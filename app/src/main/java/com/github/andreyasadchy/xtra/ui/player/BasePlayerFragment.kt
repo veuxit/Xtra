@@ -89,7 +89,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
         super.onCreate(savedInstanceState)
         val activity = requireActivity()
         prefs = activity.prefs()
-        systemUiFlags = systemUiFlags or (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            systemUiFlags = systemUiFlags or (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        }
         isPortrait = activity.isInPortraitOrientation
     }
 

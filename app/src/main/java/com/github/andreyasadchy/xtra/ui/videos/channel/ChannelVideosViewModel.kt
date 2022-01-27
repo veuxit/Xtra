@@ -13,7 +13,6 @@ import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
 import javax.inject.Inject
 
@@ -30,13 +29,9 @@ class ChannelVideosViewModel @Inject constructor(
         if (it.useHelix) {
             repository.loadChannelVideos(it.clientId, it.token, it.channelId, it.period, it.broadcastType, it.sort, viewModelScope)
         } else {
-            repository.loadChannelVideosGQL(it.clientId, it.channelId,
-                when (it.broadcastType) {
-                    BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
-                    BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
-                    BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
-                    else -> null },
-                when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS }, viewModelScope)
+            repository.loadChannelVideosGQL(it.clientId, it.channelLogin,
+                if (it.broadcastType == BroadcastType.ALL) { null }
+                else { it.broadcastType.value.uppercase() }, it.sort.value.uppercase(), viewModelScope)
         }
     }
     val sort: Sort
@@ -50,9 +45,9 @@ class ChannelVideosViewModel @Inject constructor(
         _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.upload_date), context.getString(R.string.all_time))
     }
 
-    fun setChannelId(useHelix: Boolean, clientId: String?, channelId: String, token: String? = null) {
-        if (filter.value?.channelId != channelId) {
-            filter.value = Filter(useHelix, clientId, token, channelId = channelId)
+    fun setChannelId(useHelix: Boolean, clientId: String?, channelId: String? = null, channelLogin: String? = null, token: String? = null) {
+        if (filter.value?.channelId != channelId || filter.value?.channelLogin != channelLogin) {
+            filter.value = Filter(useHelix, clientId, token, channelId = channelId ?: "", channelLogin = channelLogin ?: "")
         }
     }
 
@@ -66,6 +61,7 @@ class ChannelVideosViewModel @Inject constructor(
         val clientId: String?,
         val token: String?,
         val channelId: String,
+        val channelLogin: String,
         val sort: Sort = Sort.TIME,
         val period: Period = Period.ALL,
         val broadcastType: BroadcastType = BroadcastType.ALL)

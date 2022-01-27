@@ -10,7 +10,6 @@ import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import javax.inject.Inject
@@ -37,14 +36,15 @@ class ClipsViewModel @Inject constructor(
             repository.loadClips(it.clientId, it.token, it.channelId, it.channelLogin, it.gameId, started, ended, viewModelScope)
         } else {
             val period = when (it.period) {
-                Period.DAY -> ClipsPeriod.LAST_DAY
-                Period.WEEK -> ClipsPeriod.LAST_WEEK
-                Period.MONTH -> ClipsPeriod.LAST_MONTH
-                else -> ClipsPeriod.ALL_TIME }
-            if (it.gameId == null)
-                repository.loadChannelClipsGQL(it.clientId, it.channelId, period, viewModelScope)
-            else
-                repository.loadGameClipsGQL(it.clientId, it.gameId, period, viewModelScope)
+                Period.DAY -> "LAST_DAY"
+                Period.WEEK -> "LAST_WEEK"
+                Period.MONTH -> "LAST_MONTH"
+                else -> "ALL_TIME" }
+            if (it.gameName == null) {
+                repository.loadChannelClipsGQL(it.clientId, it.channelLogin, period, viewModelScope)
+            } else {
+                repository.loadGameClipsGQL(it.clientId, it.gameName, period, viewModelScope)
+            }
         }
     }
     var selectedIndex = 2
@@ -54,9 +54,9 @@ class ClipsViewModel @Inject constructor(
         _sortText.value = context.getString(sortOptions[selectedIndex])
     }
 
-    fun loadClips(useHelix: Boolean, clientId: String?, channelId: String? = null, channelLogin: String? = null, gameId: String? = null, token: String? = null) {
+    fun loadClips(useHelix: Boolean, clientId: String?, channelId: String? = null, channelLogin: String? = null, gameId: String? = null, gameName: String? = null, token: String? = null) {
         if (filter.value == null) {
-            filter.value = Filter(useHelix = useHelix, clientId = clientId, token = token, channelId = channelId, channelLogin = channelLogin, gameId = gameId)
+            filter.value = Filter(useHelix = useHelix, clientId = clientId, token = token, channelId = channelId, channelLogin = channelLogin, gameId = gameId, gameName = gameName)
         } else {
             filter.value?.copy(useHelix = useHelix, clientId = clientId, token = token, channelId = channelId, channelLogin = channelLogin, gameId = gameId).let {
                 if (filter.value != it)
@@ -78,5 +78,6 @@ class ClipsViewModel @Inject constructor(
         val channelId: String?,
         val channelLogin: String?,
         val gameId: String?,
+        val gameName: String?,
         val period: Period? = Period.WEEK)
 }

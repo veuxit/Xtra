@@ -63,20 +63,18 @@ class StreamPlayerViewModel @Inject constructor(
         if (_stream.value == null) {
             _stream.value = stream
             loadStream(stream)
-            viewModelScope.launch {
-                while (isActive) {
-                    try {
-                        val s = stream.user_id?.let {
-                            if (useHelix && loggedIn) {
-                                repository.loadStream(clientId, token, it)
-                            } else {
-                                repository.loadStreamGQL(gqlClientId, it)
-                            }
+            if (loggedIn) {
+                viewModelScope.launch {
+                    while (isActive) {
+                        try {
+                            val s = if (stream.user_id != null) {
+                                repository.loadStream(clientId, token, stream.user_id)
+                            } else null
+                            _stream.postValue(s)
+                            delay(300000L)
+                        } catch (e: Exception) {
+                            delay(60000L)
                         }
-                        _stream.postValue(s)
-                        delay(300000L)
-                    } catch (e: Exception) {
-                        delay(60000L)
                     }
                 }
             }

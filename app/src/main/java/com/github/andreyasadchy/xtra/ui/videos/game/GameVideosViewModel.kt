@@ -13,7 +13,6 @@ import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
 import javax.inject.Inject
 
@@ -30,13 +29,9 @@ class GameVideosViewModel @Inject constructor(
         if (it.useHelix) {
             repository.loadVideos(it.clientId, it.token, it.gameId, it.period, it.broadcastType, it.language, it.sort, viewModelScope)
         } else {
-            repository.loadGameVideosGQL(it.clientId, it.gameId,
-                when (it.broadcastType) {
-                    BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
-                    BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
-                    BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
-                    else -> null },
-                when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS }, viewModelScope)
+            repository.loadGameVideosGQL(it.clientId, it.gameName,
+                if (it.broadcastType == BroadcastType.ALL) { null }
+                else { it.broadcastType.value.uppercase() }, it.sort.value.uppercase(), viewModelScope)
         }
     }
     val sort: Sort
@@ -50,9 +45,9 @@ class GameVideosViewModel @Inject constructor(
         _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count), context.getString(R.string.this_week))
     }
 
-    fun setGame(useHelix: Boolean, clientId: String?, gameId: String? = null, token: String? = null) {
-        if (filter.value?.gameId != gameId) {
-            filter.value = Filter(useHelix = useHelix, clientId = clientId, token = token, gameId = gameId)
+    fun setGame(useHelix: Boolean, clientId: String?, gameId: String? = null, gameName: String? = null, token: String? = null) {
+        if (filter.value?.gameId != gameId || filter.value?.gameName != gameName) {
+            filter.value = Filter(useHelix = useHelix, clientId = clientId, token = token, gameId = gameId, gameName = gameName)
         }
     }
 
@@ -66,6 +61,7 @@ class GameVideosViewModel @Inject constructor(
         val clientId: String?,
         val token: String?,
         val gameId: String?,
+        val gameName: String?,
         val sort: Sort = Sort.VIEWS,
         val period: Period = Period.WEEK,
         val broadcastType: BroadcastType = BroadcastType.ALL,

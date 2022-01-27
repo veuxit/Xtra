@@ -12,8 +12,6 @@ import com.github.andreyasadchy.xtra.model.helix.user.User
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
-import com.github.andreyasadchy.xtra.type.ClipsPeriod
-import com.github.andreyasadchy.xtra.type.VideoSort
 import kotlinx.coroutines.CoroutineScope
 
 interface TwitchService {
@@ -36,18 +34,13 @@ interface TwitchService {
     suspend fun loadVideoChatLog(clientId: String?, videoId: String, offsetSeconds: Double): VideoMessagesResponse
     suspend fun loadVideoChatAfter(clientId: String?, videoId: String, cursor: String): VideoMessagesResponse
 
-    suspend fun loadStreamGQL(clientId: String?, channelId: String): Stream?
-    suspend fun loadVideoGQL(clientId: String?, videoId: String): Video?
-    suspend fun loadUserByIdGQL(clientId: String?, channelId: String): User?
-    suspend fun loadCheerEmotesGQL(clientId: String?, userId: String): List<CheerEmote>?
     fun loadTopGamesGQL(clientId: String?, coroutineScope: CoroutineScope): Listing<Game>
     fun loadTopStreamsGQL(clientId: String?, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream>
-    fun loadTopVideosGQL(clientId: String?, coroutineScope: CoroutineScope): Listing<Video>
-    fun loadGameStreamsGQL(clientId: String?, gameId: String?, coroutineScope: CoroutineScope): Listing<Stream>
-    fun loadGameVideosGQL(clientId: String?, gameId: String?, type: com.github.andreyasadchy.xtra.type.BroadcastType?, sort: VideoSort?, coroutineScope: CoroutineScope): Listing<Video>
-    fun loadGameClipsGQL(clientId: String?, gameId: String?, sort: ClipsPeriod?, coroutineScope: CoroutineScope): Listing<Clip>
-    fun loadChannelVideosGQL(clientId: String?, channelId: String?, type: com.github.andreyasadchy.xtra.type.BroadcastType?, sort: VideoSort?, coroutineScope: CoroutineScope): Listing<Video>
-    fun loadChannelClipsGQL(clientId: String?, channelId: String?, sort: ClipsPeriod?, coroutineScope: CoroutineScope): Listing<Clip>
+    fun loadGameStreamsGQL(clientId: String?, gameName: String?, coroutineScope: CoroutineScope): Listing<Stream>
+    fun loadGameVideosGQL(clientId: String?, gameName: String?, type: String?, sort: String?, coroutineScope: CoroutineScope): Listing<Video>
+    fun loadGameClipsGQL(clientId: String?, gameName: String?, sort: String?, coroutineScope: CoroutineScope): Listing<Clip>
+    fun loadChannelVideosGQL(clientId: String?, channelLogin: String?, type: String?, sort: String?, coroutineScope: CoroutineScope): Listing<Video>
+    fun loadChannelClipsGQL(clientId: String?, channelLogin: String?, sort: String?, coroutineScope: CoroutineScope): Listing<Clip>
     fun loadSearchChannelsGQL(clientId: String?, query: String, coroutineScope: CoroutineScope): Listing<ChannelSearch>
     fun loadSearchGamesGQL(clientId: String?, query: String, coroutineScope: CoroutineScope): Listing<Game>
 }

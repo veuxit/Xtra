@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 
 class GameVideosDataSourceGQL private constructor(
     private val clientId: String?,
-    private val gameId: String?,
     private val gameName: String?,
     private val type: String?,
     private val sort: String?,
@@ -37,7 +36,6 @@ class GameVideosDataSourceGQL private constructor(
 
     class Factory (
         private val clientId: String?,
-        private val gameId: String?,
         private val gameName: String?,
         private val type: String?,
         private val sort: String?,
@@ -45,6 +43,6 @@ class GameVideosDataSourceGQL private constructor(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, GameVideosDataSourceGQL>() {
 
         override fun create(): DataSource<Int, Video> =
-                GameVideosDataSourceGQL(clientId, gameId, gameName, type, sort, api, coroutineScope).also(sourceLiveData::postValue)
+                GameVideosDataSourceGQL(clientId, gameName, type, sort, api, coroutineScope).also(sourceLiveData::postValue)
     }
 }

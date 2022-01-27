@@ -207,14 +207,15 @@ class ChatViewModel @Inject constructor(
             }
             (chat as? LiveChatController)?.addEmotes(list)
             _otherEmotes.postValue(list)
-            try {
-                val get = if (useHelix) repository.loadCheerEmotes(helixClientId, token, channelId)
-                else repository.loadCheerEmotesGQL(gqlClientId, channelId)
-                if (get != null) {
-                    cheerEmotes.postValue(get!!)
+            if (useHelix) {
+                try {
+                    val get = repository.loadCheerEmotes(helixClientId, token, channelId)
+                    if (get != null) {
+                        cheerEmotes.postValue(get!!)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
             }
         }
     }

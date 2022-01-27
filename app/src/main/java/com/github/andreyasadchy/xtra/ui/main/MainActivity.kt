@@ -95,9 +95,14 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             val config = resources.configuration
             val locale = Locale(lang)
             Locale.setDefault(locale)
-            config.setLocale(locale)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                config.setLocale(locale)
+            } else {
+                config.locale = locale
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 createConfigurationContext(config)
+            }
             resources.updateConfiguration(config, resources.displayMetrics)
         }
         if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {

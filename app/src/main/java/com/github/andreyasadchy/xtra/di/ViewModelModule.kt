@@ -22,7 +22,6 @@ import com.github.andreyasadchy.xtra.ui.streams.common.StreamsViewModel
 import com.github.andreyasadchy.xtra.ui.streams.followed.FollowedStreamsViewModel
 import com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosViewModel
 import com.github.andreyasadchy.xtra.ui.videos.game.GameVideosViewModel
-import com.github.andreyasadchy.xtra.ui.videos.top.TopVideosViewModel
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedViewModel
 import dagger.Binds
 import dagger.Module
@@ -83,11 +82,6 @@ abstract class ViewModelModule {
     @IntoMap
     @ViewModelKey(GameVideosViewModel::class)
     abstract fun bindGameVideosViewModel(gameVideosViewModel: GameVideosViewModel): ViewModel
-
-    @Binds
-    @IntoMap
-    @ViewModelKey(TopVideosViewModel::class)
-    abstract fun bindTopVideosViewModel(topVideosViewModel: TopVideosViewModel): ViewModel
 
     @Binds
     @IntoMap

@@ -1,13 +1,18 @@
 package com.github.andreyasadchy.xtra.di
 
 import android.app.Application
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.network.okHttpClient
+import android.os.Build
+import android.util.Log
 import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.api.*
 import com.github.andreyasadchy.xtra.model.chat.*
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
+import com.github.andreyasadchy.xtra.model.gql.game.*
 import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenDeserializer
 import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenResponse
 import com.github.andreyasadchy.xtra.model.gql.playlist.VideoPlaylistTokenDeserializer
@@ -16,24 +21,29 @@ import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataDeseriali
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetDeserializer
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.util.FetchProvider
+import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import com.google.gson.GsonBuilder
 import com.tonyodev.fetch2.FetchConfiguration
 import com.tonyodev.fetch2okhttp.OkHttpDownloader
 import dagger.Module
 import dagger.Provides
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Response
+import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 @Module
 class XtraModule {
@@ -129,39 +139,16 @@ class XtraModule {
                 .registerTypeAdapter(StreamPlaylistTokenResponse::class.java, StreamPlaylistTokenDeserializer())
                 .registerTypeAdapter(VideoPlaylistTokenResponse::class.java, VideoPlaylistTokenDeserializer())
                 .registerTypeAdapter(ClipDataResponse::class.java, ClipDataDeserializer())
-/*                .registerTypeAdapter(GameDataResponse::class.java, GameDataDeserializer())
+                .registerTypeAdapter(GameDataResponse::class.java, GameDataDeserializer())
                 .registerTypeAdapter(StreamDataResponse::class.java, StreamDataDeserializer())
                 .registerTypeAdapter(GameStreamsDataResponse::class.java, GameStreamsDataDeserializer())
                 .registerTypeAdapter(GameVideosDataResponse::class.java, GameVideosDataDeserializer())
                 .registerTypeAdapter(GameClipsDataResponse::class.java, GameClipsDataDeserializer())
                 .registerTypeAdapter(ChannelVideosDataResponse::class.java, ChannelVideosDataDeserializer())
-                .registerTypeAdapter(ChannelClipsDataResponse::class.java, ChannelClipsDataDeserializer())*/
+                .registerTypeAdapter(ChannelClipsDataResponse::class.java, ChannelClipsDataDeserializer())
                 .registerTypeAdapter(SearchChannelDataResponse::class.java, SearchChannelDataDeserializer())
                 .registerTypeAdapter(SearchGameDataResponse::class.java, SearchGameDataDeserializer())
                 .create())
-    }
-
-    @Singleton
-    @Provides
-    fun apolloClient(clientId: String?): ApolloClient {
-        val builder = ApolloClient.Builder()
-            .serverUrl("https://gql.twitch.tv/gql/")
-            .okHttpClient(OkHttpClient.Builder().apply {
-                addInterceptor(AuthorizationInterceptor(clientId))
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
-                }
-            }.build())
-        return builder.build()
-    }
-
-    private class AuthorizationInterceptor(val clientId: String?): Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request().newBuilder().apply {
-                clientId?.let { addHeader("Client-ID", it) }
-            }.build()
-            return chain.proceed(request)
-        }
     }
 
     @Singleton
@@ -170,6 +157,26 @@ class XtraModule {
         val builder = OkHttpClient.Builder().apply {
             if (BuildConfig.DEBUG) {
                 addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+            }
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
+                try {
+                    val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
+                        init(null as KeyStore?)
+                        trustManagers.first { it is X509TrustManager } as X509TrustManager
+                    }
+                    val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
+                    sslContext.init(null, arrayOf(trustManager), null)
+                    val cipherSuites = ConnectionSpec.MODERN_TLS.cipherSuites()!!.toMutableList().apply {
+                        add(CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA)
+                    }.toTypedArray()
+                    sslSocketFactory(TlsSocketFactory(sslContext.socketFactory), trustManager)
+                    val cs = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                        .cipherSuites(*cipherSuites)
+                        .build()
+                    connectionSpecs(arrayListOf(cs))
+                } catch (e: Exception) {
+                    Log.e("OkHttpTLSCompat", "Error while setting TLS 1.2 compatibility", e)
+                }
             }
             connectTimeout(5, TimeUnit.MINUTES)
             writeTimeout(5, TimeUnit.MINUTES)

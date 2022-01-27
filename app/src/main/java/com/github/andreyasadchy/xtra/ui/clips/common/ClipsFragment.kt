@@ -11,9 +11,7 @@ import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
-import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
 import kotlinx.android.synthetic.main.fragment_clips.*
 import kotlinx.android.synthetic.main.sort_bar.*
 
@@ -26,7 +24,7 @@ class ClipsFragment : BaseClipsFragment<ClipsViewModel>() {
             lastSelectedItem = it
             showDownloadDialog()
         }
-        if (arguments?.getString(C.CHANNEL_ID) != null) {
+        if (arguments?.getString(C.CHANNEL_ID) != null || arguments?.getString(C.CHANNEL_LOGIN) != null) {
             ChannelClipsAdapter(this, activity, activity, showDialog)
         } else {
             ClipsAdapter(this, activity, activity, activity, showDialog)
@@ -41,7 +39,7 @@ class ClipsFragment : BaseClipsFragment<ClipsViewModel>() {
         if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
             viewModel.loadClips(useHelix = true, clientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), channelId = arguments?.getString(C.CHANNEL_ID), channelLogin = arguments?.getString(C.CHANNEL_LOGIN), gameId = arguments?.getString(C.GAME_ID), token = requireContext().prefs().getString(C.TOKEN, ""))
         } else {
-            viewModel.loadClips(useHelix = false, clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), channelId = arguments?.getString(C.CHANNEL_ID), gameId = arguments?.getString(C.GAME_ID))
+            viewModel.loadClips(useHelix = false, clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), channelLogin = arguments?.getString(C.CHANNEL_LOGIN), gameName = arguments?.getString(C.GAME_NAME))
         }
         sortBar.setOnClickListener { FragmentUtils.showRadioButtonDialogFragment(requireContext(), childFragmentManager, viewModel.sortOptions, viewModel.selectedIndex) }
     }
@@ -59,6 +57,5 @@ class ClipsFragment : BaseClipsFragment<ClipsViewModel>() {
         } else {
             viewModel.filter(false, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), period, index, text)
         }
-        scrollTop.gone()
     }
 }

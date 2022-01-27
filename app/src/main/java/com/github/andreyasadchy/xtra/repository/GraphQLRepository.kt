@@ -112,9 +112,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             addProperty("operationName", "DirectoryVideos_Game")
             add("variables", JsonObject().apply {
                 if (type != null) {
-                    add("broadcastTypes", JsonObject().apply {
-                        addProperty("0", type)
-                    })
+                    addProperty("broadcastTypes", type)
                 }
                 addProperty("followedCursor", cursor)
                 addProperty("gameName", game)

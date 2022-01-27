@@ -51,20 +51,20 @@ class ChannelPagerViewModel @Inject constructor(
             _userLogin.value = channelLogin
             _userName.value = channelName
             _profileImageURL.value = profileImageURL
-            viewModelScope.launch {
-                try {
-                    val stream = if (useHelix) {
+            if (useHelix) {
+                viewModelScope.launch {
+                    try {
                         val get = repository.loadStream(clientId, token, channelId)
-                        if (profileImageURL == null) {
-                            get?.profileImageURL = repository.loadUserById(clientId, token, channelId)?.profile_image_url
-                        }
-                        get
-                    } else {
-                        repository.loadStreamGQL(clientId, channelId)
-                    }
-                    _stream.postValue(stream)
-                } catch (e: Exception) {
+                        val stream = if (get != null) {
+                            if (profileImageURL == null) {
+                                get.profileImageURL = repository.loadUserById(clientId, token, channelId)?.profile_image_url
+                            }
+                            get
+                        } else null
+                        _stream.postValue(stream)
+                    } catch (e: Exception) {
 
+                    }
                 }
             }
         }

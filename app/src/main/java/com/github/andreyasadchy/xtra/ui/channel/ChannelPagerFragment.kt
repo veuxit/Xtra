@@ -117,51 +117,50 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     override fun initialize() {
         val activity = requireActivity() as MainActivity
         collapsingToolbar.expandedTitleMarginBottom = activity.convertDpToPixels(50.5f)
-        if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
+        if (requireContext().prefs().getString(C.USERNAME, "") != "") {
             viewModel.loadStream(useHelix = true, clientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = requireContext().prefs().getString(C.TOKEN, ""), channelId = requireArguments().getString(C.CHANNEL_ID), channelLogin = requireArguments().getString(C.CHANNEL_LOGIN), channelName = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
-        } else {
-            viewModel.loadStream(useHelix = false, clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), channelId = requireArguments().getString(C.CHANNEL_ID), channelLogin = requireArguments().getString(C.CHANNEL_LOGIN),channelName = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
-        }
-        viewModel.stream.observe(viewLifecycleOwner, { stream ->
-            if (stream?.type?.lowercase() == "rerun")  {
-                watchLive.text = getString(R.string.watch_rerun)
-                watchLive.setOnClickListener { activity.startStream(stream) }
-            } else {
-                if (stream?.viewer_count != null) {
-                    watchLive.text = getString(R.string.watch_live)
+            viewModel.stream.observe(viewLifecycleOwner, { stream ->
+                if (stream?.type?.lowercase() == "rerun")  {
+                    watchLive.text = getString(R.string.watch_rerun)
                     watchLive.setOnClickListener { activity.startStream(stream) }
                 } else {
-                    watchLive.setOnClickListener { activity.startStream(Stream(user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
+                    if (stream?.viewer_count != null) {
+                        watchLive.text = getString(R.string.watch_live)
+                        watchLive.setOnClickListener { activity.startStream(stream) }
+                    } else {
+                        watchLive.setOnClickListener { activity.startStream(Stream(user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
+                    }
                 }
-            }
-            stream?.channelLogo.let { if (it != null) {
-                logo.loadImage(this, it, circle = true)
-                bundle.putString(C.CHANNEL_PROFILEIMAGE, it)
-                arguments = bundle
-            } }
-            stream?.user_name.let { if (it != null && it != requireArguments().getString(C.CHANNEL_DISPLAYNAME)) {
-                collapsingToolbar.title = it
-                bundle.putString(C.CHANNEL_DISPLAYNAME, it)
-                arguments = bundle
-            } }
-            stream?.user_login.let { if (it != null && it != requireArguments().getString(C.CHANNEL_LOGIN)) {
-                bundle.putString(C.CHANNEL_LOGIN, it)
-                arguments = bundle
-            } }
-            if (requireArguments().getBoolean(C.CHANNEL_UPDATELOCAL) && stream != null) {
-                viewModel.updateLocalUser(requireContext(), stream)
-            }
-        })
+                stream?.channelLogo.let { if (it != null) {
+                    logo.loadImage(this, it, circle = true)
+                    bundle.putString(C.CHANNEL_PROFILEIMAGE, it)
+                    arguments = bundle
+                } }
+                stream?.user_name.let { if (it != null && it != requireArguments().getString(C.CHANNEL_DISPLAYNAME)) {
+                    collapsingToolbar.title = it
+                    bundle.putString(C.CHANNEL_DISPLAYNAME, it)
+                    arguments = bundle
+                } }
+                stream?.user_login.let { if (it != null && it != requireArguments().getString(C.CHANNEL_LOGIN)) {
+                    bundle.putString(C.CHANNEL_LOGIN, it)
+                    arguments = bundle
+                } }
+                if (requireArguments().getBoolean(C.CHANNEL_UPDATELOCAL) && stream != null) {
+                    viewModel.updateLocalUser(requireContext(), stream)
+                }
+            })
+        } else {
+            watchLive.setOnClickListener { activity.startStream(Stream(user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
+        }
         if (requireContext().prefs().getBoolean(C.UI_FOLLOW, true)) {
             initializeFollow(this, viewModel, follow, User.get(activity), context?.prefs()?.getString(C.HELIX_CLIENT_ID, ""))
         }
     }
 
     override fun onNetworkRestored() {
-        if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "")
+        if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
             viewModel.retry(useHelix = true, clientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = requireContext().prefs().getString(C.TOKEN, ""))
-        else
-            viewModel.retry(useHelix = false, clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

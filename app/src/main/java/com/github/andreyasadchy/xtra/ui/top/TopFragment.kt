@@ -16,7 +16,6 @@ import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.ui.streams.common.StreamsFragment
-import com.github.andreyasadchy.xtra.ui.videos.top.TopVideosFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
@@ -27,7 +26,6 @@ class TopFragment : MediaFragment() {
     override fun onSpinnerItemSelected(position: Int): Fragment {
         return when (position) {
             0 -> StreamsFragment()
-            1 -> TopVideosFragment()
             else -> ClipsFragment()
         }
     }

@@ -3,7 +3,6 @@ plugins {
     id("kotlin-android")
     id("kotlin-android-extensions")
     id("kotlin-kapt")
-    id("com.apollographql.apollo3").version("3.0.0-rc01")
 }
 
 android {
@@ -18,7 +17,7 @@ android {
     compileSdkVersion 31
     defaultConfig {
         applicationId "com.github.andreyasadchy.xtra"
-        minSdkVersion 21
+        minSdkVersion 16
         targetSdkVersion 31
         versionCode 103
         versionName "1.6.1"
@@ -35,6 +34,7 @@ android {
             applicationIdSuffix '.debug'
             versionNameSuffix '-DEBUG'
             signingConfig signingConfigs.debug
+            multiDexEnabled true
         }
         release {
             shrinkResources true
@@ -75,6 +75,8 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
+    implementation 'androidx.multidex:multidex:2.0.1'
+
     //UI
     implementation 'com.google.android.material:material:1.6.0-alpha02'
     implementation 'androidx.appcompat:appcompat:1.4.1'
@@ -96,7 +98,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:1.4.0"
 
     //Misc
-    implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.3'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.0'
     implementation 'com.ncapdevi:frag-nav:3.2.0'
     implementation 'com.iheartradio.m3u8:open-m3u8:0.2.6'
 
@@ -107,7 +109,6 @@ dependencies {
     implementation "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:$fetch"
 
     implementation 'androidx.webkit:webkit:1.4.0'
-    implementation 'com.apollographql.apollo3:apollo-runtime:3.0.0-rc01'
 
     implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
@@ -126,9 +127,4 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0-native-mt'
-}
-
-apollo {
-    packageName.set("com.github.andreyasadchy.xtra")
-    generateKotlinModels.set(true)
 }
