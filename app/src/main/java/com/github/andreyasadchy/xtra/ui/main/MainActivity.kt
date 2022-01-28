@@ -5,7 +5,8 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.net.ConnectivityManager
-import android.os.*
+import android.os.Build
+import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
@@ -146,6 +147,10 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         })
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+        if (notInitialized) {
+            installPlayServicesIfNeeded()
+            handleIntent(intent)
+        }
         restorePlayerFragment()
     }
 

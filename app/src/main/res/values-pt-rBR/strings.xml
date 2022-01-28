@@ -214,4 +214,5 @@
     <string name="show_uptime">Show stream uptime</string>
     <string name="chat_first">First time chat</string>
     <string name="Android_5_required">Android 5 required</string>
+    <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
 </resources>
