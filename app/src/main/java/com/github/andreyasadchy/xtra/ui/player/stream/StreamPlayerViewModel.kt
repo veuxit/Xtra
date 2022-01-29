@@ -62,8 +62,8 @@ class StreamPlayerViewModel @Inject constructor(
         this.gqlClientId = gqlClientId
         if (_stream.value == null) {
             _stream.value = stream
-            loadStream(stream)
             if (loggedIn) {
+                loadStream(stream)
                 viewModelScope.launch {
                     while (isActive) {
                         try {
@@ -77,6 +77,9 @@ class StreamPlayerViewModel @Inject constructor(
                         }
                     }
                 }
+            } else {
+                stream.viewer_count = null
+                loadStream(stream)
             }
         }
     }

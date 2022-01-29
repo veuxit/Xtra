@@ -76,7 +76,7 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
         val icon = requireView().findViewById<ImageView>(R.id.viewericon)
         viewModel.stream.observe(viewLifecycleOwner, Observer {
             if (it?.viewer_count != null) {
-                viewers.text = TwitchApiHelper.formatCount(it.viewer_count, context?.prefs()!!.getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                viewers.text = TwitchApiHelper.formatCount(it.viewer_count!!, context?.prefs()!!.getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
                 if (iconpref) icon.visible()
             } else {
                 viewers.text = null

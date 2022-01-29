@@ -24,7 +24,7 @@ class StreamsAdapter(
             thumbnail.loadImage(fragment, item.thumbnail, true, diskCacheStrategy = DiskCacheStrategy.NONE)
             if (item.viewer_count != null) {
                 viewers.visible()
-                viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewer_count, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewer_count!!, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
             }
             TwitchApiHelper.getType(context, item.type).let {
                 if (it != null)  {
