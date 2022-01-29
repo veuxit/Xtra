@@ -1,4 +1,4 @@
-name: Api 16
+name: Android CI
 
 on:
   push:
