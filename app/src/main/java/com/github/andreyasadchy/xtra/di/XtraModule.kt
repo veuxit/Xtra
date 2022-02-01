@@ -23,6 +23,8 @@ import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
+import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetDeserializer
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -34,7 +36,10 @@ import com.tonyodev.fetch2.FetchConfiguration
 import com.tonyodev.fetch2okhttp.OkHttpDownloader
 import dagger.Module
 import dagger.Provides
-import okhttp3.*
+import okhttp3.CipherSuite
+import okhttp3.ConnectionSpec
+import okhttp3.OkHttpClient
+import okhttp3.TlsVersion
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -141,6 +146,7 @@ class XtraModule {
                 .registerTypeAdapter(ClipDataResponse::class.java, ClipDataDeserializer())
                 .registerTypeAdapter(GameDataResponse::class.java, GameDataDeserializer())
                 .registerTypeAdapter(StreamDataResponse::class.java, StreamDataDeserializer())
+                .registerTypeAdapter(ViewersDataResponse::class.java, ViewersDataDeserializer())
                 .registerTypeAdapter(GameStreamsDataResponse::class.java, GameStreamsDataDeserializer())
                 .registerTypeAdapter(GameVideosDataResponse::class.java, GameVideosDataDeserializer())
                 .registerTypeAdapter(GameClipsDataResponse::class.java, GameClipsDataDeserializer())

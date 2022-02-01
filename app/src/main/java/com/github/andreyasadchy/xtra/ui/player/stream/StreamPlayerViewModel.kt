@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserF
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsManifest
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsMediaSource
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
@@ -25,6 +26,7 @@ import javax.inject.Inject
 class StreamPlayerViewModel @Inject constructor(
     context: Application,
     private val playerRepository: PlayerRepository,
+    private val gql: GraphQLRepository,
     repository: TwitchService,
     localFollows: LocalFollowRepository) : HlsPlayerViewModel(context, repository, localFollows) {
 
@@ -62,24 +64,22 @@ class StreamPlayerViewModel @Inject constructor(
         this.gqlClientId = gqlClientId
         if (_stream.value == null) {
             _stream.value = stream
-            if (loggedIn) {
-                loadStream(stream)
-                viewModelScope.launch {
-                    while (isActive) {
-                        try {
-                            val s = if (stream.user_id != null) {
-                                repository.loadStream(clientId, token, stream.user_id)
-                            } else null
-                            _stream.postValue(s)
-                            delay(300000L)
-                        } catch (e: Exception) {
-                            delay(60000L)
+            loadStream(stream)
+            viewModelScope.launch {
+                while (isActive) {
+                    try {
+                        val s = if (useHelix && loggedIn) {
+                            stream.user_id?.let { repository.loadStream(clientId, token, it) }
+                        } else {
+                            stream.viewer_count = stream.user_login?.let { gql.loadViewerCount(gqlClientId, it).viewers }
+                            stream
                         }
+                        _stream.postValue(s)
+                        delay(300000L)
+                    } catch (e: Exception) {
+                        delay(60000L)
                     }
                 }
-            } else {
-                stream.viewer_count = null
-                loadStream(stream)
             }
         }
     }

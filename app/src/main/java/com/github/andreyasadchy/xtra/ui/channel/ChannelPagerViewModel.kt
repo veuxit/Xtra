@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
@@ -18,6 +19,7 @@ import javax.inject.Inject
 
 class ChannelPagerViewModel @Inject constructor(
     private val repository: TwitchService,
+    private val gql: GraphQLRepository,
     private val localFollows: LocalFollowRepository,
     private val offlineRepository: OfflineRepository) : ViewModel(), FollowViewModel {
 
@@ -46,25 +48,25 @@ class ChannelPagerViewModel @Inject constructor(
     }
 
     fun loadStream(useHelix: Boolean, clientId: String?, token: String? = null, channelId: String?, channelLogin: String?, channelName: String?, profileImageURL: String?) {
-        if (_userId.value != channelId && channelId != null) {
+        if (useHelix && _userId.value != channelId && channelId != null || !useHelix && _userLogin.value != channelLogin && channelLogin != null) {
             _userId.value = channelId
             _userLogin.value = channelLogin
             _userName.value = channelName
             _profileImageURL.value = profileImageURL
-            if (useHelix) {
-                viewModelScope.launch {
-                    try {
-                        val get = repository.loadStream(clientId, token, channelId)
-                        val stream = if (get != null) {
-                            if (profileImageURL == null) {
-                                get.profileImageURL = repository.loadUserById(clientId, token, channelId)?.profile_image_url
-                            }
-                            get
-                        } else null
-                        _stream.postValue(stream)
-                    } catch (e: Exception) {
-
+            viewModelScope.launch {
+                try {
+                    val stream = if (useHelix) {
+                        val get = repository.loadStream(clientId, token, channelId!!)
+                        if (profileImageURL == null) {
+                            get?.profileImageURL = repository.loadUserById(clientId, token, channelId)?.profile_image_url
+                        }
+                        get
+                    } else {
+                        Stream(user_id = userId, user_login = userLogin, user_name = userName, profileImageURL = profileImageURL, viewer_count = gql.loadViewerCount(clientId, channelLogin).viewers)
                     }
+                    _stream.postValue(stream)
+                } catch (e: Exception) {
+
                 }
             }
         }

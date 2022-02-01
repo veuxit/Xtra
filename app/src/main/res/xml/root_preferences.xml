@@ -53,18 +53,6 @@
         android:title="@string/truncated_view_counts"
         app:iconSpaceReserved="false"/>
 
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="ui_uptime"
-        android:title="@string/show_uptime"
-        app:iconSpaceReserved="false"/>
-
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="ui_broadcasterscount"
-        android:title="@string/broadcastersCount"
-        app:iconSpaceReserved="false"/>
-
     <ListPreference
         android:defaultValue="1"
         android:entries="@array/followedEntries"
