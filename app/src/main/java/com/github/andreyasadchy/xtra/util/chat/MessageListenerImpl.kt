@@ -3,8 +3,6 @@ package com.github.andreyasadchy.xtra.util.chat
 import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.set
 
 class MessageListenerImpl(
@@ -12,7 +10,7 @@ class MessageListenerImpl(
     private val callbackUserState: OnUserStateReceivedListener,
     private val callbackRoomState: OnRoomStateReceivedListener,
     private val callbackCommand: OnCommandReceivedListener) : LiveChatThread.OnMessageReceivedListener {
-    
+
     override fun onMessage(message: String) {
         val parts = message.substring(1).split(" ".toRegex(), 2)
         val prefix = parts[0]
@@ -65,8 +63,6 @@ class MessageListenerImpl(
             isFirst = prefixes["first-msg"] == "1",
             emotes = emotesList,
             badges = badgesList,
-            userType = prefixes["user-type"],
-            roomId = prefixes["room-id"],
             timestamp = prefixes["tmi-sent-ts"]?.toLong()
         ))
     }
@@ -177,7 +173,7 @@ class MessageListenerImpl(
         }
         return map
     }
-    
+
     companion object {
         const val ACTION = "\u0001ACTION"
     }

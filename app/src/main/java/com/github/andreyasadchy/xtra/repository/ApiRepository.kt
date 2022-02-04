@@ -168,8 +168,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override suspend fun loadEmotesFromSet(clientId: String?, userToken: String?, setId: String): List<TwitchEmote>? = withContext(Dispatchers.IO) {
-        api.getEmotesFromSet(clientId, userToken?.let { TwitchApiHelper.addTokenPrefix(it) }, setId).emotes
+    override suspend fun loadEmotesFromSet(clientId: String?, userToken: String?, setIds: List<String>): List<TwitchEmote>? = withContext(Dispatchers.IO) {
+        api.getEmotesFromSet(clientId, userToken?.let { TwitchApiHelper.addTokenPrefix(it) }, setIds).emotes
     }
 
     override suspend fun loadCheerEmotes(clientId: String?, userToken: String?, userId: String): List<CheerEmote> = withContext(Dispatchers.IO) {
@@ -185,6 +185,7 @@ class ApiRepository @Inject constructor(
         Log.d(TAG, "Loading chat log for video $videoId. Cursor: $cursor")
         misc.getVideoChatLogAfter(clientId, videoId, cursor, 100)
     }
+
 
     override fun loadTopGamesGQL(clientId: String?, coroutineScope: CoroutineScope): Listing<Game> {
         val factory = GamesDataSourceGQL.Factory(clientId, gql, coroutineScope)
