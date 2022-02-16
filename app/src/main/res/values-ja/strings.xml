@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Xtra</string>
     <string name="games">ゲーム</string>
     <string name="popular">人気</string>
     <string name="following">フォロー中</string>
@@ -52,8 +51,6 @@
     <string name="follow_tab_login_prompt">あなたがフォローしているチャンネルがここに表示されます</string>
     <string name="downloads_empty">ダウンロードした動画はここに表示されます</string>
     <string name="notification_downloads_channel_title">ダウンロード</string>
-    <string name="notification_downloads_channel_id" translatable="false">xtra_downloads_channel</string>
-    <string name="old_notification_downloads_channel_id" translatable="false">xtra_download_channel</string>
     <string name="storage_permission_title">アプリにストレージの許可が必要です</string>
     <string name="storage_permission_message">動画をダウンロードするにはストレージの許可が必要です。</string>
     <string name="permission_denied">必要なパーミッションが拒否されました</string>
@@ -106,7 +103,6 @@
     <string name="chat">チャット</string>
     <string name="recent_emotes">最新</string>
     <string name="notification_playback_channel_title">プレイバック</string>
-    <string name="notification_playback_channel_id" translatable="false">xtra_playback_channel</string>
     <string name="channels">チャンネル</string>
     <string name="watch_video">フルサイズのビデオを視聴する</string>
     <string name="animated_emotes">アニメーションエモート</string>
@@ -153,7 +149,6 @@
     <string name="startonfollowed">フォローしているページからスタート</string>
     <string name="when_logged_in">ログインしている場合</string>
     <string name="show_follow_button">フォローボタンの表示</string>
-    <string name="show_scrolltop">トップへ戻るスクロールボタンの表示</string>
     <string name="bold_usernames">太字のユーザー名表示</string>
     <string name="randomcolor">色の未設定ユーザーのランダムカラー表示</string>
     <string name="zerowidth">ゼロ幅のエモート</string>
@@ -186,14 +181,7 @@
     <string name="api_gql">GQLクライアントID</string>
     <string name="playback_speed">再生速度</string>
     <string name="quality">品質</string>
-    <string name="speed0.25" translatable="false">0.25x</string>
-    <string name="speed0.5" translatable="false">0.5x</string>
-    <string name="speed0.75" translatable="false">0.75x</string>
     <string name="speed1">標準</string>
-    <string name="speed1.25" translatable="false">1.25x</string>
-    <string name="speed1.5" translatable="false">1.5x</string>
-    <string name="speed1.75" translatable="false">1.75x</string>
-    <string name="speed2" translatable="false">2.0x</string>
     <string name="saved_value">保存された値</string>
     <string name="playerQualityEntries1">360p以下</string>
     <string name="playerQualityEntries2">480p以下</string>
@@ -239,5 +227,6 @@
     <string name="user_admin">管理者</string>
     <string name="user_global_mod">グローバルモデレーター</string>
     <string name="uptime">%s アップタイム</string>
-    <string name="select_language">言語を選択</string>
+    <string name="Android_5_required">Android 5 required</string>
+    <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
 </resources>
