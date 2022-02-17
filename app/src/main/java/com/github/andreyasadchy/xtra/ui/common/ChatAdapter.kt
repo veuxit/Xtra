@@ -34,17 +34,17 @@ import java.util.*
 import kotlin.collections.set
 
 class ChatAdapter(
-    private val fragment: Fragment,
-    private val emoteSize: Int,
-    private val badgeSize: Int,
-    private val randomColor: Boolean,
-    private val boldNames: Boolean,
-    private val enableZeroWidth: Boolean,
-    private val enableTimestamps: Boolean,
-    private val timestampFormat: String?,
-    private val firstmsgVisibility: String?,
-    private val firstChatMsg: String,
-    private val rewardChatMsg: String) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
+        private val fragment: Fragment,
+        private val emoteSize: Int,
+        private val badgeSize: Int,
+        private val randomColor: Boolean,
+        private val boldNames: Boolean,
+        private val enableZeroWidth: Boolean,
+        private val enableTimestamps: Boolean,
+        private val timestampFormat: String?,
+        private val firstmsgVisibility: String?,
+        private val firstChatMsg: String,
+        private val rewardChatMsg: String) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     var messages: MutableList<ChatMessage>? = null
         set(value) {

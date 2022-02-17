@@ -40,13 +40,13 @@ class DatabaseModule {
     @Singleton
     @Provides
     fun providesAppDatabase(application: Application): AppDatabase =
-        Room.databaseBuilder(application, AppDatabase::class.java, "database")
-            .addMigrations(
-                object : Migration(9, 10) {
-                    override fun migrate(database: SupportSQLiteDatabase) {
-                        database.execSQL("DELETE FROM emotes")
-                    }
-                }
-            )
-            .build()
+            Room.databaseBuilder(application, AppDatabase::class.java, "database")
+                    .addMigrations(
+                            object : Migration(9, 10) {
+                                override fun migrate(database: SupportSQLiteDatabase) {
+                                    database.execSQL("DELETE FROM emotes")
+                                }
+                            }
+                    )
+                    .build()
 }

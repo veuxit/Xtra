@@ -376,7 +376,7 @@ class ChatView : ConstraintLayout {
         val extent = recyclerView.computeVerticalScrollExtent()
         val range = recyclerView.computeVerticalScrollRange()
         val percentage = (100f * offset / (range - extent).toFloat())
-        return percentage < 97f
+        return percentage < 100f
     }
 
     class SpaceTokenizer : MultiAutoCompleteTextView.Tokenizer {
@@ -415,9 +415,9 @@ class ChatView : ConstraintLayout {
     }
 
     class AutoCompleteAdapter(
-        context: Context,
-        private val fragment: Fragment,
-        list: List<Any>) : ArrayAdapter<Any>(context, 0, list) {
+            context: Context,
+            private val fragment: Fragment,
+            list: List<Any>) : ArrayAdapter<Any>(context, 0, list) {
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val viewHolder: ViewHolder

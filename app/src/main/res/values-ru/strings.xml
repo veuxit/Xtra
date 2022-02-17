@@ -166,7 +166,6 @@
     <string name="cutoutmode_desc">Display content inside of the cutout area</string>
     <string name="cutoutmode_always">Always - Both portrait and landscape modes</string>
     <string name="not_supported">Not supported</string>
-    <string name="Android_9_required">Android 9 required</string>
     <string name="settings_token">PLAYLIST HEADERS</string>
     <string name="token_random_deviceid">Random device id</string>
     <string name="settings_token_summary">for livestreams only, disable adblock</string>
@@ -210,7 +209,6 @@
     <string name="show_uptime">Show stream uptime</string>
     <string name="chat_first">First time chat</string>
     <string name="seconds_full">%s секунд</string>
-    <string name="Android_5_required">Android 5 required</string>
     <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
     <string name="chat_reward">Channel point redemption</string>
     <string name="chatFirstMsgEntries1">Show type and change background color</string>
@@ -229,4 +227,6 @@
     <string name="user_admin">Admin</string>
     <string name="user_global_mod">Global mod</string>
     <string name="uptime">%s uptime</string>
+    <string name="select_language">Select language</string>
+    <string name="show_tags">Show tags</string>
 </resources>

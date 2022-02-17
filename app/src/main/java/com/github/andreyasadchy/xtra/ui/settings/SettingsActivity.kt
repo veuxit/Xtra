@@ -64,10 +64,8 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             findPreference<ListPreference>(C.LANDSCAPE_COLUMN_COUNT)!!.onPreferenceChangeListener = changeListener
 
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)!!.isEnabled = false
-                findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)!!.summary = resources.getString(R.string.Android_5_required)
-                findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)!!.isEnabled = false
-                findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)!!.summary = resources.getString(R.string.Android_5_required)
+                findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)!!.isVisible = false
+                findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)!!.isVisible = false
             } else {
                 findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)!!.setOnPreferenceChangeListener { _, _ ->
                     changed = true
@@ -93,8 +91,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             }
 
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                findPreference<ListPreference>(C.UI_CUTOUTMODE)!!.isEnabled = false
-                findPreference<ListPreference>(C.UI_CUTOUTMODE)!!.summary = resources.getString(R.string.Android_9_required)
+                findPreference<ListPreference>(C.UI_CUTOUTMODE)!!.isVisible = false
             } else {
                 findPreference<ListPreference>(C.UI_CUTOUTMODE)!!.setOnPreferenceChangeListener { _, _ ->
                     changed = true

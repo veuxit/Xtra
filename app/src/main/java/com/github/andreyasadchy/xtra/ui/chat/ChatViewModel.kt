@@ -40,8 +40,8 @@ import kotlin.collections.mutableMapOf
 import kotlin.collections.set
 
 class ChatViewModel @Inject constructor(
-    private val repository: TwitchService,
-    private val playerRepository: PlayerRepository) : BaseViewModel(), ChatView.MessageSenderCallback {
+        private val repository: TwitchService,
+        private val playerRepository: PlayerRepository) : BaseViewModel(), ChatView.MessageSenderCallback {
 
     val recentEmotes: LiveData<List<Emote>> by lazy {
         MediatorLiveData<List<Emote>>().apply {
@@ -224,11 +224,11 @@ class ChatViewModel @Inject constructor(
     }
 
     private inner class LiveChatController(
-        private val user: User,
-        private val helixClientId: String?,
-        private val channelId: String?,
-        private val channelLogin: String,
-        displayName: String) : ChatController() {
+            private val user: User,
+            private val helixClientId: String?,
+            private val channelId: String?,
+            private val channelLogin: String,
+            displayName: String) : ChatController() {
 
         private var chat: LiveChatThread? = null
         private val allEmotesMap = mutableMapOf<String, Emote>()
@@ -336,10 +336,10 @@ class ChatViewModel @Inject constructor(
     }
 
     private inner class VideoChatController(
-        private val clientId: String,
-        private val videoId: String,
-        private val startTime: Double,
-        private val getCurrentPosition: () -> Double) : ChatController() {
+            private val clientId: String,
+            private val videoId: String,
+            private val startTime: Double,
+            private val getCurrentPosition: () -> Double) : ChatController() {
 
         private var chatReplayManager: ChatReplayManager? = null
 

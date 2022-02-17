@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.follows.Follow
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.model.helix.user.User
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Period
@@ -52,8 +53,8 @@ class ApiRepository @Inject constructor(
         api.getStreams(clientId, userToken?.let { TwitchApiHelper.addTokenPrefix(it) }, userIds).data?.firstOrNull()
     }
 
-    override fun loadTopStreams(clientId: String?, userToken: String?, gameId: String?, languages: String?, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
-        val factory = StreamsDataSource.Factory(clientId, userToken?.let { TwitchApiHelper.addTokenPrefix(it) }, gameId, languages, api, coroutineScope)
+    override fun loadTopStreams(clientId: String?, userToken: String?, gameId: String?, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
+        val factory = StreamsDataSource.Factory(clientId, userToken?.let { TwitchApiHelper.addTokenPrefix(it) }, gameId, api, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
             builder.setPageSize(10)
@@ -187,8 +188,18 @@ class ApiRepository @Inject constructor(
     }
 
 
-    override fun loadTopGamesGQL(clientId: String?, coroutineScope: CoroutineScope): Listing<Game> {
-        val factory = GamesDataSourceGQL.Factory(clientId, gql, coroutineScope)
+    override fun loadTagsGQL(clientId: String?, getGameTags: Boolean, gameId: String?, gameName: String?, query: String?, coroutineScope: CoroutineScope): Listing<Tag> {
+        val factory = TagsDataSourceGQL.Factory(clientId, getGameTags, gameId, gameName, query, gql, coroutineScope)
+        val config = PagedList.Config.Builder()
+            .setPageSize(10000)
+            .setInitialLoadSizeHint(10000)
+            .setPrefetchDistance(5)
+            .setEnablePlaceholders(false)
+            .build()
+        return Listing.create(factory, config)
+    }
+    override fun loadTopGamesGQL(clientId: String?, tags: List<String>?, coroutineScope: CoroutineScope): Listing<Game> {
+        val factory = GamesDataSourceGQL.Factory(clientId, tags, gql, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(30)
             .setInitialLoadSizeHint(30)
@@ -198,8 +209,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadTopStreamsGQL(clientId: String?, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
-        val factory = StreamsDataSourceGQL.Factory(clientId, gql, coroutineScope)
+    override fun loadTopStreamsGQL(clientId: String?, tags: List<String>?, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
+        val factory = StreamsDataSourceGQL.Factory(clientId, tags, gql, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
             builder.setPageSize(10)
@@ -214,8 +225,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadGameStreamsGQL(clientId: String?, gameName: String?, coroutineScope: CoroutineScope): Listing<Stream> {
-        val factory = GameStreamsDataSourceGQL.Factory(clientId, gameName, gql, coroutineScope)
+    override fun loadGameStreamsGQL(clientId: String?, gameName: String?, tags: List<String>?, coroutineScope: CoroutineScope): Listing<Stream> {
+        val factory = GameStreamsDataSourceGQL.Factory(clientId, gameName, tags, gql, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(10)
             .setInitialLoadSizeHint(15)

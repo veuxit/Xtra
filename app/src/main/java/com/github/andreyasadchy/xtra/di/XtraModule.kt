@@ -25,6 +25,7 @@ import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
+import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetDeserializer
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -154,6 +155,11 @@ class XtraModule {
                 .registerTypeAdapter(ChannelClipsDataResponse::class.java, ChannelClipsDataDeserializer())
                 .registerTypeAdapter(SearchChannelDataResponse::class.java, SearchChannelDataDeserializer())
                 .registerTypeAdapter(SearchGameDataResponse::class.java, SearchGameDataDeserializer())
+                .registerTypeAdapter(TagGameDataResponse::class.java, TagGameDataDeserializer())
+                .registerTypeAdapter(TagGameStreamDataResponse::class.java, TagGameStreamDataDeserializer())
+                .registerTypeAdapter(TagStreamDataResponse::class.java, TagStreamDataDeserializer())
+                .registerTypeAdapter(TagSearchGameStreamDataResponse::class.java, TagSearchGameStreamDataDeserializer())
+                .registerTypeAdapter(TagSearchDataResponse::class.java, TagSearchDataDeserializer())
                 .create())
     }
 

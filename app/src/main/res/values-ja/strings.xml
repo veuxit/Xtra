@@ -177,7 +177,6 @@
     <string name="settings_token_summary">ライブストリームのみ、Adblockを無効</string>
     <string name="settings_api">API</string>
     <string name="not_supported">サポートされていません</string>
-    <string name="Android_9_required">Android 9以上が必要</string>
     <string name="token_random_deviceid">ランダムなデバイスID</string>
     <string name="api_usehelix">ログイン時にHelix Apiを使用する</string>
     <string name="api_helix">HelixクライアントID</string>
@@ -238,6 +237,7 @@
     <string name="user_admin">管理者</string>
     <string name="user_global_mod">グローバルモデレーター</string>
     <string name="uptime">%s 経過</string>
-    <string name="Android_5_required">Android_5_required</string>
-    <string name="play_services_not_available">play_services_not_available</string>
+    <string name="select_language">言語を選択</string>
+    <string name="show_tags">Show tags</string>
+    <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
 </resources>

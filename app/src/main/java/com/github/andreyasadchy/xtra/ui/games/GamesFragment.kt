@@ -22,12 +22,7 @@ import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
-import kotlinx.android.synthetic.main.fragment_channel.*
 import kotlinx.android.synthetic.main.fragment_games.*
-import kotlinx.android.synthetic.main.fragment_games.appBar
-import kotlinx.android.synthetic.main.fragment_games.menu
-import kotlinx.android.synthetic.main.fragment_games.search
-import kotlinx.android.synthetic.main.fragment_media.*
 
 class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapter<Game>>(), Scrollable {
 
@@ -35,8 +30,20 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
         fun openGame(id: String?, name: String?)
     }
 
+    interface OnTagGames {
+        fun openTagGames(tags: List<String>?)
+    }
+
+    companion object {
+        fun newInstance(tags: List<String>?) = GamesFragment().apply {
+            bundle.putStringArray(C.TAGS, tags?.toTypedArray())
+            arguments = bundle
+        }
+    }
+
+    val bundle = Bundle()
     override val viewModel by viewModels<GamesViewModel> { viewModelFactory }
-    override val adapter: BasePagedListAdapter<Game> by lazy { GamesAdapter(this, requireActivity() as MainActivity) }
+    override val adapter: BasePagedListAdapter<Game> by lazy { GamesAdapter(this, requireActivity() as MainActivity, requireActivity() as MainActivity) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_games, container, false)
@@ -74,6 +81,7 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
                 show()
             }
         }
+        sortBar.setOnClickListener { activity.openTagSearch(getGameTags = true) }
     }
 
     override fun scrollToTop() {
@@ -90,9 +98,10 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
 
     override fun initialize() {
         super.initialize()
-        if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
-            viewModel.loadGames(true, requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), requireContext().prefs().getString(C.TOKEN, ""))
+        if (arguments?.getStringArray(C.TAGS) == null && requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
+            viewModel.loadGames(useHelix = true, showTags = requireContext().prefs().getBoolean(C.UI_TAGS, true), clientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = requireContext().prefs().getString(C.TOKEN, ""))
         } else {
-            viewModel.loadGames(false, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))}
+            viewModel.loadGames(useHelix = false, showTags = requireContext().prefs().getBoolean(C.UI_TAGS, true), clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), tags = arguments?.getStringArray(C.TAGS)?.toList())
+        }
     }
 }
