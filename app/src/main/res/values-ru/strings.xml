@@ -209,7 +209,7 @@
     <string name="show_uptime">Show stream uptime</string>
     <string name="chat_first">First time chat</string>
     <string name="seconds_full">%s секунд</string>
-    <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
+    <string name="show_scrolltop">Show scroll to top button</string>
     <string name="chat_reward">Channel point redemption</string>
     <string name="chatFirstMsgEntries1">Show type and change background color</string>
     <string name="chatFirstMsgEntries2">Change background color</string>
@@ -231,4 +231,5 @@
     <string name="show_tags">Show tags</string>
     <string name="recentMsg_enable">Load recent messages</string>
     <string name="recentMsg_limit">Recent message limit</string>
+    <string name="play_services_not_available">Google Play Services are not available. Some functions may not work correctly</string>
 </resources>
