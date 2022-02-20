@@ -190,7 +190,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 if (stream?.viewer_count != null) {
                     streamLayout.visible()
                     viewers.visible()
-                    viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewer_count!!, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                    viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewer_count!!)
                 }
                 if (requireContext().prefs().getBoolean(C.UI_UPTIME, true)) {
                     if (stream?.started_at != null) {
@@ -216,11 +216,11 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                     }
                     if (user.followers_count != null) {
                         userFollowers.visible()
-                        userFollowers.text = requireContext().getString(R.string.followers, TwitchApiHelper.formatCount(user.followers_count, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)))
+                        userFollowers.text = requireContext().getString(R.string.followers, TwitchApiHelper.formatCount(requireContext(), user.followers_count))
                     }
                     if (user.view_count != null) {
                         userViews.visible()
-                        userViews.text = TwitchApiHelper.formatViewsCount(requireContext(), user.view_count, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                        userViews.text = TwitchApiHelper.formatViewsCount(requireContext(), user.view_count)
                     }
                     val broadcasterType = if (user.broadcaster_type != null) { TwitchApiHelper.getUserType(requireContext(), user.broadcaster_type) } else null
                     val type = if (user.type != null) { TwitchApiHelper.getUserType(requireContext(), user.type) } else null

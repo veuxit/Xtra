@@ -66,6 +66,7 @@ class ChatViewModel @Inject constructor(
     val cheerEmotes = MutableLiveData<List<CheerEmote>>()
     var emoteSetsAdded = false
     val emotesFromSets = MutableLiveData<List<Emote>>()
+    val emotesLoaded = MutableLiveData<Boolean>()
     val roomState = MutableLiveData<RoomState>()
     val command = MutableLiveData<Command>()
 
@@ -231,6 +232,7 @@ class ChatViewModel @Inject constructor(
                     Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
                 }
             }
+            emotesLoaded.value = true
         }
     }
 
