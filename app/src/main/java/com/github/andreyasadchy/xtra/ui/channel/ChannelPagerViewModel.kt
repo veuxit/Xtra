@@ -96,7 +96,7 @@ class ChannelPagerViewModel @Inject constructor(
         if (_stream.value == null) {
             loadStream(useHelix, clientId, token, _userId.value, _userLogin.value, _userName.value, _profileImageURL.value)
         }
-        if (_user.value == null) {
+        if (useHelix && _user.value == null) {
             loadUser(useHelix, clientId, token, _userId.value)
         }
     }
