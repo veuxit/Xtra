@@ -20,7 +20,7 @@
     <string name="live">ライブ</string>
     <string name="videos">ビデオ</string>
     <string name="clips">クリップ</string>
-    <string name="scroll_down">スクロールダウン</string>
+    <string name="scroll_down">さらにメッセージが続きます</string>
     <string name="auto">自動</string>
     <string name="source">ソース</string>
     <string name="audio_only">オーディオのみ</string>
@@ -72,7 +72,7 @@
     <string name="landscape_column_count">ランドスケープのカラム数</string>
     <string name="internal_storage">内部ストレージ</string>
     <string name="save_to">保存する場所</string>
-    <string name="no_storage_detected">利用可能なストレージが検出されませんでした。(端末がコンピュータに接続されている可能性が高いです)</string>
+    <string name="no_storage_detected">利用可能なストレージが検出されませんでした。 (端末がコンピュータに接続されている可能性が高いです)</string>
     <string name="rewind">巻き戻し</string>
     <string name="forward">早送り</string>
     <string name="seconds_full">%s 秒</string>
@@ -140,7 +140,7 @@
     <string name="logout_msg">ログインしています %s</string>
     <string name="language">使用言語</string>
     <string name="cutoutmode">ディスプレイカットアウトモード</string>
-    <string name="cutoutmode_desc">カットアウト領域の中にコンテンツを表示する</string>
+    <string name="cutoutmode_desc">カットアウト領域の中にコンテンツを表示します</string>
     <string name="cutoutmode_default">標準 - ポートレートモードのみ</string>
     <string name="cutoutmode_always">常時 - 縦向きと横向きの両モード</string>
     <string name="never">しない</string>
@@ -169,7 +169,7 @@
     <string name="player_chatbartoggle">チャットバーの切り替えを表示</string>
     <string name="player_chattoggle">チャットの表示切り替えボタン</string>
     <string name="player_fullscreen">フルスクリーン表示ボタン</string>
-    <string name="player_viewericon">視聴数の横にアイコンを表示</string>
+    <string name="player_viewericon">視聴者数の横にアイコンを表示</string>
     <string name="player_pause">ライブ配信の一時停止ボタンを表示</string>
     <string name="settings_ui">UI</string>
     <string name="settings_chat">チャット</string>
@@ -245,4 +245,14 @@
     <string name="recentMsg_limit">最新のメッセージの上限</string>
     <string name="last_broadcast_date">前回の放送 %s</string>
     <string name="followed_at">フォローしています %s</string>
+    <string name="show_usernotice">ユーザーへの通知を表示 (サブスクライブ、Raid)</string>
+    <string name="show_clearmsg">メッセージの削除を表示</string>
+    <string name="show_clearchat">一時追放と無期限追放を表示</string>
+    <string name="player_gamesbutton">VODにゲームチャプターボタンを表示</string>
+    <string name="copy_fullmsg">Copy full message</string>
+    <string name="settings_debug">DEBUG</string>
+    <string name="show_copy_fullmsg">Copy full IRC messages</string>
+    <string name="chat_disconnect">Disconnecting from %1$s - %2$s</string>
+    <string name="chat_send_msg_error">Error sending message - %s</string>
+    <string name="chat_socket_error">Error while closing socket - %s</string>
 </resources>
