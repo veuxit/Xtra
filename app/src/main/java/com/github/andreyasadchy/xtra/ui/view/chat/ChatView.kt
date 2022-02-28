@@ -301,10 +301,10 @@ class ChatView : ConstraintLayout {
     }
 
     fun enableChatInteraction(enableMessaging: Boolean) {
-        adapter.setOnClickListener { original, formatted, userId ->
+        adapter.setOnClickListener { original, formatted, userId, fullMsg ->
             editText.hideKeyboard()
             editText.clearFocus()
-            MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId).show(fragment.childFragmentManager, null)
+            MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId, fullMsg).show(fragment.childFragmentManager, null)
         }
         if (enableMessaging) {
             editText.addTextChangedListener(onTextChanged = { text, _, _, _ ->
