@@ -10,7 +10,7 @@ import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsManifest
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsMediaSource
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.LocalFollowRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
@@ -28,7 +28,7 @@ class StreamPlayerViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val gql: GraphQLRepository,
     repository: TwitchService,
-    localFollows: LocalFollowRepository) : HlsPlayerViewModel(context, repository, localFollows) {
+    localFollowsChannel: LocalFollowChannelRepository) : HlsPlayerViewModel(context, repository, localFollowsChannel) {
 
     private val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>

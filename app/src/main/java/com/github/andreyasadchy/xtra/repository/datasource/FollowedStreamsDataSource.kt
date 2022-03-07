@@ -3,13 +3,13 @@ package com.github.andreyasadchy.xtra.repository.datasource
 import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.repository.LocalFollowRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import kotlinx.coroutines.CoroutineScope
 
 class FollowedStreamsDataSource(
     private val useHelix: Boolean,
-    private val localFollows: LocalFollowRepository,
+    private val localFollowsChannel: LocalFollowChannelRepository,
     private val repository: TwitchService,
     private val gqlClientId: String?,
     private val helixClientId: String?,
@@ -23,9 +23,9 @@ class FollowedStreamsDataSource(
         loadInitial(params, callback) {
             val list = mutableListOf<Stream>()
             val userIds = mutableListOf<String>()
-            if (localFollows.loadFollows().isNotEmpty()) {
+            if (localFollowsChannel.loadFollows().isNotEmpty()) {
                 val ids = mutableListOf<String>()
-                for (i in localFollows.loadFollows()) {
+                for (i in localFollowsChannel.loadFollows()) {
                     ids.add(i.user_id)
                 }
                 for (localIds in ids.chunked(100)) {
@@ -105,7 +105,7 @@ class FollowedStreamsDataSource(
 
     class Factory(
         private val useHelix: Boolean,
-        private val localFollows: LocalFollowRepository,
+        private val localFollowsChannel: LocalFollowChannelRepository,
         private val repository: TwitchService,
         private val gqlClientId: String?,
         private val helixClientId: String?,
@@ -115,6 +115,6 @@ class FollowedStreamsDataSource(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Stream, FollowedStreamsDataSource>() {
 
         override fun create(): DataSource<Int, Stream> =
-                FollowedStreamsDataSource(useHelix, localFollows, repository, gqlClientId, helixClientId, userToken, user_id, api, coroutineScope).also(sourceLiveData::postValue)
+                FollowedStreamsDataSource(useHelix, localFollowsChannel, repository, gqlClientId, helixClientId, userToken, user_id, api, coroutineScope).also(sourceLiveData::postValue)
     }
 }

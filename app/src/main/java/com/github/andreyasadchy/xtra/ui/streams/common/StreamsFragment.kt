@@ -2,32 +2,21 @@ package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.os.Bundle
 import androidx.fragment.app.viewModels
+import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
+import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.streams.BaseStreamsFragment
 import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
+import kotlinx.android.synthetic.main.fragment_media.*
 import kotlinx.android.synthetic.main.fragment_streams.*
 
-class StreamsFragment : BaseStreamsFragment<StreamsViewModel>() {
+class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), FollowFragment {
 
-    interface OnTagStreams {
-        fun openTagStreams(tags: List<String>?, gameId: String?, gameName: String?)
-    }
-
-    companion object {
-        fun newInstance(tags: List<String>?, gameId: String?, gameName: String?) = StreamsFragment().apply {
-            bundle.putStringArray(C.TAGS, tags?.toTypedArray())
-            bundle.putString(C.GAME_ID, gameId)
-            bundle.putString(C.GAME_NAME, gameName)
-            arguments = bundle
-        }
-    }
-
-    val bundle = Bundle()
     override val viewModel by viewModels<StreamsViewModel> { viewModelFactory }
 
     override val adapter: BasePagedListAdapter<Stream> by lazy {
@@ -57,6 +46,12 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>() {
         sortBar.visible()
         if (arguments?.getString(C.GAME_ID) != null && arguments?.getString(C.GAME_NAME) != null) {
             sortBar.setOnClickListener { activity.openTagSearch(gameId = arguments?.getString(C.GAME_ID), gameName = arguments?.getString(C.GAME_NAME)) }
+            if (requireContext().prefs().getBoolean(C.UI_FOLLOW, true)) {
+                parentFragment?.followGame?.let { initializeFollow(this, viewModel, it, User.get(activity), requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), requireContext().prefs().getString(C.GQL_CLIENT_ID, "")) }
+            }
+            if (arguments?.getBoolean(C.CHANNEL_UPDATELOCAL) == true) {
+                viewModel.updateLocalGame(context = requireContext(), helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = requireContext().prefs().getString(C.TOKEN, ""))
+            }
         } else {
             sortBar.setOnClickListener { activity.openTagSearch() }
         }

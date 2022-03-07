@@ -8,7 +8,7 @@ import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.LocalFollowRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
@@ -20,7 +20,7 @@ import javax.inject.Inject
 class ChannelPagerViewModel @Inject constructor(
     private val repository: TwitchService,
     private val gql: GraphQLRepository,
-    private val localFollows: LocalFollowRepository,
+    private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository) : ViewModel(), FollowViewModel {
 
     private val _stream = MutableLiveData<Stream?>()
@@ -44,9 +44,9 @@ class ChannelPagerViewModel @Inject constructor(
         get() { return _profileImageURL.value }
     override lateinit var follow: FollowLiveData
 
-    override fun setUser(user: User, clientId: String?) {
+    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollows, userId, userLogin, userName, channelLogo, repository, clientId, user, viewModelScope)
+            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, viewModelScope = viewModelScope)
         }
     }
 
@@ -111,7 +111,7 @@ class ChannelPagerViewModel @Inject constructor(
                     } catch (e: Exception) {
                         stream.channelLogo
                     }
-                    localFollows.getFollowById(stream.user_id)?.let { localFollows.updateFollow(it.apply {
+                    localFollowsChannel.getFollowById(stream.user_id)?.let { localFollowsChannel.updateFollow(it.apply {
                         user_login = stream.user_login
                         user_name = stream.user_name
                         channelLogo = downloadedLogo }) }
