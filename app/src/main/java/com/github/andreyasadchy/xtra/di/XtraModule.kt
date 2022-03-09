@@ -6,10 +6,7 @@ import android.util.Log
 import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.api.*
 import com.github.andreyasadchy.xtra.model.chat.*
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataDeserializer
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataDeserializer
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
+import com.github.andreyasadchy.xtra.model.gql.channel.*
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.*
@@ -156,6 +153,7 @@ class XtraModule {
                 .registerTypeAdapter(GameClipsDataResponse::class.java, GameClipsDataDeserializer())
                 .registerTypeAdapter(ChannelVideosDataResponse::class.java, ChannelVideosDataDeserializer())
                 .registerTypeAdapter(ChannelClipsDataResponse::class.java, ChannelClipsDataDeserializer())
+                .registerTypeAdapter(ChannelViewerListDataResponse::class.java, ChannelViewerListDeserializer())
                 .registerTypeAdapter(SearchChannelDataResponse::class.java, SearchChannelDataDeserializer())
                 .registerTypeAdapter(SearchGameDataResponse::class.java, SearchGameDataDeserializer())
                 .registerTypeAdapter(TagGameDataResponse::class.java, TagGameDataDeserializer())
@@ -163,7 +161,7 @@ class XtraModule {
                 .registerTypeAdapter(TagStreamDataResponse::class.java, TagStreamDataDeserializer())
                 .registerTypeAdapter(TagSearchGameStreamDataResponse::class.java, TagSearchGameStreamDataDeserializer())
                 .registerTypeAdapter(TagSearchDataResponse::class.java, TagSearchDataDeserializer())
-            .registerTypeAdapter(VodGamesDataResponse::class.java, VodGamesDataDeserializer())
+                .registerTypeAdapter(VodGamesDataResponse::class.java, VodGamesDataDeserializer())
                 .create())
     }
 

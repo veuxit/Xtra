@@ -33,27 +33,27 @@ abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePa
                 })
             }
         })
-        recyclerView.adapter = adapter
+        recyclerView?.adapter = adapter
     }
 
     override fun initialize() {
         viewModel.list.observe(viewLifecycleOwner, Observer {
             adapter.submitList(it)
-            nothingHere.isVisible = it.isEmpty()
+            nothingHere?.isVisible = it.isEmpty()
         })
         viewModel.loadingState.observe(viewLifecycleOwner, Observer {
             val isLoading = it == LoadingState.LOADING
             val isListEmpty = adapter.currentList.isNullOrEmpty()
             if (isLoading) {
-                nothingHere.gone()
+                nothingHere?.gone()
             }
-            progressBar.isVisible = isLoading && isListEmpty
-            if (swipeRefresh.isEnabled) {
+            progressBar?.isVisible = isLoading && isListEmpty
+            if (swipeRefresh?.isEnabled == true) {
                 swipeRefresh.isRefreshing = isLoading && !isListEmpty
             }
         })
         viewModel.pagingState.observe(viewLifecycleOwner, Observer(adapter::setPagingState))
-        if (swipeRefresh.isEnabled) {
+        if (swipeRefresh?.isEnabled == true) {
             swipeRefresh.setOnRefreshListener { viewModel.refresh() }
         }
     }
