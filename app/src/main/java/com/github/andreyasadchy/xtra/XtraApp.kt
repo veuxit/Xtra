@@ -7,10 +7,19 @@ import androidx.multidex.MultiDex
 import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
+import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
 import dagger.android.HasAndroidInjector
+import okhttp3.TlsVersion
+import org.conscrypt.Conscrypt
+import java.security.KeyStore
+import java.security.Security
 import javax.inject.Inject
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 
 class XtraApp : Application(), HasAndroidInjector {
@@ -24,6 +33,15 @@ class XtraApp : Application(), HasAndroidInjector {
 
     override fun onCreate() {
         super.onCreate()
+        Security.insertProviderAt(Conscrypt.newProvider(), 1)
+        val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
+            init(null as KeyStore?)
+            trustManagers.first { it is X509TrustManager } as X509TrustManager
+        }
+        val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
+        sslContext.init(null, arrayOf(trustManager), null)
+        HttpsURLConnection.setDefaultSSLSocketFactory(TlsSocketFactory(sslContext.socketFactory))
+
         INSTANCE = this
         AppInjector.init(this)
 

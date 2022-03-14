@@ -148,10 +148,6 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         })
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
-        if (notInitialized) {
-            installPlayServicesIfNeeded()
-            handleIntent(intent)
-        }
         restorePlayerFragment()
     }
 

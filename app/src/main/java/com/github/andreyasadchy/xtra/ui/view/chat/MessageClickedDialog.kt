@@ -95,8 +95,6 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
                 reply.gone()
                 copyMessage.gone()
             }
-        } else {
-            viewProfile.visible()
         }
         copyClip.setOnClickListener {
             clipboard?.setPrimaryClip(ClipData.newPlainText("label", if (userId != null) msg.substring(msg.indexOf(':') + 2) else msg))
