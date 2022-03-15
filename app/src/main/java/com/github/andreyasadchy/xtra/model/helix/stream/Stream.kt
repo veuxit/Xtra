@@ -21,7 +21,8 @@ data class Stream(
         val thumbnail_url: String? = null,
 
         var profileImageURL: String? = null,
-        val tags: List<Tag>? = null) : Parcelable {
+        val tags: List<Tag>? = null,
+        val lastBroadcast: String? = null) : Parcelable {
 
         val thumbnail: String?
                 get() = TwitchApiHelper.getTemplateUrl(thumbnail_url, "video")

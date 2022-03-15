@@ -40,7 +40,7 @@ class XtraApp : Application(), HasAndroidInjector {
         }
         val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
         sslContext.init(null, arrayOf(trustManager), null)
-        HttpsURLConnection.setDefaultSSLSocketFactory(TlsSocketFactory(sslContext.socketFactory))
+        HttpsURLConnection.setDefaultSSLSocketFactory(TlsSocketFactory(sslContext.socketFactory)) // enable TLS 1.2 for exoplayer
 
         INSTANCE = this
         AppInjector.init(this)
