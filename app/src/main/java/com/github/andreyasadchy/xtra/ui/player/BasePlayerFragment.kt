@@ -497,7 +497,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
     }
 
     private fun lockScreen() {
-        if ((requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive) {
+        if ((requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager).isScreenOn) {
             try {
                 (requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
             } catch (e: SecurityException) {
