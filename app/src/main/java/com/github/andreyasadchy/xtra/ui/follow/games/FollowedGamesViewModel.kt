@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.follow.games
 
 import android.app.Application
+import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -18,17 +19,17 @@ class FollowedGamesViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadFollowedGames(it.gqlClientId, it.helixClientId, it.user.token, it.user.id, viewModelScope)
+        repository.loadFollowedGames(it.user.id, it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
     }
 
-    fun setUser(gqlClientId: String?, helixClientId: String?, user: User) {
+    fun setUser(user: User, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
         if (filter.value == null) {
-            filter.value = Filter(gqlClientId, helixClientId, user)
+            filter.value = Filter(user, gqlClientId, apiPref)
         }
     }
 
     private data class Filter(
+        val user: User,
         val gqlClientId: String?,
-        val helixClientId: String?,
-        val user: User)
+        val apiPref: ArrayList<Pair<Long?, String?>?>)
 }

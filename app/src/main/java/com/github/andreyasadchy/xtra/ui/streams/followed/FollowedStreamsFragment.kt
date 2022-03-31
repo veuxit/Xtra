@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.streams.BaseStreamsFragment
 import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 
 class FollowedStreamsFragment : BaseStreamsFragment<FollowedStreamsViewModel>() {
@@ -33,10 +34,14 @@ class FollowedStreamsFragment : BaseStreamsFragment<FollowedStreamsViewModel>() 
 
     override fun initialize() {
         super.initialize()
-        if (requireContext().prefs().getBoolean(C.API_USEHELIX, true) && requireContext().prefs().getString(C.USERNAME, "") != "") {
-            viewModel.loadStreams(useHelix = true, helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = User.get(requireContext()).token, channelId = User.get(requireContext()).id, thumbnailsEnabled = !compactStreams)
-        } else {
-            viewModel.loadStreams(useHelix = false, gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), token = User.get(requireContext()).token, channelId = User.get(requireContext()).id, thumbnailsEnabled = !compactStreams)
-        }
+        viewModel.loadStreams(
+            userId = User.get(requireContext()).id,
+            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+            helixToken = User.get(requireContext()).helixToken,
+            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlToken = User.get(requireContext()).gqlToken,
+            apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults),
+            thumbnailsEnabled = !compactStreams
+        )
     }
 }

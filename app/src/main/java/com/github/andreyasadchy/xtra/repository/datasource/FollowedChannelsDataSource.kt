@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.repository.datasource
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
@@ -10,8 +11,12 @@ import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.follows.Follow
+import com.github.andreyasadchy.xtra.model.helix.follows.Order
+import com.github.andreyasadchy.xtra.model.helix.follows.Sort
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.coroutines.CoroutineScope
@@ -22,11 +27,18 @@ import java.io.File
 class FollowedChannelsDataSource(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
+    private val userId: String?,
     private val helixClientId: String?,
-    private val userToken: String?,
-    private val userId: String,
-    private val api: HelixApi,
+    private val helixToken: String?,
+    private val helixApi: HelixApi,
+    private val gqlClientId: String?,
+    private val gqlToken: String?,
+    private val gqlApi: GraphQLRepository,
+    private val apiPref: ArrayList<Pair<Long?, String?>?>,
+    private val sort: Sort,
+    private val order: Order,
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Follow>(coroutineScope) {
+    private var api: String? = null
     private var offset: String? = null
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Follow>) {
@@ -35,29 +47,118 @@ class FollowedChannelsDataSource(
             for (i in localFollowsChannel.loadFollows()) {
                 list.add(Follow(to_id = i.user_id, to_login = i.user_login, to_name = i.user_name, profileImageURL = i.channelLogo, followLocal = true))
             }
-            if (userId != "") {
-                val get = api.getFollowedChannels(helixClientId, userToken, userId, 100, offset)
-                if (get.data != null) {
-                    for (i in get.data) {
-                        val item = list.find { it.to_id == i.to_id }
-                        if (item == null) {
-                            i.followTwitch = true
-                            list.add(i)
-                        } else {
-                            item.followTwitch = true
-                        }
+            val remote = try {
+                when (apiPref.elementAt(0)?.second) {
+                    C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
+                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial(params) else throw Exception()
+                    else -> throw Exception()
+                }
+            } catch (e: Exception) {
+                try {
+                    when (apiPref.elementAt(1)?.second) {
+                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
+                        C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial(params) else throw Exception()
+                        else -> throw Exception()
                     }
-                    offset = get.pagination?.cursor
+                } catch (e: Exception) {
+                    mutableListOf()
                 }
             }
-            if (list.isNotEmpty()) {
-                val allIds = list.mapNotNull { it.to_id }
-                if (allIds.isNotEmpty()) {
+            if (!remote.isNullOrEmpty()) {
+                for (i in remote) {
+                    val item = list.find { it.to_id == i.to_id }
+                    if (item == null) {
+                        i.followTwitch = true
+                        list.add(i)
+                    } else {
+                        item.followTwitch = true
+                        item.followed_at = i.followed_at
+                        item.lastBroadcast = i.lastBroadcast
+                    }
+                }
+            }
+            val allIds = mutableListOf<String>()
+            for (i in list) {
+                if (i.profileImageURL == null || i.profileImageURL?.contains("image_manager_disk_cache") == true || i.lastBroadcast == null) {
+                    i.to_id?.let { allIds.add(it) }
+                }
+            }
+            if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
+                for (ids in allIds.chunked(100)) {
+                    val get = helixApi.getUserById(helixClientId, helixToken, ids).data
+                    if (get != null) {
+                        for (user in get) {
+                            val item = list.find { it.to_id == user.id }
+                            if (item != null) {
+                                if (item.followLocal) {
+                                    if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                        val appContext = XtraApp.INSTANCE.applicationContext
+                                        item.to_id?.let { id -> user.profile_image_url?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                    }
+                                } else {
+                                    if (item.profileImageURL == null) {
+                                        item.profileImageURL = user.profile_image_url
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (order == Order.ASC) {
+                when (sort) {
+                    Sort.FOLLOWED_AT -> list.sortBy { it.followed_at }
+                    Sort.LAST_BROADCAST -> list.sortBy { it.lastBroadcast }
+                    else -> list.sortBy { it.to_login }
+                }
+            } else {
+                when (sort) {
+                    Sort.FOLLOWED_AT -> list.sortByDescending { it.followed_at }
+                    Sort.LAST_BROADCAST -> list.sortByDescending { it.lastBroadcast }
+                    else -> list.sortByDescending { it.to_login }
+                }
+            }
+            list
+        }
+    }
+
+    private suspend fun helixInitial(params: LoadInitialParams): List<Follow> {
+        api = C.HELIX
+        val get = helixApi.getFollowedChannels(helixClientId, helixToken, userId, 100, offset)
+        return if (get.data != null) {
+            offset = get.pagination?.cursor
+            get.data
+        } else mutableListOf()
+    }
+
+    private suspend fun gqlInitial(params: LoadInitialParams): List<Follow> {
+        api = C.GQL
+        val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
+        return if (!get.data.isNullOrEmpty()) {
+            offset = get.cursor
+            get.data
+        } else mutableListOf()
+    }
+
+    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Follow>) {
+        loadRange(params, callback) {
+            val list = if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.HELIX -> helixRange(params)
+                    C.GQL -> gqlRange(params)
+                    else -> mutableListOf()
+                }
+            } else mutableListOf()
+            for (i in list) {
+                val allIds = mutableListOf<String>()
+                if (i.profileImageURL == null || i.lastBroadcast == null) {
+                    i.to_id?.let { allIds.add(it) }
+                }
+                if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
                     for (ids in allIds.chunked(100)) {
-                        val get = api.getUserById(helixClientId, userToken, ids).data
+                        val get = helixApi.getUserById(helixClientId, helixToken, ids).data
                         if (get != null) {
                             for (user in get) {
-
                                 val item = list.find { it.to_id == user.id }
                                 if (item != null) {
                                     if (item.followLocal) {
@@ -80,46 +181,20 @@ class FollowedChannelsDataSource(
         }
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Follow>) {
-        loadRange(params, callback) {
-            val list = mutableListOf<Follow>()
-            if (offset != null && offset != "") {
-                if (userId != "") {
-                    val get = api.getFollowedChannels(helixClientId, userToken, userId, 100, offset)
-                    if (get.data != null) {
-                        for (i in get.data) {
-                            val item = list.find { it.to_id == i.to_id }
-                            if (item == null) {
-                                i.followTwitch = true
-                                list.add(i)
-                            } else {
-                                item.followTwitch = true
-                            }
-                        }
-                        offset = get.pagination?.cursor
-                    }
-                }
-                if (list.isNotEmpty()) {
-                    val allIds = list.mapNotNull { it.to_id }
-                    if (allIds.isNotEmpty()) {
-                        for (ids in allIds.chunked(100)) {
-                            val get = api.getUserById(helixClientId, userToken, ids).data
-                            if (get != null) {
-                                for (user in get) {
-                                    val item = list.find { it.to_id == user.id }
-                                    if (item != null) {
-                                        if (item.profileImageURL == null) {
-                                            item.profileImageURL = user.profile_image_url
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            list
-        }
+    private suspend fun helixRange(params: LoadRangeParams): List<Follow> {
+        val get = helixApi.getFollowedChannels(helixClientId, helixToken, userId, 100, offset)
+        return if (get.data != null) {
+            offset = get.pagination?.cursor
+            get.data
+        } else mutableListOf()
+    }
+
+    private suspend fun gqlRange(params: LoadRangeParams): List<Follow> {
+        val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
+        return if (!get.data.isNullOrEmpty()) {
+            offset = get.cursor
+            get.data
+        } else mutableListOf()
     }
 
     private fun updateLocalUser(context: Context, userId: String, profileImageURL: String) {
@@ -157,13 +232,19 @@ class FollowedChannelsDataSource(
     class Factory(
         private val localFollowsChannel: LocalFollowChannelRepository,
         private val offlineRepository: OfflineRepository,
+        private val userId: String?,
         private val helixClientId: String?,
-        private val userToken: String?,
-        private val userId: String,
-        private val api: HelixApi,
+        private val helixToken: String?,
+        private val helixApi: HelixApi,
+        private val gqlClientId: String?,
+        private val gqlToken: String?,
+        private val gqlApi: GraphQLRepository,
+        private val apiPref: ArrayList<Pair<Long?, String?>?>,
+        private val sort: Sort,
+        private val order: Order,
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Follow, FollowedChannelsDataSource>() {
 
         override fun create(): DataSource<Int, Follow> =
-                FollowedChannelsDataSource(localFollowsChannel, offlineRepository, helixClientId, userToken, userId, api, coroutineScope).also(sourceLiveData::postValue)
+                FollowedChannelsDataSource(localFollowsChannel, offlineRepository, userId, helixClientId, helixToken, helixApi, gqlClientId, gqlToken, gqlApi, apiPref, sort, order, coroutineScope).also(sourceLiveData::postValue)
     }
 }

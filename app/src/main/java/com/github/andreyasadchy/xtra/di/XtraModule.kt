@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.model.chat.*
 import com.github.andreyasadchy.xtra.model.gql.channel.*
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.*
 import com.github.andreyasadchy.xtra.model.gql.game.*
 import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenDeserializer
 import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenResponse
@@ -162,6 +163,10 @@ class XtraModule {
                 .registerTypeAdapter(TagSearchGameStreamDataResponse::class.java, TagSearchGameStreamDataDeserializer())
                 .registerTypeAdapter(TagSearchDataResponse::class.java, TagSearchDataDeserializer())
                 .registerTypeAdapter(VodGamesDataResponse::class.java, VodGamesDataDeserializer())
+                .registerTypeAdapter(FollowedStreamsDataResponse::class.java, FollowedStreamsDataDeserializer())
+                .registerTypeAdapter(FollowedVideosDataResponse::class.java, FollowedVideosDataDeserializer())
+                .registerTypeAdapter(FollowedChannelsDataResponse::class.java, FollowedChannelsDataDeserializer())
+                .registerTypeAdapter(FollowedGamesDataResponse::class.java, FollowedGamesDataDeserializer())
                 .create())
     }
 

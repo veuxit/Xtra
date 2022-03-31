@@ -1,25 +1,29 @@
 package com.github.andreyasadchy.xtra.ui.channel
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.GlideApp
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 class ChannelPagerViewModel @Inject constructor(
     private val repository: TwitchService,
-    private val gql: GraphQLRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository) : ViewModel(), FollowViewModel {
 
@@ -50,23 +54,15 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun loadStream(useHelix: Boolean, clientId: String?, token: String? = null, channelId: String?, channelLogin: String?, channelName: String?, profileImageURL: String?) {
-        if (useHelix && _userId.value != channelId && channelId != null || !useHelix && _userLogin.value != channelLogin && channelLogin != null) {
+    fun loadStream(channelId: String?, channelLogin: String?, channelName: String?, profileImageURL: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+        if (_userId.value != channelId && channelId != null) {
             _userId.value = channelId
             _userLogin.value = channelLogin
             _userName.value = channelName
             _profileImageURL.value = profileImageURL
             viewModelScope.launch {
                 try {
-                    val stream = if (useHelix) {
-                        val get = repository.loadStream(clientId, token, channelId!!)
-                        if (profileImageURL == null) {
-                            get?.profileImageURL = repository.loadUserById(clientId, token, channelId)?.profile_image_url
-                        }
-                        get
-                    } else {
-                        Stream(user_id = userId, user_login = userLogin, user_name = userName, profileImageURL = profileImageURL, viewer_count = gql.loadViewerCount(clientId, channelLogin).viewers)
-                    }
+                    val stream = repository.loadStream(channelId, channelLogin, helixClientId, helixToken, gqlClientId)
                     _stream.postValue(stream)
                 } catch (e: Exception) {
 
@@ -75,15 +71,11 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun loadUser(useHelix: Boolean, clientId: String?, token: String? = null, channelId: String?) {
+    fun loadUser(channelId: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
         if (channelId != null) {
             viewModelScope.launch {
                 try {
-                    val user = if (useHelix) {
-                        repository.loadUserById(clientId, token, channelId)
-                    } else {
-                        null
-                    }
+                    val user = repository.loadUserById(channelId, helixClientId, helixToken, gqlClientId)
                     _user.postValue(user)
                 } catch (e: Exception) {
 
@@ -92,33 +84,45 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun retry(useHelix: Boolean, clientId: String?, token: String? = null) {
+    fun retry(helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
         if (_stream.value == null) {
-            loadStream(useHelix, clientId, token, _userId.value, _userLogin.value, _userName.value, _profileImageURL.value)
-        }
-        if (useHelix && _user.value == null) {
-            loadUser(useHelix, clientId, token, _userId.value)
+            loadStream(_userId.value, _userLogin.value, _userName.value, _profileImageURL.value, helixClientId, helixToken, gqlClientId)
+        } else {
+            if (_stream.value!!.channelUser == null) {
+                loadUser(_userId.value, helixClientId, helixToken, gqlClientId)
+            }
         }
     }
 
-    fun updateLocalUser(context: Context, stream: Stream) {
+    fun updateLocalUser(context: Context, user: com.github.andreyasadchy.xtra.model.helix.user.User) {
         GlobalScope.launch {
             try {
-                if (stream.user_id != null) {
-                    val glide = GlideApp.with(context)
-                    val downloadedLogo: String? = try {
-                        glide.downloadOnly().load(stream.channelLogo).submit().get().absolutePath
+                if (user.id != null) {
+                    try {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(user.channelLogo)
+                            .into(object: CustomTarget<Bitmap>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
+
+                                }
+
+                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                    DownloadUtils.savePng(context, "profile_pics", user.id, resource)
+                                }
+                            })
                     } catch (e: Exception) {
-                        stream.channelLogo
+
                     }
-                    localFollowsChannel.getFollowById(stream.user_id)?.let { localFollowsChannel.updateFollow(it.apply {
-                        user_login = stream.user_login
-                        user_name = stream.user_name
+                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${user.id}.png").absolutePath
+                    localFollowsChannel.getFollowById(user.id)?.let { localFollowsChannel.updateFollow(it.apply {
+                        user_login = user.login
+                        user_name = user.display_name
                         channelLogo = downloadedLogo }) }
-                    for (i in offlineRepository.getVideosByUserId(stream.user_id.toInt())) {
+                    for (i in offlineRepository.getVideosByUserId(user.id.toInt())) {
                         offlineRepository.updateVideo(i.apply {
-                            channelLogin = stream.user_login
-                            channelName = stream.user_name
+                            channelLogin = user.login
+                            channelName = user.display_name
                             channelLogo = downloadedLogo })
                     }
                 }

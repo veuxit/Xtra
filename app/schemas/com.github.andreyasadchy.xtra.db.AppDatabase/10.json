@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "b4570c3b0b1263d14a95b28723adf56a",
+    "identityHash": "ebacc3c634e315413fb488e294afb219",
     "entities": [
       {
         "tableName": "videos",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url` TEXT NOT NULL, `source_url` TEXT NOT NULL, `source_start_position` INTEGER, `name` TEXT, `channel_id` TEXT, `channel_login` TEXT, `channel_name` TEXT, `channel_logo` TEXT, `thumbnail` TEXT, `gameId` TEXT, `gameName` TEXT, `duration` INTEGER, `upload_date` INTEGER, `download_date` INTEGER NOT NULL, `last_watch_position` INTEGER NOT NULL, `progress` INTEGER NOT NULL, `max_progress` INTEGER NOT NULL, `status` INTEGER NOT NULL, `type` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `is_vod` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url` TEXT NOT NULL, `source_url` TEXT NOT NULL, `source_start_position` INTEGER, `name` TEXT, `channel_id` TEXT, `channel_login` TEXT, `channel_name` TEXT, `channel_logo` TEXT, `thumbnail` TEXT, `gameId` TEXT, `gameName` TEXT, `duration` INTEGER, `upload_date` INTEGER, `download_date` INTEGER NOT NULL, `last_watch_position` INTEGER NOT NULL, `progress` INTEGER NOT NULL, `max_progress` INTEGER NOT NULL, `status` INTEGER NOT NULL, `type` TEXT, `videoId` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `is_vod` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "url",
@@ -119,6 +119,12 @@
           {
             "fieldPath": "type",
             "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "videoId",
+            "columnName": "videoId",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -306,7 +312,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b4570c3b0b1263d14a95b28723adf56a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ebacc3c634e315413fb488e294afb219')"
     ]
   }
 }

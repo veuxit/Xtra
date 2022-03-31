@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.clips.common
 
 import android.app.Application
+import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -28,27 +29,25 @@ class ClipsViewModel @Inject constructor(
         get() = _sortText
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Clip>> = Transformations.map(filter) {
-        if (it.useHelix) {
-            val started = when (it.period) {
-                Period.ALL -> null
-                else -> TwitchApiHelper.getClipTime(it.period)
-            }
-            val ended = when (it.period) {
-                Period.ALL -> null
-                else -> TwitchApiHelper.getClipTime()
-            }
-            repository.loadClips(it.clientId, it.token, it.channelId, it.channelLogin, it.gameId, started, ended, viewModelScope)
+        val started = when (it.period) {
+            Period.ALL -> null
+            else -> TwitchApiHelper.getClipTime(it.period)
+        }
+        val ended = when (it.period) {
+            Period.ALL -> null
+            else -> TwitchApiHelper.getClipTime()
+        }
+        val gqlPeriod = when (it.period) {
+            Period.DAY -> "LAST_DAY"
+            Period.WEEK -> "LAST_WEEK"
+            Period.MONTH -> "LAST_MONTH"
+            else -> "ALL_TIME" }
+        if (it.gameId == null && it.gameName == null) {
+            repository.loadChannelClips(it.channelId, it.channelLogin, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
+                gqlPeriod, it.channelApiPref, viewModelScope)
         } else {
-            val period = when (it.period) {
-                Period.DAY -> "LAST_DAY"
-                Period.WEEK -> "LAST_WEEK"
-                Period.MONTH -> "LAST_MONTH"
-                else -> "ALL_TIME" }
-            if (it.gameName == null) {
-                repository.loadChannelClipsGQL(it.clientId, it.channelLogin, period, viewModelScope)
-            } else {
-                repository.loadGameClipsGQL(it.clientId, it.gameName, period, viewModelScope)
-            }
+            repository.loadGameClips(it.gameId, it.gameName, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
+                gqlPeriod, it.gameApiPref, viewModelScope)
         }
     }
     val period: Period
@@ -60,30 +59,32 @@ class ClipsViewModel @Inject constructor(
         _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count), context.getString(R.string.this_week))
     }
 
-    fun loadClips(useHelix: Boolean, clientId: String?, channelId: String? = null, channelLogin: String? = null, gameId: String? = null, gameName: String? = null, token: String? = null) {
+    fun loadClips(channelId: String? = null, channelLogin: String? = null, gameId: String? = null, gameName: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, channelApiPref: ArrayList<Pair<Long?, String?>?>, gameApiPref: ArrayList<Pair<Long?, String?>?>) {
         if (filter.value == null) {
-            filter.value = Filter(useHelix = useHelix, clientId = clientId, token = token, channelId = channelId, channelLogin = channelLogin, gameId = gameId, gameName = gameName)
+            filter.value = Filter(channelId, channelLogin, gameId, gameName, helixClientId, helixToken, gqlClientId, channelApiPref, gameApiPref)
         } else {
-            filter.value?.copy(useHelix = useHelix, clientId = clientId, token = token, channelId = channelId, channelLogin = channelLogin, gameId = gameId).let {
+            filter.value?.copy(channelId = channelId, channelLogin = channelLogin, gameId = gameId, gameName = gameName, helixClientId = helixClientId, helixToken = helixToken, gqlClientId = gqlClientId, channelApiPref = channelApiPref, gameApiPref = gameApiPref).let {
                 if (filter.value != it)
                     filter.value = it
             }
         }
     }
 
-    fun filter(useHelix: Boolean, clientId: String?, period: Period, languageIndex: Int, text: CharSequence, token: String? = null) {
-        filter.value = filter.value?.copy(useHelix = useHelix, clientId = clientId, token = token, period = period, languageIndex = languageIndex)
+    fun filter(period: Period, languageIndex: Int, text: CharSequence) {
+        filter.value = filter.value?.copy(period = period, languageIndex = languageIndex)
         _sortText.value = text
     }
 
     private data class Filter(
-        val useHelix: Boolean,
-        val clientId: String?,
-        val token: String?,
         val channelId: String?,
         val channelLogin: String?,
         val gameId: String?,
         val gameName: String?,
+        val helixClientId: String?,
+        val helixToken: String?,
+        val gqlClientId: String?,
+        val channelApiPref: ArrayList<Pair<Long?, String?>?>,
+        val gameApiPref: ArrayList<Pair<Long?, String?>?>,
         val period: Period = Period.WEEK,
         val languageIndex: Int = 0)
 

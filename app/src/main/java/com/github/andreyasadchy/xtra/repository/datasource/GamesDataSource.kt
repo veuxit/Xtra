@@ -1,45 +1,101 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
+import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
 
 class GamesDataSource(
-    private val clientId: String?,
-    private val userToken: String?,
-    private val api: HelixApi,
+    private val helixClientId: String?,
+    private val helixToken: String?,
+    private val helixApi: HelixApi,
+    private val gqlClientId: String?,
+    private val tags: List<String>?,
+    private val gqlApi: GraphQLRepository,
+    private val apiPref: ArrayList<Pair<Long?, String?>?>,
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Game>(coroutineScope) {
+    private var api: String? = null
     private var offset: String? = null
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Game>) {
         loadInitial(params, callback) {
-            val get = api.getTopGames(clientId, userToken, params.requestedLoadSize, offset)
-            if (get.data != null) {
-                offset = get.pagination?.cursor
-                get.data
-            } else mutableListOf()
+            try {
+                when (apiPref.elementAt(0)?.second) {
+                    C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
+                    C.GQL -> gqlInitial(params)
+                    else -> throw Exception()
+                }
+            } catch (e: Exception) {
+                try {
+                    when (apiPref.elementAt(1)?.second) {
+                        C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
+                        C.GQL -> gqlInitial(params)
+                        else -> throw Exception()
+                    }
+                } catch (e: Exception) {
+                    mutableListOf()
+                }
+            }
         }
+    }
+
+    private suspend fun helixInitial(params: LoadInitialParams): List<Game> {
+        api = C.HELIX
+        val get = helixApi.getTopGames(helixClientId, helixToken, params.requestedLoadSize, offset)
+        return if (get.data != null) {
+            offset = get.pagination?.cursor
+            get.data
+        } else mutableListOf()
+    }
+
+    private suspend fun gqlInitial(params: LoadInitialParams): List<Game> {
+        api = C.GQL
+        val get = gqlApi.loadTopGames(gqlClientId, tags, params.requestedLoadSize, offset)
+        offset = get.cursor
+        return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Game>) {
         loadRange(params, callback) {
-            val get = api.getTopGames(clientId, userToken, params.loadSize, offset)
-            if (offset != null && offset != "") {
-                if (get.data != null) {
-                    offset = get.pagination?.cursor
-                    get.data
-                } else mutableListOf()
-            } else mutableListOf()
+            when (api) {
+                C.HELIX -> helixRange(params)
+                C.GQL -> gqlRange(params)
+                else -> mutableListOf()
+            }
         }
     }
 
+    private suspend fun helixRange(params: LoadRangeParams): List<Game> {
+        val get = helixApi.getTopGames(helixClientId, helixToken, params.loadSize, offset)
+        return if (offset != null && offset != "") {
+            if (get.data != null) {
+                offset = get.pagination?.cursor
+                get.data
+            } else mutableListOf()
+        } else mutableListOf()
+    }
+
+    private suspend fun gqlRange(params: LoadRangeParams): List<Game> {
+        val get = gqlApi.loadTopGames(gqlClientId, tags, params.loadSize, offset)
+        return if (offset != null && offset != "") {
+            offset = get.cursor
+            get.data
+        } else mutableListOf()
+    }
+
     class Factory(
-        private val clientId: String?,
-        private val userToken: String?,
-        private val api: HelixApi,
+        private val helixClientId: String?,
+        private val helixToken: String?,
+        private val helixApi: HelixApi,
+        private val gqlClientId: String?,
+        private val tags: List<String>?,
+        private val gqlApi: GraphQLRepository,
+        private val apiPref: ArrayList<Pair<Long?, String?>?>,
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Game, GamesDataSource>() {
 
-        override fun create(): DataSource<Int, Game> = GamesDataSource(clientId, userToken, api, coroutineScope).also(sourceLiveData::postValue)
+        override fun create(): DataSource<Int, Game> = GamesDataSource(helixClientId, helixToken, helixApi, gqlClientId, tags, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

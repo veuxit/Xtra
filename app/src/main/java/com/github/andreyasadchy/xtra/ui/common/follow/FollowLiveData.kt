@@ -13,10 +13,8 @@ import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -99,8 +97,8 @@ class FollowLiveData(
             try {
                 if (userId != null) {
                     if (channelLogo == null) {
-                        val get = if (context.prefs().getString(C.USERNAME, "") != "") {
-                            repository.loadGame(helixClientId, user.token, userId)?.boxArt
+                        val get = if (!user.helixToken.isNullOrBlank()) {
+                            repository.loadGameBoxArt(userId, helixClientId, user.helixToken, gqlClientId)
                         } else {
                             null
                         }

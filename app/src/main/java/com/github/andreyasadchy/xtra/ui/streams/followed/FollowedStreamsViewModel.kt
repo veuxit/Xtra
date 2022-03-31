@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.streams.followed
 
+import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -15,11 +16,11 @@ class FollowedStreamsViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Stream>> = Transformations.map(filter) {
-        repository.loadFollowedStreams(it.useHelix, it.gqlClientId, it.helixClientId, it.token, it.channelId, it.thumbnailsEnabled, viewModelScope)
+        repository.loadFollowedStreams(it.userId, it.helixClientId, it.helixToken, it.gqlClientId, it.gqlToken, it.apiPref, it.thumbnailsEnabled, viewModelScope)
     }
 
-    fun loadStreams(useHelix: Boolean, gqlClientId: String? = null, helixClientId: String? = null, token: String? = null, channelId: String, thumbnailsEnabled: Boolean) {
-        Filter(useHelix, gqlClientId, helixClientId, token, channelId, thumbnailsEnabled).let {
+    fun loadStreams(userId: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, gqlToken: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean) {
+        Filter(userId, helixClientId, helixToken, gqlClientId, gqlToken, apiPref, thumbnailsEnabled).let {
             if (filter.value != it) {
                 filter.value = it
             }
@@ -27,10 +28,11 @@ class FollowedStreamsViewModel @Inject constructor(
     }
 
     private data class Filter(
-        val useHelix: Boolean,
-        val gqlClientId: String?,
+        val userId: String?,
         val helixClientId: String?,
-        val token: String?,
-        val channelId: String,
+        val helixToken: String?,
+        val gqlClientId: String?,
+        val gqlToken: String?,
+        val apiPref: ArrayList<Pair<Long?, String?>?>,
         val thumbnailsEnabled: Boolean)
 }

@@ -55,7 +55,7 @@ class StreamPlayerViewModel @Inject constructor(
         .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
         .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
-    fun startStream(clientId: String?, token: String, stream: Stream, useAdBlock: Boolean, randomDeviceId: Boolean, xDeviceId: String, deviceId: String, playerType: String, gqlClientId: String, useHelix: Boolean, loggedIn: Boolean) {
+    fun startStream(helixClientId: String?, helixToken: String, stream: Stream, useAdBlock: Boolean, randomDeviceId: Boolean, xDeviceId: String, deviceId: String, playerType: String, gqlClientId: String) {
         this.useAdBlock = useAdBlock
         this.randomDeviceId = randomDeviceId
         this.xDeviceId = xDeviceId
@@ -68,11 +68,14 @@ class StreamPlayerViewModel @Inject constructor(
             viewModelScope.launch {
                 while (isActive) {
                     try {
-                        val s = if (useHelix && loggedIn) {
-                            stream.user_id?.let { repository.loadStream(clientId, token, it) }
-                        } else {
-                            stream.viewer_count = stream.user_login?.let { gql.loadViewerCount(gqlClientId, it).viewers }
-                            stream
+                        val s = when {
+                            stream.user_id != null && helixToken.isNotBlank() -> {
+                                repository.loadStream(stream.user_id, stream.user_login, helixClientId, helixToken, gqlClientId)
+                            }
+                            stream.user_login != null -> {
+                                Stream(viewer_count = gql.loadViewerCount(gqlClientId, stream.user_login).viewers)
+                            }
+                            else -> null
                         }
                         _stream.postValue(s)
                         delay(300000L)

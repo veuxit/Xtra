@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.model.helix.stream
 
 import android.os.Parcelable
 import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.helix.user.User
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.android.parcel.Parcelize
 
@@ -22,6 +23,7 @@ data class Stream(
 
         var profileImageURL: String? = null,
         val tags: List<Tag>? = null,
+        val channelUser: User? = null,
         val lastBroadcast: String? = null) : Parcelable {
 
         val thumbnail: String?

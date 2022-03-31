@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.streams.common
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -31,19 +32,15 @@ class StreamsViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Stream>> = Transformations.map(filter) {
-        if (it.useHelix && !it.showTags) {
-            repository.loadTopStreams(it.clientId, it.token, it.gameId, it.thumbnailsEnabled, viewModelScope)
+        if (it.gameId == null && it.gameName == null) {
+            repository.loadTopStreams(it.helixClientId, it.helixToken, it.gqlClientId, it.tags, it.apiPref, it.thumbnailsEnabled, viewModelScope)
         } else {
-            if (it.gameName == null) {
-                repository.loadTopStreamsGQL(it.clientId, it.tags, it.thumbnailsEnabled, viewModelScope)
-            } else {
-                repository.loadGameStreamsGQL(it.clientId, it.gameName, it.tags, viewModelScope)
-            }
+            repository.loadGameStreams(it.gameId, it.gameName, it.helixClientId, it.helixToken, it.gqlClientId, it.tags, it.gameApiPref, it.thumbnailsEnabled, viewModelScope)
         }
     }
 
-    fun loadStreams(useHelix: Boolean, showTags: Boolean, clientId: String?, token: String? = null, channelId: String? = null, gameId: String? = null, gameName: String? = null, tags: List<String>? = null, languages: String? = null, thumbnailsEnabled: Boolean = true) {
-        Filter(useHelix, showTags, clientId, token, channelId, gameId, gameName, tags, languages, thumbnailsEnabled).let {
+    fun loadStreams(gameId: String? = null, gameName: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, tags: List<String>? = null, apiPref: ArrayList<Pair<Long?, String?>?>, gameApiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean = true) {
+        Filter(gameId, gameName, helixClientId, helixToken, gqlClientId, tags, apiPref, gameApiPref, thumbnailsEnabled).let {
             if (filter.value != it) {
                 filter.value = it
             }
@@ -51,16 +48,15 @@ class StreamsViewModel @Inject constructor(
     }
 
     private data class Filter(
-            val useHelix: Boolean,
-            val showTags: Boolean,
-            val clientId: String?,
-            val token: String?,
-            val channelId: String?,
-            val gameId: String?,
-            val gameName: String?,
-            val tags: List<String>?,
-            val languages: String?,
-            val thumbnailsEnabled: Boolean)
+        val gameId: String?,
+        val gameName: String?,
+        val helixClientId: String?,
+        val helixToken: String?,
+        val gqlClientId: String?,
+        val tags: List<String>?,
+        val apiPref: ArrayList<Pair<Long?, String?>?>,
+        val gameApiPref: ArrayList<Pair<Long?, String?>?>,
+        val thumbnailsEnabled: Boolean)
 
     override val userId: String?
         get() { return filter.value?.gameId }
@@ -80,12 +76,12 @@ class StreamsViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalGame(context: Context, helixClientId: String?, token: String?) {
+    fun updateLocalGame(context: Context) {
         GlobalScope.launch {
             try {
                 if (filter.value?.gameId != null) {
-                    val get = if (token != null) {
-                        repository.loadGame(helixClientId, token, filter.value?.gameId!!)?.boxArt
+                    val get = if (!filter.value?.helixToken.isNullOrBlank()) {
+                        repository.loadGameBoxArt(filter.value?.gameId!!, filter.value?.helixClientId, filter.value?.helixToken, filter.value?.gqlClientId)
                     } else {
                         null
                     }
