@@ -1,8 +1,10 @@
-package com.github.andreyasadchy.xtra.ui.downloads
+package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.text.format.DateUtils
 import android.view.View
+import android.widget.LinearLayout
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -19,17 +21,16 @@ class DownloadsAdapter(
     private val clickListener: DownloadsFragment.OnVideoSelectedListener,
     private val channelClickListener: OnChannelSelectedListener,
     private val gameClickListener: GamesFragment.OnGameSelectedListener,
-    private val deleteVideo: (OfflineVideo) -> Unit,
-) : BaseListAdapter<OfflineVideo>(
-        object : DiffUtil.ItemCallback<OfflineVideo>() {
-            override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
-                return oldItem.id == newItem.id
-            }
+    private val deleteVideo: (OfflineVideo) -> Unit) : BaseListAdapter<OfflineVideo>(
+    object : DiffUtil.ItemCallback<OfflineVideo>() {
+        override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
+            return oldItem.id == newItem.id
+        }
 
-            override fun areContentsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
-                return false //bug, oldItem and newItem are sometimes the same
-            }
-        }) {
+        override fun areContentsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
+            return false //bug, oldItem and newItem are sometimes the same
+        }
+    }) {
 
     override val layoutId: Int = R.layout.fragment_downloads_list_item
 
@@ -41,22 +42,16 @@ class DownloadsAdapter(
             setOnLongClickListener { deleteVideo(item); true }
             thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.AUTOMATIC)
             if (item.uploadDate != null) {
-                val text = TwitchApiHelper.formatTime(context, item.uploadDate)
-                if (text != null) {
-                    date.visible()
-                    date.text = context.getString(R.string.uploaded_date, text)
-                } else {
-                    date.gone()
-                }
+                date.visible()
+                date.text = context.getString(R.string.uploaded_date, TwitchApiHelper.formatTime(context, item.uploadDate))
             } else {
                 date.gone()
             }
-            downloadDate.text = context.getString(R.string.downloaded_date, TwitchApiHelper.formatTime(context, item.downloadDate))
-            if (item.duration != null) {
-                duration.visible()
-                duration.text = DateUtils.formatElapsedTime(item.duration / 1000L)
+            if (item.downloadDate != null) {
+                downloadDate.visible()
+                downloadDate.text = context.getString(R.string.downloaded_date, TwitchApiHelper.formatTime(context, item.downloadDate))
             } else {
-                duration.gone()
+                downloadDate.gone()
             }
             if (item.type != null) {
                 val text = TwitchApiHelper.getType(context, item.type)
@@ -97,9 +92,16 @@ class DownloadsAdapter(
                 gameName.gone()
             }
             if (item.duration != null) {
-                item.sourceStartPosition?.let {
-                    sourceStart.text = context.getString(R.string.source_vod_start, DateUtils.formatElapsedTime(it / 1000L))
-                    sourceEnd.text = context.getString(R.string.source_vod_end, DateUtils.formatElapsedTime((it + item.duration) / 1000L))
+                duration.visible()
+                duration.text = DateUtils.formatElapsedTime(item.duration / 1000L)
+                if (item.sourceStartPosition != null)  {
+                    sourceStart.visible()
+                    sourceStart.text = context.getString(R.string.source_vod_start, DateUtils.formatElapsedTime(item.sourceStartPosition / 1000L))
+                    sourceEnd.visible()
+                    sourceEnd.text = context.getString(R.string.source_vod_end, DateUtils.formatElapsedTime((item.sourceStartPosition + item.duration) / 1000L))
+                } else {
+                    sourceStart.gone()
+                    sourceEnd.gone()
                 }
                 if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true) && item.lastWatchPosition != null && item.duration > 0L) {
                     progressBar.progress = (item.lastWatchPosition!!.toFloat() / item.duration * 100).toInt()
@@ -108,12 +110,37 @@ class DownloadsAdapter(
                     progressBar.gone()
                 }
             } else {
+                duration.gone()
+                sourceStart.gone()
+                sourceEnd.gone()
                 progressBar.gone()
             }
-            options.setOnClickListener {
+            if (sourceEnd.isVisible && sourceStart.isVisible) {
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, context.convertDpToPixels(5F), 0, 0)
+                sourceEnd.layoutParams = params
+            }
+            if (type.isVisible && (sourceStart.isVisible || sourceEnd.isVisible)) {
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, context.convertDpToPixels(5F), 0, 0)
+                type.layoutParams = params
+            }
+            options.setOnClickListener { it ->
                 PopupMenu(context, it).apply {
                     inflate(R.menu.offline_item)
-                    setOnMenuItemClickListener { deleteVideo(item); true }
+                    setOnMenuItemClickListener {
+                        when(it.itemId) {
+                            R.id.delete -> deleteVideo(item)
+                            else -> menu.close()
+                        }
+                        true
+                    }
                     show()
                 }
             }

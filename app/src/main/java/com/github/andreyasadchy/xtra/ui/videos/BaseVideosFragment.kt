@@ -10,7 +10,6 @@ import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
@@ -19,14 +18,6 @@ abstract class BaseVideosFragment<VM : BaseVideosViewModel> : PagedListFragment<
 
     interface OnVideoSelectedListener {
         fun startVideo(video: Video, offset: Double? = null)
-    }
-
-    override val adapter: BaseVideosAdapter by lazy {
-        val activity = requireActivity() as MainActivity
-        VideosAdapter(this, activity, activity, activity) {
-            lastSelectedItem = it
-            showDownloadDialog()
-        }
     }
 
     var lastSelectedItem: Video? = null
@@ -41,6 +32,9 @@ abstract class BaseVideosFragment<VM : BaseVideosViewModel> : PagedListFragment<
             viewModel.positions.observe(viewLifecycleOwner) {
                 adapter.setVideoPositions(it)
             }
+        }
+        viewModel.bookmarks.observe(viewLifecycleOwner) {
+            adapter.setBookmarksList(it)
         }
     }
 

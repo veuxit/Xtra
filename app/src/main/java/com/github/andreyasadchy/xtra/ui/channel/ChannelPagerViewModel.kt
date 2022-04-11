@@ -11,6 +11,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
@@ -25,7 +26,8 @@ import javax.inject.Inject
 class ChannelPagerViewModel @Inject constructor(
     private val repository: TwitchService,
     private val localFollowsChannel: LocalFollowChannelRepository,
-    private val offlineRepository: OfflineRepository) : ViewModel(), FollowViewModel {
+    private val offlineRepository: OfflineRepository,
+    private val bookmarksRepository: BookmarksRepository) : ViewModel(), FollowViewModel {
 
     private val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>
@@ -75,7 +77,7 @@ class ChannelPagerViewModel @Inject constructor(
         if (channelId != null) {
             viewModelScope.launch {
                 try {
-                    val user = repository.loadUserById(channelId, helixClientId, helixToken, gqlClientId)
+                    val user = repository.loadUsersById(mutableListOf(channelId), helixClientId, helixToken, gqlClientId)?.firstOrNull()
                     _user.postValue(user)
                 } catch (e: Exception) {
 
@@ -124,6 +126,12 @@ class ChannelPagerViewModel @Inject constructor(
                             channelLogin = user.login
                             channelName = user.display_name
                             channelLogo = downloadedLogo })
+                    }
+                    for (i in bookmarksRepository.getBookmarksByUserId(user.id)) {
+                        bookmarksRepository.updateBookmark(i.apply {
+                            userLogin = user.login
+                            userName = user.display_name
+                            userLogo = downloadedLogo })
                     }
                 }
             } catch (e: Exception) {

@@ -16,7 +16,7 @@ data class Stream(
         val game_name: String? = null,
         val type: String? = null,
         val title: String? = null,
-        var viewer_count: Int? = null,
+        val viewer_count: Int? = null,
         val started_at: String? = null,
         val language: String? = null,
         val thumbnail_url: String? = null,

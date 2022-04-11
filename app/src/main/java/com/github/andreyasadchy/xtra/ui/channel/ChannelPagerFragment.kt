@@ -241,7 +241,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         if (stream?.viewer_count != null) {
             streamLayout.visible()
             viewers.visible()
-            viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewer_count!!)
+            viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewer_count)
         } else {
             viewers.gone()
         }

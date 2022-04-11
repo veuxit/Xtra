@@ -37,11 +37,11 @@ abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePa
     }
 
     override fun initialize() {
-        viewModel.list.observe(viewLifecycleOwner, Observer {
+        viewModel.list.observe(viewLifecycleOwner) {
             adapter.submitList(it)
             nothingHere?.isVisible = it.isEmpty()
-        })
-        viewModel.loadingState.observe(viewLifecycleOwner, Observer {
+        }
+        viewModel.loadingState.observe(viewLifecycleOwner) {
             val isLoading = it == LoadingState.LOADING
             val isListEmpty = adapter.currentList.isNullOrEmpty()
             if (isLoading) {
@@ -51,7 +51,7 @@ abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePa
             if (swipeRefresh?.isEnabled == true) {
                 swipeRefresh.isRefreshing = isLoading && !isListEmpty
             }
-        })
+        }
         viewModel.pagingState.observe(viewLifecycleOwner, Observer(adapter::setPagingState))
         if (swipeRefresh?.isEnabled == true) {
             swipeRefresh.setOnRefreshListener { viewModel.refresh() }

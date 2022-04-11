@@ -1,31 +1,40 @@
 package com.github.andreyasadchy.xtra.ui.videos.game
 
 import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
-import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
+import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.repository.*
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
+import com.github.andreyasadchy.xtra.util.DownloadUtils
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 class GameVideosViewModel @Inject constructor(
         context: Application,
         private val repository: TwitchService,
         playerRepository: PlayerRepository,
-        private val localFollowsGame: LocalFollowGameRepository) : BaseVideosViewModel(playerRepository), FollowViewModel {
+        private val localFollowsGame: LocalFollowGameRepository,
+        private val bookmarksRepository: BookmarksRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository), FollowViewModel {
 
     private val _sortText = MutableLiveData<CharSequence>()
     val sortText: LiveData<CharSequence>
@@ -92,6 +101,68 @@ class GameVideosViewModel @Inject constructor(
     override fun setUser(user: User, helixClientId: String?, gqlClientId: String?) {
         if (!this::follow.isInitialized) {
             follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, viewModelScope = viewModelScope)
+        }
+    }
+
+    fun saveBookmark(context: Context, video: Video) {
+        GlobalScope.launch {
+            val item = bookmarksRepository.getBookmarkById(video.id)
+            if (item != null) {
+                bookmarksRepository.deleteBookmark(context, item)
+            } else {
+                try {
+                    Glide.with(context)
+                        .asBitmap()
+                        .load(video.thumbnail)
+                        .into(object: CustomTarget<Bitmap>() {
+                            override fun onLoadCleared(placeholder: Drawable?) {
+
+                            }
+
+                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                DownloadUtils.savePng(context, "thumbnails", video.id, resource)
+                            }
+                        })
+                } catch (e: Exception) {
+
+                }
+                try {
+                    if (video.channelId != null) {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(video.channelLogo)
+                            .into(object: CustomTarget<Bitmap>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
+
+                                }
+
+                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                    DownloadUtils.savePng(context, "profile_pics", video.channelId!!, resource)
+                                }
+                            })
+                    }
+                } catch (e: Exception) {
+
+                }
+                val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
+                val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
+                bookmarksRepository.saveBookmark(
+                    Bookmark(
+                    id = video.id,
+                    userId = video.channelId,
+                    userLogin = video.channelLogin,
+                    userName = video.channelName,
+                    userLogo = downloadedLogo,
+                    gameId = video.gameId,
+                    gameName = video.gameName,
+                    title = video.title,
+                    createdAt = video.createdAt,
+                    thumbnail = downloadedThumbnail,
+                    type = video.type,
+                    duration = video.duration,
+                )
+                )
+            }
         }
     }
 }

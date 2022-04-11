@@ -37,7 +37,8 @@ interface TwitchService {
     suspend fun loadGameBoxArt(gameId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): String?
     suspend fun loadStream(channelId: String, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?) : Stream?
     suspend fun loadVideo(videoId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): Video?
-    suspend fun loadUserById(channelId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): User?
+    suspend fun loadVideos(ids: List<String>, helixClientId: String?, helixToken: String?): List<Video>?
+    suspend fun loadUsersById(ids: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>?
     suspend fun loadCheerEmotes(userId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<CheerEmote>?
     suspend fun loadEmotesFromSet(clientId: String?, userToken: String?, setIds: List<String>): List<TwitchEmote>?
     suspend fun loadUserFollows(clientId: String?, userToken: String?, userId: String, channelId: String): Boolean

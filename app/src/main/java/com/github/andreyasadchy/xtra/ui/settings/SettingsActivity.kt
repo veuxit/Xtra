@@ -22,8 +22,7 @@ import dagger.android.HasAndroidInjector
 import kotlinx.android.synthetic.main.activity_settings.*
 import javax.inject.Inject
 
-class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-    HasAndroidInjector, Injectable {
+class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPreferenceStartScreenCallback, HasAndroidInjector, Injectable {
 
     @Inject
     lateinit var dispatchingAndroidInjector: DispatchingAndroidInjector<Any>
@@ -143,7 +142,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
 
             findPreference<Preference>("clear_video_positions")!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 viewModel.deletePositions()
-                requireContext().toast(R.string.cleared)
+                requireContext().shortToast(R.string.cleared)
                 true
             }
 
