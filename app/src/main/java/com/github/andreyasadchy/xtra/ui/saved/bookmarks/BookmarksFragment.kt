@@ -80,7 +80,7 @@ class BookmarksFragment : Fragment(), Injectable, Scrollable {
                 )
             }
         }
-        if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrEmpty()) {
+        if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrBlank()) {
             viewModel.loadVideos(
                 context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),

@@ -48,7 +48,7 @@ class ChannelClipsDataSource(
 
     private suspend fun helixInitial(params: LoadInitialParams): List<Clip> {
         api = C.HELIX
-        val get = helixApi.getClips(helixClientId, helixToken, channelId, null, started_at, ended_at, params.requestedLoadSize, offset)
+        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, channelId = channelId, started_at = started_at, ended_at = ended_at, limit = params.requestedLoadSize, cursor = offset)
         val list = mutableListOf<Clip>()
         get.data?.let { list.addAll(it) }
         val userIds = mutableListOf<String>()
@@ -102,7 +102,7 @@ class ChannelClipsDataSource(
     }
 
     private suspend fun helixRange(params: LoadRangeParams): List<Clip> {
-        val get = helixApi.getClips(helixClientId, helixToken, channelId, null, started_at, ended_at, params.loadSize, offset)
+        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, channelId = channelId, started_at = started_at, ended_at = ended_at, limit = params.loadSize, cursor = offset)
         val list = mutableListOf<Clip>()
         if (offset != null && offset != "") {
             get.data?.let { list.addAll(it) }
