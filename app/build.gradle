@@ -121,7 +121,7 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayer"
-    implementation "org.checkerframework:checker-qual:3.21.4"
+    implementation "org.checkerframework:checker-qual:3.22.0"
 
     implementation "com.github.zjupure:webpdecoder:2.0.$glide"
     implementation "com.github.bumptech.glide:glide:$glide"
