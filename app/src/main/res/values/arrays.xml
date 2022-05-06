@@ -132,6 +132,7 @@
         <item>Japanese</item>
         <item>Portuguese (Brazil)</item>
         <item>Russian</item>
+        <item>Turkish</item>
     </string-array>
 
     <string-array name="language">
@@ -142,6 +143,7 @@
         <item>ja</item>
         <item>pt</item>
         <item>ru</item>
+        <item>tr</item>
     </string-array>
 
     <string-array name="cutoutmodeEntries">
