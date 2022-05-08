@@ -111,6 +111,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 createConfigurationContext(config)
             }
             resources.updateConfiguration(config, resources.displayMetrics)
+            application.resources.updateConfiguration(config, resources.displayMetrics)
         }
         if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.root_preferences, false)
