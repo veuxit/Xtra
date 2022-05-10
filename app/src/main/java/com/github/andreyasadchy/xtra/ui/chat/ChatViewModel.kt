@@ -79,7 +79,7 @@ class ChatViewModel @Inject constructor(
     val newMessage: LiveData<ChatMessage>
         get() = _newMessage
 
-    private var chat: ChatController? = null
+    var chat: ChatController? = null
 
     private val _newChatter by lazy { SingleLiveEvent<Chatter>() }
     val newChatter: LiveData<Chatter>
@@ -263,7 +263,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private inner class LiveChatController(
+    inner class LiveChatController(
             private val user: User,
             private val helixClientId: String?,
             private val channelId: String?,
@@ -285,10 +285,7 @@ class ChatViewModel @Inject constructor(
 
         override fun send(message: CharSequence) {
             if (message.toString() == "/dc" || message.toString() == "/disconnect") {
-                chat?.disconnect()
-                loggedInChat?.disconnect()
-                roomState.postValue(RoomState(null, null, null, null, null))
-                command.postValue(Command(type = "disconnect_command"))
+                disconnect()
             } else {
                 loggedInChat?.send(message)
                 val usedEmotes = hashSetOf<RecentEmote>()
@@ -390,6 +387,19 @@ class ChatViewModel @Inject constructor(
                 allEmotesMap.putAll(list.associateBy { it.name })
             }
         }
+
+        fun isActive(): Boolean? {
+            return chat?.isActive
+        }
+
+        fun disconnect() {
+            if (chat?.isActive == true) {
+                chat?.disconnect()
+                loggedInChat?.disconnect()
+                roomState.postValue(RoomState(null, null, null, null, null))
+                command.postValue(Command(type = "disconnect_command"))
+            }
+        }
     }
 
     private inner class VideoChatController(
@@ -427,7 +437,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private abstract inner class ChatController : OnChatMessageReceivedListener, OnUserStateReceivedListener, OnRoomStateReceivedListener, OnCommandReceivedListener {
+    abstract inner class ChatController : OnChatMessageReceivedListener, OnUserStateReceivedListener, OnRoomStateReceivedListener, OnCommandReceivedListener {
         abstract fun send(message: CharSequence)
         abstract fun start()
         abstract fun pause()

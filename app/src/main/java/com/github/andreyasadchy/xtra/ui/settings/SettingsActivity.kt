@@ -155,6 +155,15 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 true
             }
 
+            findPreference<Preference>("player_menu_settings")!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                parentFragmentManager
+                    .beginTransaction()
+                    .replace(R.id.settings, PlayerMenuSettingsFragment())
+                    .addToBackStack(null)
+                    .commit()
+                true
+            }
+
             findPreference<Preference>("buffer_settings")!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 parentFragmentManager
                     .beginTransaction()
@@ -203,6 +212,12 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
     class PlayerButtonSettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.player_button_preferences, rootKey)
+        }
+    }
+
+    class PlayerMenuSettingsFragment : PreferenceFragmentCompat() {
+        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            setPreferencesFromResource(R.xml.player_menu_preferences, rootKey)
         }
     }
 
