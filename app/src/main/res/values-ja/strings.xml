@@ -452,7 +452,7 @@
     <string name="vod_time_left">自動で削除されました %s</string>
     <string name="vod_ignore_user">このユーザーの自動削除を無視する</string>
     <string name="bookmarks">ブックマーク</string>
-    <string name="use_savedpager">保存するページにタブレイアウトを使用する</string>
+    <string name="use_savedpager">保存ページにタブレイアウトを使用する</string>
     <string name="default_saved_tab">標準で保存タブ</string>
     <string name="vod_remove_ignore">無視リストから削除する</string>
     <string name="remove_bookmark">ブックマークの削除</string>
@@ -508,4 +508,5 @@
     <string name="hide">隠す</string>
     <string name="follow_account">Twitchアカウントでフォローする</string>
     <string name="follow_local">ローカルでフォローする</string>
+    <string name="chat_ssl">SSLで接続する</string>
 </resources>
