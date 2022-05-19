@@ -310,10 +310,8 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun pause() {
-            viewModelScope.launch {
-                chat?.disconnect()
-                loggedInChat?.disconnect()
-            }
+            chat?.disconnect()
+            loggedInChat?.disconnect()
         }
 
         override fun stop() {
@@ -398,10 +396,8 @@ class ChatViewModel @Inject constructor(
 
         fun disconnect() {
             if (chat?.isActive == true) {
-                viewModelScope.launch {
-                    chat?.disconnect()
-                    loggedInChat?.disconnect()
-                }
+                chat?.disconnect()
+                loggedInChat?.disconnect()
                 roomState.postValue(RoomState(null, null, null, null, null))
                 command.postValue(Command(type = "disconnect_command"))
             }
