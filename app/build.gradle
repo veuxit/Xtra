@@ -71,9 +71,12 @@ android {
         disable 'ContentDescription'
     }
     namespace 'com.github.andreyasadchy.xtra'
-    configurations.all { //https://stackoverflow.com/questions/41025200/android-view-inflateexception-error-inflating-class-android-webkit-webview
+    configurations.all {
         resolutionStrategy {
-            force 'androidx.appcompat:appcompat:1.1.0-rc01'
+            force 'androidx.appcompat:appcompat:1.1.0-rc01' // https://github.com/crackededed/Xtra/issues/3 https://stackoverflow.com/questions/41025200/android-view-inflateexception-error-inflating-class-android-webkit-webview
+            force 'com.squareup.okhttp3:logging-interceptor:3.12.0'
+            force 'com.squareup.retrofit2:retrofit:2.6.4'
+            force 'com.squareup.retrofit2:converter-gson:2.6.4'
         }
     }
 }
@@ -82,11 +85,6 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
     implementation 'org.conscrypt:conscrypt-android:2.5.2'
-
-    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.0'
-    implementation "com.squareup.retrofit2:retrofit:2.6.4"
-    implementation "com.squareup.retrofit2:converter-gson:2.6.4"
-
     implementation 'androidx.multidex:multidex:2.0.1'
 
     //UI
@@ -111,8 +109,12 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.4.1'
 
     //Misc
+    implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.7'
     implementation 'com.ncapdevi:frag-nav:3.3.0'
     implementation 'com.iheartradio.m3u8:open-m3u8:0.2.6'
+
+    implementation "com.squareup.retrofit2:retrofit:$retrofit"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofit"
 
     implementation "androidx.tonyodev.fetch2:xfetch2:$fetch"
     implementation "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:$fetch"
