@@ -28,7 +28,7 @@ class PubSubWebSocket(
 
     fun disconnect() {
         socket?.close(1000, null)
-        client?.dispatcher?.cancelAll()
+        client?.dispatcher()?.cancelAll()
     }
 
     private fun reconnect() {
