@@ -509,4 +509,7 @@
     <string name="follow_account">Twitchアカウントでフォローする</string>
     <string name="follow_local">ローカルでフォローする</string>
     <string name="chat_ssl">SSLで接続する</string>
+    <string name="redeemed">交換しました %s</string>
+    <string name="user_redeemed">%1$s 交換します %2$s</string>
+    <string name="enable_pubsub">PubSubの有効化</string>
 </resources>
