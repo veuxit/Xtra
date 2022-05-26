@@ -459,8 +459,8 @@
     <string name="saved">保存</string>
     <string name="refresh">更新</string>
     <string name="image_library">画像ライブラリ</string>
-    <string name="imageLibraryEntries1">コイル (Android 9 以上推奨)</string>
-    <string name="imageLibraryEntries2">コイル + グライド WebP (Android 9 未満推奨)</string>
+    <string name="imageLibraryEntries1">コイル</string>
+    <string name="imageLibraryEntries2">コイル + グライド WebP</string>
     <string name="imageLibraryEntries3">グライド</string>
     <string name="background_playback">バックグラウンド再生</string>
     <string name="disabled">無効</string>
@@ -511,5 +511,5 @@
     <string name="chat_ssl">SSLで接続する</string>
     <string name="redeemed">交換しました %s</string>
     <string name="user_redeemed">%1$s 交換します %2$s</string>
-    <string name="enable_pubsub">PubSubの有効化</string>
+    <string name="enable_pubsub">PubSubを有効にする</string>
 </resources>
