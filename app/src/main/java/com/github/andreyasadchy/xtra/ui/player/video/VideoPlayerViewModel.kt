@@ -233,7 +233,7 @@ class VideoPlayerViewModel @Inject constructor(
                 } catch (e: Exception) {
 
                 }
-                val userTypes = video.channelId?.let { repository.loadUserTypes(mutableListOf(it), helixClientId, helixToken, gqlClientId) }?.first()
+                val userTypes = video.channelId?.let { repository.loadUsersById(mutableListOf(it), helixClientId, helixToken, gqlClientId) }?.first()
                 val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
                 val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
                 bookmarksRepository.saveBookmark(
