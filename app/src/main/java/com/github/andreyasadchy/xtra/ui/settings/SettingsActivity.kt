@@ -244,15 +244,20 @@ class SettingsActivity : AppCompatActivity(), HasAndroidInjector, Injectable {
                 activity.recreate()
                 true
             }
-            findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)?.setOnPreferenceChangeListener { _, _ ->
-                changed = true
-                activity.recreate()
-                true
-            }
-            findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)?.setOnPreferenceChangeListener { _, _ ->
-                changed = true
-                activity.recreate()
-                true
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)!!.isVisible = false
+                findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)!!.isVisible = false
+            } else {
+                findPreference<SwitchPreferenceCompat>(C.UI_STATUSBAR)?.setOnPreferenceChangeListener { _, _ ->
+                    changed = true
+                    activity.recreate()
+                    true
+                }
+                findPreference<SwitchPreferenceCompat>(C.UI_NAVBAR)?.setOnPreferenceChangeListener { _, _ ->
+                    changed = true
+                    activity.recreate()
+                    true
+                }
             }
         }
 
