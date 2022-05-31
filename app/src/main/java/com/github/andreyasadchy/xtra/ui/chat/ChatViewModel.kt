@@ -22,15 +22,10 @@ import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
-import kotlin.collections.ArrayList
-import kotlin.collections.Collection
-import kotlin.collections.List
-import kotlin.collections.MutableList
 import kotlin.collections.asReversed
 import kotlin.collections.associateBy
 import kotlin.collections.chunked
 import kotlin.collections.contains
-import kotlin.collections.containsKey
 import kotlin.collections.filter
 import kotlin.collections.forEach
 import kotlin.collections.hashSetOf
@@ -312,7 +307,7 @@ class ChatViewModel @Inject constructor(
                 loggedInChat = TwitchApiHelper.startLoggedInChat(useSSl, user.login, user.gqlToken?.nullIfEmpty() ?: user.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this, this, this, this)
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
-                TwitchApiHelper.startPubSub(channelId, viewModelScope, this, this)
+                pubSub = TwitchApiHelper.startPubSub(channelId, viewModelScope, this, this)
             }
         }
 
