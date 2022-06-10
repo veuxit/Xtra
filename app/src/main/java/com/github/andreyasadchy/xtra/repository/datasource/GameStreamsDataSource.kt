@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.repository.datasource
 import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.helix.stream.Sort
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -15,6 +16,7 @@ class GameStreamsDataSource private constructor(
     private val helixToken: String?,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
+    private val gqlSort: Sort?,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
     private val apiPref: ArrayList<Pair<Long?, String?>?>,
@@ -26,14 +28,14 @@ class GameStreamsDataSource private constructor(
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
+                    C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
                     C.GQL -> gqlInitial(params)
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
+                        C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
                         C.GQL -> gqlInitial(params)
                         else -> throw Exception()
                     }
@@ -70,7 +72,7 @@ class GameStreamsDataSource private constructor(
 
     private suspend fun gqlInitial(params: LoadInitialParams): List<Stream> {
         api = C.GQL
-        val get = gqlApi.loadGameStreams(gqlClientId, gameName, tags, params.requestedLoadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, params.requestedLoadSize, offset)
         offset = get.cursor
         return get.data
     }
@@ -111,7 +113,7 @@ class GameStreamsDataSource private constructor(
     }
 
     private suspend fun gqlRange(params: LoadRangeParams): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlClientId, gameName, tags, params.loadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, params.loadSize, offset)
         return if (offset != null && offset != "") {
             offset = get.cursor
             get.data
@@ -125,12 +127,13 @@ class GameStreamsDataSource private constructor(
         private val helixToken: String?,
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
+        private val gqlSort: Sort?,
         private val tags: List<String>?,
         private val gqlApi: GraphQLRepository,
         private val apiPref: ArrayList<Pair<Long?, String?>?>,
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Stream, GameStreamsDataSource>() {
 
         override fun create(): DataSource<Int, Stream> =
-            GameStreamsDataSource(gameId, gameName, helixClientId, helixToken, helixApi, gqlClientId, tags, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
+            GameStreamsDataSource(gameId, gameName, helixClientId, helixToken, helixApi, gqlClientId, gqlSort, tags, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

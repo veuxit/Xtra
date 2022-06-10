@@ -22,13 +22,14 @@ import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.visible
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
 import kotlinx.android.synthetic.main.fragment_games.*
 
 class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapter<Game>>(), Scrollable {
 
     interface OnGameSelectedListener {
-        fun openGame(id: String?, name: String?, tags: List<String>? = null, updateLocal: Boolean = false)
+        fun openGame(id: String? = null, name: String? = null, tags: List<String>? = null, updateLocal: Boolean = false)
     }
 
     interface OnTagGames {
@@ -81,6 +82,7 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
                 show()
             }
         }
+        sortBar.visible()
         sortBar.setOnClickListener { activity.openTagSearch(getGameTags = true) }
     }
 

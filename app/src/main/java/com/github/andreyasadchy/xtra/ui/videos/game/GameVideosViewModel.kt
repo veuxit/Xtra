@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.core.content.edit
 import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -13,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Period
@@ -24,7 +26,9 @@ import com.github.andreyasadchy.xtra.repository.*
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -115,7 +119,7 @@ class GameVideosViewModel @Inject constructor(
         }
     }
 
-    fun filter(sort: Sort, period: Period, type: BroadcastType, languageIndex: Int, text: CharSequence, saveSort: Boolean) {
+    fun filter(sort: Sort, period: Period, type: BroadcastType, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
         filter.value = filter.value?.copy(saveSort = saveSort, sort = sort, period = period, broadcastType = type, languageIndex = languageIndex)
         _sortText.value = text
         viewModelScope.launch {
@@ -135,7 +139,8 @@ class GameVideosViewModel @Inject constructor(
                     videoType = type.value,
                     videoLanguageIndex = if (filter.value?.helixToken.isNullOrBlank()) null else languageIndex)
                 })?.let { sortGameRepository.save(it) }
-            } else {
+            }
+            if (saveDefault) {
                 (sortValues?.apply {
                     this.saveSort = saveSort
                 } ?: filter.value?.gameId?.let { SortGame(
@@ -156,6 +161,10 @@ class GameVideosViewModel @Inject constructor(
                     videoLanguageIndex = if (filter.value?.helixToken.isNullOrBlank()) null else languageIndex
                 )).let { sortGameRepository.save(it) }
             }
+        }
+        val appContext = XtraApp.INSTANCE.applicationContext
+        if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_GAME_VIDEOS, false)) {
+            appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_VIDEOS, saveDefault) }
         }
     }
 
