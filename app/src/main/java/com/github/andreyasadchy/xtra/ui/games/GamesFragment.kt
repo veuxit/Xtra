@@ -19,17 +19,14 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.*
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
 import kotlinx.android.synthetic.main.fragment_games.*
 
 class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapter<Game>>(), Scrollable {
 
     interface OnGameSelectedListener {
-        fun openGame(id: String?, name: String?, tags: List<String>? = null, updateLocal: Boolean = false)
+        fun openGame(id: String? = null, name: String? = null, tags: List<String>? = null, updateLocal: Boolean = false)
     }
 
     interface OnTagGames {
@@ -57,26 +54,25 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
         }
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
-        val isLoggedIn = User.get(activity) !is NotLoggedIn
+        val user = User.get(activity)
         search.setOnClickListener { activity.openSearch() }
         menu.setOnClickListener { it ->
             PopupMenu(activity, it).apply {
                 inflate(R.menu.top_menu)
-                menu.findItem(R.id.login).title = if (isLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
+                menu.findItem(R.id.login).title = if (user !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
                 setOnMenuItemClickListener {
                     when(it.itemId) {
                         R.id.settings -> { activity.startActivityFromFragment(this@GamesFragment, Intent(activity, SettingsActivity::class.java), 3) }
                         R.id.login -> {
-                            if (!isLoggedIn) {
+                            if (user is NotLoggedIn) {
                                 activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
                             } else {
-                                AlertDialog.Builder(activity)
-                                    .setTitle(getString(R.string.logout_title))
-                                    .setMessage(getString(R.string.logout_msg, context?.prefs()?.getString(C.USERNAME, "")))
-                                    .setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
-                                    .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                                        activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
-                                    .show()
+                                AlertDialog.Builder(activity).apply {
+                                    setTitle(getString(R.string.logout_title))
+                                    user.login?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                    setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
+                                    setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
+                                }.show()
                             }
                         }
                         else -> menu.close()
@@ -86,6 +82,7 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
                 show()
             }
         }
+        sortBar.visible()
         sortBar.setOnClickListener { activity.openTagSearch(getGameTags = true) }
     }
 

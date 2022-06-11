@@ -56,7 +56,6 @@ import dagger.android.DispatchingAndroidInjector
 import dagger.android.HasAndroidInjector
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_media_pager.view.*
-import java.util.*
 import javax.inject.Inject
 
 
@@ -97,18 +96,6 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = prefs()
-        val lang = prefs.getString(C.UI_LANGUAGE, "auto") ?: "auto"
-        if (lang != "auto") {
-            val config = resources.configuration
-            val locale = Locale(lang)
-            Locale.setDefault(locale)
-            config.setLocale(locale)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                createConfigurationContext(config)
-            }
-            resources.updateConfiguration(config, resources.displayMetrics)
-            application.resources.updateConfiguration(config, resources.displayMetrics)
-        }
         if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.root_preferences, false)
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.player_button_preferences, true)
@@ -128,7 +115,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         if (prefs.getBoolean(C.FIRST_LAUNCH, true)) {
             prefs.edit {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                    putString(C.CHAT_IMAGE_LIBRARY, "1")
+                    putString(C.CHAT_IMAGE_LIBRARY, "2")
                 }
                 putBoolean(C.FIRST_LAUNCH, false)
             }
@@ -148,7 +135,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
 
         val notInitialized = savedInstanceState == null
         initNavigation()
-        if ((User.get(this) !is NotLoggedIn && (prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1 < 2)) || (User.get(this) is NotLoggedIn && (prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1 == 0))) {
+        if ((User.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
             fragNavController.initialize(INDEX_FOLLOWED, savedInstanceState)
             if (notInitialized) {
                 navBar.selectedItemId = R.id.fragment_follow
@@ -221,7 +208,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
     override fun onBackPressed() {
         if (!viewModel.isPlayerMaximized) {
             if (fragNavController.isRootFragment) {
-                if ((User.get(this) !is NotLoggedIn && (prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1 < 2)) || (User.get(this) is NotLoggedIn && (prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1 == 0))) {
+                if ((User.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
                     if (fragNavController.currentStackIndex != INDEX_FOLLOWED) {
                         navBar.selectedItemId = R.id.fragment_follow
                     } else {

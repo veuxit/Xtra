@@ -6,10 +6,12 @@ import java.io.*
 import java.net.Socket
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import javax.net.ssl.SSLSocketFactory
 
 private const val TAG = "LoggedInChatThread"
 
 class LoggedInChatThread(
+    private val useSSl: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
     private val channelName: String,
@@ -35,7 +37,12 @@ class LoggedInChatThread(
                     val messageOut = readerOut.readLine()!!
                     messageOut.run {
                         when {
+                            contains("PRIVMSG") -> {}
+                            contains("USERNOTICE") -> {}
+                            contains("CLEARMSG") -> {}
+                            contains("CLEARCHAT") -> {}
                             contains("NOTICE") -> listener.onNotice(this)
+                            contains("ROOMSTATE") -> {}
                             contains("USERSTATE") -> listener.onUserState(this)
                             startsWith("PING") -> handlePing(writerOut)
                         }
@@ -53,9 +60,9 @@ class LoggedInChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC")
+        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
         try {
-            socketOut = Socket("irc.twitch.tv", 6667).apply {
+            socketOut = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
                 readerOut = BufferedReader(InputStreamReader(getInputStream()))
                 writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
                 write("PASS oauth:$userToken", writerOut)
@@ -73,8 +80,12 @@ class LoggedInChatThread(
 
     fun disconnect() {
         if (isActive) {
-            isActive = false
-            close()
+            val thread = Thread {
+                isActive = false
+                close()
+            }
+            thread.start()
+            thread.join()
         }
     }
 

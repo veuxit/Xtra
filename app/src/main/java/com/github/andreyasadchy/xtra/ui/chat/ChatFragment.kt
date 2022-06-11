@@ -34,6 +34,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelName = args.getString(KEY_CHANNEL_NAME)
         val user = User.get(requireContext())
         val userIsLoggedIn = user is LoggedIn
+        val useSSl = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
+        val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
         val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "")
         val gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "") ?: ""
         val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
@@ -47,7 +49,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             false
         } else {
             if (isLive) {
-                viewModel.startLive(user, helixClientId, gqlClientId, channelId, channelLogin, channelName, showUserNotice, showClearMsg, showClearChat, enableRecentMsg, recentMsgLimit.toString())
+                viewModel.startLive(useSSl, usePubSub, user, helixClientId, gqlClientId, channelId, channelLogin, channelName, showUserNotice, showClearMsg, showClearChat, enableRecentMsg, recentMsgLimit.toString())
                 chatView.init(this)
                 chatView.setCallback(viewModel)
                 if (userIsLoggedIn) {
@@ -85,6 +87,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             viewModel.emotesLoaded.observe(viewLifecycleOwner) { chatView.notifyEmotesLoaded() }
             viewModel.roomState.observe(viewLifecycleOwner) { chatView.notifyRoomState(it) }
             viewModel.command.observe(viewLifecycleOwner) { chatView.notifyCommand(it) }
+            viewModel.reward.observe(viewLifecycleOwner) { chatView.notifyReward(it) }
         }
     }
 
