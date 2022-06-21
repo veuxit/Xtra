@@ -23,7 +23,7 @@
     <string name="scroll_down">さらにメッセージが続きます</string>
     <string name="auto">自動</string>
     <string name="source">ソース</string>
-    <string name="audio_only">オーディオのみ</string>
+    <string name="audio_only">音声のみ</string>
     <string name="chat_only">チャットのみ</string>
     <string name="select_quality">画質を選ぶ</string>
     <string name="download">ダウンロード</string>
@@ -527,4 +527,5 @@
     <string name="viewers_high">視聴者数 (多い順)</string>
     <string name="viewers_low">視聴者数 (少ない順)</string>
     <string name="tags">タグ</string>
+    <string name="show_player_mode">音声のみボタンの表示</string>
 </resources>
