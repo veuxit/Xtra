@@ -17,7 +17,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.text.getSpans
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.integration.webp.decoder.WebpDrawable
@@ -171,8 +170,8 @@ class ChatAdapter(
                 builder.append("${pointReward?.rewardCost}")
                 imageIndex += pointReward?.rewardCost?.toString()?.length ?: 0
                 originalMessage = "$userName: ${chatMessage.message}"
-                userNameWithPostfixLength = string.length + (pointReward?.rewardCost?.toString()?.length ?: 0) + 3
-                builder.setSpan(ForegroundColorSpan(Color.parseColor("#999999")), userNameWithPostfixLength - userNameWithPostfixLength, userNameWithPostfixLength, SPAN_INCLUSIVE_INCLUSIVE)
+                userNameWithPostfixLength = imageIndex
+                builder.setSpan(ForegroundColorSpan(Color.parseColor("#999999")), 0, imageIndex, SPAN_INCLUSIVE_INCLUSIVE)
             } else {
                 originalMessage = "${chatMessage.message}"
                 userNameWithPostfixLength = 0
@@ -218,8 +217,8 @@ class ChatAdapter(
                 }
                 copy.forEach { images.add(Image(it.url, imageIndex + it.begin, imageIndex + it.end + 1, true, "image/gif")) }
             }
-            val split = builder.split(" ")
-            var builderIndex = 0
+            val split = builder.substring(userNameWithPostfixLength).split(" ")
+            var builderIndex = userNameWithPostfixLength
             var emotesFound = 0
             var wasMentioned = false
             for (value in split) {

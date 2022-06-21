@@ -151,27 +151,27 @@ class FollowedChannelsDataSource(
                     else -> mutableListOf()
                 }
             } else mutableListOf()
+            val allIds = mutableListOf<String>()
             for (i in list) {
-                val allIds = mutableListOf<String>()
                 if (i.profileImageURL == null || i.lastBroadcast == null) {
                     i.to_id?.let { allIds.add(it) }
                 }
-                if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
-                    for (ids in allIds.chunked(100)) {
-                        val get = helixApi.getUsersById(helixClientId, helixToken, ids).data
-                        if (get != null) {
-                            for (user in get) {
-                                val item = list.find { it.to_id == user.id }
-                                if (item != null) {
-                                    if (item.followLocal) {
-                                        if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
-                                            val appContext = XtraApp.INSTANCE.applicationContext
-                                            item.to_id?.let { id -> user.profile_image_url?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
-                                        }
-                                    } else {
-                                        if (item.profileImageURL == null) {
-                                            item.profileImageURL = user.profile_image_url
-                                        }
+            }
+            if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
+                for (ids in allIds.chunked(100)) {
+                    val get = helixApi.getUsersById(helixClientId, helixToken, ids).data
+                    if (get != null) {
+                        for (user in get) {
+                            val item = list.find { it.to_id == user.id }
+                            if (item != null) {
+                                if (item.followLocal) {
+                                    if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                        val appContext = XtraApp.INSTANCE.applicationContext
+                                        item.to_id?.let { id -> user.profile_image_url?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                    }
+                                } else {
+                                    if (item.profileImageURL == null) {
+                                        item.profileImageURL = user.profile_image_url
                                     }
                                 }
                             }
