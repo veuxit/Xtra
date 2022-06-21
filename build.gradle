@@ -4,12 +4,12 @@ buildscript {
     ext.paging = '2.1.2'
     ext.lifecycle = '2.4.1'
     ext.room = '2.4.2'
-    ext.exoplayer = '2.17.1'
+    ext.exoplayer = '2.18.0'
     ext.dagger = '2.42'
     ext.retrofit = '2.9.0'
     ext.glide = '4.13.2'
     ext.fetch = '3.1.6'
-    ext.apollo_ver = '3.3.0'
+    ext.apollo_ver = '3.3.2'
     ext.coil = '2.1.0'
     repositories {
         google()
