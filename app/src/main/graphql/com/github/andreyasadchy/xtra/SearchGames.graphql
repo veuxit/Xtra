@@ -1,0 +1,21 @@
+query SearchGames($query: String!, $first: Int, $after: String) {
+    searchFor(userQuery: $query, platform: "", target: { cursor: $after, index: GAME, limit: $first }) {
+        games {
+            cursor
+            items {
+                boxArtURL
+                broadcastersCount
+                displayName
+                id
+                tags(tagType: CONTENT) {
+                    id
+                    localizedName
+                }
+                viewersCount
+            }
+            pageInfo {
+                hasNextPage
+            }
+        }
+    }
+}
