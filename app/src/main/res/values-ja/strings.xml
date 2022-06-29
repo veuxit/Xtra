@@ -518,7 +518,6 @@
     <string name="lang_auto">システムの標準</string>
     <string name="lang_en">英語</string>
     <string name="lang_ar">アラビア語</string>
-    <string name="lang_de">German</string>
     <string name="lang_es">スペイン語</string>
     <string name="lang_ja">日本語</string>
     <string name="lang_pt">ポルトガル語 (ブラジル)</string>
@@ -529,4 +528,6 @@
     <string name="viewers_low">視聴者数 (少ない順)</string>
     <string name="tags">タグ</string>
     <string name="show_player_mode">Show audio only button</string>
+    <string name="search_videos">Search videos</string>
+    <string name="lang_de">German</string>
 </resources>
