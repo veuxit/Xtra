@@ -26,13 +26,13 @@ class FollowedGamesDataSource(
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial(params) else throw Exception()
+                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial() else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 mutableListOf()
             }
-            if (!remote.isNullOrEmpty()) {
+            if (remote.isNotEmpty()) {
                 for (i in remote) {
                     val item = list.find { it.id == i.id }
                     if (item == null) {
@@ -51,7 +51,7 @@ class FollowedGamesDataSource(
         }
     }
 
-    private suspend fun gqlInitial(params: LoadInitialParams): List<Game> {
+    private suspend fun gqlInitial(): List<Game> {
         api = C.GQL
         val get = gqlApi.loadFollowedGames(gqlClientId, gqlToken, 100)
         return get.data
