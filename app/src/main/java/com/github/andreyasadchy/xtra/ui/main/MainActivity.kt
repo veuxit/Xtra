@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
     /**
      * Result of LoginActivity
      */
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         fun restartActivity() {
@@ -314,7 +315,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             val token = prefs.getString(C.TOKEN, "")
             when {
                 url.contains("twitch.tv/videos/") -> {
-                    val id = url.substringAfter("twitch.tv/videos/").substringBefore("?")
+                    val id = url.substringAfter("twitch.tv/videos/").let { it.substringBefore("?", it.substringBefore("/")) }
                     val offset = url.substringAfter("?t=").nullIfEmpty()?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, ""), token, prefs.getString(C.GQL_CLIENT_ID, ""))
                     viewModel.video.observe(this) { video ->
@@ -324,7 +325,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     }
                 }
                 url.contains("/clip/") -> {
-                    val id = url.substringAfter("/clip/").substringBefore("?")
+                    val id = url.substringAfter("/clip/").let { it.substringBefore("?", it.substringBefore("/")) }
                     viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, ""), token, prefs.getString(C.GQL_CLIENT_ID, ""))
                     viewModel.clip.observe(this) { clip ->
                         if (clip != null && clip.id.isNotBlank()) {
@@ -333,7 +334,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     }
                 }
                 url.contains("clips.twitch.tv/") -> {
-                    val id = url.substringAfter("clips.twitch.tv/").substringBefore("?")
+                    val id = url.substringAfter("clips.twitch.tv/").let { it.substringBefore("?", it.substringBefore("/")) }
                     viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, ""), token, prefs.getString(C.GQL_CLIENT_ID, ""))
                     viewModel.clip.observe(this) { clip ->
                         if (clip != null && clip.id.isNotBlank()) {
@@ -342,16 +343,18 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     }
                 }
                 url.contains("twitch.tv/directory/game/") -> {
-                    val name = url.substringAfter("twitch.tv/directory/game/").substringBefore("/")
+                    playerFragment?.minimize()
+                    val name = url.substringAfter("twitch.tv/directory/game/").let { it.substringBefore("?", it.substringBefore("/")) }
                     openGame(id = null, name = Uri.decode(name))
                 }
                 else -> {
                     if (!token.isNullOrBlank()) {
-                        val login = url.substringAfter("twitch.tv/").substringBefore("/")
+                        val login = url.substringAfter("twitch.tv/").let { it.substringBefore("?", it.substringBefore("/")) }
                         if (login.isNotBlank()) {
                             viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, ""), token, prefs.getString(C.GQL_CLIENT_ID, ""))
                             viewModel.user.observe(this) { user ->
                                 if (user != null && (!user.id.isNullOrBlank() || !user.login.isNullOrBlank())) {
+                                    playerFragment?.minimize()
                                     viewChannel(id = user.id, login = user.login, name = user.display_name, channelLogo = user.channelLogo)
                                 }
                             }
@@ -395,8 +398,8 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         startPlayer(OfflinePlayerFragment.newInstance(video))
     }
 
-    override fun viewChannel(id: String?, login: String?, name: String?, channelLogo: String?, updateLocal: Boolean) {
-        fragNavController.pushFragment(ChannelPagerFragment.newInstance(id, login, name, channelLogo, updateLocal))
+    override fun viewChannel(id: String?, login: String?, name: String?, channelLogo: String?, updateLocal: Boolean, streamId: String?) {
+        fragNavController.pushFragment(ChannelPagerFragment.newInstance(id, login, name, channelLogo, updateLocal, streamId))
     }
 
 //SlidingLayout.Listener

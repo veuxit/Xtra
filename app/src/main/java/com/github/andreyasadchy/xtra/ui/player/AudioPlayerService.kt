@@ -100,6 +100,7 @@ class AudioPlayerService : Service() {
         }
         player.apply {
             addListener(object : Player.Listener  {
+                @Deprecated("Deprecated in Java")
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     if (restorePosition && playbackState == Player.STATE_READY) {
                         restorePosition = false

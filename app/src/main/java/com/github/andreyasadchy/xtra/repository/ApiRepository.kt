@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.repository
 
+import android.util.Base64
 import androidx.core.util.Pair
 import androidx.paging.PagedList
 import com.github.andreyasadchy.xtra.api.HelixApi
@@ -7,6 +8,7 @@ import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoMessagesResponse
+import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelViewerList
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
@@ -22,9 +24,11 @@ import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.datasource.*
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,11 +47,11 @@ class ApiRepository @Inject constructor(
     override fun loadTopGames(helixClientId: String?, helixToken: String?, gqlClientId: String?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Game> {
         val factory = GamesDataSource.Factory(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, tags, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-                .setPageSize(30)
-                .setInitialLoadSizeHint(30)
-                .setPrefetchDistance(10)
-                .setEnablePlaceholders(false)
-                .build()
+            .setPageSize(30)
+            .setInitialLoadSizeHint(30)
+            .setPrefetchDistance(10)
+            .setEnablePlaceholders(false)
+            .build()
         return Listing.create(factory, config)
     }
 
@@ -219,7 +223,7 @@ class ApiRepository @Inject constructor(
                 helix.getStreams(helixClientId, helixToken.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(channelId)).data?.firstOrNull()
             else throw Exception()
         } catch (e: Exception) {
-            Stream(viewer_count = gql.loadViewerCount(gqlClientId, channelLogin).viewers)
+            null
         }
     }
 
@@ -287,6 +291,44 @@ class ApiRepository @Inject constructor(
 
     override suspend fun loadChannelViewerListGQL(clientId: String?, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
         gql.loadChannelViewerList(clientId, channelLogin).data
+    }
+
+    override suspend fun loadChannelPointsContext(gqlClientId: String?, gqlToken: String?, channelLogin: String?): ChannelPointsContextDataResponse = withContext(Dispatchers.IO){
+        gql.loadChannelPointsContext(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelLogin)
+    }
+
+    override suspend fun loadClaimPoints(gqlClientId: String?, gqlToken: String?, channelId: String?, claimID: String?) = withContext(Dispatchers.IO) {
+        gql.loadClaimPoints(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, claimID)
+    }
+
+    override suspend fun loadMinuteWatched(userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
+        try {
+            val pageResponse = channelLogin?.let { misc.getChannelPage(it).string() }
+            if (!pageResponse.isNullOrBlank()) {
+                val settingsRegex = Regex("(https://static.twitchcdn.net/config/settings.*?js)")
+                val settingsUrl = settingsRegex.find(pageResponse)?.value
+                val settingsResponse = settingsUrl?.let { misc.getUrl(it).string() }
+                if (!settingsResponse.isNullOrBlank()) {
+                    val spadeRegex = Regex("\"spade_url\":\"(.*?)\"")
+                    val spadeUrl = spadeRegex.find(settingsResponse)?.groups?.get(1)?.value
+                    if (!spadeUrl.isNullOrBlank()) {
+                        val json = JsonObject().apply {
+                            addProperty("event", "minute-watched")
+                            add("properties", JsonObject().apply {
+                                addProperty("channel_id", channelId)
+                                addProperty("broadcast_id", streamId)
+                                addProperty("player", "site")
+                                addProperty("user_id", userId?.toInt())
+                            })
+                        }
+                        val spadeRequest = Base64.encodeToString(json.toString().toByteArray(), Base64.NO_WRAP).toRequestBody()
+                        misc.postUrl(spadeUrl, spadeRequest)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+
+        }
     }
 
     override suspend fun followUser(gqlClientId: String?, gqlToken: String?, userId: String?): Boolean = withContext(Dispatchers.IO) {
