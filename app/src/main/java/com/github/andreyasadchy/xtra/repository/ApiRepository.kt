@@ -28,7 +28,8 @@ import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType
+import okhttp3.RequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -321,8 +322,9 @@ class ApiRepository @Inject constructor(
                                 addProperty("user_id", userId?.toInt())
                             })
                         }
-                        val spadeRequest = Base64.encodeToString(json.toString().toByteArray(), Base64.NO_WRAP).toRequestBody()
-                        misc.postUrl(spadeUrl, spadeRequest)
+                        val spadeRequest = Base64.encodeToString(json.toString().toByteArray(), Base64.NO_WRAP)
+                        val request = RequestBody.create(MediaType.get("application/x-www-form-urlencoded; charset=utf-8"), spadeRequest)
+                        misc.postUrl(spadeUrl, request)
                     }
                 }
             }
