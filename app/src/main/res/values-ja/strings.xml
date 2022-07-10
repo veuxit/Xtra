@@ -532,6 +532,6 @@
     <string name="lang_de">ドイツ語</string>
     <string name="points_earned">チャンネルポイントを %d 獲得しました</string>
     <string name="points_notify">チャンネルポイントの獲得時に通知する</string>
-    <string name="points_collect">チャネルポイントを自動的に獲得する</string>
+    <string name="points_collect">チャンネルポイントを自動的に獲得する</string>
     <string name="connect_chat">チャットの接続</string>
 </resources>
