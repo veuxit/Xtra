@@ -530,8 +530,8 @@
     <string name="show_player_mode">音声のみボタンの表示</string>
     <string name="search_videos">動画検索</string>
     <string name="lang_de">ドイツ語</string>
-    <string name="points_earned">%d チャネルポイントを受信しました</string>
+    <string name="points_earned">チャンネルポイントを %d 獲得しました</string>
     <string name="points_notify">チャンネルポイントの獲得時に通知する</string>
-    <string name="points_collect">チャネルポイントを自動的に収集する</string>
-    <string name="connect_chat">チャットに接続する</string>
+    <string name="points_collect">チャネルポイントを自動的に獲得する</string>
+    <string name="connect_chat">チャットの接続</string>
 </resources>
