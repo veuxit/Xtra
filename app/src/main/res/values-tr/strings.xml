@@ -532,7 +532,7 @@ Bir kullanıcı üzerindeki zaman aşımını kaldırır.</string>
     <string name="chat_ssl">SSL kullanarak bağlan</string>
     <string name="redeemed">%s kullanıldı</string>
     <string name="user_redeemed">%1$s %2$s kullandı</string>
-    <string name="enable_pubsub">PubSub'ı etkinleştir</string>
+    <string name="enable_pubsub">PubSub\'ı etkinleştir</string>
     <string name="bookmark">Yer imi</string>
     <string name="dark_theme_on">Koyu tema açık</string>
     <string name="dark_theme_off">Koyu tema kapalı</string>
@@ -560,4 +560,9 @@ Bir kullanıcı üzerindeki zaman aşımını kaldırır.</string>
     <string name="points_notify">Kanal puanı kazanırken bilgilendir</string>
     <string name="points_collect">Kanal puanlarını otomatik olarak topla</string>
     <string name="connect_chat">Sohbete bağlan</string>
+    <string name="raid_text">Raiding %1$s with %2$d viewers</string>
+    <string name="show_raids">Show raids and hosts</string>
+    <string name="auto_switch_raids">Switch stream on raid automatically</string>
+    <string name="host_text">Hosting %s</string>
+    <string name="watch_stream">Watch stream</string>
 </resources>

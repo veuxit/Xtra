@@ -550,4 +550,9 @@ Use “untimeout” to remove a timeout.</string>
     <string name="points_notify">Уведомлять о получении баллов канала</string>
     <string name="points_collect">Забирать баллы канала автоматически</string>
     <string name="connect_chat">Подключиться к чату</string>
+    <string name="raid_text">Raiding %1$s with %2$d viewers</string>
+    <string name="show_raids">Show raids and hosts</string>
+    <string name="auto_switch_raids">Switch stream on raid automatically</string>
+    <string name="host_text">Hosting %s</string>
+    <string name="watch_stream">Watch stream</string>
 </resources>
