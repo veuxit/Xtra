@@ -277,7 +277,7 @@
     <string name="irc_notice_bad_unban_no_ban">%s bu kanalda yasaklı değil.</string>
     <string name="irc_notice_bad_unhost_error">Paylaşım modundan çıkarken bir sorun oluştu. Lütfen bir dakika içinde tekrar deneyin.</string>
     <string name="irc_notice_bad_unmod_mod">%s bu kanalın moderatörü değil.</string>
-    <string name="irc_notice_bad_vip_grantee_banned">%s bu kanalda yasaklı. VIP statüsü vermeden önce bu kullanıcının yasağını kaldırmalısınız.</string>
+    <string name="irc_notice_bad_vip_grantee_banned">%s bu kanalda yasaklı. VIP\'liğini vermeden önce bu kullanıcının yasağını kaldırmalısınız.</string>
     <string name="irc_notice_bad_vip_grantee_already_vip">%s zaten bu kanalın bir VIP\'si.</string>
     <string name="irc_notice_bad_vip_max_vips_reached">VIP eklenemiyor. Ek VIP yerlerinin nasıl açılacağını öğrenmek için kontrol panelinizdeki Başarılar sayfasını ziyaret edin.</string>
     <string name="irc_notice_bad_vip_achievement_incomplete">VIP eklenemiyor. Bu özelliğin nasıl açılacağını öğrenmek için kontrol panelinizdeki Başarılar sayfasını ziyaret edin.</string>
@@ -409,7 +409,7 @@ Baskını iptal eder.</string>
 Bir kullanıcı üzerindeki zaman aşımını kaldırır.</string>
     <string name="irc_notice_usage_unvip">Kullanım: “/unvip &lt;isim&gt;” - Bir kullanıcının VIP\'liğini iptal edin. Bu kanalın VIP\'lerini listelemek için “/vips” kullanın.</string>
     <string name="irc_notice_usage_user">Kullanım: “/user” &lt;isim&gt; - Bu kanalda belirli bir kullanıcıyla ilgili bilgileri görüntüleyin.</string>
-    <string name="irc_notice_usage_vip">Kullanım: “/vip &lt;isim&gt;” - Bir kullanıcıya VIP statüsü verin. Bu kanalın VIP\'lerini listelemek için “/vips” kullanın.</string>
+    <string name="irc_notice_usage_vip">Kullanım: “/vip &lt;isim&gt;” - Bir kullanıcıya VIP\'lik verin. Bu kanalın VIP\'lerini listelemek için “/vips” kullanın.</string>
     <string name="irc_notice_usage_vips">Kullanım: “/vips” - Bu kanalın VIP\'lerini listeler.</string>
     <string name="irc_notice_usage_whisper">Kullanım: “/w &lt;isim&gt; &lt;mesaj&gt;”</string>
     <string name="irc_notice_vip_success">%s bu kanala VIP olarak eklendi.</string>
