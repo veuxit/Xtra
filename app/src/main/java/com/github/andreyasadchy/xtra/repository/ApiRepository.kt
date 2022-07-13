@@ -296,20 +296,13 @@ class ApiRepository @Inject constructor(
 
     override suspend fun loadHosting(clientId: String?, channelId: String?, channelLogin: String?): Stream? = withContext(Dispatchers.IO) {
         try {
-            apolloClient(XtraModule(), clientId).query(HostingQuery(Optional.Present(channelId), Optional.Present(channelLogin))).execute().data?.user?.hosting?.let { get ->
-                Stream(
-                    user_id = get.id,
-                    user_login = get.login,
-                    user_name = get.displayName,
-                    profileImageURL = get.profileImageURL,
-                )
-            }
-        } catch (e: Exception) {
             if (!channelLogin.isNullOrBlank()) {
                 gql.loadHosting(clientId, channelLogin).data
             } else {
                 null
             }
+        } catch (e: Exception) {
+            null
         }
     }
 

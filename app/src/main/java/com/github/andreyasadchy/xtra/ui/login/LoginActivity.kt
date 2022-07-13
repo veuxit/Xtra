@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.login
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
