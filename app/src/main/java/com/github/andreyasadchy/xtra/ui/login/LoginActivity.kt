@@ -77,44 +77,52 @@ class LoginActivity : AppCompatActivity(), Injectable {
         val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId}&redirect_uri=${gqlRedirect}&scope="
         havingTrouble.setOnClickListener {
             AlertDialog.Builder(this)
-                    .setMessage(getString(R.string.login_problem_solution))
-                    .setPositiveButton(R.string.log_in) { _, _ ->
-                        val intent = Intent(Intent.ACTION_VIEW, helixAuthUrl.toUri())
-                        if (intent.resolveActivity(packageManager) != null) {
-                            webView.reload()
-                            startActivity(intent)
-                        } else {
-                            toast(R.string.no_browser_found)
+                .setMessage(getString(R.string.login_problem_solution))
+                .setPositiveButton(R.string.log_in) { _, _ ->
+                    val intent = Intent(Intent.ACTION_VIEW, helixAuthUrl.toUri())
+                    if (intent.resolveActivity(packageManager) != null) {
+                        webView.reload()
+                        startActivity(intent)
+                    } else {
+                        toast(R.string.no_browser_found)
+                    }
+                }
+                .setNeutralButton(R.string.to_enter_url) { _, _ ->
+                    val editText = EditText(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                            val margin = convertDpToPixels(10f)
+                            setMargins(margin, 0, margin, 0)
                         }
                     }
-                    .setNeutralButton(R.string.to_enter_url) { _, _ ->
-                        val editText = EditText(this).apply {
-                            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                                val margin = convertDpToPixels(10f)
-                                setMargins(margin, 0, margin, 0)
+                    val dialog = AlertDialog.Builder(this)
+                        .setTitle(R.string.enter_url)
+                        .setView(editText)
+                        .setPositiveButton(R.string.log_in) { _, _ ->
+                            val text = editText.text
+                            if (text.isNotEmpty()) {
+                                if (!loginIfValidUrl(text.toString(), gqlAuthUrl, 2)) {
+                                    shortToast(R.string.invalid_url)
+                                }
                             }
                         }
-                        val dialog = AlertDialog.Builder(this)
-                                .setTitle(R.string.enter_url)
-                                .setView(editText)
-                                .setPositiveButton(R.string.log_in) { _, _ ->
-                                    val text = editText.text
-                                    if (text.isNotEmpty()) {
-                                        if (!loginIfValidUrl(text.toString(), gqlAuthUrl, 2)) {
-                                            shortToast(R.string.invalid_url)
-                                        }
-                                    }
-                                }
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show()
-                        dialog.window?.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                    dialog.window?.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
         clearCookies()
+        val theme = if (prefs().getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
+            when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
+                Configuration.UI_MODE_NIGHT_YES -> prefs().getString(C.UI_THEME_DARK_ON, "0")!!
+                else -> prefs().getString(C.UI_THEME_DARK_OFF, "2")!!
+            }
+        } else {
+            prefs().getString(C.THEME, "0")!!
+        }
         with(webView) {
-            if (prefs().getString(C.THEME, "0") != "2") {
+            if (theme != "2") {
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
                     WebSettingsCompat.setForceDark(this.settings, WebSettingsCompat.FORCE_DARK_ON)
                 }
