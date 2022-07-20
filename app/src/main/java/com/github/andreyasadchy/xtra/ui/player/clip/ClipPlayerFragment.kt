@@ -6,6 +6,7 @@ import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
@@ -58,7 +59,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, clip.video_id, clip.videoOffsetSeconds?.toDouble())).commit()
         }
-        if (clip.video_id.isNullOrBlank() || prefs.getString(C.TOKEN, "").isNullOrBlank()) {
+        if (clip.video_id.isNullOrBlank() || User.get(requireContext()).helixToken.isNullOrBlank()) {
             watchVideo.gone()
         }
     }
@@ -92,7 +93,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 showDownloadDialog()
             }
         }
-        if (!clip.video_id.isNullOrBlank() && !prefs.getString(C.TOKEN, "").isNullOrBlank()) {
+        if (!clip.video_id.isNullOrBlank() && !User.get(requireContext()).helixToken.isNullOrBlank()) {
             watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
                     id = clip.video_id!!,

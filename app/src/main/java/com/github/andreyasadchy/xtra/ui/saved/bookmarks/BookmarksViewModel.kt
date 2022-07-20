@@ -52,7 +52,7 @@ class BookmarksViewModel @Inject internal constructor(
                 val allIds = bookmarksRepository.loadBookmarks().mapNotNull { bookmark -> bookmark.userId.takeUnless { it == null || ignoredUsers.value?.contains(VodBookmarkIgnoredUser(it)) == true } }
                 if (!allIds.isNullOrEmpty()) {
                     for (ids in allIds.chunked(100)) {
-                        val users = repository.loadUsersById(ids, helixClientId, helixToken, gqlClientId)
+                        val users = repository.loadUserTypes(ids, helixClientId, helixToken, gqlClientId)
                         if (users != null) {
                             for (user in users) {
                                 val bookmarks = user.id?.let { bookmarksRepository.getBookmarksByUserId(it) }

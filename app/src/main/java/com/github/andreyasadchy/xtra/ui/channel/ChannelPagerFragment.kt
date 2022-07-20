@@ -56,7 +56,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     private val viewModel by viewModels<ChannelPagerViewModel> { viewModelFactory }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(if (!User.get(activity).helixToken.isNullOrBlank()) R.layout.fragment_channel else R.layout.fragment_channel_old, container, false)
+        return inflater.inflate(if (!User.get(requireContext()).helixToken.isNullOrBlank()) R.layout.fragment_channel else R.layout.fragment_channel_old, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -168,7 +168,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             collapsingToolbar.expandedTitleMarginBottom = activity.convertDpToPixels(50.5f)
             watchLive.setOnClickListener { activity.startStream(Stream(user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
-            viewModel.loadStream(channelId = requireArguments().getString(C.CHANNEL_ID), channelLogin = requireArguments().getString(C.CHANNEL_LOGIN), channelName = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE), helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = requireContext().prefs().getString(C.TOKEN, ""), gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+            viewModel.loadStream(helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = User.get(requireContext()).helixToken, gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
             viewModel.stream.observe(viewLifecycleOwner) { stream ->
                 if (stream?.viewer_count != null) {
                     watchLive.text = getString(R.string.watch_live)
@@ -342,7 +342,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onNetworkRestored() {
-        if (!User.get(activity).helixToken.isNullOrBlank()) {
+        if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
             viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
         }
     }

@@ -2,13 +2,8 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
 import androidx.paging.DataSource
-import com.apollographql.apollo3.api.Optional
-import com.github.andreyasadchy.xtra.SearchStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.di.XtraModule
-import com.github.andreyasadchy.xtra.di.XtraModule_ApolloClientFactory
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
 
@@ -29,19 +24,10 @@ class SearchStreamsDataSource private constructor(
             try {
                 when (apiPref?.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                    C.GQL_QUERY -> gqlQueryInitial(params)
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                try {
-                    when (apiPref?.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                        C.GQL_QUERY -> gqlQueryInitial(params)
-                        else -> throw Exception()
-                    }
-                } catch (e: Exception) {
-                    mutableListOf()
-                }
+                mutableListOf()
             }
         }
     }
@@ -66,53 +52,10 @@ class SearchStreamsDataSource private constructor(
         return list
     }
 
-    private suspend fun gqlQueryInitial(params: LoadInitialParams): List<Stream> {
-        api = C.GQL_QUERY
-        val get1 = XtraModule_ApolloClientFactory.apolloClient(XtraModule(), gqlClientId).query(SearchStreamsQuery(
-            query = query,
-            first = Optional.Present(params.requestedLoadSize),
-            after = Optional.Present(offset)
-        )).execute().data?.searchStreams
-        val get = get1?.edges
-        val list = mutableListOf<Stream>()
-        if (get != null) {
-            for (edge in get) {
-                edge.node?.let { i ->
-                    val tags = mutableListOf<Tag>()
-                    i.tags?.forEach { tag ->
-                        tags.add(Tag(
-                            id = tag.id,
-                            name = tag.localizedName
-                        ))
-                    }
-                    list.add(Stream(
-                        id = i.id,
-                        user_id = i.broadcaster?.id,
-                        user_login = i.broadcaster?.login,
-                        user_name = i.broadcaster?.displayName,
-                        game_id = i.game?.id,
-                        game_name = i.game?.displayName,
-                        type = i.type,
-                        title = i.broadcaster?.broadcastSettings?.title,
-                        viewer_count = i.viewersCount,
-                        started_at = i.createdAt.toString(),
-                        thumbnail_url = i.previewImageURL,
-                        profileImageURL = i.broadcaster?.profileImageURL,
-                        tags = tags
-                    ))
-                }
-            }
-            offset = get1.edges.lastOrNull()?.cursor.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
-        }
-        return list
-    }
-
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Stream>) {
         loadRange(params, callback) {
             when (api) {
                 C.HELIX -> helixRange(params)
-                C.GQL_QUERY -> gqlQueryRange(params)
                 else -> mutableListOf()
             }
         }
@@ -135,48 +78,6 @@ class SearchStreamsDataSource private constructor(
                 ))
             }
             offset = get.pagination?.cursor
-        }
-        return list
-    }
-
-    private suspend fun gqlQueryRange(params: LoadRangeParams): List<Stream> {
-        api = C.GQL_QUERY
-        val get1 = XtraModule_ApolloClientFactory.apolloClient(XtraModule(), gqlClientId).query(SearchStreamsQuery(
-            query = query,
-            first = Optional.Present(params.loadSize),
-            after = Optional.Present(offset)
-        )).execute().data?.searchStreams
-        val get = get1?.edges
-        val list = mutableListOf<Stream>()
-        if (get != null && nextPage && offset != null && offset != "") {
-            for (edge in get) {
-                edge.node?.let { i ->
-                    val tags = mutableListOf<Tag>()
-                    i.tags?.forEach { tag ->
-                        tags.add(Tag(
-                            id = tag.id,
-                            name = tag.localizedName
-                        ))
-                    }
-                    list.add(Stream(
-                        id = i.id,
-                        user_id = i.broadcaster?.id,
-                        user_login = i.broadcaster?.login,
-                        user_name = i.broadcaster?.displayName,
-                        game_id = i.game?.id,
-                        game_name = i.game?.displayName,
-                        type = i.type,
-                        title = i.broadcaster?.broadcastSettings?.title,
-                        viewer_count = i.viewersCount,
-                        started_at = i.createdAt.toString(),
-                        thumbnail_url = i.previewImageURL,
-                        profileImageURL = i.broadcaster?.profileImageURL,
-                        tags = tags
-                    ))
-                }
-            }
-            offset = get1.edges.lastOrNull()?.cursor.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
         }
         return list
     }

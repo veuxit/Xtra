@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
@@ -170,7 +171,7 @@ class BookmarksAdapter(
                 PopupMenu(context, it).apply {
                     inflate(R.menu.offline_item)
                     if (item.id.isNotBlank()) {
-                        if (!context.prefs().getString(C.TOKEN, "").isNullOrBlank()) {
+                        if (!User.get(context).helixToken.isNullOrBlank()) {
                             menu.findItem(R.id.refresh).isVisible = true
                         }
                         menu.findItem(R.id.download).isVisible = true
