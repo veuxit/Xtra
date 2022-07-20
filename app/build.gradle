@@ -20,7 +20,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 32
         versionCode 109
-        versionName "2.2.0"
+        versionName "2.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
@@ -124,7 +124,7 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayer"
-    implementation 'org.checkerframework:checker-qual:3.22.2'
+    implementation 'org.checkerframework:checker-qual:3.23.0'
 
     implementation "com.github.zjupure:webpdecoder:2.0.4.13.2"
     implementation "com.github.bumptech.glide:glide:$glide"
@@ -138,5 +138,5 @@ dependencies {
     kapt "com.google.dagger:dagger-android-processor:$dagger"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 }

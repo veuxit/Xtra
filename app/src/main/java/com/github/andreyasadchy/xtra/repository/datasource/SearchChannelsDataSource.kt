@@ -45,25 +45,8 @@ class SearchChannelsDataSource private constructor(
     private suspend fun helixInitial(params: LoadInitialParams): List<ChannelSearch> {
         api = C.HELIX
         val get = helixApi.getChannels(helixClientId, helixToken, query, params.requestedLoadSize, offset)
-        val list = mutableListOf<ChannelSearch>()
-        get.data?.let { list.addAll(it) }
-        val ids = mutableListOf<String>()
-        for (i in list) {
-            i.id?.let { ids.add(it) }
-        }
-        if (ids.isNotEmpty()) {
-            val users = helixApi.getUsersById(helixClientId, helixToken, ids).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.id == i.id }
-                    for (item in items) {
-                        item.profileImageURL = i.profile_image_url
-                    }
-                }
-            }
-        }
         offset = get.pagination?.cursor
-        return list
+        return get.data ?: mutableListOf()
     }
 
     private suspend fun gqlInitial(): List<ChannelSearch> {
@@ -85,27 +68,10 @@ class SearchChannelsDataSource private constructor(
 
     private suspend fun helixRange(params: LoadRangeParams): List<ChannelSearch> {
         val get = helixApi.getChannels(helixClientId, helixToken, query, params.loadSize, offset)
-        val list = mutableListOf<ChannelSearch>()
-        if (offset != null && offset != "") {
-            get.data?.let { list.addAll(it) }
-            val ids = mutableListOf<String>()
-            for (i in list) {
-                i.id?.let { ids.add(it) }
-            }
-            if (ids.isNotEmpty()) {
-                val users = helixApi.getUsersById(helixClientId, helixToken, ids).data
-                if (users != null) {
-                    for (i in users) {
-                        val items = list.filter { it.id == i.id }
-                        for (item in items) {
-                            item.profileImageURL = i.profile_image_url
-                        }
-                    }
-                }
-            }
+        return if (offset != null && offset != "") {
             offset = get.pagination?.cursor
-        }
-        return list
+            get.data ?: mutableListOf()
+        } else mutableListOf()
     }
 
     private suspend fun gqlRange(): List<ChannelSearch> {

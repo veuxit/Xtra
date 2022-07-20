@@ -48,11 +48,11 @@ class ApiRepository @Inject constructor(
     override fun loadTopGames(helixClientId: String?, helixToken: String?, gqlClientId: String?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Game> {
         val factory = GamesDataSource.Factory(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, tags, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(30)
-            .setInitialLoadSizeHint(30)
-            .setPrefetchDistance(10)
-            .setEnablePlaceholders(false)
-            .build()
+                .setPageSize(30)
+                .setInitialLoadSizeHint(30)
+                .setPrefetchDistance(10)
+                .setEnablePlaceholders(false)
+                .build()
         return Listing.create(factory, config)
     }
 
@@ -165,6 +165,22 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
+    override fun loadSearchStreams(query: String, helixClientId: String?, helixToken: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>?, thumbnailsEnabled: Boolean?, coroutineScope: CoroutineScope): Listing<Stream> {
+        val factory = SearchStreamsDataSource.Factory(query, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, apiPref, coroutineScope)
+        val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
+        if (thumbnailsEnabled == true) {
+            builder.setPageSize(10)
+                .setInitialLoadSizeHint(15)
+                .setPrefetchDistance(3)
+        } else {
+            builder.setPageSize(30)
+                .setInitialLoadSizeHint(30)
+                .setPrefetchDistance(10)
+        }
+        val config = builder.build()
+        return Listing.create(factory, config)
+    }
+
     override fun loadFollowedStreams(userId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
         val factory = FollowedStreamsDataSource.Factory(localFollowsChannel, userId, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
@@ -250,16 +266,36 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    override suspend fun loadUsersById(ids: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>? = withContext(Dispatchers.IO) {
-        helix.getUsersById(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids).data
+    override suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
+        helix.getStreams(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
     }
 
-    override suspend fun loadUsersByLogin(logins: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>? = withContext(Dispatchers.IO) {
-        helix.getUsersByLogin(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, logins).data
+    override suspend fun loadUser(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?): User? = withContext(Dispatchers.IO) {
+        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+    }
+
+    override suspend fun loadCheckUser(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
+        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+    }
+
+    override suspend fun loadUserMessageClicked(channelId: String?, channelLogin: String?, targetId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
+        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { mutableListOf(channelId) }, channelLogin?.let { mutableListOf(channelLogin) }).data?.firstOrNull()
+    }
+
+    override suspend fun loadUserTypes(ids: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>? = withContext(Dispatchers.IO) {
+        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids).data
     }
 
     override suspend fun loadCheerEmotes(userId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<CheerEmote>? = withContext(Dispatchers.IO) {
         helix.getCheerEmotes(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId).emotes
+    }
+
+    override suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, userId: String, channelId: String?): List<TwitchEmote>? = withContext(Dispatchers.IO) {
+        try {
+            gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override suspend fun loadEmotesFromSet(helixClientId: String?, helixToken: String?, setIds: List<String>): List<TwitchEmote>? = withContext(Dispatchers.IO) {
@@ -297,7 +333,7 @@ class ApiRepository @Inject constructor(
     override suspend fun loadHosting(clientId: String?, channelId: String?, channelLogin: String?): Stream? = withContext(Dispatchers.IO) {
         try {
             if (!channelLogin.isNullOrBlank()) {
-                gql.loadHosting(clientId, channelLogin).data
+                gql.loadChannelHosting(clientId, channelLogin).data
             } else {
                 null
             }

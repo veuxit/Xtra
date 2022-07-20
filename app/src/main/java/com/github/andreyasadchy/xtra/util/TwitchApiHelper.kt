@@ -278,6 +278,7 @@ object TwitchApiHelper {
     val channelVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL), Pair(1, C.HELIX))
     val channelClipsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.HELIX), Pair(1, C.GQL))
     val searchVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL))
+    val searchStreamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX))
     val searchChannelsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.HELIX), Pair(1, C.GQL))
     val searchGamesApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL), Pair(1, C.HELIX))
     val followedStreamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.HELIX), Pair(1, C.GQL))

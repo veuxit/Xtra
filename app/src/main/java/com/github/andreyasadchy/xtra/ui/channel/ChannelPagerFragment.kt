@@ -56,7 +56,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     private val viewModel by viewModels<ChannelPagerViewModel> { viewModelFactory }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrBlank()) R.layout.fragment_channel else R.layout.fragment_channel_old, container, false)
+        return inflater.inflate(if (!User.get(activity).helixToken.isNullOrBlank()) R.layout.fragment_channel else R.layout.fragment_channel_old, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,7 +67,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         if (activity.isInLandscapeOrientation) {
             appBar.setExpanded(false, false)
         }
-        if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrBlank()) {
+        if (!user.helixToken.isNullOrBlank()) {
             requireArguments().getString(C.CHANNEL_DISPLAYNAME).let {
                 if (it != null) {
                     userLayout.visible()
@@ -108,7 +108,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                             } else {
                                 AlertDialog.Builder(activity).apply {
                                     setTitle(getString(R.string.logout_title))
-                                    user.login?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                    user.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
                                     setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
                                     setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
                                 }.show()
@@ -142,19 +142,27 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
 
     override fun initialize() {
         val activity = requireActivity() as MainActivity
-        if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrBlank()) {
-            viewModel.loadStream(channelId = requireArguments().getString(C.CHANNEL_ID), channelLogin = requireArguments().getString(C.CHANNEL_LOGIN), channelName = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE), helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = requireContext().prefs().getString(C.TOKEN, ""), gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        watchLive.setOnClickListener { activity.startStream(Stream(
+            id = requireArguments().getString(C.STREAM_ID),
+            user_id = requireArguments().getString(C.CHANNEL_ID),
+            user_login = requireArguments().getString(C.CHANNEL_LOGIN),
+            user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME),
+            profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE)))
+        }
+        if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
+            viewModel.init(requireArguments().getString(C.CHANNEL_ID), requireArguments().getString(C.CHANNEL_LOGIN), requireArguments().getString(C.CHANNEL_DISPLAYNAME), requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
+            viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
             viewModel.stream.observe(viewLifecycleOwner) { stream ->
                 updateStreamLayout(stream)
                 if (stream?.channelUser != null) {
                     updateUserLayout(stream.channelUser)
                 } else {
-                    viewModel.loadUser(channelId = requireArguments().getString(C.CHANNEL_ID), helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = requireContext().prefs().getString(C.TOKEN, ""), gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
-                    viewModel.user.observe(viewLifecycleOwner) { user ->
-                        if (user != null) {
-                            updateUserLayout(user)
-                        }
-                    }
+                    viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken)
+                }
+            }
+            viewModel.user.observe(viewLifecycleOwner) { user ->
+                if (user != null) {
+                    updateUserLayout(user)
                 }
             }
         } else {
@@ -190,7 +198,6 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 watchLive.text = getString(R.string.watch_live)
                 watchLive.setOnClickListener { activity.startStream(stream) }
             } else {
-                watchLive.setOnClickListener { activity.startStream(Stream(id = requireArguments().getString(C.STREAM_ID), user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
                 if (stream?.lastBroadcast != null) {
                     TwitchApiHelper.formatTimeString(requireContext(), stream.lastBroadcast).let {
                         if (it != null)  {
@@ -335,8 +342,8 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onNetworkRestored() {
-        if (!requireContext().prefs().getString(C.TOKEN, "").isNullOrBlank()) {
-            viewModel.retry(helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = requireContext().prefs().getString(C.TOKEN, ""), gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        if (!User.get(activity).helixToken.isNullOrBlank()) {
+            viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
         }
     }
 
