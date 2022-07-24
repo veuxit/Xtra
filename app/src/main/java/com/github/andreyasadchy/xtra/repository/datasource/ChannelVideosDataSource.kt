@@ -33,15 +33,15 @@ class ChannelVideosDataSource (
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                    C.GQL -> if (helixPeriod == Period.ALL) gqlInitial(params) else throw Exception()
+                    C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                        C.GQL -> if (helixPeriod == Period.ALL) gqlInitial(params) else throw Exception()
+                        C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -51,48 +51,30 @@ class ChannelVideosDataSource (
         }
     }
 
-    private suspend fun helixInitial(params: LoadInitialParams): List<Video> {
-        api = C.HELIX
-        val get = helixApi.getChannelVideos(helixClientId, helixToken, channelId, helixPeriod, helixBroadcastTypes, helixSort, params.requestedLoadSize, offset)
+    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+        val get = helixApi.getChannelVideos(helixClientId, helixToken, channelId, helixPeriod, helixBroadcastTypes, helixSort, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data
-        } else mutableListOf()
+        } else listOf()
     }
 
-    private suspend fun gqlInitial(params: LoadInitialParams): List<Video> {
-        api = C.GQL
-        val get = gqlApi.loadChannelVideos(gqlClientId, channelLogin, gqlType, gqlSort, params.requestedLoadSize, offset)
+    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+        val get = gqlApi.loadChannelVideos(gqlClientId, channelLogin, gqlType, gqlSort, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         offset = get.cursor
         return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
         loadRange(params, callback) {
-            when (api) {
-                C.HELIX -> helixRange(params)
-                C.GQL -> gqlRange(params)
-                else -> mutableListOf()
-            }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.HELIX -> helixLoad(rangeParams = params)
+                    C.GQL -> gqlLoad(rangeParams = params)
+                    else -> listOf()
+                }
+            } else listOf()
         }
-    }
-
-    private suspend fun helixRange(params: LoadRangeParams): List<Video> {
-        val get = helixApi.getChannelVideos(helixClientId, helixToken, channelId, helixPeriod, helixBroadcastTypes, helixSort, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            if (get.data != null) {
-                offset = get.pagination?.cursor
-                get.data
-            } else mutableListOf()
-        } else mutableListOf()
-    }
-
-    private suspend fun gqlRange(params: LoadRangeParams): List<Video> {
-        val get = gqlApi.loadChannelVideos(gqlClientId, channelLogin, gqlType, gqlSort, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(

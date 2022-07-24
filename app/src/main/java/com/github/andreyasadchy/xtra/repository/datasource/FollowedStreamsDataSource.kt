@@ -31,23 +31,23 @@ class FollowedStreamsDataSource(
                 try {
                     if (!helixToken.isNullOrBlank()) helixLocal(localIds) else throw Exception()
                 } catch (e: Exception) {
-                    mutableListOf()
+                    listOf()
                 }
-            } else mutableListOf()
+            } else listOf()
             if (local.isNotEmpty()) {
                 list.addAll(local)
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial() else throw Exception()
-                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial() else throw Exception()
+                    C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                    C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial() else throw Exception()
-                        C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial() else throw Exception()
+                        C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                        C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -61,37 +61,33 @@ class FollowedStreamsDataSource(
                         list.add(i)
                     }
                 }
-                if (api == C.HELIX) {
-                    val userIds = remote.mapNotNull { it.user_id }
-                    for (ids in userIds.chunked(100)) {
-                        val users = helixApi.getUsers(helixClientId, helixToken, ids).data
-                        if (users != null) {
-                            for (i in users) {
-                                val item = list.find { it.user_id == i.id }
-                                if (item != null) {
-                                    item.profileImageURL = i.profile_image_url
-                                }
-                            }
-                        }
-                    }
-                }
             }
             list.sortByDescending { it.viewer_count }
             list
         }
     }
 
-    private suspend fun helixInitial(): List<Stream> {
-        api = C.HELIX
+    private suspend fun helixLoad(): List<Stream> {
         val get = helixApi.getFollowedStreams(helixClientId, helixToken, userId, 100, offset)
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else mutableListOf()
+        val list = mutableListOf<Stream>()
+        get.data?.let { list.addAll(it) }
+        val ids = list.mapNotNull { it.user_id }
+        if (ids.isNotEmpty()) {
+            val users = helixApi.getUsers(helixClientId, helixToken, ids).data
+            if (users != null) {
+                for (i in users) {
+                    val item = list.find { it.user_id == i.id }
+                    if (item != null) {
+                        item.profileImageURL = i.profile_image_url
+                    }
+                }
+            }
+        }
+        offset = get.pagination?.cursor
+        return list
     }
 
-    private suspend fun gqlInitial(): List<Stream> {
-        api = C.GQL
+    private suspend fun gqlLoad(): List<Stream> {
         val get = gqlApi.loadFollowedStreams(gqlClientId, gqlToken, 100, offset)
         offset = get.cursor
         return get.data
@@ -99,43 +95,14 @@ class FollowedStreamsDataSource(
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Stream>) {
         loadRange(params, callback) {
-            val list = if (!offset.isNullOrBlank()) {
+            if (!offset.isNullOrBlank()) {
                 when (api) {
-                    C.HELIX -> helixRange()
-                    C.GQL -> gqlRange()
-                    else -> mutableListOf()
+                    C.HELIX -> helixLoad()
+                    C.GQL -> gqlLoad()
+                    else -> listOf()
                 }
-            } else mutableListOf()
-            if (api == C.HELIX && list.isNotEmpty()) {
-                val userIds = list.mapNotNull { it.user_id }
-                for (ids in userIds.chunked(100)) {
-                    val users = helixApi.getUsers(helixClientId, helixToken, ids).data
-                    if (users != null) {
-                        for (i in users) {
-                            val item = list.find { it.user_id == i.id }
-                            if (item != null) {
-                                item.profileImageURL = i.profile_image_url
-                            }
-                        }
-                    }
-                }
-            }
-            list
+            } else listOf()
         }
-    }
-
-    private suspend fun helixRange(): List<Stream> {
-        val get = helixApi.getFollowedStreams(helixClientId, helixToken, userId, 100, offset)
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else mutableListOf()
-    }
-
-    private suspend fun gqlRange(): List<Stream> {
-        val get = gqlApi.loadFollowedStreams(gqlClientId, gqlToken, 100, offset)
-        offset = get.cursor
-        return get.data
     }
 
     private suspend fun helixLocal(ids: List<String>): List<Stream> {

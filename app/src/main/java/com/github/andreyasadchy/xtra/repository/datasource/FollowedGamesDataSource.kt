@@ -16,7 +16,6 @@ class FollowedGamesDataSource(
     private val gqlApi: GraphQLRepository,
     private val apiPref: ArrayList<Pair<Long?, String?>?>,
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Game>(coroutineScope) {
-    private var api: String? = null
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Game>) {
         loadInitial(params, callback) {
@@ -26,7 +25,7 @@ class FollowedGamesDataSource(
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial() else throw Exception()
+                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
@@ -51,15 +50,14 @@ class FollowedGamesDataSource(
         }
     }
 
-    private suspend fun gqlInitial(): List<Game> {
-        api = C.GQL
+    private suspend fun gqlLoad(): List<Game> {
         val get = gqlApi.loadFollowedGames(gqlClientId, gqlToken, 100)
         return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Game>) {
         loadRange(params, callback) {
-            mutableListOf()
+            listOf()
         }
     }
 

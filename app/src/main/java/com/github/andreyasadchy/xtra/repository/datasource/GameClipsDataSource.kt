@@ -28,15 +28,15 @@ class GameClipsDataSource(
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                    C.GQL -> gqlInitial(params)
+                    C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                        C.GQL -> gqlInitial(params)
+                        C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -46,9 +46,8 @@ class GameClipsDataSource(
         }
     }
 
-    private suspend fun helixInitial(params: LoadInitialParams): List<Clip> {
-        api = C.HELIX
-        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, gameId = gameId, started_at = started_at, ended_at = ended_at, limit = params.requestedLoadSize, cursor = offset)
+    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Clip> {
+        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, gameId = gameId, started_at = started_at, ended_at = ended_at, limit = initialParams?.requestedLoadSize ?: rangeParams?.loadSize, cursor = offset)
         val list = mutableListOf<Clip>()
         get.data?.let { list.addAll(it) }
         val userIds = mutableListOf<String>()
@@ -71,55 +70,22 @@ class GameClipsDataSource(
         return list
     }
 
-    private suspend fun gqlInitial(params: LoadInitialParams): List<Clip> {
-        api = C.GQL
-        val get = gqlApi.loadGameClips(gqlClientId, gameName, gqlPeriod, params.requestedLoadSize, offset)
+    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Clip> {
+        val get = gqlApi.loadGameClips(gqlClientId, gameName, gqlPeriod, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         offset = get.cursor
         return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Clip>) {
         loadRange(params, callback) {
-            when (api) {
-                C.HELIX -> helixRange(params)
-                C.GQL -> gqlRange(params)
-                else -> mutableListOf()
-            }
-        }
-    }
-
-    private suspend fun helixRange(params: LoadRangeParams): List<Clip> {
-        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, gameId = gameId, started_at = started_at, ended_at = ended_at, limit = params.loadSize, cursor = offset)
-        val list = mutableListOf<Clip>()
-        if (offset != null && offset != "") {
-            get.data?.let { list.addAll(it) }
-            val userIds = mutableListOf<String>()
-            for (i in list) {
-                i.broadcaster_id?.let { userIds.add(it) }
-            }
-            if (userIds.isNotEmpty()) {
-                val users = helixApi.getUsers(helixClientId, helixToken, userIds).data
-                if (users != null) {
-                    for (i in users) {
-                        val items = list.filter { it.broadcaster_id == i.id }
-                        for (item in items) {
-                            item.broadcaster_login = i.login
-                            item.profileImageURL = i.profile_image_url
-                        }
-                    }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.HELIX -> helixLoad(rangeParams = params)
+                   C.GQL -> gqlLoad(rangeParams = params)
+                    else -> listOf()
                 }
-            }
-            offset = get.pagination?.cursor
+            } else listOf()
         }
-        return list
-    }
-
-    private suspend fun gqlRange(params: LoadRangeParams): List<Clip> {
-        val get = gqlApi.loadGameClips(gqlClientId, gameName, gqlPeriod, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(

@@ -21,7 +21,7 @@ class FollowedVideosDataSource(
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlInitial(params) else throw Exception()
+                    C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
@@ -30,28 +30,21 @@ class FollowedVideosDataSource(
         }
     }
 
-    private suspend fun gqlInitial(params: LoadInitialParams): List<Video> {
-        api = C.GQL
-        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, params.requestedLoadSize, offset)
+    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         offset = get.cursor
         return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
         loadRange(params, callback) {
-            when (api) {
-                C.GQL -> gqlRange(params)
-                else -> mutableListOf()
-            }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.GQL -> gqlLoad(rangeParams = params)
+                    else -> listOf()
+                }
+            } else listOf()
         }
-    }
-
-    private suspend fun gqlRange(params: LoadRangeParams): List<Video> {
-        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, params.loadSize, offset)
-        return if (!offset.isNullOrBlank()) {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(

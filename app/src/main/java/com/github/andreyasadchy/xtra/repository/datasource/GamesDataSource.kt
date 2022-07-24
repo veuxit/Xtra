@@ -24,15 +24,15 @@ class GamesDataSource(
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
-                    C.GQL -> gqlInitial(params)
+                    C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) helixInitial(params) else throw Exception()
-                        C.GQL -> gqlInitial(params)
+                        C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -42,48 +42,30 @@ class GamesDataSource(
         }
     }
 
-    private suspend fun helixInitial(params: LoadInitialParams): List<Game> {
-        api = C.HELIX
-        val get = helixApi.getTopGames(helixClientId, helixToken, params.requestedLoadSize, offset)
+    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
+        val get = helixApi.getTopGames(helixClientId, helixToken, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data
-        } else mutableListOf()
+        } else listOf()
     }
 
-    private suspend fun gqlInitial(params: LoadInitialParams): List<Game> {
-        api = C.GQL
-        val get = gqlApi.loadTopGames(gqlClientId, tags, params.requestedLoadSize, offset)
+    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
+        val get = gqlApi.loadTopGames(gqlClientId, tags, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         offset = get.cursor
         return get.data
     }
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Game>) {
         loadRange(params, callback) {
-            when (api) {
-                C.HELIX -> helixRange(params)
-                C.GQL -> gqlRange(params)
-                else -> mutableListOf()
-            }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.HELIX -> helixLoad(rangeParams = params)
+                    C.GQL -> gqlLoad(rangeParams = params)
+                    else -> listOf()
+                }
+            } else listOf()
         }
-    }
-
-    private suspend fun helixRange(params: LoadRangeParams): List<Game> {
-        val get = helixApi.getTopGames(helixClientId, helixToken, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            if (get.data != null) {
-                offset = get.pagination?.cursor
-                get.data
-            } else mutableListOf()
-        } else mutableListOf()
-    }
-
-    private suspend fun gqlRange(params: LoadRangeParams): List<Game> {
-        val get = gqlApi.loadTopGames(gqlClientId, tags, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(

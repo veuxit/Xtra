@@ -20,7 +20,7 @@ class SearchVideosDataSource private constructor(
         loadInitial(params, callback) {
             try {
                 when (apiPref?.elementAt(0)?.second) {
-                    C.GQL -> gqlInitial()
+                    C.GQL -> { api = C.GQL; gqlLoad() }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
@@ -29,7 +29,7 @@ class SearchVideosDataSource private constructor(
         }
     }
 
-    private suspend fun gqlInitial(): List<Video> {
+    private suspend fun gqlLoad(): List<Video> {
         val get = gqlApi.loadSearchVideos(gqlClientId, query, offset)
         offset = get.cursor
         return get.data
@@ -37,19 +37,13 @@ class SearchVideosDataSource private constructor(
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
         loadRange(params, callback) {
-            when (api) {
-                C.GQL -> gqlRange()
-                else -> mutableListOf()
-            }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.GQL -> gqlLoad()
+                    else -> listOf()
+                }
+            } else listOf()
         }
-    }
-
-    private suspend fun gqlRange(): List<Video> {
-        val get = gqlApi.loadSearchVideos(gqlClientId, query, offset)
-        return if (offset != null && offset != "") {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(

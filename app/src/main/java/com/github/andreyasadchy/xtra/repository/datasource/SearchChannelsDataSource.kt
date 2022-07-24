@@ -24,15 +24,15 @@ class SearchChannelsDataSource private constructor(
         loadInitial(params, callback) {
             try {
                 when (apiPref?.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                    C.GQL -> gqlInitial()
+                    C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL -> { api = C.GQL; gqlLoad() }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref?.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) helixInitial(params) else throw Exception()
-                        C.GQL -> gqlInitial()
+                        C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL -> { api = C.GQL; gqlLoad() }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -42,15 +42,13 @@ class SearchChannelsDataSource private constructor(
         }
     }
 
-    private suspend fun helixInitial(params: LoadInitialParams): List<ChannelSearch> {
-        api = C.HELIX
-        val get = helixApi.getChannels(helixClientId, helixToken, query, params.requestedLoadSize, offset)
+    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<ChannelSearch> {
+        val get = helixApi.getChannels(helixClientId, helixToken, query, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
         offset = get.pagination?.cursor
-        return get.data ?: mutableListOf()
+        return get.data ?: listOf()
     }
 
-    private suspend fun gqlInitial(): List<ChannelSearch> {
-        api = C.GQL
+    private suspend fun gqlLoad(): List<ChannelSearch> {
         val get = gqlApi.loadSearchChannels(gqlClientId, query, offset)
         offset = get.cursor
         return get.data
@@ -58,28 +56,14 @@ class SearchChannelsDataSource private constructor(
 
     override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<ChannelSearch>) {
         loadRange(params, callback) {
-            when (api) {
-                C.HELIX -> helixRange(params)
-                C.GQL -> gqlRange()
-                else -> mutableListOf()
-            }
+            if (!offset.isNullOrBlank()) {
+                when (api) {
+                    C.HELIX -> helixLoad(rangeParams = params)
+                    C.GQL -> gqlLoad()
+                    else -> listOf()
+                }
+            } else listOf()
         }
-    }
-
-    private suspend fun helixRange(params: LoadRangeParams): List<ChannelSearch> {
-        val get = helixApi.getChannels(helixClientId, helixToken, query, params.loadSize, offset)
-        return if (offset != null && offset != "") {
-            offset = get.pagination?.cursor
-            get.data ?: mutableListOf()
-        } else mutableListOf()
-    }
-
-    private suspend fun gqlRange(): List<ChannelSearch> {
-        val get = gqlApi.loadSearchChannels(gqlClientId, query, offset)
-        return if (offset != null && offset != "") {
-            offset = get.cursor
-            get.data
-        } else mutableListOf()
     }
 
     class Factory(
