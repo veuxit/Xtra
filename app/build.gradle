@@ -20,7 +20,7 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdkVersion 21
         targetSdkVersion 32
-        versionCode 119
+        versionCode 120
         versionName "2.4.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
