@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -17,6 +18,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -26,6 +28,7 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
@@ -51,6 +54,9 @@ class AudioPlayerService : Service() {
     private lateinit var mediaSource: MediaSource
     private lateinit var playerNotificationManager: PlayerNotificationManager
 
+    private lateinit var mediaSession: MediaSessionCompat
+    private lateinit var mediaSessionConnector: MediaSessionConnector
+
     private var restorePosition = false
     private var type = -1
     private var videoId: Number? = null
@@ -61,6 +67,9 @@ class AudioPlayerService : Service() {
         player = ExoPlayer.Builder(this).setTrackSelector(DefaultTrackSelector(this).apply {
             parameters = buildUponParameters().setRendererDisabled(0, true).build()
         }).build()
+        val context = XtraApp.INSTANCE
+        mediaSession = MediaSessionCompat(context, context.packageName)
+        mediaSessionConnector = MediaSessionConnector(mediaSession)
     }
 
     override fun onDestroy() {
@@ -76,6 +85,8 @@ class AudioPlayerService : Service() {
         }
         player.release()
         connection = null
+        mediaSessionConnector.setPlayer(null)
+        mediaSession.isActive = false
         super.onDestroy()
     }
 
@@ -120,6 +131,8 @@ class AudioPlayerService : Service() {
             setMediaSource(mediaSource)
             prepare()
             playWhenReady = true
+            mediaSessionConnector.setPlayer(player)
+            mediaSession.isActive = true
             if (currentPlaybackPosition > 0) {
                 player.seekTo(currentPlaybackPosition)
             }
