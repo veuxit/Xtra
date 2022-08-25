@@ -516,15 +516,6 @@
     <string name="ignore_cutouts">Ignorer les découpes d'affichage</string>
     <string name="portrait_only">Portrait uniquement</string>
     <string name="lang_auto">Défaut du système</string>
-    <string name="lang_ar">Arabe</string>
-    <string name="lang_en">Anglais</string>
-    <string name="lang_fr">Français</string>
-    <string name="lang_de">Allemand</string>
-    <string name="lang_ja">Japonais</string>
-    <string name="lang_pt">Portugais (Brésil)</string>
-    <string name="lang_ru">Russe</string>
-    <string name="lang_es">Espagnol</string>
-    <string name="lang_tr">Turc</string>
     <string name="save_default">Enregistrer par défaut</string>
     <string name="viewers_high">Téléspectateurs (de haut en bas)</string>
     <string name="viewers_low">Téléspectateurs (faible à élevé)</string>
