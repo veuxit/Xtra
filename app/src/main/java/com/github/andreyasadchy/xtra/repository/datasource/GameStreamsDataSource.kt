@@ -47,7 +47,7 @@ class GameStreamsDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
-        val get = helixApi.getTopStreams(helixClientId, helixToken, gameId, null, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = helixApi.getTopStreams(helixClientId, helixToken, gameId, null, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         val list = mutableListOf<Stream>()
         get.data?.let { list.addAll(it) }
         val ids = mutableListOf<String>()
@@ -70,7 +70,7 @@ class GameStreamsDataSource private constructor(
     }
 
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
         return get.data
     }

@@ -43,7 +43,7 @@ class GamesDataSource(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
-        val get = helixApi.getTopGames(helixClientId, helixToken, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = helixApi.getTopGames(helixClientId, helixToken, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data
@@ -51,7 +51,7 @@ class GamesDataSource(
     }
 
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
-        val get = gqlApi.loadTopGames(gqlClientId, tags, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = gqlApi.loadTopGames(gqlClientId, tags, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
         return get.data
     }

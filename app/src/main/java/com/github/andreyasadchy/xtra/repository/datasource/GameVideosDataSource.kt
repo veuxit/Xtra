@@ -52,7 +52,7 @@ class GameVideosDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = helixApi.getTopVideos(helixClientId, helixToken, gameId, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = helixApi.getTopVideos(helixClientId, helixToken, gameId, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         val list = mutableListOf<Video>()
         get.data?.let { list.addAll(it) }
         val ids = mutableListOf<String>()
@@ -75,7 +75,7 @@ class GameVideosDataSource private constructor(
     }
 
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = gqlApi.loadGameVideos(gqlClientId, gameName, gqlType, gqlSort, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = gqlApi.loadGameVideos(gqlClientId, gameName, gqlType, gqlSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
         return get.data
     }

@@ -43,7 +43,7 @@ class StreamsDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
-        val get = helixApi.getTopStreams(helixClientId, helixToken, null, null, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = helixApi.getTopStreams(helixClientId, helixToken, null, null, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         val list = mutableListOf<Stream>()
         get.data?.let { list.addAll(it) }
         val ids = list.mapNotNull { it.user_id }
@@ -63,7 +63,7 @@ class StreamsDataSource private constructor(
     }
 
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
-        val get = gqlApi.loadTopStreams(gqlClientId, tags, initialParams?.requestedLoadSize ?: rangeParams?.loadSize, offset)
+        val get = gqlApi.loadTopStreams(gqlClientId, tags, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
         return get.data
     }
