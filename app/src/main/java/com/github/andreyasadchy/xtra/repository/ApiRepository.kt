@@ -60,8 +60,8 @@ class ApiRepository @Inject constructor(
         val factory = StreamsDataSource.Factory(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, tags, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
-            builder.setPageSize(10)
-                .setInitialLoadSizeHint(15)
+            builder.setPageSize(30)
+                .setInitialLoadSizeHint(30)
                 .setPrefetchDistance(3)
         } else {
             builder.setPageSize(30)
@@ -76,8 +76,8 @@ class ApiRepository @Inject constructor(
         val factory = GameStreamsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlSort, tags, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
-            builder.setPageSize(10)
-                .setInitialLoadSizeHint(15)
+            builder.setPageSize(30)
+                .setInitialLoadSizeHint(30)
                 .setPrefetchDistance(3)
         } else {
             builder.setPageSize(30)
@@ -91,8 +91,8 @@ class ApiRepository @Inject constructor(
     override fun loadGameVideos(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixLanguage: String?, helixSort: Sort, gqlClientId: String?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = GameVideosDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, helix, gqlClientId, gqlType, gqlSort, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(10)
-            .setInitialLoadSizeHint(15)
+            .setPageSize(30)
+            .setInitialLoadSizeHint(30)
             .setPrefetchDistance(3)
             .setEnablePlaceholders(false)
             .build()
@@ -102,8 +102,8 @@ class ApiRepository @Inject constructor(
     override fun loadGameClips(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
         val factory = GameClipsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlPeriod, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(10)
-            .setInitialLoadSizeHint(15)
+            .setPageSize(20)
+            .setInitialLoadSizeHint(20)
             .setPrefetchDistance(3)
             .setEnablePlaceholders(false)
             .build()
@@ -113,8 +113,8 @@ class ApiRepository @Inject constructor(
     override fun loadChannelVideos(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixSort: Sort, gqlClientId: String?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = ChannelVideosDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixSort, helix, gqlClientId, gqlType, gqlSort, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(10)
-            .setInitialLoadSizeHint(15)
+            .setPageSize(30)
+            .setInitialLoadSizeHint(30)
             .setPrefetchDistance(3)
             .setEnablePlaceholders(false)
             .build()
@@ -124,8 +124,8 @@ class ApiRepository @Inject constructor(
     override fun loadChannelClips(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
         val factory = ChannelClipsDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlPeriod, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(10)
-            .setInitialLoadSizeHint(15)
+            .setPageSize(20)
+            .setInitialLoadSizeHint(20)
             .setPrefetchDistance(3)
             .setEnablePlaceholders(false)
             .build()
@@ -185,12 +185,12 @@ class ApiRepository @Inject constructor(
         val factory = FollowedStreamsDataSource.Factory(localFollowsChannel, userId, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
-            builder.setPageSize(10)
-                .setInitialLoadSizeHint(15)
+            builder.setPageSize(50)
+                .setInitialLoadSizeHint(50)
                 .setPrefetchDistance(3)
         } else {
-            builder.setPageSize(30)
-                .setInitialLoadSizeHint(30)
+            builder.setPageSize(50)
+                .setInitialLoadSizeHint(50)
                 .setPrefetchDistance(10)
         }
         val config = builder.build()
@@ -200,8 +200,8 @@ class ApiRepository @Inject constructor(
     override fun loadFollowedVideos(userId: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = FollowedVideosDataSource.Factory(userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(10)
-            .setInitialLoadSizeHint(15)
+            .setPageSize(50)
+            .setInitialLoadSizeHint(50)
             .setPrefetchDistance(3)
             .setEnablePlaceholders(false)
             .build()
@@ -222,8 +222,8 @@ class ApiRepository @Inject constructor(
     override fun loadFollowedGames(userId: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Game> {
         val factory = FollowedGamesDataSource.Factory(localFollowsGame, userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
-            .setPageSize(40)
-            .setInitialLoadSizeHint(40)
+            .setPageSize(100)
+            .setInitialLoadSizeHint(100)
             .setPrefetchDistance(10)
             .setEnablePlaceholders(false)
             .build()
