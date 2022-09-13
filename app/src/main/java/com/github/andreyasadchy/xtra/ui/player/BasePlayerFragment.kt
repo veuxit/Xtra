@@ -16,8 +16,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.edit
-import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
+import androidx.core.view.*
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
@@ -506,14 +505,31 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
     }
 
     private fun showStatusBar() {
-        if (isAdded) { //TODO this check might not be needed anymore AND ANDROID 5
-            requireActivity().window.decorView.systemUiVisibility = 0
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            WindowCompat.setDecorFitsSystemWindows(requireActivity().window, true)
+            WindowInsetsControllerCompat(requireActivity().window, requireActivity().window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (isAdded) {
+                    requireActivity().window.decorView.systemUiVisibility = 0
+                }
+            }
         }
     }
 
     private fun hideStatusBar() {
-        if (isAdded) {
-            requireActivity().window.decorView.systemUiVisibility = systemUiFlags
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+            WindowInsetsControllerCompat(requireActivity().window, requireActivity().window.decorView).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (isAdded) {
+                    requireActivity().window.decorView.systemUiVisibility = systemUiFlags
+                }
+            }
         }
     }
 
