@@ -106,6 +106,7 @@ class ChannelClipsDataSource(
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Clip> {
         val get = gqlApi.loadChannelClips(gqlClientId, channelLogin, gqlPeriod, 20 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
+        nextPage = get.hasNextPage ?: true
         return get.data
     }
 
@@ -115,7 +116,7 @@ class ChannelClipsDataSource(
                 when (api) {
                     C.HELIX -> helixLoad(rangeParams = params)
                     C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
-                    C.GQL -> gqlLoad(rangeParams = params)
+                    C.GQL -> if (nextPage) gqlLoad(rangeParams = params) else listOf()
                     else -> listOf()
                 }
             } else listOf()

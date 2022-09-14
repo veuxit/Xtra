@@ -174,6 +174,7 @@ class FollowedChannelsDataSource(
     private suspend fun gqlLoad(): List<Follow> {
         val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
         offset = get.cursor
+        nextPage = get.hasNextPage ?: true
         return get.data
     }
 
@@ -183,7 +184,7 @@ class FollowedChannelsDataSource(
                 when (api) {
                     C.HELIX -> helixLoad()
                     C.GQL_QUERY -> if (nextPage) gqlQueryLoad() else listOf()
-                    C.GQL -> gqlLoad()
+                    C.GQL -> if (nextPage) gqlLoad() else listOf()
                     else -> listOf()
                 }
             } else listOf()
