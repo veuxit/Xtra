@@ -2,11 +2,15 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
 import androidx.paging.DataSource
+import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 
 class FollowedStreamsDataSource(
@@ -22,6 +26,7 @@ class FollowedStreamsDataSource(
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Stream>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
+    private var nextPage: Boolean = true
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Stream>) {
         loadInitial(params, callback) {
@@ -29,9 +34,13 @@ class FollowedStreamsDataSource(
             val localIds = localFollowsChannel.loadFollows().map { it.user_id }
             val local = if (localIds.isNotEmpty()) {
                 try {
-                    if (!helixToken.isNullOrBlank()) helixLocal(localIds) else throw Exception()
+                    gqlQueryLocal(localIds)
                 } catch (e: Exception) {
-                    listOf()
+                    try {
+                        if (!helixToken.isNullOrBlank()) helixLocal(localIds) else throw Exception()
+                    } catch (e: Exception) {
+                        listOf()
+                    }
                 }
             } else listOf()
             if (local.isNotEmpty()) {
@@ -40,6 +49,7 @@ class FollowedStreamsDataSource(
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
                     C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                     else -> throw Exception()
                 }
@@ -47,11 +57,21 @@ class FollowedStreamsDataSource(
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                        C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
                         C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    mutableListOf()
+                    try {
+                        when (apiPref.elementAt(2)?.second) {
+                            C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                            C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            else -> throw Exception()
+                        }
+                    } catch (e: Exception) {
+                        listOf()
+                    }
                 }
             }
             if (remote.isNotEmpty()) {
@@ -87,6 +107,22 @@ class FollowedStreamsDataSource(
         return list
     }
 
+    private suspend fun gqlQueryLoad(): List<Stream> {
+        val context = XtraApp.INSTANCE.applicationContext
+        val get = gqlApi.loadQueryFollowedStreams(
+            clientId = gqlClientId,
+            token = gqlToken,
+            query = context.resources.openRawResource(R.raw.followedstreams).bufferedReader().use { it.readText() },
+            variables = JsonObject().apply {
+                addProperty("id", userId)
+                addProperty("first", 100)
+                addProperty("after", offset)
+            })
+        offset = get.cursor
+        nextPage = get.hasNextPage ?: true
+        return get.data
+    }
+
     private suspend fun gqlLoad(): List<Stream> {
         val get = gqlApi.loadFollowedStreams(gqlClientId, gqlToken, 100, offset)
         offset = get.cursor
@@ -98,11 +134,31 @@ class FollowedStreamsDataSource(
             if (!offset.isNullOrBlank()) {
                 when (api) {
                     C.HELIX -> helixLoad()
+                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad() else listOf()
                     C.GQL -> gqlLoad()
                     else -> listOf()
                 }
             } else listOf()
         }
+    }
+
+    private suspend fun gqlQueryLocal(ids: List<String>): List<Stream> {
+        val streams = mutableListOf<Stream>()
+        for (localIds in ids.chunked(100)) {
+            val context = XtraApp.INSTANCE.applicationContext
+            val get = gqlApi.loadQueryUsersStream(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.usersstream).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    val idArray = JsonArray()
+                    localIds.forEach {
+                        idArray.add(it)
+                    }
+                    add("id", idArray)
+                }).data
+            streams.addAll(get)
+        }
+        return streams
     }
 
     private suspend fun helixLocal(ids: List<String>): List<Stream> {

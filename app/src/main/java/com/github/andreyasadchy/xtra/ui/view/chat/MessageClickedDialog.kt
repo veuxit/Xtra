@@ -3,7 +3,6 @@ package com.github.andreyasadchy.xtra.ui.view.chat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -68,7 +67,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
         val targetId = args.getString(KEY_CHANNEL_ID)
         val fullMsg = args.getString(KEY_FULL_MSG)
         val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
-        if (userId != null && !com.github.andreyasadchy.xtra.model.User.get(requireContext()).helixToken.isNullOrBlank()) {
+        if (userId != null) {
             val item = savedUsers.find { it.first.id == userId && it.second == targetId }
             if (item != null) {
                 updateUserLayout(item.first)
@@ -125,13 +124,13 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
     }
 
     private fun updateUserLayout(user: User) {
-        if (user.bannerImageURL != null) {
+        /*if (user.bannerImageURL != null) {
             userLayout.visible()
             bannerImage.visible()
             bannerImage.loadImage(requireParentFragment(), user.bannerImageURL)
         } else {
             bannerImage.gone()
-        }
+        }*/
         if (user.channelLogo != null) {
             userLayout.visible()
             userImage.visible()
@@ -151,9 +150,9 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
                 listener.onViewProfileClicked(user.id, user.login, user.display_name, user.channelLogo)
                 dismiss()
             }
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userName.gone()
         }
@@ -161,10 +160,10 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
             userLayout.visible()
             userCreated.visible()
             userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.created_at))
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userCreated.setTextColor(Color.LTGRAY)
                 userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userCreated.gone()
         }
@@ -172,10 +171,10 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), Injectable {
             userLayout.visible()
             userFollowed.visible()
             userFollowed.text = requireContext().getString(R.string.followed_at, TwitchApiHelper.formatTimeString(requireContext(), user.followedAt))
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userFollowed.setTextColor(Color.LTGRAY)
                 userFollowed.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userFollowed.gone()
         }

@@ -1,0 +1,20 @@
+query ($id: ID) {
+    video(id: $id) {
+        broadcastType
+        createdAt
+        game {
+            id
+            displayName
+        }
+        id
+        lengthSeconds
+        owner {
+            displayName
+            id
+            login
+            profileImageURL(width: 300)
+        }
+        previewThumbnailURL
+        title
+    }
+}

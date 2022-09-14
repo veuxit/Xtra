@@ -86,7 +86,7 @@ class StreamPlayerViewModel @Inject constructor(
                     while (isActive) {
                         try {
                             val s = when {
-                                stream.user_id != null && !user.helixToken.isNullOrBlank() -> {
+                                stream.user_id != null -> {
                                     repository.loadStream(stream.user_id, stream.user_login, helixClientId, user.helixToken, gqlClientId) ?:
                                     gql.loadViewerCount(gqlClientId, stream.user_login).let { get ->
                                         _stream.value?.apply {

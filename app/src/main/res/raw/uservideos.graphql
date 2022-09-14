@@ -1,0 +1,33 @@
+query ($id: ID, $sort: VideoSort, $types: [BroadcastType!], $first: Int, $after: Cursor) {
+    user(id: $id, lookupType: ALL) {
+        displayName
+        id
+        login
+        profileImageURL(width: 300)
+        videos(first: $first, after: $after, types: $types, sort: $sort) {
+            edges {
+                cursor
+                node {
+                    broadcastType
+                    contentTags {
+                        id
+                        localizedName
+                    }
+                    createdAt
+                    game {
+                        id
+                        displayName
+                    }
+                    id
+                    lengthSeconds
+                    previewThumbnailURL
+                    title
+                    viewCount
+                }
+            }
+            pageInfo {
+                hasNextPage
+            }
+        }
+    }
+}

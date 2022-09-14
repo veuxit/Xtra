@@ -49,6 +49,12 @@
         android:title="@string/show_tags"
         app:iconSpaceReserved="false"/>
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="ui_broadcasterscount"
+        android:title="@string/broadcastersCount"
+        app:iconSpaceReserved="false"/>
+
     <ListPreference
         android:defaultValue="1"
         android:entries="@array/followedEntries"

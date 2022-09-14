@@ -23,6 +23,7 @@ import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
+import com.github.andreyasadchy.xtra.model.query.*
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -35,6 +36,214 @@ private const val TAG = "GraphQLRepository"
 
 @Singleton
 class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
+
+    suspend fun loadQueryCheerEmotes(clientId: String?, query: String?, variables: JsonObject): CheerEmotesQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryCheerEmotes(clientId, json)
+    }
+
+    suspend fun loadQueryFollowedGames(clientId: String?, token: String?, query: String?, variables: JsonObject): FollowedGamesQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryFollowedGames(clientId, token, json)
+    }
+
+    suspend fun loadQueryFollowedStreams(clientId: String?, token: String?, query: String?, variables: JsonObject): FollowedStreamsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryFollowedStreams(clientId, token, json)
+    }
+
+    suspend fun loadQueryFollowedUsers(clientId: String?, token: String?, query: String?, variables: JsonObject): FollowedUsersQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryFollowedUsers(clientId, token, json)
+    }
+
+    suspend fun loadQueryFollowedVideos(clientId: String?, token: String?, query: String?, variables: JsonObject): FollowedVideosQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryFollowedVideos(clientId, token, json)
+    }
+
+    suspend fun loadQueryGameBoxArt(clientId: String?, query: String?, variables: JsonObject): GameBoxArtQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryGameBoxArt(clientId, json)
+    }
+
+    suspend fun loadQueryGameClips(clientId: String?, query: String?, variables: JsonObject): GameClipsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryGameClips(clientId, json)
+    }
+
+    suspend fun loadQueryGameStreams(clientId: String?, query: String?, variables: JsonObject): GameStreamsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryGameStreams(clientId, json)
+    }
+
+    suspend fun loadQueryGameVideos(clientId: String?, query: String?, variables: JsonObject): GameVideosQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryGameVideos(clientId, json)
+    }
+
+    suspend fun loadQuerySearchChannels(clientId: String?, query: String?, variables: JsonObject): SearchChannelsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQuerySearchChannels(clientId, json)
+    }
+
+    suspend fun loadQuerySearchGames(clientId: String?, query: String?, variables: JsonObject): SearchGamesQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQuerySearchGames(clientId, json)
+    }
+
+    suspend fun loadQuerySearchStreams(clientId: String?, query: String?, variables: JsonObject): SearchStreamsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQuerySearchStreams(clientId, json)
+    }
+
+    suspend fun loadQuerySearchVideos(clientId: String?, query: String?, variables: JsonObject): SearchVideosQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQuerySearchVideos(clientId, json)
+    }
+
+    suspend fun loadQueryTopGames(clientId: String?, query: String?, variables: JsonObject): TopGamesQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryTopGames(clientId, json)
+    }
+
+    suspend fun loadQueryTopStreams(clientId: String?, query: String?, variables: JsonObject): TopStreamsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryTopStreams(clientId, json)
+    }
+
+    suspend fun loadQueryUser(clientId: String?, query: String?, variables: JsonObject): UserQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUser(clientId, json)
+    }
+
+    suspend fun loadQueryUserChannelPage(clientId: String?, query: String?, variables: JsonObject): UserChannelPageQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserChannelPage(clientId, json)
+    }
+
+    suspend fun loadQueryUserClips(clientId: String?, query: String?, variables: JsonObject): UserClipsQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserClips(clientId, json)
+    }
+
+    suspend fun loadQueryUserEmotes(clientId: String?, token: String?, query: String?, variables: JsonObject): UserEmotesQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserEmotes(clientId, token, json)
+    }
+
+    suspend fun loadQueryUserHosting(clientId: String?, query: String?, variables: JsonObject): UserHostingQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserHosting(clientId, json)
+    }
+
+    suspend fun loadQueryUserMessageClicked(clientId: String?, query: String?, variables: JsonObject): UserMessageClickedQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserMessageClicked(clientId, json)
+    }
+
+    suspend fun loadQueryUserVideos(clientId: String?, query: String?, variables: JsonObject): UserVideosQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserVideos(clientId, json)
+    }
+
+    suspend fun loadQueryUsersLastBroadcast(clientId: String?, query: String?, variables: JsonObject): UsersLastBroadcastQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUsersLastBroadcast(clientId, json)
+    }
+
+    suspend fun loadQueryUsersStream(clientId: String?, query: String?, variables: JsonObject): UsersStreamQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUsersStream(clientId, json)
+    }
+
+    suspend fun loadQueryUsersType(clientId: String?, query: String?, variables: JsonObject): UsersTypeQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUsersType(clientId, json)
+    }
+
+    suspend fun loadQueryVideo(clientId: String?, query: String?, variables: JsonObject): VideoQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryVideo(clientId, json)
+    }
 
     suspend fun loadClipUrls(clientId: String?, slug: String?): Map<String, String> = withContext(Dispatchers.IO) {
         val array = JsonArray(1)

@@ -3,7 +3,6 @@ package com.github.andreyasadchy.xtra.ui.channel
 import android.app.Activity
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,14 +26,6 @@ import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.material.appbar.AppBarLayout
 import kotlinx.android.synthetic.main.fragment_channel.*
-import kotlinx.android.synthetic.main.fragment_channel.appBar
-import kotlinx.android.synthetic.main.fragment_channel.collapsingToolbar
-import kotlinx.android.synthetic.main.fragment_channel.follow
-import kotlinx.android.synthetic.main.fragment_channel.menu
-import kotlinx.android.synthetic.main.fragment_channel.search
-import kotlinx.android.synthetic.main.fragment_channel.toolbar
-import kotlinx.android.synthetic.main.fragment_channel.watchLive
-import kotlinx.android.synthetic.main.fragment_channel_old.*
 import kotlinx.android.synthetic.main.fragment_media_pager.*
 
 
@@ -56,7 +47,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     private val viewModel by viewModels<ChannelPagerViewModel> { viewModelFactory }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(if (!User.get(requireContext()).helixToken.isNullOrBlank()) R.layout.fragment_channel else R.layout.fragment_channel_old, container, false)
+        return inflater.inflate(R.layout.fragment_channel, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,28 +58,23 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         if (activity.isInLandscapeOrientation) {
             appBar.setExpanded(false, false)
         }
-        if (!user.helixToken.isNullOrBlank()) {
-            requireArguments().getString(C.CHANNEL_DISPLAYNAME).let {
-                if (it != null) {
-                    userLayout.visible()
-                    userName.visible()
-                    userName.text = it
-                } else {
-                    userName.gone()
-                }
+        requireArguments().getString(C.CHANNEL_DISPLAYNAME).let {
+            if (it != null) {
+                userLayout.visible()
+                userName.visible()
+                userName.text = it
+            } else {
+                userName.gone()
             }
-            requireArguments().getString(C.CHANNEL_PROFILEIMAGE).let {
-                if (it != null) {
-                    userLayout.visible()
-                    userImage.visible()
-                    userImage.loadImage(this, it, circle = true)
-                } else {
-                    userImage.gone()
-                }
+        }
+        requireArguments().getString(C.CHANNEL_PROFILEIMAGE).let {
+            if (it != null) {
+                userLayout.visible()
+                userImage.visible()
+                userImage.loadImage(this, it, circle = true)
+            } else {
+                userImage.gone()
             }
-        } else {
-            collapsingToolbar.title = requireArguments().getString(C.CHANNEL_DISPLAYNAME)
-            logo.loadImage(this, requireArguments().getString(C.CHANNEL_PROFILEIMAGE), circle = true)
         }
         toolbar.apply {
             navigationIcon = Utils.getNavigationIcon(activity)
@@ -149,30 +135,19 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
             user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME),
             profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE)))
         }
-        if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
-            viewModel.init(requireArguments().getString(C.CHANNEL_ID), requireArguments().getString(C.CHANNEL_LOGIN), requireArguments().getString(C.CHANNEL_DISPLAYNAME), requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
-            viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
-            viewModel.stream.observe(viewLifecycleOwner) { stream ->
-                updateStreamLayout(stream)
-                if (stream?.channelUser != null) {
-                    updateUserLayout(stream.channelUser)
-                } else {
-                    viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken)
-                }
+        viewModel.init(requireArguments().getString(C.CHANNEL_ID), requireArguments().getString(C.CHANNEL_LOGIN), requireArguments().getString(C.CHANNEL_DISPLAYNAME), requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
+        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        viewModel.stream.observe(viewLifecycleOwner) { stream ->
+            updateStreamLayout(stream)
+            if (stream?.channelUser != null) {
+                updateUserLayout(stream.channelUser)
+            } else {
+                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken)
             }
-            viewModel.user.observe(viewLifecycleOwner) { user ->
-                if (user != null) {
-                    updateUserLayout(user)
-                }
-            }
-        } else {
-            collapsingToolbar.expandedTitleMarginBottom = activity.convertDpToPixels(50.5f)
-            watchLive.setOnClickListener { activity.startStream(Stream(user_id = requireArguments().getString(C.CHANNEL_ID), user_login = requireArguments().getString(C.CHANNEL_LOGIN), user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME), profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE))) }
-            viewModel.loadStream(helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), helixToken = User.get(requireContext()).helixToken, gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
-            viewModel.stream.observe(viewLifecycleOwner) { stream ->
-                if (stream?.viewer_count != null) {
-                    watchLive.text = getString(R.string.watch_live)
-                }
+        }
+        viewModel.user.observe(viewLifecycleOwner) { user ->
+            if (user != null) {
+                updateUserLayout(user)
             }
         }
         if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
@@ -284,7 +259,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
             userImage.loadImage(this, user.channelLogo, circle = true)
             requireArguments().putString(C.CHANNEL_PROFILEIMAGE, user.channelLogo)
         }
-        if (user.bannerImageURL != null) {
+        /*if (user.bannerImageURL != null) {
             bannerImage.visible()
             bannerImage.loadImage(this, user.bannerImageURL)
             if (userName.isVisible) {
@@ -292,34 +267,34 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
             }
         } else {
             bannerImage.gone()
-        }
+        }*/
         if (user.created_at != null) {
             userCreated.visible()
             userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.created_at))
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userCreated.setTextColor(Color.LTGRAY)
                 userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userCreated.gone()
         }
         if (user.followers_count != null) {
             userFollowers.visible()
             userFollowers.text = requireContext().getString(R.string.followers, TwitchApiHelper.formatCount(requireContext(), user.followers_count))
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userFollowers.setTextColor(Color.LTGRAY)
                 userFollowers.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userFollowers.gone()
         }
         if (user.view_count != null) {
             userViews.visible()
             userViews.text = TwitchApiHelper.formatViewsCount(requireContext(), user.view_count)
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userViews.setTextColor(Color.LTGRAY)
                 userViews.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userViews.gone()
         }
@@ -329,10 +304,10 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         if (typeString != null) {
             userType.visible()
             userType.text = typeString
-            if (user.bannerImageURL != null) {
+            /*if (user.bannerImageURL != null) {
                 userType.setTextColor(Color.LTGRAY)
                 userType.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }
+            }*/
         } else {
             userType.gone()
         }
@@ -342,9 +317,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onNetworkRestored() {
-        if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
-            viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
-        }
+        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

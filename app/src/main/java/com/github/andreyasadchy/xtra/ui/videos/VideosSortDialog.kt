@@ -97,7 +97,6 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
             is GameVideosFragment -> {
                 if (User.get(requireContext()).helixToken.isNullOrBlank()) {
                     period.gone()
-                    selectLang.gone()
                 }
                 saveSort.text = requireContext().getString(R.string.save_sort_game)
                 saveSort.isVisible = parentFragment?.arguments?.getString(C.GAME_ID).isNullOrBlank() == false

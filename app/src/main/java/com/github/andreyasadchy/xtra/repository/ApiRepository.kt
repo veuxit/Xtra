@@ -3,6 +3,8 @@ package com.github.andreyasadchy.xtra.repository
 import android.util.Base64
 import androidx.core.util.Pair
 import androidx.paging.PagedList
+import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
@@ -23,7 +25,14 @@ import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.datasource.*
+import com.github.andreyasadchy.xtra.type.ClipsPeriod
+import com.github.andreyasadchy.xtra.type.Language
+import com.github.andreyasadchy.xtra.type.StreamSort
+import com.github.andreyasadchy.xtra.type.VideoSort
+import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
+import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,8 +81,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadGameStreams(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlSort: com.github.andreyasadchy.xtra.model.helix.stream.Sort?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
-        val factory = GameStreamsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlSort, tags, gql, apiPref, coroutineScope)
+    override fun loadGameStreams(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlQuerySort: StreamSort?, gqlSort: com.github.andreyasadchy.xtra.model.helix.stream.Sort?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
+        val factory = GameStreamsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlQuerySort, gqlSort, tags, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
             builder.setPageSize(30)
@@ -88,8 +97,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadGameVideos(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixLanguage: String?, helixSort: Sort, gqlClientId: String?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
-        val factory = GameVideosDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, helix, gqlClientId, gqlType, gqlSort, gql, apiPref, coroutineScope)
+    override fun loadGameVideos(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixLanguage: String?, helixSort: Sort, gqlClientId: String?, gqlQueryLanguages: List<String>?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+        val factory = GameVideosDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, helix, gqlClientId, gqlQueryLanguages, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(30)
             .setInitialLoadSizeHint(30)
@@ -99,8 +108,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadGameClips(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
-        val factory = GameClipsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlPeriod, gql, apiPref, coroutineScope)
+    override fun loadGameClips(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlQueryLanguages: List<Language>?, gqlQueryPeriod: ClipsPeriod?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
+        val factory = GameClipsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlQueryLanguages, gqlQueryPeriod, gqlPeriod, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(20)
             .setInitialLoadSizeHint(20)
@@ -110,8 +119,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadChannelVideos(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixSort: Sort, gqlClientId: String?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
-        val factory = ChannelVideosDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixSort, helix, gqlClientId, gqlType, gqlSort, gql, apiPref, coroutineScope)
+    override fun loadChannelVideos(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixSort: Sort, gqlClientId: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+        val factory = ChannelVideosDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixSort, helix, gqlClientId, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(30)
             .setInitialLoadSizeHint(30)
@@ -121,8 +130,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadChannelClips(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
-        val factory = ChannelClipsDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlPeriod, gql, apiPref, coroutineScope)
+    override fun loadChannelClips(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, started_at: String?, ended_at: String?, gqlClientId: String?, gqlQueryPeriod: ClipsPeriod?, gqlPeriod: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Clip> {
+        val factory = ChannelClipsDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, started_at, ended_at, helix, gqlClientId, gqlQueryPeriod, gqlPeriod, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(20)
             .setInitialLoadSizeHint(20)
@@ -166,7 +175,7 @@ class ApiRepository @Inject constructor(
     }
 
     override fun loadSearchStreams(query: String, helixClientId: String?, helixToken: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>?, thumbnailsEnabled: Boolean?, coroutineScope: CoroutineScope): Listing<Stream> {
-        val factory = SearchStreamsDataSource.Factory(query, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, apiPref, coroutineScope)
+        val factory = SearchStreamsDataSource.Factory(query, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gql, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled == true) {
             builder.setPageSize(10)
@@ -197,8 +206,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    override fun loadFollowedVideos(userId: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
-        val factory = FollowedVideosDataSource.Factory(userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apiPref, coroutineScope)
+    override fun loadFollowedVideos(userId: String?, gqlClientId: String?, gqlToken: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+        val factory = FollowedVideosDataSource.Factory(userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gqlQueryType, gqlQuerySort, gql, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(50)
             .setInitialLoadSizeHint(50)
@@ -231,21 +240,51 @@ class ApiRepository @Inject constructor(
     }
 
     override suspend fun loadGameBoxArt(gameId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): String? = withContext(Dispatchers.IO) {
-        helix.getGames(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(gameId)).data?.firstOrNull()?.boxArt
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryGameBoxArt(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.gameboxart).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", gameId)
+                }).boxArtURL
+        } catch (e: Exception) {
+            helix.getGames(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(gameId)).data?.firstOrNull()?.boxArt
+        }
     }
 
     override suspend fun loadStream(channelId: String, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
         try {
-            if (!helixToken.isNullOrBlank())
-                helix.getStreams(helixClientId, helixToken.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(channelId)).data?.firstOrNull()
-            else throw Exception()
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUsersStream(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.usersstream).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    val idArray = JsonArray()
+                    idArray.add(channelId)
+                    add("id", idArray)
+                }).data.firstOrNull()
         } catch (e: Exception) {
-            null
+            try {
+                helix.getStreams(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(channelId)).data?.firstOrNull()
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
     override suspend fun loadVideo(videoId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): Video? = withContext(Dispatchers.IO) {
-        helix.getVideos(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(videoId)).data?.firstOrNull()
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryVideo(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.video).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", videoId)
+                }).data
+        } catch (e: Exception) {
+            helix.getVideos(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, mutableListOf(videoId)).data?.firstOrNull()
+        }
     }
 
     override suspend fun loadVideos(ids: List<String>, helixClientId: String?, helixToken: String?): List<Video>? = withContext(Dispatchers.IO) {
@@ -267,7 +306,18 @@ class ApiRepository @Inject constructor(
     }
 
     override suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
-        helix.getStreams(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserChannelPage(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.userchannelpage).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                    addProperty("login", channelLogin)
+                }).data
+        } catch (e: Exception) {
+            helix.getStreams(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+        }
     }
 
     override suspend fun loadUser(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?): User? = withContext(Dispatchers.IO) {
@@ -275,26 +325,86 @@ class ApiRepository @Inject constructor(
     }
 
     override suspend fun loadCheckUser(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
-        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUser(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.user).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                    addProperty("login", channelLogin)
+                }).data
+        } catch (e: Exception) {
+            helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { listOf(channelId) }, channelLogin?.let { listOf(channelLogin) }).data?.firstOrNull()
+        }
     }
 
     override suspend fun loadUserMessageClicked(channelId: String?, channelLogin: String?, targetId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
-        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { mutableListOf(channelId) }, channelLogin?.let { mutableListOf(channelLogin) }).data?.firstOrNull()
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserMessageClicked(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.usermessageclicked).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                    addProperty("login", channelLogin)
+                    addProperty("targetId", targetId)
+                }).data
+        } catch (e: Exception) {
+            helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId?.let { mutableListOf(channelId) }, channelLogin?.let { mutableListOf(channelLogin) }).data?.firstOrNull()
+        }
     }
 
     override suspend fun loadUserTypes(ids: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>? = withContext(Dispatchers.IO) {
-        helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids).data
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUsersType(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.userstype).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    val idArray = JsonArray()
+                    ids.forEach {
+                        idArray.add(it)
+                    }
+                    add("id", idArray)
+                }).data
+        } catch (e: Exception) {
+            helix.getUsers(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids).data
+        }
     }
 
     override suspend fun loadCheerEmotes(userId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<CheerEmote>? = withContext(Dispatchers.IO) {
-        helix.getCheerEmotes(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId).emotes
+        try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryCheerEmotes(
+                clientId = gqlClientId,
+                query = context.resources.openRawResource(R.raw.cheeremotes).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", userId)
+                    addProperty("gif", animateGifs)
+                    addProperty("quality", (when (emoteQuality) {"4" -> 4 "3" -> 3 "2" -> 2 else -> 1}).toDouble())
+                }).data
+        } catch (e: Exception) {
+            helix.getCheerEmotes(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId).emotes
+        }
     }
 
     override suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, userId: String, channelId: String?): List<TwitchEmote>? = withContext(Dispatchers.IO) {
         try {
-            gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserEmotes(
+                clientId = gqlClientId,
+                token = gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) },
+                query = context.resources.openRawResource(R.raw.useremotes).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                }).data
         } catch (e: Exception) {
-            null
+            try {
+                gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
@@ -332,13 +442,20 @@ class ApiRepository @Inject constructor(
 
     override suspend fun loadHosting(clientId: String?, channelId: String?, channelLogin: String?): Stream? = withContext(Dispatchers.IO) {
         try {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserHosting(
+                clientId = clientId,
+                query = context.resources.openRawResource(R.raw.userhosting).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                    addProperty("login", channelLogin)
+                }).data
+        } catch (e: Exception) {
             if (!channelLogin.isNullOrBlank()) {
                 gql.loadChannelHosting(clientId, channelLogin).data
             } else {
                 null
             }
-        } catch (e: Exception) {
-            null
         }
     }
 

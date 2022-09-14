@@ -28,6 +28,7 @@ import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetDeserializer
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
+import com.github.andreyasadchy.xtra.model.query.*
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.util.FetchProvider
@@ -177,6 +178,32 @@ class XtraModule {
                 .registerTypeAdapter(FollowingGameDataResponse::class.java, FollowingGameDataDeserializer())
                 .registerTypeAdapter(ChannelPointsContextDataResponse::class.java, ChannelPointsContextDataDeserializer())
                 .registerTypeAdapter(UserEmotesDataResponse::class.java, UserEmotesDataDeserializer())
+
+                .registerTypeAdapter(CheerEmotesQueryResponse::class.java, CheerEmotesQueryDeserializer())
+                .registerTypeAdapter(FollowedGamesQueryResponse::class.java, FollowedGamesQueryDeserializer())
+                .registerTypeAdapter(FollowedStreamsQueryResponse::class.java, FollowedStreamsQueryDeserializer())
+                .registerTypeAdapter(FollowedUsersQueryResponse::class.java, FollowedUsersQueryDeserializer())
+                .registerTypeAdapter(FollowedVideosQueryResponse::class.java, FollowedVideosQueryDeserializer())
+                .registerTypeAdapter(GameBoxArtQueryResponse::class.java, GameBoxArtQueryDeserializer())
+                .registerTypeAdapter(GameClipsQueryResponse::class.java, GameClipsQueryDeserializer())
+                .registerTypeAdapter(GameStreamsQueryResponse::class.java, GameStreamsQueryDeserializer())
+                .registerTypeAdapter(GameVideosQueryResponse::class.java, GameVideosQueryDeserializer())
+                .registerTypeAdapter(SearchChannelsQueryResponse::class.java, SearchChannelsQueryDeserializer())
+                .registerTypeAdapter(SearchGamesQueryResponse::class.java, SearchGamesQueryDeserializer())
+                .registerTypeAdapter(SearchStreamsQueryResponse::class.java, SearchStreamsQueryDeserializer())
+                .registerTypeAdapter(SearchVideosQueryResponse::class.java, SearchVideosQueryDeserializer())
+                .registerTypeAdapter(TopGamesQueryResponse::class.java, TopGamesQueryDeserializer())
+                .registerTypeAdapter(TopStreamsQueryResponse::class.java, TopStreamsQueryDeserializer())
+                .registerTypeAdapter(UserChannelPageQueryResponse::class.java, UserChannelPageQueryDeserializer())
+                .registerTypeAdapter(UserClipsQueryResponse::class.java, UserClipsQueryDeserializer())
+                .registerTypeAdapter(UserEmotesQueryResponse::class.java, UserEmotesQueryDeserializer())
+                .registerTypeAdapter(UserHostingQueryResponse::class.java, UserHostingQueryDeserializer())
+                .registerTypeAdapter(UserMessageClickedQueryResponse::class.java, UserMessageClickedQueryDeserializer())
+                .registerTypeAdapter(UserQueryResponse::class.java, UserQueryDeserializer())
+                .registerTypeAdapter(UsersLastBroadcastQueryResponse::class.java, UsersLastBroadcastQueryDeserializer())
+                .registerTypeAdapter(UsersStreamQueryResponse::class.java, UsersStreamQueryDeserializer())
+                .registerTypeAdapter(UserVideosQueryResponse::class.java, UserVideosQueryDeserializer())
+                .registerTypeAdapter(VideoQueryResponse::class.java, VideoQueryDeserializer())
                 .create())
     }
 

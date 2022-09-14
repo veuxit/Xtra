@@ -114,6 +114,14 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 }
             }
         }
+        if (prefs.getBoolean(C.FIRST_LAUNCH, true)) {
+            prefs.edit {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    putString(C.CHAT_IMAGE_LIBRARY, "2")
+                }
+                putBoolean(C.FIRST_LAUNCH, false)
+            }
+        }
         if (prefs.getBoolean(C.FIRST_LAUNCH1, true)) {
             prefs.edit {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
@@ -359,15 +367,13 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     }
                 }
                 else -> {
-                    if (!User.get(this).helixToken.isNullOrBlank()) {
-                        val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                        if (!login.isNullOrBlank()) {
-                            viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
-                            viewModel.user.observe(this) { user ->
-                                if (user != null && (!user.id.isNullOrBlank() || !user.login.isNullOrBlank())) {
-                                    playerFragment?.minimize()
-                                    viewChannel(id = user.id, login = user.login, name = user.display_name, channelLogo = user.channelLogo)
-                                }
+                    val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                    if (!login.isNullOrBlank()) {
+                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+                        viewModel.user.observe(this) { user ->
+                            if (user != null && (!user.id.isNullOrBlank() || !user.login.isNullOrBlank())) {
+                                playerFragment?.minimize()
+                                viewChannel(id = user.id, login = user.login, name = user.display_name, channelLogo = user.channelLogo)
                             }
                         }
                     }

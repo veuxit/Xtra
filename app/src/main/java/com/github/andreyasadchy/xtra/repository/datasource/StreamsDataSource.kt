@@ -2,10 +2,14 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
 import androidx.paging.DataSource
+import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 
 class StreamsDataSource private constructor(
@@ -19,12 +23,14 @@ class StreamsDataSource private constructor(
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Stream>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
+    private var nextPage: Boolean = true
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Stream>) {
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
                 }
@@ -32,11 +38,21 @@ class StreamsDataSource private constructor(
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    mutableListOf()
+                    try {
+                        when (apiPref.elementAt(2)?.second) {
+                            C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
+                            C.GQL -> { api = C.GQL; gqlLoad(params) }
+                            else -> throw Exception()
+                        }
+                    } catch (e: Exception) {
+                        listOf()
+                    }
                 }
             }
         }
@@ -62,6 +78,25 @@ class StreamsDataSource private constructor(
         return list
     }
 
+    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
+        val context = XtraApp.INSTANCE.applicationContext
+        val get = gqlApi.loadQueryTopStreams(
+            clientId = gqlClientId,
+            query = context.resources.openRawResource(R.raw.topstreams).bufferedReader().use { it.readText() },
+            variables = JsonObject().apply {
+                val tagsArray = JsonArray()
+                tags?.forEach {
+                    tagsArray.add(it)
+                }
+                add("tags", tagsArray)
+                addProperty("first", 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/)
+                addProperty("after", offset)
+            })
+        offset = get.cursor
+        nextPage = get.hasNextPage ?: true
+        return get.data
+    }
+
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
         val get = gqlApi.loadTopStreams(gqlClientId, tags, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
@@ -73,6 +108,7 @@ class StreamsDataSource private constructor(
             if (!offset.isNullOrBlank()) {
                 when (api) {
                     C.HELIX -> helixLoad(rangeParams = params)
+                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
                     C.GQL -> gqlLoad(rangeParams = params)
                     else -> listOf()
                 }

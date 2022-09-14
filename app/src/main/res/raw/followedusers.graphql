@@ -1,0 +1,22 @@
+query ($id: ID, $first: Int, $after: Cursor) {
+    user(id: $id) {
+        follows(first: $first, after: $after, order: ASC) {
+            edges {
+                cursor
+                followedAt
+                node {
+                    displayName
+                    id
+                    lastBroadcast {
+                        startedAt
+                    }
+                    login
+                    profileImageURL(width: 300)
+                }
+            }
+            pageInfo {
+                hasNextPage
+            }
+        }
+    }
+}

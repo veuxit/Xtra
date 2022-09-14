@@ -1,0 +1,32 @@
+query ($id: ID, $name: String, $sort: StreamSort, $tags: [String!], $first: Int, $after: Cursor) {
+    game(id: $id, name: $name) {
+        streams(first: $first, after: $after, options: { sort: $sort, tags: $tags }) {
+            edges {
+                cursor
+                node {
+                    broadcaster {
+                        broadcastSettings {
+                            title
+                        }
+                        id
+                        login
+                        displayName
+                        profileImageURL(width: 300)
+                    }
+                    createdAt
+                    id
+                    previewImageURL
+                    tags {
+                        id
+                        localizedName
+                    }
+                    type
+                    viewersCount
+                }
+            }
+            pageInfo {
+                hasNextPage
+            }
+        }
+    }
+}

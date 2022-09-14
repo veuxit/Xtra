@@ -2,10 +2,13 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
 import androidx.paging.DataSource
+import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 
 class FollowedGamesDataSource(
@@ -25,11 +28,20 @@ class FollowedGamesDataSource(
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
+                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
                     C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                mutableListOf()
+                try {
+                    when (apiPref.elementAt(1)?.second) {
+                        C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                        C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
+                        else -> throw Exception()
+                    }
+                } catch (e: Exception) {
+                    listOf()
+                }
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
@@ -48,6 +60,19 @@ class FollowedGamesDataSource(
             list.sortBy { it.name }
             list
         }
+    }
+
+    private suspend fun gqlQueryLoad(): List<Game> {
+        val context = XtraApp.INSTANCE.applicationContext
+        val get = gqlApi.loadQueryFollowedGames(
+            clientId = gqlClientId,
+            token = gqlToken,
+            query = context.resources.openRawResource(R.raw.followedgames).bufferedReader().use { it.readText() },
+            variables = JsonObject().apply {
+                addProperty("id", userId)
+                addProperty("first", 100)
+            })
+        return get.data
     }
 
     private suspend fun gqlLoad(): List<Game> {

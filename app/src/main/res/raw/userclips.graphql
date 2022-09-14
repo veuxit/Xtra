@@ -1,0 +1,32 @@
+query ($id: ID, $sort: ClipsPeriod, $first: Int, $after: Cursor) {
+    user(id: $id, lookupType: ALL) {
+        clips(first: $first, after: $after, criteria: { period: $sort }) {
+            edges {
+                cursor
+                node {
+                    createdAt
+                    durationSeconds
+                    game {
+                        id
+                        displayName
+                    }
+                    slug
+                    thumbnailURL
+                    title
+                    video {
+                        id
+                    }
+                    videoOffsetSeconds
+                    viewCount
+                }
+            }
+            pageInfo {
+                hasNextPage
+            }
+        }
+        displayName
+        id
+        login
+        profileImageURL(width: 300)
+    }
+}

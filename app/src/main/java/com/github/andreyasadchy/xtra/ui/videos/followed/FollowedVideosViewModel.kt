@@ -23,6 +23,7 @@ import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
@@ -45,7 +46,13 @@ class FollowedVideosViewModel @Inject constructor(
         get() = _sortText
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Video>> = Transformations.map(filter) {
-        repository.loadFollowedVideos(it.user.id, it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
+        repository.loadFollowedVideos(it.user.id, it.gqlClientId, it.user.gqlToken,
+            when (it.broadcastType) {
+                BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
+                BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
+                BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
+                else -> null },
+            when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS }, it.apiPref, viewModelScope)
     }
     val sort: Sort
         get() = filter.value!!.sort

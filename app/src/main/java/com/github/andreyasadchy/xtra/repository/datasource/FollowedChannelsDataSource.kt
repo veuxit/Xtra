@@ -8,6 +8,7 @@ import androidx.paging.DataSource
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.follows.Follow
@@ -20,6 +21,8 @@ import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -42,6 +45,7 @@ class FollowedChannelsDataSource(
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Follow>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
+    private var nextPage: Boolean = true
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Follow>) {
         loadInitial(params, callback) {
@@ -52,6 +56,7 @@ class FollowedChannelsDataSource(
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
                     C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                     else -> throw Exception()
                 }
@@ -59,11 +64,21 @@ class FollowedChannelsDataSource(
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                        C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
                         C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    mutableListOf()
+                    try {
+                        when (apiPref.elementAt(2)?.second) {
+                            C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
+                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                            C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            else -> throw Exception()
+                        }
+                    } catch (e: Exception) {
+                        listOf()
+                    }
                 }
             }
             if (remote.isNotEmpty()) {
@@ -85,24 +100,33 @@ class FollowedChannelsDataSource(
                     i.to_id?.let { allIds.add(it) }
                 }
             }
-            if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
+            if (allIds.isNotEmpty()) {
                 for (ids in allIds.chunked(100)) {
-                    val get = helixApi.getUsers(helixClientId, helixToken, ids).data
-                    if (get != null) {
-                        for (user in get) {
-                            val item = list.find { it.to_id == user.id }
-                            if (item != null) {
-                                if (item.followLocal) {
-                                    if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
-                                        val appContext = XtraApp.INSTANCE.applicationContext
-                                        item.to_id?.let { id -> user.profile_image_url?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
-                                    }
-                                } else {
-                                    if (item.profileImageURL == null) {
-                                        item.profileImageURL = user.profile_image_url
-                                    }
+                    val context = XtraApp.INSTANCE.applicationContext
+                    val get = gqlApi.loadQueryUsersLastBroadcast(
+                        clientId = gqlClientId,
+                        query = context.resources.openRawResource(R.raw.userslastbroadcast).bufferedReader().use { it.readText() },
+                        variables = JsonObject().apply {
+                            val idArray = JsonArray()
+                            ids.forEach {
+                                idArray.add(it)
+                            }
+                            add("id", idArray)
+                        }).data
+                    for (user in get) {
+                        val item = list.find { it.to_id == user.to_id }
+                        if (item != null) {
+                            if (item.followLocal) {
+                                if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                    val appContext = XtraApp.INSTANCE.applicationContext
+                                    item.to_id?.let { id -> user.profileImageURL?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                }
+                            } else {
+                                if (item.profileImageURL == null) {
+                                    item.profileImageURL = user.profileImageURL
                                 }
                             }
+                            item.lastBroadcast = user.lastBroadcast
                         }
                     }
                 }
@@ -131,6 +155,22 @@ class FollowedChannelsDataSource(
         } else listOf()
     }
 
+    private suspend fun gqlQueryLoad(): List<Follow> {
+        val context = XtraApp.INSTANCE.applicationContext
+        val get = gqlApi.loadQueryFollowedUsers(
+            clientId = gqlClientId,
+            token = gqlToken,
+            query = context.resources.openRawResource(R.raw.followedusers).bufferedReader().use { it.readText() },
+            variables = JsonObject().apply {
+                addProperty("id", userId)
+                addProperty("first", 100)
+                addProperty("after", offset)
+            })
+        offset = get.cursor
+        nextPage = get.hasNextPage ?: true
+        return get.data
+    }
+
     private suspend fun gqlLoad(): List<Follow> {
         val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
         offset = get.cursor
@@ -142,6 +182,7 @@ class FollowedChannelsDataSource(
             val list = if (!offset.isNullOrBlank()) {
                 when (api) {
                     C.HELIX -> helixLoad()
+                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad() else listOf()
                     C.GQL -> gqlLoad()
                     else -> listOf()
                 }
@@ -152,24 +193,33 @@ class FollowedChannelsDataSource(
                     i.to_id?.let { allIds.add(it) }
                 }
             }
-            if (allIds.isNotEmpty() && !helixToken.isNullOrBlank()) {
+            if (allIds.isNotEmpty()) {
                 for (ids in allIds.chunked(100)) {
-                    val get = helixApi.getUsers(helixClientId, helixToken, ids).data
-                    if (get != null) {
-                        for (user in get) {
-                            val item = list.find { it.to_id == user.id }
-                            if (item != null) {
-                                if (item.followLocal) {
-                                    if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
-                                        val appContext = XtraApp.INSTANCE.applicationContext
-                                        item.to_id?.let { id -> user.profile_image_url?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
-                                    }
-                                } else {
-                                    if (item.profileImageURL == null) {
-                                        item.profileImageURL = user.profile_image_url
-                                    }
+                    val context = XtraApp.INSTANCE.applicationContext
+                    val get = gqlApi.loadQueryUsersLastBroadcast(
+                        clientId = gqlClientId,
+                        query = context.resources.openRawResource(R.raw.userslastbroadcast).bufferedReader().use { it.readText() },
+                        variables = JsonObject().apply {
+                            val idArray = JsonArray()
+                            ids.forEach {
+                                idArray.add(it)
+                            }
+                            add("id", idArray)
+                        }).data
+                    for (user in get) {
+                        val item = list.find { it.to_id == user.to_id }
+                        if (item != null) {
+                            if (item.followLocal) {
+                                if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                    val appContext = XtraApp.INSTANCE.applicationContext
+                                    item.to_id?.let { id -> user.profileImageURL?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                }
+                            } else {
+                                if (item.profileImageURL == null) {
+                                    item.profileImageURL = user.profileImageURL
                                 }
                             }
+                            item.lastBroadcast = user.lastBroadcast
                         }
                     }
                 }

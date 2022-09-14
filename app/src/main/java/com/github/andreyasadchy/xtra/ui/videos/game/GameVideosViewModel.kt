@@ -23,6 +23,7 @@ import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.offline.SortGame
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
@@ -53,6 +54,15 @@ class GameVideosViewModel @Inject constructor(
             langValues.elementAt(languageIndex)
         } else null
         repository.loadGameVideos(it.gameId, it.gameName, it.helixClientId, it.helixToken, it.period, it.broadcastType, language?.lowercase(), it.sort, it.gqlClientId,
+            if (language != null) {
+                listOf(language)
+            } else null,
+            when (it.broadcastType) {
+                BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
+                BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
+                BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
+                else -> null },
+            when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
             if (it.broadcastType == BroadcastType.ALL) { null }
             else { it.broadcastType.value.uppercase() },
             it.sort.value.uppercase(), it.apiPref, viewModelScope)
@@ -102,7 +112,7 @@ class GameVideosViewModel @Inject constructor(
                     BroadcastType.UPLOAD.value -> BroadcastType.UPLOAD
                     else -> BroadcastType.ALL
                 },
-                languageIndex = if (helixToken.isNullOrBlank()) 0 else (sortValues?.videoLanguageIndex ?: 0)
+                languageIndex = sortValues?.videoLanguageIndex ?: 0
             )
             _sortText.value = context.getString(R.string.sort_and_period,
                 when (sortValues?.videoSort) {
@@ -130,14 +140,14 @@ class GameVideosViewModel @Inject constructor(
                     videoSort = sort.value
                     if (!filter.value?.helixToken.isNullOrBlank()) videoPeriod = period.value
                     videoType = type.value
-                    if (!filter.value?.helixToken.isNullOrBlank()) videoLanguageIndex = languageIndex
+                    videoLanguageIndex = languageIndex
                 } ?: filter.value?.gameId?.let { SortGame(
                     id = it,
                     saveSort = saveSort,
                     videoSort = sort.value,
                     videoPeriod = if (filter.value?.helixToken.isNullOrBlank()) null else period.value,
                     videoType = type.value,
-                    videoLanguageIndex = if (filter.value?.helixToken.isNullOrBlank()) null else languageIndex)
+                    videoLanguageIndex = languageIndex)
                 })?.let { sortGameRepository.save(it) }
             }
             if (saveDefault) {
@@ -152,13 +162,13 @@ class GameVideosViewModel @Inject constructor(
                     videoSort = sort.value
                     if (!filter.value?.helixToken.isNullOrBlank()) videoPeriod = period.value
                     videoType = type.value
-                    if (!filter.value?.helixToken.isNullOrBlank()) videoLanguageIndex = languageIndex
+                    videoLanguageIndex = languageIndex
                 } ?: SortGame(
                     id = "default",
                     videoSort = sort.value,
                     videoPeriod = if (filter.value?.helixToken.isNullOrBlank()) null else period.value,
                     videoType = type.value,
-                    videoLanguageIndex = if (filter.value?.helixToken.isNullOrBlank()) null else languageIndex
+                    videoLanguageIndex = languageIndex
                 )).let { sortGameRepository.save(it) }
             }
         }

@@ -19,7 +19,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/sort"
                 android:textStyle="bold"
-                android:layout_marginStart="5dp" />
+                android:layout_marginStart="5dp"
+                android:layout_marginLeft="5dp" />
 
             <RadioButton
                 android:id="@+id/viewers_high"

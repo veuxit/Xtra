@@ -1,0 +1,12 @@
+query ($id: [ID!]) {
+    users(ids: $id) {
+        id
+        roles {
+            isAffiliate
+            isGlobalMod
+            isPartner
+            isSiteAdmin
+            isStaff
+        }
+    }
+}

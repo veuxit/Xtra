@@ -2,11 +2,16 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
 import androidx.paging.DataSource
+import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.stream.Sort
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 
 class GameStreamsDataSource private constructor(
@@ -16,6 +21,7 @@ class GameStreamsDataSource private constructor(
     private val helixToken: String?,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
+    private val gqlQuerySort: StreamSort?,
     private val gqlSort: Sort?,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
@@ -23,12 +29,14 @@ class GameStreamsDataSource private constructor(
     coroutineScope: CoroutineScope) : BasePositionalDataSource<Stream>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
+    private var nextPage: Boolean = true
 
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Stream>) {
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
                 }
@@ -36,11 +44,21 @@ class GameStreamsDataSource private constructor(
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    mutableListOf()
+                    try {
+                        when (apiPref.elementAt(2)?.second) {
+                            C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
+                            C.GQL -> { api = C.GQL; gqlLoad(params) }
+                            else -> throw Exception()
+                        }
+                    } catch (e: Exception) {
+                        listOf()
+                    }
                 }
             }
         }
@@ -69,6 +87,28 @@ class GameStreamsDataSource private constructor(
         return list
     }
 
+    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
+        val context = XtraApp.INSTANCE.applicationContext
+        val get = gqlApi.loadQueryGameStreams(
+            clientId = gqlClientId,
+            query = context.resources.openRawResource(R.raw.gamestreams).bufferedReader().use { it.readText() },
+            variables = JsonObject().apply {
+                addProperty("id", if (!gameId.isNullOrBlank()) gameId else null)
+                addProperty("name", if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null)
+                addProperty("sort", gqlQuerySort.toString())
+                val tagsArray = JsonArray()
+                tags?.forEach {
+                    tagsArray.add(it)
+                }
+                add("tags", tagsArray)
+                addProperty("first", 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/)
+                addProperty("after", offset)
+            })
+        offset = get.cursor
+        nextPage = get.hasNextPage ?: true
+        return get.data
+    }
+
     private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
         val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
         offset = get.cursor
@@ -80,6 +120,7 @@ class GameStreamsDataSource private constructor(
             if (!offset.isNullOrBlank()) {
                 when (api) {
                     C.HELIX -> helixLoad(rangeParams = params)
+                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
                     C.GQL -> gqlLoad(rangeParams = params)
                     else -> listOf()
                 }
@@ -94,6 +135,7 @@ class GameStreamsDataSource private constructor(
         private val helixToken: String?,
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
+        private val gqlQuerySort: StreamSort?,
         private val gqlSort: Sort?,
         private val tags: List<String>?,
         private val gqlApi: GraphQLRepository,
@@ -101,6 +143,6 @@ class GameStreamsDataSource private constructor(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Stream, GameStreamsDataSource>() {
 
         override fun create(): DataSource<Int, Stream> =
-            GameStreamsDataSource(gameId, gameName, helixClientId, helixToken, helixApi, gqlClientId, gqlSort, tags, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
+            GameStreamsDataSource(gameId, gameName, helixClientId, helixToken, helixApi, gqlClientId, gqlQuerySort, gqlSort, tags, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

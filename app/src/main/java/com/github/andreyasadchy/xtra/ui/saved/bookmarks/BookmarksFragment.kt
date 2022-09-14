@@ -74,13 +74,11 @@ class BookmarksFragment : Fragment(), Injectable, Scrollable {
             viewModel.ignoredUsers.observe(viewLifecycleOwner) {
                 adapter.setIgnoredUsers(it)
             }
-            if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
-                viewModel.loadUsers(
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-                    helixToken = User.get(requireContext()).helixToken,
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-                )
-            }
+            viewModel.loadUsers(
+                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixToken = User.get(requireContext()).helixToken,
+                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            )
         }
         if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
             viewModel.loadVideos(

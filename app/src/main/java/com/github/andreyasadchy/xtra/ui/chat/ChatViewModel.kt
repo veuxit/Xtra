@@ -326,18 +326,16 @@ class ChatViewModel @Inject constructor(
                     Log.e(TAG, "Failed to load FFZ emotes for channel $channelId", e)
                 }
             }
-            if (!helixToken.isNullOrBlank()) {
-                viewModelScope.launch {
-                    try {
-                        repository.loadCheerEmotes(channelId, helixClientId, helixToken, gqlClientId)?.let {
-                            if (it.isNotEmpty()) {
-                                cheerEmotes.postValue(it)
-                                reloadMessages.value = true
-                            }
+            viewModelScope.launch {
+                try {
+                    repository.loadCheerEmotes(channelId, helixClientId, helixToken, gqlClientId)?.let {
+                        if (it.isNotEmpty()) {
+                            cheerEmotes.postValue(it)
+                            reloadMessages.value = true
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
                 }
             }
         }

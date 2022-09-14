@@ -24,6 +24,7 @@ import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
+import com.github.andreyasadchy.xtra.model.query.*
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -36,6 +37,84 @@ import retrofit2.http.POST
 
 @JvmSuppressWildcards
 interface GraphQLApi {
+
+    @POST(".")
+    suspend fun getQueryCheerEmotes(@Header("Client-ID") clientId: String?, @Body json: JsonObject): CheerEmotesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryFollowedGames(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedGamesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryFollowedStreams(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedStreamsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryFollowedUsers(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedUsersQueryResponse
+
+    @POST(".")
+    suspend fun getQueryFollowedVideos(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedVideosQueryResponse
+
+    @POST(".")
+    suspend fun getQueryGameBoxArt(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameBoxArtQueryResponse
+
+    @POST(".")
+    suspend fun getQueryGameClips(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameClipsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryGameStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameStreamsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryGameVideos(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameVideosQueryResponse
+
+    @POST(".")
+    suspend fun getQuerySearchChannels(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchChannelsQueryResponse
+
+    @POST(".")
+    suspend fun getQuerySearchGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchGamesQueryResponse
+
+    @POST(".")
+    suspend fun getQuerySearchStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchStreamsQueryResponse
+
+    @POST(".")
+    suspend fun getQuerySearchVideos(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchVideosQueryResponse
+
+    @POST(".")
+    suspend fun getQueryTopGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TopGamesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryTopStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TopStreamsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUser(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserChannelPage(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserChannelPageQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserClips(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserClipsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserEmotes(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserEmotesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserHosting(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserHostingQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserMessageClicked(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserMessageClickedQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserVideos(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserVideosQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUsersLastBroadcast(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UsersLastBroadcastQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUsersStream(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UsersStreamQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUsersType(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UsersTypeQueryResponse
+
+    @POST(".")
+    suspend fun getQueryVideo(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VideoQueryResponse
 
     @POST(".")
     suspend fun getStreamPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonArray): StreamPlaylistTokenResponse

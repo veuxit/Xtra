@@ -1,0 +1,5 @@
+query ($id: ID, $name: String) {
+    game(id: $id, name: $name) {
+        boxArtURL
+    }
+}

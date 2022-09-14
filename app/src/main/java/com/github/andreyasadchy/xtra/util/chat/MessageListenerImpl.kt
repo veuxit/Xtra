@@ -15,7 +15,7 @@ class MessageListenerImpl(
     private val showClearMsg: Boolean,
     private val showClearChat: Boolean,
     private val usePubSub: Boolean) : LiveChatThread.OnMessageReceivedListener, LoggedInChatThread.OnMessageReceivedListener {
-
+    
     override fun onMessage(message: String, userNotice: Boolean) {
         if (!userNotice || (userNotice && showUserNotice)) {
             val parts = message.substring(1).split(" ".toRegex(), 2)

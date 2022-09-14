@@ -16,6 +16,8 @@ import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.offline.SortGame
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.type.ClipsPeriod
+import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
@@ -46,6 +48,11 @@ class ClipsViewModel @Inject constructor(
             Period.ALL -> null
             else -> TwitchApiHelper.getClipTime()
         }
+        val gqlQueryPeriod = when (it.period) {
+            Period.DAY -> ClipsPeriod.LAST_DAY
+            Period.WEEK -> ClipsPeriod.LAST_WEEK
+            Period.MONTH -> ClipsPeriod.LAST_MONTH
+            else -> ClipsPeriod.ALL_TIME }
         val gqlPeriod = when (it.period) {
             Period.DAY -> "LAST_DAY"
             Period.WEEK -> "LAST_WEEK"
@@ -53,10 +60,18 @@ class ClipsViewModel @Inject constructor(
             else -> "ALL_TIME" }
         if (it.gameId == null && it.gameName == null) {
             repository.loadChannelClips(it.channelId, it.channelLogin, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
-                gqlPeriod, it.channelApiPref, viewModelScope)
+                gqlQueryPeriod, gqlPeriod, it.channelApiPref, viewModelScope)
         } else {
-            repository.loadGameClips(it.gameId, it.gameName, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
-                gqlPeriod, it.gameApiPref, viewModelScope)
+            val langList = mutableListOf<Language>()
+            val langValues = context.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
+            if (languageIndex != 0) {
+                val item = Language.values().find { lang -> lang.toString() == langValues.elementAt(languageIndex) }
+                if (item != null) {
+                    langList.add(item)
+                }
+            }
+            repository.loadGameClips(it.gameId, it.gameName, it.helixClientId, it.helixToken, started, ended, it.gqlClientId, langList.ifEmpty { null },
+                gqlQueryPeriod, gqlPeriod, it.gameApiPref, viewModelScope)
         }
     }
     val period: Period

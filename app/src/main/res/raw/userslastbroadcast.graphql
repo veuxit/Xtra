@@ -1,0 +1,9 @@
+query ($id: [ID!]) {
+    users(ids: $id) {
+        id
+        lastBroadcast {
+            startedAt
+        }
+        profileImageURL(width: 300)
+    }
+}
