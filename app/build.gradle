@@ -20,8 +20,8 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdkVersion 21
         targetSdkVersion 32
-        versionCode 131
-        versionName "2.6.0"
+        versionCode 132
+        versionName "2.6.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
