@@ -64,7 +64,15 @@ class ChannelClipsDataSource(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Clip> {
-        val get = helixApi.getClips(clientId = helixClientId, token = helixToken, channelId = channelId, started_at = started_at, ended_at = ended_at, limit = 20 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, cursor = offset)
+        val get = helixApi.getClips(
+            clientId = helixClientId,
+            token = helixToken,
+            channelId = channelId,
+            started_at = started_at,
+            ended_at = ended_at,
+            limit = 20 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            cursor = offset
+        )
         val list = mutableListOf<Clip>()
         get.data?.let { list.addAll(it) }
         val gameIds = mutableListOf<String>()
@@ -73,7 +81,11 @@ class ChannelClipsDataSource(
             i.game_id?.let { gameIds.add(it) }
         }
         if (gameIds.isNotEmpty()) {
-            val games = helixApi.getGames(helixClientId, helixToken, gameIds).data
+            val games = helixApi.getGames(
+                clientId = helixClientId,
+                token = helixToken,
+                ids = gameIds
+            ).data
             if (games != null) {
                 for (i in games) {
                     val items = list.filter { it.game_id == i.id }

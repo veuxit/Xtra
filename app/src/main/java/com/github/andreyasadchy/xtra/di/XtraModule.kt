@@ -29,8 +29,6 @@ import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetDeserializer
 import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
 import com.github.andreyasadchy.xtra.model.query.*
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.util.FetchProvider
 import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import com.google.gson.GsonBuilder
@@ -54,12 +52,6 @@ import javax.net.ssl.X509TrustManager
 
 @Module
 class XtraModule {
-
-    @Singleton
-    @Provides
-    fun providesTwitchService(repository: ApiRepository): TwitchService {
-        return repository
-    }
 
     @Singleton
     @Provides

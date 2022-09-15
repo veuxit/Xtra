@@ -73,7 +73,17 @@ class GameVideosDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = helixApi.getTopVideos(helixClientId, helixToken, gameId, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+        val get = helixApi.getVideos(
+            clientId = helixClientId,
+            token = helixToken,
+            gameId = gameId,
+            period = helixPeriod,
+            broadcastType = helixBroadcastTypes,
+            language = helixLanguage,
+            sort = helixSort,
+            limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            offset = offset
+        )
         val list = mutableListOf<Video>()
         get.data?.let { list.addAll(it) }
         val ids = mutableListOf<String>()
@@ -81,7 +91,7 @@ class GameVideosDataSource private constructor(
             i.user_id?.let { ids.add(it) }
         }
         if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(helixClientId, helixToken, ids).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
             if (users != null) {
                 for (i in users) {
                     val items = list.filter { it.user_id == i.id }

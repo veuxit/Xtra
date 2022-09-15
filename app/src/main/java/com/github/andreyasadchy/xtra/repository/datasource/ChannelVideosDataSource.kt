@@ -71,7 +71,16 @@ class ChannelVideosDataSource (
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = helixApi.getChannelVideos(helixClientId, helixToken, channelId, helixPeriod, helixBroadcastTypes, helixSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+        val get = helixApi.getVideos(
+            clientId = helixClientId,
+            token = helixToken,
+            channelId = channelId,
+            period = helixPeriod,
+            broadcastType = helixBroadcastTypes,
+            sort = helixSort,
+            limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            offset = offset
+        )
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data

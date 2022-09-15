@@ -59,7 +59,12 @@ class GamesDataSource(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
-        val get = helixApi.getTopGames(helixClientId, helixToken, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+        val get = helixApi.getTopGames(
+            clientId = helixClientId,
+            token = helixToken,
+            limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            offset = offset
+        )
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data

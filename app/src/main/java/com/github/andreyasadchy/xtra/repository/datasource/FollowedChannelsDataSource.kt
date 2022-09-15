@@ -148,7 +148,13 @@ class FollowedChannelsDataSource(
     }
 
     private suspend fun helixLoad(): List<Follow> {
-        val get = helixApi.getFollowedChannels(helixClientId, helixToken, userId, 100, offset)
+        val get = helixApi.getUserFollows(
+            clientId = helixClientId,
+            token = helixToken,
+            userId = userId,
+            limit = 100,
+            offset = offset
+        )
         return if (get.data != null) {
             offset = get.pagination?.cursor
             get.data

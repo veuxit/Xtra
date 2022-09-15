@@ -88,12 +88,18 @@ class FollowedStreamsDataSource(
     }
 
     private suspend fun helixLoad(): List<Stream> {
-        val get = helixApi.getFollowedStreams(helixClientId, helixToken, userId, 100, offset)
+        val get = helixApi.getFollowedStreams(
+            clientId = helixClientId,
+            token = helixToken,
+            userId = userId,
+            limit = 100,
+            offset = offset
+        )
         val list = mutableListOf<Stream>()
         get.data?.let { list.addAll(it) }
         val ids = list.mapNotNull { it.user_id }
         if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(helixClientId, helixToken, ids).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
             if (users != null) {
                 for (i in users) {
                     val item = list.find { it.user_id == i.id }
@@ -165,7 +171,11 @@ class FollowedStreamsDataSource(
     private suspend fun helixLocal(ids: List<String>): List<Stream> {
         val streams = mutableListOf<Stream>()
         for (localIds in ids.chunked(100)) {
-            val get = helixApi.getStreams(helixClientId, helixToken, localIds).data
+            val get = helixApi.getStreams(
+                clientId = helixClientId,
+                token = helixToken,
+                ids = localIds
+            ).data
             if (get != null) {
                 for (i in get) {
                     if (i.viewer_count != null) {
@@ -177,7 +187,7 @@ class FollowedStreamsDataSource(
         if (streams.isNotEmpty()) {
             val userIds = streams.mapNotNull { it.user_id }
             for (streamIds in userIds.chunked(100)) {
-                val users = helixApi.getUsers(helixClientId, helixToken, streamIds).data
+                val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = streamIds).data
                 if (users != null) {
                     for (i in users) {
                         val item = streams.find { it.user_id == i.id }
