@@ -37,9 +37,10 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.util.Util
-import dagger.android.AndroidInjection
+import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+@AndroidEntryPoint
 class AudioPlayerService : Service() {
 
     @Inject
@@ -62,7 +63,6 @@ class AudioPlayerService : Service() {
     private var videoId: Number? = null
 
     override fun onCreate() {
-        AndroidInjection.inject(this)
         super.onCreate()
         player = ExoPlayer.Builder(this).setTrackSelector(DefaultTrackSelector(this).apply {
             parameters = buildUponParameters().setRendererDisabled(0, true).build()

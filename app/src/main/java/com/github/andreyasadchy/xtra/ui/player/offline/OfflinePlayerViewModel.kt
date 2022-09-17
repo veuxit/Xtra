@@ -13,8 +13,10 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
+import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
+@HiltViewModel
 class OfflinePlayerViewModel @Inject constructor(
         context: Application,
         private val repository: OfflineRepository) : PlayerViewModel(context) {
