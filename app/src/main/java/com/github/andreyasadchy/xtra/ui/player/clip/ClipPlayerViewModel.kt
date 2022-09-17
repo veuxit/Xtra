@@ -24,11 +24,11 @@ import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val TAG = "ClipPlayerViewModel"
-
+@HiltViewModel
 class ClipPlayerViewModel @Inject constructor(
     context: Application,
     private val graphQLRepository: GraphQLRepository,

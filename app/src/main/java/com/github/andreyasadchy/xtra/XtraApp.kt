@@ -8,9 +8,7 @@ import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TlsSocketFactory
-import dagger.android.AndroidInjector
-import dagger.android.DispatchingAndroidInjector
-import dagger.android.HasAndroidInjector
+import dagger.hilt.android.HiltAndroidApp
 import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
 import java.security.KeyStore
@@ -22,13 +20,13 @@ import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 
-class XtraApp : Application(), HasAndroidInjector {
+@HiltAndroidApp
+class XtraApp : Application() {
 
     companion object {
         lateinit var INSTANCE: Application
     }
 
-    @Inject lateinit var dispatchingAndroidInjector: DispatchingAndroidInjector<Any>
     private val appLifecycleObserver = AppLifecycleObserver()
 
     override fun onCreate() {
@@ -53,10 +51,6 @@ class XtraApp : Application(), HasAndroidInjector {
         if (BuildConfig.DEBUG) {
             MultiDex.install(this)
         }
-    }
-
-    override fun androidInjector(): AndroidInjector<Any> {
-        return dispatchingAndroidInjector
     }
 
     fun addLifecycleListener(listener: LifecycleListener) {

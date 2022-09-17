@@ -36,6 +36,8 @@ import com.tonyodev.fetch2.FetchConfiguration
 import com.tonyodev.fetch2okhttp.OkHttpDownloader
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import okhttp3.CipherSuite
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
@@ -51,6 +53,7 @@ import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 @Module
+@InstallIn(SingletonComponent::class)
 class XtraModule {
 
     @Singleton
