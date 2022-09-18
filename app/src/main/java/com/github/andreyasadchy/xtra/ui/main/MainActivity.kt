@@ -201,6 +201,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (!viewModel.isPlayerMaximized) {
             if (fragNavController.isRootFragment) {

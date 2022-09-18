@@ -22,6 +22,7 @@ import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.*
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -29,6 +30,7 @@ import java.io.IOException
 import java.util.regex.Pattern
 import javax.inject.Inject
 
+@AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
 
     @Inject
