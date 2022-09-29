@@ -5,15 +5,12 @@ import android.content.Context
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.multidex.MultiDex
 import com.github.andreyasadchy.xtra.di.AppInjector
-import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
-import com.github.andreyasadchy.xtra.util.LifecycleListener
-import com.github.andreyasadchy.xtra.util.TlsSocketFactory
+import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
 import java.security.KeyStore
 import java.security.Security
-import javax.inject.Inject
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -31,7 +28,13 @@ class XtraApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Security.insertProviderAt(Conscrypt.newProvider(), 1)
+        try {
+            Security.insertProviderAt(Conscrypt.newProvider(), 1)
+        } catch (e: VerifyError) {
+            if (prefs().getBoolean(C.DEBUG_SHOW_CONSCRYPT_ERROR_TOAST, true)) {
+                toast("Conscrypt VerifyError")
+            }
+        }
         val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
             init(null as KeyStore?)
             trustManagers.first { it is X509TrustManager } as X509TrustManager
