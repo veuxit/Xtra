@@ -25,7 +25,6 @@ import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
 import com.github.andreyasadchy.xtra.model.query.*
 import com.google.gson.JsonArray
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -785,7 +784,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getFollowedGames(clientId, token, json)
     }
 
-    suspend fun loadFollowUser(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, userId: String?): FollowUserDataResponse {
+    suspend fun loadFollowUser(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, userId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "FollowButton_FollowUser")
             add("variables", JsonObject().apply {
@@ -804,7 +803,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getFollowUser(clientId, token, integrityToken, deviceId, json)
     }
 
-    suspend fun loadUnfollowUser(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, userId: String?): JsonElement {
+    suspend fun loadUnfollowUser(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, userId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "FollowButton_UnfollowUser")
             add("variables", JsonObject().apply {
@@ -822,7 +821,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getUnfollowUser(clientId, token, integrityToken, deviceId, json)
     }
 
-    suspend fun loadFollowGame(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, gameId: String?): JsonElement {
+    suspend fun loadFollowGame(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, gameId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "FollowGameButton_FollowGame")
             add("variables", JsonObject().apply {
@@ -840,7 +839,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getFollowGame(clientId, token, integrityToken, deviceId, json)
     }
 
-    suspend fun loadUnfollowGame(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, gameId: String?): JsonElement {
+    suspend fun loadUnfollowGame(clientId: String?, token: String?, integrityToken: String?, deviceId: String?, gameId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "FollowGameButton_UnfollowGame")
             add("variables", JsonObject().apply {
