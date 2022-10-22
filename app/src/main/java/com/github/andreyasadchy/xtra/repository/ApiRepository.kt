@@ -337,21 +337,25 @@ class ApiRepository @Inject constructor(
                     started_at = i.stream?.createdAt?.toString(),
                     profileImageURL = i.profileImageURL,
                     channelUser = User(
-                        bannerImageURL = i.bannerImageURL,
-                        view_count = i.profileViewCount,
-                        created_at = i.createdAt?.toString(),
-                        followers_count = i.followers?.totalCount,
-                        broadcaster_type = when {
-                            i.roles?.isPartner == true -> "partner"
-                            i.roles?.isAffiliate == true -> "affiliate"
-                            else -> null
-                        },
+                        id = i.id,
+                        login = i.login,
+                        display_name = i.displayName,
                         type = when {
                             i.roles?.isStaff == true -> "staff"
                             i.roles?.isSiteAdmin == true -> "admin"
                             i.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
-                        }
+                        },
+                        broadcaster_type = when {
+                            i.roles?.isPartner == true -> "partner"
+                            i.roles?.isAffiliate == true -> "affiliate"
+                            else -> null
+                        },
+                        profile_image_url = i.profileImageURL,
+                        view_count = i.profileViewCount,
+                        created_at = i.createdAt?.toString(),
+                        followers_count = i.followers?.totalCount,
+                        bannerImageURL = i.bannerImageURL
                     ),
                     lastBroadcast = i.lastBroadcast?.startedAt?.toString()
                 )

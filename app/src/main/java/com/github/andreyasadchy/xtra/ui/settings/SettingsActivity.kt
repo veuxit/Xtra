@@ -180,7 +180,7 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            findPreference<Preference>("clear_video_positions")?.setOnPreferenceChangeListener { _, _ ->
+            findPreference<Preference>("clear_video_positions")?.setOnPreferenceClickListener {
                 viewModel.deletePositions()
                 requireContext().shortToast(R.string.cleared)
                 true
