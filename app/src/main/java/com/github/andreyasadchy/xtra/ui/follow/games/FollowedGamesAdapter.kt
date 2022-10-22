@@ -28,7 +28,7 @@ class FollowedGamesAdapter(
 
     override fun bind(item: Game, view: View) {
         with(view) {
-            setOnClickListener { listener.openGame(id = item.id, name = item.name, updateLocal = true) }
+            setOnClickListener { listener.openGame(id = item.id, name = item.name, updateLocal = item.followLocal) }
             if (item.boxArt != null)  {
                 gameImage.visible()
                 gameImage.loadImage(fragment, item.boxArt, diskCacheStrategy = DiskCacheStrategy.NONE)
