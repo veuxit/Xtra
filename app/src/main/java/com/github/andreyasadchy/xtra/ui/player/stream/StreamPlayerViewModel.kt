@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
@@ -14,14 +15,15 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode.*
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.prefs
-import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.*
+import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.google.android.exoplayer2.upstream.HttpDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -205,6 +207,59 @@ class StreamPlayerViewModel @Inject constructor(
             } catch (e: Exception) {
                 val context = getApplication<Application>()
                 context.toast(R.string.error_stream)
+            }
+        }
+    }
+
+    override fun onPlayerError(error: PlaybackException) {
+        val playerError = player.playerError
+        Log.e(tag, "Player error", playerError)
+        playbackPosition = player.currentPosition
+        val context = getApplication<Application>()
+        if (context.isNetworkAvailable) {
+            try {
+                val responseCode = try {
+                    if (playerError?.type == ExoPlaybackException.TYPE_SOURCE) {
+                        (playerError.sourceException as? HttpDataSource.InvalidResponseCodeException)?.responseCode
+                    } else null
+                } catch (e: IllegalStateException) {
+//                    Crashlytics.log(Log.ERROR, tag, "onPlayerError: Stream end check error. Type: ${error.type}")
+//                    Crashlytics.logException(e)
+                    return
+                }
+                when {
+                    responseCode == 404 -> {
+                        context.toast(R.string.stream_ended)
+                    }
+                    useAdBlock == true && responseCode != null && responseCode >= 400 -> {
+                        context.toast(R.string.adblock_not_working)
+                        useAdBlock = false
+                        viewModelScope.launch {
+                            delay(1500L)
+                            try {
+                                restartPlayer()
+                            } catch (e: Exception) {
+//                            Crashlytics.log(Log.ERROR, tag, "onPlayerError: Retry error. ${e.message}")
+//                            Crashlytics.logException(e)
+                            }
+                        }
+                    }
+                    else -> {
+                        context.shortToast(R.string.player_error)
+                        viewModelScope.launch {
+                            delay(1500L)
+                            try {
+                                restartPlayer()
+                            } catch (e: Exception) {
+//                            Crashlytics.log(Log.ERROR, tag, "onPlayerError: Retry error. ${e.message}")
+//                            Crashlytics.logException(e)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+//                Crashlytics.log(Log.ERROR, tag, "onPlayerError ${e.message}")
+//                Crashlytics.logException(e)
             }
         }
     }
