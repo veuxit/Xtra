@@ -142,14 +142,12 @@ class ClipPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val error2 = player.playerError
-        if (error2 != null) {
-            if (error2.type == ExoPlaybackException.TYPE_UNEXPECTED && error2.unexpectedException is IllegalStateException) {
-                val context = getApplication<Application>()
-                context.shortToast(R.string.player_error)
-                if (qualityIndex < helper.urls.size - 1) {
-                    changeQuality(++qualityIndex)
-                }
+        val playerError = player.playerError
+        if (playerError?.type == ExoPlaybackException.TYPE_UNEXPECTED && playerError.unexpectedException is IllegalStateException) {
+            val context = getApplication<Application>()
+            context.shortToast(R.string.player_error)
+            if (qualityIndex < helper.urls.size - 1) {
+                changeQuality(++qualityIndex)
             }
         }
     }

@@ -177,18 +177,16 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     //Player.EventListener
 
     override fun onPlayerError(error: PlaybackException) {
-        val error2 = player.playerError
-        Log.e(tag, "Player error", error2)
+        val playerError = player.playerError
+        Log.e(tag, "Player error", playerError)
         playbackPosition = player.currentPosition
         val context = getApplication<Application>()
         if (context.isNetworkAvailable) {
             try {
                 val isStreamEnded = try {
-                    if (error2 != null) {
-                        error2.type == ExoPlaybackException.TYPE_SOURCE &&
-                                this@PlayerViewModel is StreamPlayerViewModel &&
-                                error2.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 404 }
-                    } else false
+                    playerError?.type == ExoPlaybackException.TYPE_SOURCE &&
+                            this@PlayerViewModel is StreamPlayerViewModel &&
+                            playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 404 }
                 } catch (e: IllegalStateException) {
 //                    Crashlytics.log(Log.ERROR, tag, "onPlayerError: Stream end check error. Type: ${error.type}")
 //                    Crashlytics.logException(e)
