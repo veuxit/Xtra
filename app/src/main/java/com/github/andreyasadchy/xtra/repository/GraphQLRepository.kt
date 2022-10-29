@@ -15,6 +15,7 @@ import com.github.andreyasadchy.xtra.model.gql.game.GameClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameStreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameVideosDataResponse
+import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
 import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
@@ -244,9 +245,28 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getQueryVideo(clientId, json)
     }
 
+    suspend fun loadPlaybackAccessToken(clientId: String?, headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
+        val json = JsonObject().apply {
+            addProperty("operationName", "PlaybackAccessToken")
+            add("variables", JsonObject().apply {
+                addProperty("isLive", !login.isNullOrBlank())
+                addProperty("login", login ?: "")
+                addProperty("isVod", !vodId.isNullOrBlank())
+                addProperty("vodID", vodId ?: "")
+                addProperty("playerType", playerType)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "0828119ded1c13477966434e15800ff57ddacf13ba1911c129dc2200705b0712")
+                })
+            })
+        }
+        return graphQL.getPlaybackAccessToken(clientId, headers, json)
+    }
+
     suspend fun loadClipUrls(clientId: String?, slug: String?): Map<String, String> = withContext(Dispatchers.IO) {
-        val array = JsonArray(1)
-        val videoAccessTokenOperation = JsonObject().apply {
+        val json = JsonObject().apply {
             addProperty("operationName", "VideoAccessToken_Clip")
             add("variables", JsonObject().apply {
                 addProperty("slug", slug)
@@ -258,8 +278,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        array.add(videoAccessTokenOperation)
-        val response = graphQL.getClipUrls(clientId, array)
+        val response = graphQL.getClipUrls(clientId, json)
         response.data.withIndex().associateBy({
             if (!it.value.quality.isNullOrBlank()) {
                 if ((it.value.frameRate ?: 0) < 60) {

@@ -57,7 +57,6 @@ class StreamPlayerViewModel @Inject constructor(
     private var useAdBlock: Boolean? = true
     private var randomDeviceId: Boolean? = true
     private var xDeviceId: String? = null
-    private var deviceId: String? = null
     private var playerType: String? = null
     private var minSpeed: Float? = null
     private var maxSpeed: Float? = null
@@ -69,7 +68,7 @@ class StreamPlayerViewModel @Inject constructor(
         .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
         .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
-    fun startStream(user: User, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useAdBlock: Boolean?, randomDeviceId: Boolean?, xDeviceId: String?, deviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
+    fun startStream(user: User, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useAdBlock: Boolean?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
         this.gqlClientId = gqlClientId
         if (includeToken == true) {
             this.gqlToken = user.gqlToken
@@ -77,7 +76,6 @@ class StreamPlayerViewModel @Inject constructor(
         this.useAdBlock = useAdBlock
         this.randomDeviceId = randomDeviceId
         this.xDeviceId = xDeviceId
-        this.deviceId = deviceId
         this.playerType = playerType
         this.minSpeed = minSpeed?.toFloatOrNull()
         this.maxSpeed = maxSpeed?.toFloatOrNull()
@@ -186,7 +184,7 @@ class StreamPlayerViewModel @Inject constructor(
     private fun loadStream(stream: Stream) {
         viewModelScope.launch {
             try {
-                val result = stream.user_login?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useAdBlock, randomDeviceId, xDeviceId, deviceId, playerType) }
+                val result = stream.user_login?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useAdBlock, randomDeviceId, xDeviceId, playerType) }
                 if (result != null) {
                     if (useAdBlock == true) {
                         if (result.second) {

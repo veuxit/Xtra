@@ -77,7 +77,6 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
             useAdBlock = prefs.getBoolean(C.AD_BLOCKER, true),
             randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
             xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, ""),
-            deviceId = prefs.getString(C.TOKEN_DEVICEID, ""),
             playerType = prefs.getString(C.TOKEN_PLAYERTYPE, ""),
             minSpeed = prefs.getString(C.PLAYER_LIVE_MIN_SPEED, ""),
             maxSpeed = prefs.getString(C.PLAYER_LIVE_MAX_SPEED, ""),

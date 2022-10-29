@@ -36,11 +36,11 @@ class VideoDownloadViewModel @Inject constructor(
     val videoInfo: LiveData<VideoDownloadInfo?>
         get() = _videoInfo
 
-    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video) {
+    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?) {
         if (_videoInfo.value == null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val response = playerRepository.loadVideoPlaylist(gqlClientId, gqlToken, video.id)
+                    val response = playerRepository.loadVideoPlaylist(gqlClientId, gqlToken, video.id, playerType)
                     if (response.isSuccessful) {
                         val playlist = response.body()!!.string()
                         val qualities = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()

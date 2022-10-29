@@ -175,7 +175,8 @@ class DownloadService : IntentService(TAG) {
                     val response = playerRepository.loadVideoPlaylist(
                         gqlClientId = applicationContext.prefs().getString(C.GQL_CLIENT_ID, ""),
                         gqlToken = if (applicationContext.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(applicationContext).gqlToken else null,
-                        videoId = request.videoId!!
+                        videoId = request.videoId!!,
+                        playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
                     )
                     playlist = URL("https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value).openStream().use {
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
