@@ -63,6 +63,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             gqlClientId = prefs.getString(C.GQL_CLIENT_ID, ""),
             gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
             video = video,
+            playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
             offset = requireArguments().getDouble(KEY_OFFSET)
         )
         super.initialize()

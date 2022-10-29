@@ -11,15 +11,6 @@
         app:iconSpaceReserved="false"
         app:useSimpleSummaryProvider="true" />
 
-    <EditTextPreference
-        android:defaultValue="twitch-web-wall-mason"
-        android:dependency="token_random_deviceid"
-        android:key="token_deviceid"
-        android:maxLines="1"
-        android:title="Device-ID"
-        app:iconSpaceReserved="false"
-        app:useSimpleSummaryProvider="true" />
-
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:disableDependentsState="true"
@@ -43,6 +34,14 @@
         app:iconSpaceReserved="false" />
 
     <PreferenceCategory android:title="@string/videos" app:iconSpaceReserved="false"/>
+    <EditTextPreference
+        android:defaultValue="channel_home_live"
+        android:key="token_playertype_video"
+        android:maxLines="1"
+        android:title="playerType"
+        app:iconSpaceReserved="false"
+        app:useSimpleSummaryProvider="true" />
+
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="token_include_token_video"

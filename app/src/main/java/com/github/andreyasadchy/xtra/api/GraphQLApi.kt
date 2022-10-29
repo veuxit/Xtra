@@ -14,8 +14,7 @@ import com.github.andreyasadchy.xtra.model.gql.game.GameClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameStreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameVideosDataResponse
-import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenResponse
-import com.github.andreyasadchy.xtra.model.gql.playlist.VideoPlaylistTokenResponse
+import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
 import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
@@ -37,13 +36,10 @@ import retrofit2.http.POST
 interface GraphQLApi {
 
     @POST(".")
-    suspend fun getStreamPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonArray): StreamPlaylistTokenResponse
+    suspend fun getPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonObject): PlaybackAccessTokenResponse
 
     @POST(".")
-    suspend fun getVideoPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonArray): VideoPlaylistTokenResponse
-
-    @POST(".")
-    suspend fun getClipUrls(@Header("Client-ID") clientId: String?, @Body json: JsonArray): ClipUrlsResponse
+    suspend fun getClipUrls(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ClipUrlsResponse
 
     @POST(".")
     suspend fun getClipData(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ClipDataResponse

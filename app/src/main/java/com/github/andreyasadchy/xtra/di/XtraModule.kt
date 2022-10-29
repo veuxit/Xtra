@@ -12,10 +12,8 @@ import com.github.andreyasadchy.xtra.model.gql.emote.UserEmotesDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.emote.UserEmotesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.followed.*
 import com.github.andreyasadchy.xtra.model.gql.game.*
-import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenDeserializer
-import com.github.andreyasadchy.xtra.model.gql.playlist.StreamPlaylistTokenResponse
-import com.github.andreyasadchy.xtra.model.gql.playlist.VideoPlaylistTokenDeserializer
-import com.github.andreyasadchy.xtra.model.gql.playlist.VideoPlaylistTokenResponse
+import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenDeserializer
+import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
 import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.*
@@ -130,8 +128,7 @@ class XtraModule {
                 .registerTypeAdapter(BttvGlobalResponse::class.java, BttvGlobalDeserializer())
                 .registerTypeAdapter(BttvChannelResponse::class.java, BttvChannelDeserializer())
                 .registerTypeAdapter(BttvFfzResponse::class.java, BttvFfzDeserializer())
-                .registerTypeAdapter(StreamPlaylistTokenResponse::class.java, StreamPlaylistTokenDeserializer())
-                .registerTypeAdapter(VideoPlaylistTokenResponse::class.java, VideoPlaylistTokenDeserializer())
+                .registerTypeAdapter(PlaybackAccessTokenResponse::class.java, PlaybackAccessTokenDeserializer())
                 .registerTypeAdapter(ClipUrlsResponse::class.java, ClipUrlsDeserializer())
                 .registerTypeAdapter(ClipDataResponse::class.java, ClipDataDeserializer())
                 .registerTypeAdapter(ClipVideoResponse::class.java, ClipVideoDeserializer())
