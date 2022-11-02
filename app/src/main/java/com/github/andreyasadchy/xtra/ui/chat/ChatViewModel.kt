@@ -106,7 +106,7 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useSSl: Boolean, usePubSub: Boolean, user: User, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
+    fun startLive(useSSl: Boolean, usePubSub: Boolean, user: User, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
         if (chat == null && channelLogin != null) {
             stream_id = streamId
             this.showRaids = showRaids
@@ -122,6 +122,8 @@ class ChatViewModel @Inject constructor(
                 channelId = channelId,
                 channelLogin = channelLogin,
                 displayName = channelName,
+                emoteQuality = emoteQuality,
+                animateGifs = animateGifs,
                 showUserNotice = showUserNotice,
                 showClearMsg = showClearMsg,
                 showClearChat = showClearChat,
@@ -134,13 +136,15 @@ class ChatViewModel @Inject constructor(
                 gqlClientId = gqlClientId,
                 channelId = channelId,
                 channelLogin = channelLogin,
+                emoteQuality = emoteQuality,
+                animateGifs = animateGifs,
                 enableRecentMsg = enableRecentMsg,
                 recentMsgLimit = recentMsgLimit
             )
         }
     }
 
-    fun startReplay(user: User, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double) {
+    fun startReplay(user: User, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, emoteQuality: String, animateGifs: Boolean) {
         if (chat == null) {
             chat = VideoChatController(
                 clientId = gqlClientId,
@@ -153,7 +157,9 @@ class ChatViewModel @Inject constructor(
                 helixToken = user.helixToken,
                 gqlClientId = gqlClientId,
                 channelId = channelId,
-                channelLogin = channelLogin
+                channelLogin = channelLogin,
+                emoteQuality = emoteQuality,
+                animateGifs = animateGifs
             )
         }
     }
@@ -175,15 +181,15 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
     }
 
-    private fun init(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
+    private fun init(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
         chat?.start()
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin)
+        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs)
         if (channelLogin != null && enableRecentMsg == true) {
             loadRecentMessages(channelLogin, recentMsgLimit)
         }
     }
 
-    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?) {
+    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean) {
         val list = mutableListOf<Emote>()
         savedGlobalBadges.also {
             if (!it.isNullOrEmpty()) {
@@ -192,7 +198,7 @@ class ChatViewModel @Inject constructor(
             } else {
                 viewModelScope.launch {
                     try {
-                        repository.loadGlobalBadges(helixClientId, helixToken, gqlClientId).let { badges ->
+                        repository.loadGlobalBadges(helixClientId, helixToken, gqlClientId, emoteQuality).let { badges ->
                             if (badges.isNotEmpty()) {
                                 savedGlobalBadges = badges
                                 globalBadges.value = badges
@@ -280,7 +286,7 @@ class ChatViewModel @Inject constructor(
         if (!channelId.isNullOrBlank() || !channelLogin.isNullOrBlank()) {
             viewModelScope.launch {
                 try {
-                    repository.loadChannelBadges(helixClientId, helixToken, gqlClientId, channelId, channelLogin).let {
+                    repository.loadChannelBadges(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality).let {
                         if (it.isNotEmpty()) {
                             channelBadges.postValue(it)
                             reloadMessages.value = true
@@ -292,7 +298,7 @@ class ChatViewModel @Inject constructor(
             }
             viewModelScope.launch {
                 try {
-                    repository.loadCheerEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin).let {
+                    repository.loadCheerEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, animateGifs).let {
                         if (it.isNotEmpty()) {
                             cheerEmotes.postValue(it)
                             reloadMessages.value = true
@@ -364,12 +370,12 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?) {
+    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean) {
         savedGlobalBadges = null
         globalStvEmotes = null
         globalBttvEmotes = null
         globalFfzEmotes = null
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin)
+        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs)
     }
 
     inner class LiveChatController(
@@ -383,6 +389,8 @@ class ChatViewModel @Inject constructor(
             private val channelId: String?,
             private val channelLogin: String,
             displayName: String?,
+            private val emoteQuality: String,
+            private val animateGifs: Boolean,
             private val showUserNotice: Boolean,
             private val showClearMsg: Boolean,
             private val showClearChat: Boolean,
@@ -411,7 +419,7 @@ class ChatViewModel @Inject constructor(
                 val usedEmotes = hashSetOf<RecentEmote>()
                 val currentTime = System.currentTimeMillis()
                 message.split(' ').forEach { word ->
-                    allEmotesMap[word]?.let { usedEmotes.add(RecentEmote(word, it.url, currentTime)) }
+                    allEmotesMap[word]?.let { usedEmotes.add(RecentEmote(word, it.url1x, it.url2x, it.url3x, it.url4x, currentTime)) }
                 }
                 if (usedEmotes.isNotEmpty()) {
                     playerRepository.insertRecentEmotes(usedEmotes)
@@ -456,10 +464,10 @@ class ChatViewModel @Inject constructor(
                     try {
                         if (!helixClientId.isNullOrBlank() && !user.helixToken.isNullOrBlank()) {
                             sets?.asReversed()?.chunked(25)?.forEach { list ->
-                                repository.loadEmotesFromSet(helixClientId, user.helixToken, list)?.let { emotes.addAll(it) }
+                                repository.loadEmotesFromSet(helixClientId, user.helixToken, list, animateGifs).let { emotes.addAll(it) }
                             }
                         } else if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank() && !user.id.isNullOrBlank()) {
-                            repository.loadUserEmotes(gqlClientId, user.gqlToken, user.id, channelId)?.let { emotes.addAll(it) }
+                            repository.loadUserEmotes(gqlClientId, user.gqlToken, user.id, channelId).let { emotes.addAll(it) }
                         }
                     } catch (e: Exception) {
                     }

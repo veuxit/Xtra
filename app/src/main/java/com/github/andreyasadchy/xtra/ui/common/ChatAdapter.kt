@@ -30,8 +30,6 @@ import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.*
-import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
-import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.*
 import kotlin.collections.set
@@ -42,6 +40,8 @@ class ChatAdapter(
     private val badgeSize: Int,
     private val randomColor: Boolean,
     private val boldNames: Boolean,
+    private val emoteQuality: String,
+    private val animateGifs: Boolean,
     private val enableZeroWidth: Boolean,
     private val enableTimestamps: Boolean,
     private val timestampFormat: String?,
@@ -110,17 +110,9 @@ class ChatAdapter(
             val string = redeemedChatMsg.format(pointReward?.rewardTitle)
             builder.append("$string ")
             imageIndex += string.length + 1
-            val url = when (emoteQuality) {
-                "4" -> pointReward?.rewardImage?.url4
-                "3" -> pointReward?.rewardImage?.url4
-                "2" -> pointReward?.rewardImage?.url2
-                else -> pointReward?.rewardImage?.url1
-            }
-            url?.let {
-                builder.append("  ")
-                images.add(Image(it, imageIndex++, imageIndex++, false))
-                badgesCount++
-            }
+            builder.append("  ")
+            images.add(Image(pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url2, pointReward?.rewardImage?.url1, null, false, imageIndex++, imageIndex++, false))
+            badgesCount++
             builder.append("${pointReward?.rewardCost}\n")
             imageIndex += (pointReward?.rewardCost?.toString()?.length ?: 0) + 1
         }
@@ -132,9 +124,9 @@ class ChatAdapter(
         }
         chatMessage.badges?.forEach { chatBadge ->
             val badge = channelBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version } ?: globalBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version }
-            badge?.url?.let {
+            badge?.let {
                 builder.append("  ")
-                images.add(Image(it, imageIndex++, imageIndex++, false))
+                images.add(Image(it.url1x, it.url2x, it.url3x, it.url4x, null, false, imageIndex++, imageIndex++, false))
                 badgesCount++
             }
         }
@@ -161,17 +153,9 @@ class ChatAdapter(
                 val string = redeemedNoMsg.format(userName, pointReward?.rewardTitle)
                 builder.append("$string ")
                 imageIndex += string.length + 1
-                val url = when (emoteQuality) {
-                    "4" -> pointReward?.rewardImage?.url4
-                    "3" -> pointReward?.rewardImage?.url4
-                    "2" -> pointReward?.rewardImage?.url2
-                    else -> pointReward?.rewardImage?.url1
-                }
-                url?.let {
-                    builder.append("  ")
-                    images.add(Image(it, imageIndex++, imageIndex++, false))
-                    badgesCount++
-                }
+                builder.append("  ")
+                images.add(Image(pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url2, pointReward?.rewardImage?.url1, null, false, imageIndex++, imageIndex++, false))
+                badgesCount++
                 builder.append("${pointReward?.rewardCost}")
                 imageIndex += pointReward?.rewardCost?.toString()?.length ?: 0
                 originalMessage = "$userName: ${chatMessage.message}"
@@ -204,7 +188,7 @@ class ChatAdapter(
                     } else {
                         it.end + realBegin - it.begin
                     }
-                    TwitchEmote(it.name, realBegin, realEnd)
+                    TwitchEmote(name = it.name, begin = realBegin, end = realEnd)
                 }
                 imageIndex += userNameWithPostfixLength
                 for (e in copy) {
@@ -220,7 +204,7 @@ class ChatAdapter(
                     }
                     e.end -= length
                 }
-                copy.forEach { images.add(Image(it.url, imageIndex + it.begin, imageIndex + it.end + 1, true, "image/gif")) }
+                copy.forEach { images.add(Image(it.url1x, it.url2x, it.url3x, it.url4x, it.type, it.isZeroWidth, imageIndex + it.begin, imageIndex + it.end + 1, true)) }
             }
             val split = builder.substring(userNameWithPostfixLength).split(" ")
             var builderIndex = userNameWithPostfixLength
@@ -275,7 +259,7 @@ class ChatAdapter(
                         builder.replace(builderIndex, endIndex, ".")
                     }
                     builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    images.add(Image(emote.url, builderIndex, builderIndex + 1, true, emote.type, emote.isZeroWidth))
+                    images.add(Image(emote.url1x, emote.url2x, emote.url3x, emote.url4x, emote.type, emote.isZeroWidth, builderIndex, builderIndex + 1, true))
                     emotesFound++
                     builderIndex += 2
                     if (emote is CheerEmote) {
@@ -334,7 +318,12 @@ class ChatAdapter(
 
     private fun loadCoil(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, host: Boolean?, fullMsg: String?) {
         val request = ImageRequest.Builder(fragment.requireContext())
-            .data(image.url)
+            .data(when (emoteQuality) {
+                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
+                "3" -> image.url3x ?: image.url2x ?: image.url1x
+                "2" -> image.url2x ?: image.url1x
+                else -> image.url1x
+            })
             .target(
                 onSuccess = { result ->
                     val width: Int
@@ -370,7 +359,12 @@ class ChatAdapter(
     private fun loadWebp(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, host: Boolean?, fullMsg: String?) {
         GlideApp.with(fragment)
             .asWebp()
-            .load(image.url)
+            .load(when (emoteQuality) {
+                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
+                "3" -> image.url3x ?: image.url2x ?: image.url1x
+                "2" -> image.url2x ?: image.url1x
+                else -> image.url1x
+            })
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .into(object : CustomTarget<WebpDrawable>() {
                 override fun onResourceReady(resource: WebpDrawable, transition: Transition<in WebpDrawable>?) {
@@ -416,7 +410,12 @@ class ChatAdapter(
     private fun loadGif(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, host: Boolean?, fullMsg: String?) {
         GlideApp.with(fragment)
             .asGif()
-            .load(image.url)
+            .load(when (emoteQuality) {
+                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
+                "3" -> image.url3x ?: image.url2x ?: image.url1x
+                "2" -> image.url2x ?: image.url1x
+                else -> image.url1x
+            })
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .into(object : CustomTarget<GifDrawable>() {
                 override fun onResourceReady(resource: GifDrawable, transition: Transition<in GifDrawable>?) {
@@ -461,7 +460,12 @@ class ChatAdapter(
 
     private fun loadDrawable(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, host: Boolean?, fullMsg: String?) {
         GlideApp.with(fragment)
-            .load(image.url)
+            .load(when (emoteQuality) {
+                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
+                "3" -> image.url3x ?: image.url2x ?: image.url1x
+                "2" -> image.url2x ?: image.url1x
+                else -> image.url1x
+            })
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
