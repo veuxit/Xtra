@@ -1,4 +1,4 @@
-package com.github.andreyasadchy.xtra.model.helix.emote
+package com.github.andreyasadchy.xtra.model.helix.chat
 
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality

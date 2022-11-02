@@ -1,4 +1,4 @@
-package com.github.andreyasadchy.xtra.model.gql.emote
+package com.github.andreyasadchy.xtra.model.gql.chat
 
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.google.gson.JsonDeserializationContext

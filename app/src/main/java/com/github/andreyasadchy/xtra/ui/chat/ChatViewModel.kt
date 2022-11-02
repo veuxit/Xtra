@@ -140,7 +140,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(user: User, helixClientId: String?, gqlClientId: String?, channelId: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double) {
+    fun startReplay(user: User, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double) {
         if (chat == null) {
             chat = VideoChatController(
                 clientId = gqlClientId,
@@ -152,7 +152,8 @@ class ChatViewModel @Inject constructor(
                 helixClientId = helixClientId,
                 helixToken = user.helixToken,
                 gqlClientId = gqlClientId,
-                channelId = channelId
+                channelId = channelId,
+                channelLogin = channelLogin
             )
         }
     }
@@ -174,15 +175,15 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
     }
 
-    private fun init(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String? = null, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
+    private fun init(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
         chat?.start()
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId)
+        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin)
         if (channelLogin != null && enableRecentMsg == true) {
             loadRecentMessages(channelLogin, recentMsgLimit)
         }
     }
 
-    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?) {
+    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?) {
         val list = mutableListOf<Emote>()
         savedGlobalBadges.also {
             if (!it.isNullOrEmpty()) {
@@ -191,7 +192,7 @@ class ChatViewModel @Inject constructor(
             } else {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadGlobalBadges().body()?.badges?.let { badges ->
+                        repository.loadGlobalBadges(helixClientId, helixToken, gqlClientId).let { badges ->
                             if (badges.isNotEmpty()) {
                                 savedGlobalBadges = badges
                                 globalBadges.value = badges
@@ -276,10 +277,10 @@ class ChatViewModel @Inject constructor(
                 }
             }
         }
-        if (!channelId.isNullOrBlank()) {
+        if (!channelId.isNullOrBlank() || !channelLogin.isNullOrBlank()) {
             viewModelScope.launch {
                 try {
-                    playerRepository.loadChannelBadges(channelId).body()?.badges?.let {
+                    repository.loadChannelBadges(helixClientId, helixToken, gqlClientId, channelId, channelLogin).let {
                         if (it.isNotEmpty()) {
                             channelBadges.postValue(it)
                             reloadMessages.value = true
@@ -289,6 +290,20 @@ class ChatViewModel @Inject constructor(
                     Log.e(TAG, "Failed to load badges for channel $channelId", e)
                 }
             }
+            viewModelScope.launch {
+                try {
+                    repository.loadCheerEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin).let {
+                        if (it.isNotEmpty()) {
+                            cheerEmotes.postValue(it)
+                            reloadMessages.value = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
+                }
+            }
+        }
+        if (!channelId.isNullOrBlank()) {
             viewModelScope.launch {
                 try {
                     playerRepository.loadStvEmotes(channelId).body()?.emotes?.let {
@@ -331,18 +346,6 @@ class ChatViewModel @Inject constructor(
                     Log.e(TAG, "Failed to load FFZ emotes for channel $channelId", e)
                 }
             }
-            viewModelScope.launch {
-                try {
-                    repository.loadCheerEmotes(channelId, helixClientId, helixToken, gqlClientId)?.let {
-                        if (it.isNotEmpty()) {
-                            cheerEmotes.postValue(it)
-                            reloadMessages.value = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
-                }
-            }
         }
     }
 
@@ -361,12 +364,12 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?) {
+    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?) {
         savedGlobalBadges = null
         globalStvEmotes = null
         globalBttvEmotes = null
         globalFfzEmotes = null
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId)
+        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin)
     }
 
     inner class LiveChatController(

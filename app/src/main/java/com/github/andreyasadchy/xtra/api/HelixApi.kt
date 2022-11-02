@@ -1,9 +1,10 @@
 package com.github.andreyasadchy.xtra.api
 
-import com.github.andreyasadchy.xtra.model.chat.CheerEmotesResponse
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.ChatBadgesResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.CheerEmotesResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.EmoteSetResponse
 import com.github.andreyasadchy.xtra.model.helix.clip.ClipsResponse
-import com.github.andreyasadchy.xtra.model.helix.emote.EmoteSetResponse
 import com.github.andreyasadchy.xtra.model.helix.follows.FollowResponse
 import com.github.andreyasadchy.xtra.model.helix.game.GamesResponse
 import com.github.andreyasadchy.xtra.model.helix.stream.StreamsResponse
@@ -124,6 +125,19 @@ interface HelixApi {
         @Header("Authorization") token: String?,
         @Query("emote_set_id") setIds: List<String>
     ): EmoteSetResponse
+
+    @GET("chat/badges/global")
+    suspend fun getGlobalBadges(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+    ): ChatBadgesResponse
+
+    @GET("chat/badges")
+    suspend fun getChannelBadges(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") userId: String?
+    ): ChatBadgesResponse
 
     @GET("bits/cheermotes")
     suspend fun getCheerEmotes(

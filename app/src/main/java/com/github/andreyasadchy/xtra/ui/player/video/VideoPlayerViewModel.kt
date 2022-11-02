@@ -85,7 +85,7 @@ class VideoPlayerViewModel @Inject constructor(
             isLoading = true
             viewModelScope.launch {
                 try {
-                    val get = repository.loadVodGamesGQL(clientId, videoId)
+                    val get = repository.loadVideoGames(clientId, videoId)
                     if (get != null) {
                         gamesList.postValue(get!!)
                     }

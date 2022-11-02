@@ -20,18 +20,6 @@ interface MiscApi {
     @POST("https://gql.twitch.tv/integrity")
     suspend fun getClientIntegrityToken(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("X-Device-Id") deviceId: String?): ResponseBody
 
-    @GET("https://api.twitch.tv/v5/videos/{id}/comments")
-    suspend fun getVideoChatLog(@Header("Client-ID") clientId: String?, @Path("id") videoId: String?, @Query("content_offset_seconds") offsetSeconds: Double, @Query("limit") limit: Int): VideoMessagesResponse
-
-    @GET("https://api.twitch.tv/v5/videos/{id}/comments")
-    suspend fun getVideoChatLogAfter(@Header("Client-ID") clientId: String?, @Path("id") videoId: String?, @Query("cursor") cursor: String, @Query("limit") limit: Int): VideoMessagesResponse
-
-    @GET("https://badges.twitch.tv/v1/badges/global/display")
-    suspend fun getGlobalBadges(): Response<TwitchBadgesResponse>
-
-    @GET("https://badges.twitch.tv/v1/badges/channels/{channelId}/display")
-    suspend fun getChannelBadges(@Path("channelId") channelId: String): Response<TwitchBadgesResponse>
-
     @GET("https://recent-messages.robotty.de/api/v2/recent-messages/{channelLogin}")
     suspend fun getRecentMessages(@Path("channelLogin") channelLogin: String, @Query("limit") limit: String): Response<RecentMessagesResponse>
 
