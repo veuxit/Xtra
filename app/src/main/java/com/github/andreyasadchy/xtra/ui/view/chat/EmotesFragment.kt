@@ -16,7 +16,9 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatViewModel
 import com.github.andreyasadchy.xtra.ui.view.GridAutofitLayoutManager
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -41,7 +43,8 @@ class EmotesFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val context = requireContext()
         val args = requireArguments()
-        val emotesAdapter = EmotesAdapter(this, listener)
+        val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
+        val emotesAdapter = EmotesAdapter(this, listener, emoteQuality)
         with(view as RecyclerView) {
             itemAnimator = null
             adapter = emotesAdapter

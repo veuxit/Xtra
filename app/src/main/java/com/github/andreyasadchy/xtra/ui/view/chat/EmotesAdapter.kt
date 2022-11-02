@@ -14,7 +14,8 @@ import com.github.andreyasadchy.xtra.util.loadImage
 
 class EmotesAdapter(
         private val fragment: Fragment,
-        private val clickListener: (Emote) -> Unit) : ListAdapter<Emote, RecyclerView.ViewHolder>(object : DiffUtil.ItemCallback<Emote>() {
+        private val clickListener: (Emote) -> Unit,
+        private val emoteQuality: String) : ListAdapter<Emote, RecyclerView.ViewHolder>(object : DiffUtil.ItemCallback<Emote>() {
     override fun areItemsTheSame(oldItem: Emote, newItem: Emote): Boolean {
         return oldItem.name == newItem.name
     }
@@ -32,7 +33,12 @@ class EmotesAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val emote = getItem(position)
         (holder.itemView as ImageView).apply {
-            loadImage(fragment, emote.url, diskCacheStrategy = DiskCacheStrategy.DATA)
+            loadImage(fragment, when (emoteQuality) {
+                "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                "2" -> emote.url2x ?: emote.url1x
+                else -> emote.url1x
+            }, diskCacheStrategy = DiskCacheStrategy.DATA)
             setOnClickListener { clickListener(emote) }
         }
     }

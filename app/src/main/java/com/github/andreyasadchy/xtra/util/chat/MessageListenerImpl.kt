@@ -55,7 +55,7 @@ class MessageListenerImpl(
                     entries.forEach { emote ->
                         emote.value?.split(",")?.forEach { indexes ->
                             val index = indexes.split("-")
-                            emotesList.add(TwitchEmote(emote.key, index[0].toInt(), index[1].toInt()))
+                            emotesList.add(TwitchEmote(name = emote.key, begin = index[0].toInt(), end = index[1].toInt()))
                         }
                     }
                 }

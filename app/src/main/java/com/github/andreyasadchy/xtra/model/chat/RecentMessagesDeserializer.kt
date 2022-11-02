@@ -77,7 +77,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
                     entries.forEach { emote ->
                         emote.value?.split(",")?.forEach { indexes ->
                             val index = indexes.split("-")
-                            emotesList.add(TwitchEmote(emote.key, index[0].toInt(), index[1].toInt()))
+                            emotesList.add(TwitchEmote(name = emote.key, begin = index[0].toInt(), end = index[1].toInt()))
                         }
                     }
                 }
@@ -200,7 +200,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
                 entries.forEach { emote ->
                     emote.value?.split(",")?.forEach { indexes ->
                         val index = indexes.split("-")
-                        emotesList.add(TwitchEmote(emote.key, index[0].toInt() + system.length + 1, index[1].toInt() + system.length + 1))
+                        emotesList.add(TwitchEmote(name = emote.key, begin = index[0].toInt() + system.length + 1, end = index[1].toInt() + system.length + 1))
                     }
                 }
             }
