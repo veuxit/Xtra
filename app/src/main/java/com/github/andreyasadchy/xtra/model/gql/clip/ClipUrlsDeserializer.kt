@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.model.gql.clip
 
 import android.net.Uri
-import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessToken
+import com.github.andreyasadchy.xtra.model.PlaybackAccessToken
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement

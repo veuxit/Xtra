@@ -77,7 +77,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
                         chatView.init(this)
                         val getCurrentPosition = (parentFragment as ChatReplayPlayerFragment)::getCurrentPosition
-                        viewModel.startReplay(user, helixClientId, gqlClientId, channelId, it, args.getDouble(KEY_START_TIME), getCurrentPosition)
+                        viewModel.startReplay(user, helixClientId, gqlClientId, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition)
                         chatView.setChannelId(channelId)
                         true
                     } else {
@@ -129,10 +129,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
 
     fun reloadEmotes() {
         val channelId = requireArguments().getString(KEY_CHANNEL_ID)
+        val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
         val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "")
         val helixToken = User.get(requireContext()).helixToken
         val gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "")
-        viewModel.reloadEmotes(helixClientId, helixToken, gqlClientId, channelId)
+        viewModel.reloadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin)
     }
 
     private fun onRaidUpdate(raid: Raid) {
@@ -251,10 +252,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             }
         }
 
-        fun newInstance(channelId: String?, videoId: String?, startTime: Double?) = ChatFragment().apply {
+        fun newInstance(channelId: String?, channelLogin: String?, videoId: String?, startTime: Double?) = ChatFragment().apply {
             arguments = Bundle().apply {
                 putBoolean(KEY_IS_LIVE, false)
                 putString(KEY_CHANNEL_ID, channelId)
+                putString(KEY_CHANNEL_LOGIN, channelLogin)
                 putString(KEY_VIDEO_ID, videoId)
                 if (startTime != null) {
                     putBoolean(KEY_START_TIME_EMPTY, false)

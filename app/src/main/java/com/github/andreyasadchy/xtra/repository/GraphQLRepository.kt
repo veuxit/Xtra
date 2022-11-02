@@ -2,28 +2,30 @@ package com.github.andreyasadchy.xtra.repository
 
 import android.util.Log
 import com.github.andreyasadchy.xtra.api.GraphQLApi
-import com.github.andreyasadchy.xtra.model.chat.EmoteCardResponse
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelHostingDataResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelViewerListDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.*
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipVideoResponse
-import com.github.andreyasadchy.xtra.model.gql.emote.UserEmotesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.followed.*
 import com.github.andreyasadchy.xtra.model.gql.game.GameClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameStreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
-import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
-import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
+import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
+import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
@@ -459,7 +461,97 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getSearchStreamTags(clientId, json)
     }
 
-    suspend fun loadVodGames(clientId: String?, videoId: String?): VodGamesDataResponse {
+    suspend fun loadChatBadges(clientId: String?, channelLogin: String?): ChatBadgesDataResponse {
+        val json = JsonObject().apply {
+            addProperty("operationName", "ChatList_Badges")
+            add("variables", JsonObject().apply {
+                addProperty("channelLogin", channelLogin)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "86f43113c04606e6476e39dcd432dee47c994d77a83e54b732e11d4935f0cd08")
+                })
+            })
+        }
+        return graphQL.getChatBadges(clientId, json)
+    }
+
+    suspend fun loadCheerEmotes(clientId: String?, channelLogin: String?): List<CheerEmote> {
+        val data = mutableListOf<CheerEmote>()
+        val tiers = mutableListOf<GlobalCheerEmotesDataResponse.CheerTier>()
+        val global = JsonObject().apply {
+            addProperty("operationName", "BitsConfigContext_Global")
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "6a265b86f3be1c8d11bdcf32c183e106028c6171e985cc2584d15f7840f5fee6")
+                })
+            })
+        }
+        val response = graphQL.getGlobalCheerEmotes(clientId, global)
+        tiers.addAll(response.tiers)
+        val channel = JsonObject().apply {
+            addProperty("operationName", "BitsConfigContext_Channel")
+            add("variables", JsonObject().apply {
+                addProperty("login", channelLogin)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "368aaf9c04d3876cdd0076c105af2cd44b3bfd51a688462152ed4d3a5657e2b9")
+                })
+            })
+        }
+        tiers.addAll(graphQL.getChannelCheerEmotes(clientId, channel).data)
+        val background = (response.config.backgrounds.find { it.asString == "dark" } ?: response.config.backgrounds.last()).asString
+        val scale = (response.config.scales.find { it.asString == emoteQuality } ?: response.config.scales.last()).asString
+        val type = (if (animateGifs) {
+            response.config.types.find { it.asJsonObject.get("animation").asString == "animated" } ?: response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
+        } else {
+            response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
+        } ?: response.config.types.first()).asJsonObject
+        tiers.forEach { tier ->
+            val item = response.config.colors.find { it.asJsonObject.get("bits").asInt == tier.tierBits }?.asJsonObject
+            if (item != null) {
+                val url = tier.template
+                    .replaceFirst("PREFIX", tier.prefix)
+                    .replaceFirst("BACKGROUND", background)
+                    .replaceFirst("ANIMATION", type.get("animation").asString)
+                    .replaceFirst("TIER", item.get("bits").asString)
+                    .replaceFirst("SCALE", scale)
+                    .replaceFirst("EXTENSION", type.get("extension").asString)
+                data.add(CheerEmote(
+                    name = tier.prefix,
+                    url = url,
+                    type = if (type.get("animation").asString == "animated") "image/gif" else "image/png",
+                    minBits = item.get("bits").asInt,
+                    color = item.get("color").asString
+                ))
+            }
+        }
+        return data
+    }
+
+    suspend fun loadVideoMessages(clientId: String?, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse {
+        val json = JsonObject().apply {
+            addProperty("operationName", "VideoCommentsByOffsetOrCursor")
+            add("variables", JsonObject().apply {
+                addProperty("cursor", cursor)
+                addProperty("contentOffsetSeconds", offset)
+                addProperty("videoID", videoId)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a")
+                })
+            })
+        }
+        return graphQL.getVideoMessages(clientId, json)
+    }
+
+    suspend fun loadVideoGames(clientId: String?, videoId: String?): VideoGamesDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "VideoPlayer_ChapterSelectButtonVideo")
             add("variables", JsonObject().apply {
@@ -472,7 +564,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getVodGames(clientId, json)
+        return graphQL.getVideoGames(clientId, json)
     }
 
     suspend fun loadViewerCount(clientId: String?, channelLogin: String?): ViewersDataResponse {

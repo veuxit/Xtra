@@ -1,5 +1,6 @@
-package com.github.andreyasadchy.xtra.model.chat
+package com.github.andreyasadchy.xtra.model.gql.chat
 
+import com.github.andreyasadchy.xtra.model.chat.EmoteCard
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement

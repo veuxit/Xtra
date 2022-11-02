@@ -1,4 +1,6 @@
 type Query {
+  badges: [Badge]
+  cheerConfig: GlobalCheerConfig
   games(first: Int, after: Cursor, options: GameOptions): GameConnection
   game(id: ID, name: String): Game
   searchCategories(query: String!, first: Int, after: Cursor): SearchCategoriesConnection
@@ -11,6 +13,13 @@ type Query {
   video(id: ID): Video
 }
 
+type Badge {
+  imageURL(size: BadgeImageSize): String
+  setID: ID
+  title: String
+  version: String
+}
+
 type Broadcast {
   startedAt: Time
 }
@@ -20,7 +29,7 @@ type BroadcastSettings {
 }
 
 type CheerInfo {
-  emotes: [Cheermote]
+  cheerGroups: [CheermoteGroup!]
 }
 
 type Cheermote {
@@ -28,14 +37,30 @@ type Cheermote {
   tiers: [CheermoteTier]
 }
 
-type CheermoteImage {
-  url: String
+type CheermoteColorConfig {
+  bits: Int
+  color: String
+}
+
+type CheermoteDisplayConfig {
+  backgrounds: [String!]
+  colors: [CheermoteColorConfig!]
+  scales: [String!]
+  types: [CheermoteDisplayType!]
+}
+
+type CheermoteDisplayType {
+  animation: String
+  extension: String
+}
+
+type CheermoteGroup {
+  nodes: [Cheermote!]
+  templateURL: String
 }
 
 type CheermoteTier {
   bits: Int
-  color: String
-  images(isAnimated: Boolean, dpiScale: Float): [CheermoteImage]
 }
 
 type Clip {
@@ -128,6 +153,11 @@ type GameEdge {
   node: Game
 }
 
+type GlobalCheerConfig {
+  displayConfig: CheermoteDisplayConfig
+  groups: [CheermoteGroup!]
+}
+
 type PageInfo {
   hasNextPage: Boolean
   hasPreviousPage: Boolean
@@ -217,6 +247,7 @@ type Tag {
 
 type User {
   bannerImageURL: String
+  broadcastBadges: [Badge]
   broadcastSettings: BroadcastSettings,
   cheer: CheerInfo
   clips(first: Int, after: Cursor, criteria: UserClipsInput): ClipConnection
@@ -302,6 +333,12 @@ input StreamOptions {
 input UserClipsInput {
   period: ClipsPeriod
   sort: ClipsSort
+}
+
+enum BadgeImageSize {
+  NORMAL
+  DOUBLE
+  QUADRUPLE
 }
 
 enum BroadcastType {
@@ -410,7 +447,6 @@ enum VideoSort {
 }
 
 scalar Cursor
-scalar ID
 scalar Time
 
 schema {

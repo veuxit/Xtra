@@ -9,9 +9,10 @@ import com.github.andreyasadchy.xtra.*
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
+import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.model.chat.VideoMessagesResponse
-import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.ChannelPointsContextDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelViewerList
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
@@ -26,10 +27,7 @@ import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.datasource.*
-import com.github.andreyasadchy.xtra.type.ClipsPeriod
-import com.github.andreyasadchy.xtra.type.Language
-import com.github.andreyasadchy.xtra.type.StreamSort
-import com.github.andreyasadchy.xtra.type.VideoSort
+import com.github.andreyasadchy.xtra.type.*
 import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
 import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -453,26 +451,162 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadCheerEmotes(userId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<CheerEmote>? = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
-            val emotes = mutableListOf<CheerEmote>()
-            val get = getApolloClient(gqlClientId).query(CheerEmotesQuery(Optional.Present(userId), Optional.Present(animateGifs), Optional.Present((when (emoteQuality) {"4" -> 4 "3" -> 3 "2" -> 2 else -> 1}).toDouble()))).execute().data
-            if (get?.user?.cheer?.emotes != null) {
-                for (i in get.user.cheer.emotes) {
-                    if (i?.tiers != null) {
-                        for (tier in i.tiers) {
-                            i.prefix?.let { tier?.bits?.let { it1 -> tier.images?.first()?.url?.let { it2 -> emotes.add(CheerEmote(name = it, minBits = it1, color = tier.color, type = if (animateGifs) "image/gif" else "image/png", url = it2)) } } }
+            val badges = mutableListOf<TwitchBadge>()
+            val get = getApolloClient(gqlClientId).query(BadgesQuery(Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute().data
+            get?.badges?.forEach {
+                if (it != null) {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            it.imageURL?.let { url ->
+                                badges.add(TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url = url,
+                                    title = it.title
+                                ))
+                            }
                         }
                     }
                 }
             }
-            emotes.ifEmpty { null }
+            badges
         } catch (e: Exception) {
-            helix.getCheerEmotes(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                userId = userId
-            ).emotes
+            try {
+                gql.loadChatBadges(gqlClientId, "").global
+            } catch (e: Exception) {
+                helix.getGlobalBadges(
+                    clientId = helixClientId,
+                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }
+                ).data
+            }
+        }
+    }
+
+    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?): List<TwitchBadge> = withContext(Dispatchers.IO) {
+        try {
+            val badges = mutableListOf<TwitchBadge>()
+            val get = getApolloClient(gqlClientId).query(UserBadgesQuery(Optional.Present(channelId), Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute().data
+            get?.user?.broadcastBadges?.forEach {
+                if (it != null) {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            it.imageURL?.let { url ->
+                                badges.add(TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url = url,
+                                    title = it.title
+                                ))
+                            }
+                        }
+                    }
+                }
+            }
+            badges
+        } catch (e: Exception) {
+            try {
+                gql.loadChatBadges(gqlClientId, channelLogin).channel
+            } catch (e: Exception) {
+                helix.getChannelBadges(
+                    clientId = helixClientId,
+                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                    userId = channelId
+                ).data
+            }
+        }
+    }
+
+    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?): List<CheerEmote> = withContext(Dispatchers.IO) {
+        try {
+            val emotes = mutableListOf<CheerEmote>()
+            val get = getApolloClient(gqlClientId).query(UserCheerEmotesQuery(Optional.Present(channelId))).execute().data
+            get?.cheerConfig?.displayConfig?.let { config ->
+                config.backgrounds?.let {
+                    val background = config.backgrounds.find { it == "dark" } ?: config.backgrounds.last()
+                    config.colors?.let {
+                        val colors = config.colors
+                        config.scales?.let {
+                            val scale = config.scales.find { it == emoteQuality } ?: config.scales.last()
+                            config.types?.let {
+                                val type = if (animateGifs) {
+                                    config.types.find { it.animation == "animated" } ?: config.types.find { it.animation == "static" }
+                                } else {
+                                    config.types.find { it.animation == "static" }
+                                } ?: config.types.first()
+                                if (type.animation != null && type.extension != null) {
+                                    get.cheerConfig.groups?.forEach { group ->
+                                        group.templateURL?.let { template ->
+                                            group.nodes?.forEach { emote ->
+                                                emote.prefix?.let { prefix ->
+                                                    emote.tiers?.forEach { tier ->
+                                                        val item = colors.find { it.bits == tier?.bits }
+                                                        if (item?.bits != null) {
+                                                            val url = template
+                                                                .replaceFirst("PREFIX", prefix.lowercase())
+                                                                .replaceFirst("BACKGROUND", background)
+                                                                .replaceFirst("ANIMATION", type.animation)
+                                                                .replaceFirst("TIER", item.bits.toString())
+                                                                .replaceFirst("SCALE", scale)
+                                                                .replaceFirst("EXTENSION", type.extension)
+                                                            emotes.add(CheerEmote(
+                                                                name = prefix,
+                                                                url = url,
+                                                                type = if (type.animation == "animated") "image/gif" else "image/png",
+                                                                minBits = item.bits,
+                                                                color = item.color
+                                                            ))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    get.user?.cheer?.cheerGroups?.forEach { group ->
+                                        group.templateURL?.let { template ->
+                                            group.nodes?.forEach { emote ->
+                                                emote.prefix?.let { prefix ->
+                                                    emote.tiers?.forEach { tier ->
+                                                        val item = colors.find { it.bits == tier?.bits }
+                                                        if (item?.bits != null) {
+                                                            val url = template
+                                                                .replaceFirst("PREFIX", prefix.lowercase())
+                                                                .replaceFirst("BACKGROUND", background)
+                                                                .replaceFirst("ANIMATION", type.animation)
+                                                                .replaceFirst("TIER", item.bits.toString())
+                                                                .replaceFirst("SCALE", scale)
+                                                                .replaceFirst("EXTENSION", type.extension)
+                                                            emotes.add(CheerEmote(
+                                                                name = prefix,
+                                                                url = url,
+                                                                type = if (type.animation == "animated") "image/gif" else "image/png",
+                                                                minBits = item.bits,
+                                                                color = item.color
+                                                            ))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            emotes
+        } catch (e: Exception) {
+            try {
+                gql.loadCheerEmotes(gqlClientId, channelLogin)
+            } catch (e: Exception) {
+                helix.getCheerEmotes(
+                    clientId = helixClientId,
+                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                    userId = channelId
+                ).emotes
+            }
         }
     }
 
@@ -525,19 +659,15 @@ class ApiRepository @Inject constructor(
         gql.loadFollowingGame(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gameName).following
     }
 
-    suspend fun loadVideoChatLog(gqlClientId: String?, videoId: String, offsetSeconds: Double): VideoMessagesResponse = withContext(Dispatchers.IO) {
-        misc.getVideoChatLog(gqlClientId, videoId, offsetSeconds, 100)
+    suspend fun loadVideoMessages(gqlClientId: String?, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse = withContext(Dispatchers.IO) {
+        gql.loadVideoMessages(gqlClientId, videoId, offset, cursor)
     }
 
-    suspend fun loadVideoChatAfter(gqlClientId: String?, videoId: String, cursor: String): VideoMessagesResponse = withContext(Dispatchers.IO) {
-        misc.getVideoChatLogAfter(gqlClientId, videoId, cursor, 100)
+    suspend fun loadVideoGames(clientId: String?, videoId: String?): List<Game> = withContext(Dispatchers.IO) {
+        gql.loadVideoGames(clientId, videoId).data
     }
 
-    suspend fun loadVodGamesGQL(clientId: String?, videoId: String?): List<Game> = withContext(Dispatchers.IO) {
-        gql.loadVodGames(clientId, videoId).data
-    }
-
-    suspend fun loadChannelViewerListGQL(clientId: String?, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
+    suspend fun loadChannelViewerList(clientId: String?, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
         gql.loadChannelViewerList(clientId, channelLogin).data
     }
 
