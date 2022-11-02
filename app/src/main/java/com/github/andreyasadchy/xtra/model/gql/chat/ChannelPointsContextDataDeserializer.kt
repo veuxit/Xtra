@@ -1,4 +1,4 @@
-package com.github.andreyasadchy.xtra.model.gql.points
+package com.github.andreyasadchy.xtra.model.gql.chat
 
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer

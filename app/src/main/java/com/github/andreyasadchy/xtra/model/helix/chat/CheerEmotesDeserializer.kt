@@ -1,5 +1,6 @@
-package com.github.andreyasadchy.xtra.model.chat
+package com.github.andreyasadchy.xtra.model.helix.chat
 
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
 import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.google.gson.JsonDeserializationContext

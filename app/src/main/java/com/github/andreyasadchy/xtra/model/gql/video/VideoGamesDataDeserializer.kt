@@ -1,4 +1,4 @@
-package com.github.andreyasadchy.xtra.model.gql.vod
+package com.github.andreyasadchy.xtra.model.gql.video
 
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.google.gson.JsonDeserializationContext
@@ -7,10 +7,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import java.lang.reflect.Type
 
-class VodGamesDataDeserializer : JsonDeserializer<VodGamesDataResponse> {
+class VideoGamesDataDeserializer : JsonDeserializer<VideoGamesDataResponse> {
 
     @Throws(JsonParseException::class)
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): VodGamesDataResponse {
+    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): VideoGamesDataResponse {
         val data = mutableListOf<Game>()
         val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("video")?.getAsJsonObject("moments")?.getAsJsonArray("edges")
         dataJson?.forEach { item ->
@@ -24,6 +24,6 @@ class VodGamesDataDeserializer : JsonDeserializer<VodGamesDataResponse> {
                 ))
             }
         }
-        return VodGamesDataResponse(data)
+        return VideoGamesDataResponse(data)
     }
 }

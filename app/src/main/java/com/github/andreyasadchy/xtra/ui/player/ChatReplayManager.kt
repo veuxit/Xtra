@@ -51,18 +51,18 @@ class ChatReplayManager @Inject constructor(
         offsetJob = coroutineScope.launch(Dispatchers.IO) {
             try {
                 isLoading = true
-                val log = repository.loadVideoChatLog(clientId, videoId, offset)
+                val log = repository.loadVideoMessages(gqlClientId = clientId, videoId = videoId, offset = offset.toInt())
                 isLoading = false
-                list.addAll(log.messages)
-                cursor = log.next
+                list.addAll(log.data)
+                cursor = if (log.hasNextPage != false) log.cursor else null
                 while (isActive) {
                     val message: VideoChatMessage? = try {
                         list.poll()
                     } catch (e: NoSuchElementException) { //wtf?
                         null
                     }
-                    if (message != null) {
-                        val messageOffset = message.contentOffsetSeconds
+                    if (message?.offsetSeconds != null) {
+                        val messageOffset = message.offsetSeconds.toDouble()
                         var position: Double
                         while ((currentPosition() + startTime).also { p -> position = p } < messageOffset) {
                             delay(max((messageOffset - position) * 1000.0, 0.0).toLong())
@@ -90,9 +90,9 @@ class ChatReplayManager @Inject constructor(
             nextJob = coroutineScope.launch(Dispatchers.IO) {
                 try {
                     isLoading = true
-                    val log = repository.loadVideoChatAfter(clientId, videoId, c)
-                    list.addAll(log.messages)
-                    cursor = log.next
+                    val log = repository.loadVideoMessages(gqlClientId = clientId, videoId = videoId, cursor = c)
+                    list.addAll(log.data)
+                    cursor = if (log.hasNextPage != false) log.cursor else null
                 } catch (e: Exception) {
 
                 } finally {

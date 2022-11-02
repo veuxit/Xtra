@@ -1,3 +1,3 @@
-package com.github.andreyasadchy.xtra.model.gql.points
+package com.github.andreyasadchy.xtra.model.gql.chat
 
 data class ChannelPointsContextDataResponse(val balance: Int?)

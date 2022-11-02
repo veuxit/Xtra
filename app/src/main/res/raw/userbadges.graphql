@@ -1,0 +1,10 @@
+query ($id: ID, $quality: BadgeImageSize) {
+    user(id: $id, lookupType: ALL) {
+        broadcastBadges {
+            imageURL(size: $quality)
+            setID
+            title
+            version
+        }
+    }
+}

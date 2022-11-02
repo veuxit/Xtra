@@ -1,28 +1,24 @@
 package com.github.andreyasadchy.xtra.api
 
-import com.github.andreyasadchy.xtra.model.chat.EmoteCardResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelHostingDataResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelViewerListDataResponse
+import com.github.andreyasadchy.xtra.model.gql.channel.*
+import com.github.andreyasadchy.xtra.model.gql.chat.*
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipUrlsResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipVideoResponse
-import com.github.andreyasadchy.xtra.model.gql.emote.UserEmotesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.followed.*
 import com.github.andreyasadchy.xtra.model.gql.game.GameClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameStreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
-import com.github.andreyasadchy.xtra.model.gql.points.ChannelPointsContextDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
-import com.github.andreyasadchy.xtra.model.gql.vod.VodGamesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.github.andreyasadchy.xtra.model.query.*
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -37,7 +33,7 @@ import retrofit2.http.POST
 interface GraphQLApi {
 
     @POST(".")
-    suspend fun getQueryCheerEmotes(@Header("Client-ID") clientId: String?, @Body json: JsonObject): CheerEmotesQueryResponse
+    suspend fun getQueryBadges(@Header("Client-ID") clientId: String?, @Body json: JsonObject): BadgesQueryResponse
 
     @POST(".")
     suspend fun getQueryFollowedGames(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedGamesQueryResponse
@@ -85,7 +81,13 @@ interface GraphQLApi {
     suspend fun getQueryUser(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserQueryResponse
 
     @POST(".")
+    suspend fun getQueryUserBadges(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserBadgesQueryResponse
+
+    @POST(".")
     suspend fun getQueryUserChannelPage(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserChannelPageQueryResponse
+
+    @POST(".")
+    suspend fun getUserCheerEmotes(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserCheerEmotesQueryResponse
 
     @POST(".")
     suspend fun getQueryUserClips(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserClipsQueryResponse
@@ -175,7 +177,19 @@ interface GraphQLApi {
     suspend fun getSearchStreamTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagSearchDataResponse
 
     @POST(".")
-    suspend fun getVodGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VodGamesDataResponse
+    suspend fun getChatBadges(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChatBadgesDataResponse
+
+    @POST(".")
+    suspend fun getGlobalCheerEmotes(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GlobalCheerEmotesDataResponse
+
+    @POST(".")
+    suspend fun getChannelCheerEmotes(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChannelCheerEmotesDataResponse
+
+    @POST(".")
+    suspend fun getVideoMessages(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VideoMessagesDataResponse
+
+    @POST(".")
+    suspend fun getVideoGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VideoGamesDataResponse
 
     @POST(".")
     suspend fun getViewerCount(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ViewersDataResponse

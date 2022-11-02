@@ -79,7 +79,6 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val chatMessage = messages?.get(position) ?: return
         val liveMessage = chatMessage as? LiveChatMessage
-        val videoMessage = chatMessage as? VideoChatMessage
         val pointReward = chatMessage as? PubSubPointReward ?: liveMessage?.pointReward
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
@@ -90,7 +89,7 @@ class ChatAdapter(
             builder.append("$systemMsg\n")
             imageIndex += systemMsg.length + 1
         } else {
-            val msgId = (liveMessage?.msgId ?: videoMessage?.msgId)?.let { TwitchApiHelper.getMessageIdString(it) ?: it }
+            val msgId = liveMessage?.msgId?.let { TwitchApiHelper.getMessageIdString(it) ?: it }
             if (msgId != null) {
                 builder.append("$msgId\n")
                 imageIndex += msgId.length + 1
@@ -129,7 +128,7 @@ class ChatAdapter(
             imageIndex += timestamp.length + 1
         }
         chatMessage.badges?.forEach { chatBadge ->
-            val badge = channelBadges?.find { it.id == chatBadge.id && it.version == chatBadge.version } ?: globalBadges?.find { it.id == chatBadge.id && it.version == chatBadge.version }
+            val badge = channelBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version } ?: globalBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version }
             badge?.url?.let {
                 builder.append("  ")
                 images.add(Image(it, imageIndex++, imageIndex++, false))
@@ -287,7 +286,7 @@ class ChatAdapter(
             when {
                 liveMessage?.isFirst == true && (firstMsgVisibility?.toInt() ?: 0) < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageFirst)
                 liveMessage?.rewardId != null && (firstMsgVisibility?.toInt() ?: 0) < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageReward)
-                liveMessage?.systemMsg != null || liveMessage?.msgId != null || videoMessage?.msgId != null -> holder.textView.setBackgroundResource(R.color.chatMessageNotice)
+                liveMessage?.systemMsg != null || liveMessage?.msgId != null -> holder.textView.setBackgroundResource(R.color.chatMessageNotice)
                 wasMentioned && userId != null -> holder.textView.setBackgroundResource(R.color.chatMessageMention)
                 else -> holder.textView.background = null
             }

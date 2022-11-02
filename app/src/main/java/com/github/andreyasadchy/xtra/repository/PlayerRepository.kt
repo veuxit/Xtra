@@ -10,9 +10,9 @@ import com.github.andreyasadchy.xtra.api.TTVLolApi
 import com.github.andreyasadchy.xtra.api.UsherApi
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
+import com.github.andreyasadchy.xtra.model.PlaybackAccessToken
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.chat.*
-import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessToken
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -141,14 +141,6 @@ class PlayerRepository @Inject constructor(
 
     suspend fun loadRecentMessages(channelLogin: String, limit: String): Response<RecentMessagesResponse> = withContext(Dispatchers.IO) {
         misc.getRecentMessages(channelLogin, limit)
-    }
-
-    suspend fun loadGlobalBadges(): Response<TwitchBadgesResponse> = withContext(Dispatchers.IO) {
-        misc.getGlobalBadges()
-    }
-
-    suspend fun loadChannelBadges(channelId: String): Response<TwitchBadgesResponse> = withContext(Dispatchers.IO) {
-        misc.getChannelBadges(channelId)
     }
 
     suspend fun loadGlobalStvEmotes(): Response<StvEmotesResponse> = withContext(Dispatchers.IO) {
