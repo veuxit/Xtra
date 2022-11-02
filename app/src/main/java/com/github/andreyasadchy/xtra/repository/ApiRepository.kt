@@ -27,8 +27,6 @@ import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.datasource.*
 import com.github.andreyasadchy.xtra.type.*
-import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
-import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -413,7 +411,7 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, emoteQuality: String): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryBadges(
@@ -434,7 +432,7 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserBadges(
@@ -457,7 +455,7 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?): List<CheerEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<CheerEmote>()
             val context = XtraApp.INSTANCE.applicationContext
@@ -473,7 +471,7 @@ class ApiRepository @Inject constructor(
                     config.colors.let {
                         val colors = config.colors
                         config.scales.let {
-                            val scale = (config.scales.find { it.asString == emoteQuality } ?: config.scales.last()).asString
+                            val scale = config.scales
                             config.types.let {
                                 val type = if (animateGifs) {
                                     config.types.find { it.animation == "animated" } ?: config.types.find { it.animation == "static" }
@@ -489,12 +487,14 @@ class ApiRepository @Inject constructor(
                                                 .replaceFirst("BACKGROUND", background)
                                                 .replaceFirst("ANIMATION", type.animation)
                                                 .replaceFirst("TIER", item.bits.toString())
-                                                .replaceFirst("SCALE", scale)
                                                 .replaceFirst("EXTENSION", type.extension)
                                             emotes.add(CheerEmote(
                                                 name = tier.prefix,
-                                                url = url,
-                                                type = if (type.animation == "animated") "image/gif" else "image/png",
+                                                url1x = (scale.find { it.asString.startsWith("1") })?.let { url.replaceFirst("SCALE", it.asString) } ?: scale.last().asString,
+                                                url2x = (scale.find { it.asString.startsWith("2") })?.let { url.replaceFirst("SCALE", it.asString) },
+                                                url3x = (scale.find { it.asString.startsWith("3") })?.let { url.replaceFirst("SCALE", it.asString) },
+                                                url4x = (scale.find { it.asString.startsWith("4") })?.let { url.replaceFirst("SCALE", it.asString) },
+                                                type = if (type.animation == "animated") "image/gif" else null,
                                                 minBits = item.bits,
                                                 color = item.color
                                             ))
@@ -509,18 +509,32 @@ class ApiRepository @Inject constructor(
             emotes
         } catch (e: Exception) {
             try {
-                gql.loadCheerEmotes(gqlClientId, channelLogin)
+                gql.loadCheerEmotes(gqlClientId, channelLogin, animateGifs)
             } catch (e: Exception) {
+                val data = mutableListOf<CheerEmote>()
                 helix.getCheerEmotes(
                     clientId = helixClientId,
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                     userId = channelId
-                ).emotes
+                ).data.forEach { emote ->
+                    val urls = if (animateGifs) { emote.animated ?: emote.static } else { emote.static }
+                    data.add(CheerEmote(
+                        name = emote.name,
+                        url1x = urls?.get("1")?.takeIf { !it.isJsonNull }?.asString,
+                        url2x = urls?.get("2")?.takeIf { !it.isJsonNull }?.asString,
+                        url3x = urls?.get("3")?.takeIf { !it.isJsonNull }?.asString,
+                        url4x = urls?.get("4")?.takeIf { !it.isJsonNull }?.asString,
+                        type = if (urls == emote.animated) "image/gif" else null,
+                        minBits = emote.minBits,
+                        color = emote.color
+                    ))
+                }
+                data
             }
         }
     }
 
-    suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, userId: String, channelId: String?): List<TwitchEmote>? = withContext(Dispatchers.IO) {
+    suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, userId: String, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserEmotes(
@@ -531,20 +545,39 @@ class ApiRepository @Inject constructor(
                     addProperty("id", channelId)
                 }).data
         } catch (e: Exception) {
-            try {
-                gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
-            } catch (e: Exception) {
-                null
-            }
+            gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
         }
     }
 
-    suspend fun loadEmotesFromSet(helixClientId: String?, helixToken: String?, setIds: List<String>): List<TwitchEmote>? = withContext(Dispatchers.IO) {
+    suspend fun loadEmotesFromSet(helixClientId: String?, helixToken: String?, setIds: List<String>, animateGifs: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
+        val data = mutableListOf<TwitchEmote>()
         helix.getEmotesFromSet(
             clientId = helixClientId,
             token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             setIds = setIds
-        ).data
+        ).data.forEach { emote ->
+            val format = (if (animateGifs) {
+                emote.format.find { it.asString == "animated" } ?: emote.format.find { it.asString == "static" }
+            } else {
+                emote.format.find { it.asString == "static" }
+            } ?: emote.format.first()).asString
+            val theme = (emote.theme.find { it.asString == "dark" } ?: emote.theme.last()).asString
+            val url = emote.template
+                .replaceFirst("{{id}}", emote.id)
+                .replaceFirst("{{format}}", format)
+                .replaceFirst("{{theme_mode}}", theme)
+            data.add(TwitchEmote(
+                name = emote.name,
+                url1x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
+                url2x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
+                url3x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
+                url4x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
+                type = if (format == "animated") "image/gif" else null,
+                setId = emote.setId,
+                ownerId = emote.ownerId
+            ))
+        }
+        data.sortedByDescending { it.setId }
     }
 
     suspend fun loadUserFollowing(helixClientId: String?, helixToken: String?, targetId: String?, userId: String?, gqlClientId: String?, gqlToken: String?, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {

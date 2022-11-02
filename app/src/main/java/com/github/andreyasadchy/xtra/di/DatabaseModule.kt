@@ -141,7 +141,15 @@ class DatabaseModule {
                                 database.execSQL("CREATE TABLE IF NOT EXISTS sort_channel (id TEXT NOT NULL, saveSort INTEGER, videoSort TEXT, videoType TEXT, clipPeriod TEXT, PRIMARY KEY (id))")
                                 database.execSQL("CREATE TABLE IF NOT EXISTS sort_game (id TEXT NOT NULL, saveSort INTEGER, videoSort TEXT, videoPeriod TEXT, videoType TEXT, videoLanguageIndex INTEGER, clipPeriod TEXT, clipLanguageIndex INTEGER, PRIMARY KEY (id))")
                             }
-                        }
+                        },
+                        object : Migration(17, 18) {
+                            override fun migrate(database: SupportSQLiteDatabase) {
+                                database.execSQL("CREATE TABLE IF NOT EXISTS recent_emotes1 (name TEXT NOT NULL, url1x TEXT, url2x TEXT, url3x TEXT, url4x TEXT, used_at INTEGER NOT NULL, PRIMARY KEY (name))")
+                                database.execSQL("INSERT INTO recent_emotes1 (name, url1x, used_at) SELECT name, url, used_at FROM recent_emotes")
+                                database.execSQL("DROP TABLE recent_emotes")
+                                database.execSQL("ALTER TABLE recent_emotes1 RENAME TO recent_emotes")
+                            }
+                        },
                     )
                     .build()
 }

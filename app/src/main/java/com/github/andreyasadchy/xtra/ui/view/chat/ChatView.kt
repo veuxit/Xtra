@@ -37,8 +37,6 @@ import kotlin.math.max
 
 var MAX_ADAPTER_COUNT = 200
 var MAX_LIST_COUNT = MAX_ADAPTER_COUNT + 1
-var emoteQuality = "4"
-var animateGifs = true
 
 class ChatView : ConstraintLayout {
 
@@ -90,8 +88,6 @@ class ChatView : ConstraintLayout {
 
     fun init(fragment: Fragment) {
         this.fragment = fragment
-        emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
-        animateGifs = context.prefs().getBoolean(C.ANIMATED_EMOTES, true)
         MAX_ADAPTER_COUNT = context.prefs().getInt(C.CHAT_LIMIT, 200)
         adapter = ChatAdapter(
             fragment = fragment,
@@ -99,6 +95,8 @@ class ChatView : ConstraintLayout {
             badgeSize = context.convertDpToPixels(18.5f),
             randomColor = context.prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
             boldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
+            emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+            animateGifs = context.prefs().getBoolean(C.ANIMATED_EMOTES, true),
             enableZeroWidth = context.prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
             enableTimestamps = context.prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
             timestampFormat = context.prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
@@ -345,7 +343,7 @@ class ChatView : ConstraintLayout {
             is RecentEmote -> hasRecentEmotes = true
         }
         if (messagingEnabled && ++emotesAddedCount == 3) { //TODO refactor to not wait
-            autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList!!).apply {
+            autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList!!, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
                 setNotifyOnChange(false)
                 editText.setAdapter(this)
 
@@ -553,7 +551,8 @@ class ChatView : ConstraintLayout {
     class AutoCompleteAdapter(
             context: Context,
             private val fragment: Fragment,
-            list: List<Any>) : ArrayAdapter<Any>(context, 0, list) {
+            list: List<Any>,
+            private val emoteQuality: String) : ArrayAdapter<Any>(context, 0, list) {
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val viewHolder: ViewHolder
@@ -569,7 +568,12 @@ class ChatView : ConstraintLayout {
                     }
                     viewHolder.containerView.apply {
                         item as Emote
-                        image.loadImage(fragment, item.url, diskCacheStrategy = DiskCacheStrategy.DATA)
+                        image.loadImage(fragment, when (emoteQuality) {
+                            "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
+                            "3" -> item.url3x ?: item.url2x ?: item.url1x
+                            "2" -> item.url2x ?: item.url1x
+                            else -> item.url1x
+                        }, diskCacheStrategy = DiskCacheStrategy.DATA)
                         name.text = item.name
                     }
                 }

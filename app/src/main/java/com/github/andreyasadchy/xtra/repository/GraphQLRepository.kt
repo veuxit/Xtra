@@ -25,8 +25,6 @@ import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.github.andreyasadchy.xtra.model.query.*
-import com.github.andreyasadchy.xtra.ui.view.chat.animateGifs
-import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
@@ -702,7 +700,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getChatBadges(clientId, json)
     }
 
-    suspend fun loadCheerEmotes(clientId: String?, channelLogin: String?): List<CheerEmote> {
+    suspend fun loadCheerEmotes(clientId: String?, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> {
         val data = mutableListOf<CheerEmote>()
         val tiers = mutableListOf<GlobalCheerEmotesDataResponse.CheerTier>()
         val global = JsonObject().apply {
@@ -730,7 +728,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         }
         tiers.addAll(graphQL.getChannelCheerEmotes(clientId, channel).data)
         val background = (response.config.backgrounds.find { it.asString == "dark" } ?: response.config.backgrounds.last()).asString
-        val scale = (response.config.scales.find { it.asString == emoteQuality } ?: response.config.scales.last()).asString
+        val scale = response.config.scales
         val type = (if (animateGifs) {
             response.config.types.find { it.asJsonObject.get("animation").asString == "animated" } ?: response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
         } else {
@@ -744,12 +742,14 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                     .replaceFirst("BACKGROUND", background)
                     .replaceFirst("ANIMATION", type.get("animation").asString)
                     .replaceFirst("TIER", item.get("bits").asString)
-                    .replaceFirst("SCALE", scale)
                     .replaceFirst("EXTENSION", type.get("extension").asString)
                 data.add(CheerEmote(
                     name = tier.prefix,
-                    url = url,
-                    type = if (type.get("animation").asString == "animated") "image/gif" else "image/png",
+                    url1x = (scale.find { it.asString.startsWith("1") })?.asString?.let { url.replaceFirst("SCALE", it) } ?: scale.last()?.asString,
+                    url2x = (scale.find { it.asString.startsWith("2") })?.asString?.let { url.replaceFirst("SCALE", it) },
+                    url3x = (scale.find { it.asString.startsWith("3") })?.asString?.let { url.replaceFirst("SCALE", it) },
+                    url4x = (scale.find { it.asString.startsWith("4") })?.asString?.let { url.replaceFirst("SCALE", it) },
+                    type = if (type.get("animation").asString == "animated") "image/gif" else null,
                     minBits = item.get("bits").asInt,
                     color = item.get("color").asString
                 ))

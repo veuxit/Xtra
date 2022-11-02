@@ -2,7 +2,10 @@ package com.github.andreyasadchy.xtra.model.chat
 
 abstract class Emote {
     abstract val name: String
-    abstract val url: String //TODO null if property
+    abstract val url1x: String?
+    abstract val url2x: String?
+    abstract val url3x: String?
+    abstract val url4x: String?
     open val type: String?
         get() = null
     open val isZeroWidth: Boolean

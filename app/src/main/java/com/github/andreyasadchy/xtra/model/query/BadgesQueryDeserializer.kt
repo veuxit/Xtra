@@ -18,7 +18,10 @@ class BadgesQueryDeserializer : JsonDeserializer<BadgesQueryResponse> {
                 data.add(TwitchBadge(
                     setId = obj.get("setID").asString,
                     version = obj.get("version").asString,
-                    url = obj.get("imageURL").asString,
+                    url1x = obj.get("imageURL").asString,
+                    url2x = obj.get("imageURL").asString,
+                    url3x = obj.get("imageURL").asString,
+                    url4x = obj.get("imageURL").asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
                 ))
             }

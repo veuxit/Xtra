@@ -1,14 +1,13 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-import com.github.andreyasadchy.xtra.ui.view.chat.emoteQuality
-
 class BttvEmote(
+        val id: String,
         override val name: String,
-        override val type: String?,
-        val id: String) : Emote() {
-
-        override val url: String
-                get() = "https://cdn.betterttv.net/emote/$id/${(when (emoteQuality) {"4" -> ("3x") "3" -> ("2x") "2" -> ("2x") else -> ("1x")})}"
+        override val url1x: String? = "https://cdn.betterttv.net/emote/$id/1x",
+        override val url2x: String? = "https://cdn.betterttv.net/emote/$id/2x",
+        override val url3x: String? = "https://cdn.betterttv.net/emote/$id/2x",
+        override val url4x: String? = "https://cdn.betterttv.net/emote/$id/3x",
+        override val type: String?) : Emote() {
 
         private val zeroWidthList = listOf("IceCold", "SoSnowy", "SantaHat", "TopHat", "CandyCane", "ReinDeer", "cvHazmat", "cvMask")
         override val isZeroWidth: Boolean = zeroWidthList.contains(name)
