@@ -46,9 +46,9 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyTheme()
         setContentView(R.layout.activity_login)
-        val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "")
-        val gqlClientId = prefs().getString(C.GQL_CLIENT_ID, "")
-        val gqlClientId2 = prefs().getString(C.GQL_CLIENT_ID2, "")
+        val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
+        val gqlClientId = prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+        val gqlClientId2 = prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
         val user = User.get(this)
         if (user !is NotLoggedIn) {
             TwitchApiHelper.checkedValidation = false

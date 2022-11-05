@@ -74,9 +74,9 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                 viewModel.loadUser(
                     channelId = userId,
                     targetId = if (userId != targetId) targetId else null,
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                     helixToken = com.github.andreyasadchy.xtra.model.User.get(requireContext()).helixToken,
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "")
+                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
                 ).observe(viewLifecycleOwner) { user ->
                     if (user != null) {
                         savedUsers.add(Pair(user, targetId))

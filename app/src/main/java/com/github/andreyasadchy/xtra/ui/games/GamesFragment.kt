@@ -110,9 +110,9 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
             }
         }
         viewModel.loadGames(
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = User.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             tags = arguments?.getStringArray(C.TAGS)?.toList(),
             apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAMES, ""), TwitchApiHelper.gamesApiDefaults)
         )

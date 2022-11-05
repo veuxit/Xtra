@@ -60,7 +60,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     override fun initialize() {
         viewModel.setVideo(
-            gqlClientId = prefs.getString(C.GQL_CLIENT_ID, ""),
+            gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
             video = video,
             playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
@@ -105,7 +105,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             }
         }
         if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) {
-            viewModel.loadGamesList(prefs.getString(C.GQL_CLIENT_ID, ""), video.id)
+            viewModel.loadGamesList(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), video.id)
             viewModel.gamesList.observe(viewLifecycleOwner) { list ->
                 if (list.isNotEmpty()) {
                     if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
@@ -141,7 +141,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     fun saveBookmark() {
-        viewModel.saveBookmark(requireContext(), prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+        viewModel.saveBookmark(requireContext(), prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
     }
 
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {

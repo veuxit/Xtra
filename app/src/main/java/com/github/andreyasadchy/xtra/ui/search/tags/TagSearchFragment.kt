@@ -29,7 +29,7 @@ class TagSearchFragment : PagedListFragment<Tag, TagSearchViewModel, BasePagedLi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         swipeRefresh.isEnabled = false
-        viewModel.loadTags(clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), getGameTags = parentFragment?.arguments?.getBoolean(C.GET_GAME_TAGS) ?: false, gameId = parentFragment?.arguments?.getString(C.GAME_ID), gameName = parentFragment?.arguments?.getString(C.GAME_NAME))
+        viewModel.loadTags(clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), getGameTags = parentFragment?.arguments?.getBoolean(C.GET_GAME_TAGS) ?: false, gameId = parentFragment?.arguments?.getString(C.GAME_ID), gameName = parentFragment?.arguments?.getString(C.GAME_NAME))
     }
 
     override fun search(query: String) {

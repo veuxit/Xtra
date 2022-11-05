@@ -47,7 +47,7 @@ class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchab
         if (query.isNotEmpty()) {
             viewModel.setQuery(
                 query = query,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults)
             )
         } else {
