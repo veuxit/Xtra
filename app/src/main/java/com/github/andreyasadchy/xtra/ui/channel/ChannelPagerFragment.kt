@@ -146,13 +146,13 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
             profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE)))
         }
         viewModel.init(requireArguments().getString(C.CHANNEL_ID), requireArguments().getString(C.CHANNEL_LOGIN), requireArguments().getString(C.CHANNEL_DISPLAYNAME), requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
-        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
         viewModel.stream.observe(viewLifecycleOwner) { stream ->
             updateStreamLayout(stream)
             if (stream?.channelUser != null) {
                 updateUserLayout(stream.channelUser)
             } else {
-                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken)
+                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken)
             }
         }
         viewModel.user.observe(viewLifecycleOwner) { user ->
@@ -167,9 +167,9 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 followButton = follow,
                 setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
                 user = User.get(activity),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-                gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "")
+                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             )
         }
     }
@@ -328,7 +328,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onNetworkRestored() {
-        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, ""))
+        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

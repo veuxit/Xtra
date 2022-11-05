@@ -35,7 +35,7 @@ class FollowedGamesFragment : PagedListFragment<Game, FollowedGamesViewModel, Ba
         super.initialize()
         viewModel.setUser(
             user = User.get(requireContext()),
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults)
         )
     }
