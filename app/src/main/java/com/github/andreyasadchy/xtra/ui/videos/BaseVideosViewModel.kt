@@ -68,7 +68,7 @@ abstract class BaseVideosViewModel(
                 } catch (e: Exception) {
 
                 }
-                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, ""), User.get(context).helixToken, context.prefs().getString(C.GQL_CLIENT_ID, "")) }?.first()
+                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(context).helixToken, context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")) }?.first()
                 val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
                 val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
                 bookmarksRepository.saveBookmark(

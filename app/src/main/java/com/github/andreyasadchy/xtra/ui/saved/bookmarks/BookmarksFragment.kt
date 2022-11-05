@@ -38,9 +38,9 @@ class BookmarksFragment : Fragment(), Scrollable {
         val adapter = BookmarksAdapter(this, activity, activity, activity, {
             viewModel.loadVideo(
                 context = requireContext(),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = User.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 videoId = it
             )
         }, {
@@ -72,15 +72,15 @@ class BookmarksFragment : Fragment(), Scrollable {
                 adapter.setIgnoredUsers(it)
             }
             viewModel.loadUsers(
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = User.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             )
         }
         if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
             viewModel.loadVideos(
                 context = requireContext(),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = User.get(requireContext()).helixToken,
             )
         }

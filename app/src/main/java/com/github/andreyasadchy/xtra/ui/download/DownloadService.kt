@@ -173,7 +173,7 @@ class DownloadService : IntentService(TAG) {
             GlobalScope.launch {
                 try {
                     val response = playerRepository.loadVideoPlaylist(
-                        gqlClientId = applicationContext.prefs().getString(C.GQL_CLIENT_ID, ""),
+                        gqlClientId = applicationContext.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                         gqlToken = if (applicationContext.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(applicationContext).gqlToken else null,
                         videoId = request.videoId!!,
                         playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")

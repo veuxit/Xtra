@@ -158,7 +158,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             it.getContentIfNotHandled()?.let { online ->
                 if (online) {
                     if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                        viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, ""), prefs.getString(C.GQL_CLIENT_ID, ""), prefs.getString(C.GQL_CLIENT_ID2, ""), this)
+                        viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), this)
                     }
                 }
                 if (flag) {
@@ -333,7 +333,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.video.observe(this) { video ->
                             if (video != null && video.id.isNotBlank()) {
                                 startVideo(video, offset)
@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 url.contains("/clip/") -> {
                     val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && clip.id.isNotBlank()) {
                                 startClip(clip)
@@ -355,7 +355,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 url.contains("clips.twitch.tv/") -> {
                     val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && clip.id.isNotBlank()) {
                                 startClip(clip)
@@ -373,7 +373,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 else -> {
                     val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!login.isNullOrBlank()) {
-                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, ""), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, ""))
+                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.user.observe(this) { user ->
                             if (user != null && (!user.id.isNullOrBlank() || !user.login.isNullOrBlank())) {
                                 playerFragment?.minimize()

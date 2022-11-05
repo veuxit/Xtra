@@ -44,9 +44,9 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDial
         viewModel.loadStreams(
             gameId = arguments?.getString(C.GAME_ID),
             gameName = arguments?.getString(C.GAME_NAME),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = User.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             tags = arguments?.getStringArray(C.TAGS)?.toList(),
             apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults),
             gameApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults),
@@ -68,9 +68,9 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDial
                         followButton = it,
                         setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
                         user = User.get(activity),
-                        helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-                        gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-                        gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "")
+                        helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                        gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                        gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                     )
                 }
             }

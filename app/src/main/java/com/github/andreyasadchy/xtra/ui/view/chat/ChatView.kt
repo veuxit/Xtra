@@ -88,7 +88,7 @@ class ChatView : ConstraintLayout {
 
     fun init(fragment: Fragment) {
         this.fragment = fragment
-        MAX_ADAPTER_COUNT = context.prefs().getInt(C.CHAT_LIMIT, 200)
+        MAX_ADAPTER_COUNT = context.prefs().getInt(C.CHAT_LIMIT, 600)
         adapter = ChatAdapter(
             fragment = fragment,
             emoteSize = context.convertDpToPixels(29.5f),

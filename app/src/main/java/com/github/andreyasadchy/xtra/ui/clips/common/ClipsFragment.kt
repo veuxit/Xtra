@@ -50,9 +50,9 @@ class ClipsFragment : BaseClipsFragment<ClipsViewModel>(), VideosSortDialog.OnFi
             channelLogin = arguments?.getString(C.CHANNEL_LOGIN),
             gameId = arguments?.getString(C.GAME_ID),
             gameName = arguments?.getString(C.GAME_NAME),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
+            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = User.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             channelApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_CHANNEL_CLIPS, ""), TwitchApiHelper.channelClipsApiDefaults),
             gameApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults)
         )
@@ -75,9 +75,9 @@ class ClipsFragment : BaseClipsFragment<ClipsViewModel>(), VideosSortDialog.OnFi
                     followButton = it,
                     setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
                     user = User.get(activity),
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-                    gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "")
+                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                 )
             }
         }
