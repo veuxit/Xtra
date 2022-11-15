@@ -21,28 +21,19 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
             item.asJsonObject.getAsJsonObject("node")?.let { obj ->
                 val message = StringBuilder()
                 val emotes = mutableListOf<TwitchEmote>()
-                var emoteOffset = 0
                 obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("fragments")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { fragmentElement ->
                     fragmentElement?.takeIf { it.isJsonObject }?.asJsonObject.let { fragment ->
-                        fragment?.get("text")?.takeIf { !it.isJsonNull }?.let { textElement ->
-                            val fullText = textElement.toString().removeSurrounding("\"")
-                            val text = textElement.asString
-                            val difference = fullText.length.compareTo(text.length)
-                            if (difference > 0) {
-                                emoteOffset += difference
-                            }
-                            message.append(text)
+                        fragment?.get("text")?.takeIf { !it.isJsonNull }?.asString?.let { text ->
                             fragment.get("emote")?.takeIf { it.isJsonObject }?.asJsonObject?.let { emote ->
                                 emote.get("emoteID")?.takeIf { !it.isJsonNull }?.asString?.let { id ->
-                                    emote.get("from")?.takeIf { !it.isJsonNull }?.asInt?.let { from ->
-                                        emotes.add(TwitchEmote(
-                                            name = id,
-                                            begin = from - emoteOffset,
-                                            end = from - emoteOffset + text.lastIndex
-                                        ))
-                                    }
+                                    emotes.add(TwitchEmote(
+                                        name = id,
+                                        begin = message.codePointCount(0, message.length),
+                                        end = message.codePointCount(0, message.length) + text.lastIndex
+                                    ))
                                 }
                             }
+                            message.append(text)
                         }
                     }
                 }
