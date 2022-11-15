@@ -1,5 +1,5 @@
-query FollowedStreams($id: ID, $first: Int, $after: Cursor) {
-    user(id: $id) {
+query UserFollowedStreams($first: Int, $after: Cursor) {
+    user {
         followedLiveUsers(first: $first, after: $after) {
             edges {
                 cursor

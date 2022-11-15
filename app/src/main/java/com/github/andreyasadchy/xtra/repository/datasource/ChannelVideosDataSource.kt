@@ -90,7 +90,8 @@ class ChannelVideosDataSource (
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(UserVideosQuery(
-            id = Optional.Present(channelId),
+            id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+            login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             sort = Optional.Present(gqlQuerySort),
             types = Optional.Present(gqlQueryType?.let { listOf(it) }),
             first = Optional.Present(30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),

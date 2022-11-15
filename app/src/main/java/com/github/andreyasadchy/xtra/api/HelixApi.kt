@@ -22,7 +22,8 @@ interface HelixApi {
     suspend fun getGames(
         @Header("Client-ID") clientId: String?,
         @Header("Authorization") token: String?,
-        @Query("id") ids: List<String>
+        @Query("id") ids: List<String>? = null,
+        @Query("name") names: List<String>? = null
     ): GamesResponse
 
     @GET("games/top")
@@ -91,7 +92,7 @@ interface HelixApi {
     ): UsersResponse
 
     @GET("search/categories")
-    suspend fun getGames(
+    suspend fun getSearchGames(
         @Header("Client-ID") clientId: String?,
         @Header("Authorization") token: String?,
         @Query("query") query: String,
@@ -100,7 +101,7 @@ interface HelixApi {
     ): GamesResponse
 
     @GET("search/channels")
-    suspend fun getChannels(
+    suspend fun getSearchChannels(
         @Header("Client-ID") clientId: String?,
         @Header("Authorization") token: String?,
         @Query("query") query: String,

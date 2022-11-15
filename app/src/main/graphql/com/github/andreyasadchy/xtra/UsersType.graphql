@@ -1,5 +1,5 @@
-query UsersType($id: [ID!]) {
-    users(ids: $id) {
+query UsersType($ids: [ID!], $logins: [String!]) {
+    users(ids: $ids, logins: $logins) {
         id
         roles {
             isAffiliate

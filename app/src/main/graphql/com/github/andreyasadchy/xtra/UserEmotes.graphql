@@ -1,5 +1,5 @@
-query UserEmotes($id: ID) {
-    user(id: $id, lookupType: ALL) {
+query UserEmotes {
+    user {
         emoteSets {
             emotes {
                 id

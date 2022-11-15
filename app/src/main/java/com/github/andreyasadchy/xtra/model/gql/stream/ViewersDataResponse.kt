@@ -1,3 +1,5 @@
 package com.github.andreyasadchy.xtra.model.gql.stream
 
-data class ViewersDataResponse(val streamId: String?, val viewers: Int?)
+import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+
+data class ViewersDataResponse(val data: Stream)

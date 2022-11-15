@@ -1,5 +1,5 @@
-query UserClips($id: ID, $sort: ClipsPeriod, $first: Int, $after: Cursor) {
-    user(id: $id, lookupType: ALL) {
+query UserClips($id: ID, $login: String, $sort: ClipsPeriod, $first: Int, $after: Cursor) {
+    user(id: $id, login: $login, lookupType: ALL) {
         clips(first: $first, after: $after, criteria: { period: $sort }) {
             edges {
                 cursor

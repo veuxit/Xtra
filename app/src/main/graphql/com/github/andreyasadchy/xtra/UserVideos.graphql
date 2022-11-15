@@ -1,5 +1,5 @@
-query UserVideos($id: ID, $sort: VideoSort, $types: [BroadcastType!], $first: Int, $after: Cursor) {
-    user(id: $id, lookupType: ALL) {
+query UserVideos($id: ID, $login: String, $sort: VideoSort, $types: [BroadcastType!], $first: Int, $after: Cursor) {
+    user(id: $id, login: $login, lookupType: ALL) {
         displayName
         login
         profileImageURL(width: 300)

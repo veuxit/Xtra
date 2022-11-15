@@ -4,7 +4,7 @@ import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
-import com.github.andreyasadchy.xtra.FollowedGamesQuery
+import com.github.andreyasadchy.xtra.UserFollowedGamesQuery
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -14,7 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 
 class FollowedGamesDataSource(
     private val localFollowsGame: LocalFollowGameRepository,
-    private val userId: String?,
     private val gqlClientId: String?,
     private val gqlToken: String?,
     private val gqlApi: GraphQLRepository,
@@ -68,8 +67,7 @@ class FollowedGamesDataSource(
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
             gqlToken?.let { addHttpHeader("Authorization", it) }
-        }.build().query(FollowedGamesQuery(
-            id = Optional.Present(userId),
+        }.build().query(UserFollowedGamesQuery(
             first = Optional.Present(100)
         )).execute().data?.user?.followedGames
         val get = get1?.nodes
@@ -109,7 +107,6 @@ class FollowedGamesDataSource(
 
     class Factory(
         private val localFollowsGame: LocalFollowGameRepository,
-        private val userId: String?,
         private val gqlClientId: String?,
         private val gqlToken: String?,
         private val gqlApi: GraphQLRepository,
@@ -118,6 +115,6 @@ class FollowedGamesDataSource(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Game, FollowedGamesDataSource>() {
 
         override fun create(): DataSource<Int, Game> =
-                FollowedGamesDataSource(localFollowsGame, userId, gqlClientId, gqlToken, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
+                FollowedGamesDataSource(localFollowsGame, gqlClientId, gqlToken, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

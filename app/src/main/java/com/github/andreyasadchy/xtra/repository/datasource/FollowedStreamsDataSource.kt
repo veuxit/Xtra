@@ -4,7 +4,7 @@ import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
-import com.github.andreyasadchy.xtra.FollowedStreamsQuery
+import com.github.andreyasadchy.xtra.UserFollowedStreamsQuery
 import com.github.andreyasadchy.xtra.UsersStreamQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
@@ -119,8 +119,7 @@ class FollowedStreamsDataSource(
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
             gqlToken?.let { addHttpHeader("Authorization", it) }
-        }.build().query(FollowedStreamsQuery(
-            id = Optional.Present(userId),
+        }.build().query(UserFollowedStreamsQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
         )).execute().data?.user?.followedLiveUsers

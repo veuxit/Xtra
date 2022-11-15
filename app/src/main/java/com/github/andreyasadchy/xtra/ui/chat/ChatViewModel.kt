@@ -466,8 +466,8 @@ class ChatViewModel @Inject constructor(
                             sets?.asReversed()?.chunked(25)?.forEach { list ->
                                 repository.loadEmotesFromSet(helixClientId, user.helixToken, list, animateGifs).let { emotes.addAll(it) }
                             }
-                        } else if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank() && !user.id.isNullOrBlank()) {
-                            repository.loadUserEmotes(gqlClientId, user.gqlToken, user.id, channelId).let { emotes.addAll(it) }
+                        } else if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank()) {
+                            repository.loadUserEmotes(gqlClientId, user.gqlToken, channelId).let { emotes.addAll(it) }
                         }
                     } catch (e: Exception) {
                     }

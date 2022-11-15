@@ -21,7 +21,7 @@ class FollowedGamesViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadFollowedGames(it.user.id, it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
+        repository.loadFollowedGames(it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
     }
 
     fun setUser(user: User, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {

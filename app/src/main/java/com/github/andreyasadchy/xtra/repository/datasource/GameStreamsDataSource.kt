@@ -96,8 +96,8 @@ class GameStreamsDataSource private constructor(
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(GameStreamsQuery(
-            id = Optional.Present(if (!gameId.isNullOrBlank()) gameId else null),
-            name = Optional.Present(if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null),
+            id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             sort = Optional.Present(gqlQuerySort),
             tags = Optional.Present(tags),
             first = Optional.Present(30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),

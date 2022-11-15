@@ -207,8 +207,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadFollowedVideos(userId: String?, gqlClientId: String?, gqlToken: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
-        val factory = FollowedVideosDataSource.Factory(userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gqlQueryType, gqlQuerySort, gql, apolloClient, apiPref, coroutineScope)
+    fun loadFollowedVideos(gqlClientId: String?, gqlToken: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+        val factory = FollowedVideosDataSource.Factory(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gqlQueryType, gqlQuerySort, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(50)
             .setInitialLoadSizeHint(50)
@@ -229,8 +229,8 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadFollowedGames(userId: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Game> {
-        val factory = FollowedGamesDataSource.Factory(localFollowsGame, userId, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apolloClient, apiPref, coroutineScope)
+    fun loadFollowedGames(gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Game> {
+        val factory = FollowedGamesDataSource.Factory(localFollowsGame, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(100)
             .setInitialLoadSizeHint(100)
@@ -252,9 +252,12 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadStream(channelId: String, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
+    suspend fun loadStream(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
         try {
-            val get = getApolloClient(gqlClientId).query(UsersStreamQuery(Optional.Present(listOf(channelId)))).execute().data?.users?.firstOrNull()
+            val get = getApolloClient(gqlClientId).query(UsersStreamQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(listOf(channelId)) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(listOf(channelLogin)) else Optional.Absent,
+            )).execute().data?.users?.firstOrNull()
             if (get != null) {
                 Stream(id = get.stream?.id, user_id = channelId, user_login = get.login, user_name = get.displayName, game_id = get.stream?.game?.id,
                     game_name = get.stream?.game?.displayName, type = get.stream?.type, title = get.stream?.broadcaster?.broadcastSettings?.title,
@@ -266,10 +269,11 @@ class ApiRepository @Inject constructor(
                 helix.getStreams(
                     clientId = helixClientId,
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                    ids = listOf(channelId)
+                    ids = channelId?.let { listOf(it) },
+                    logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
                 ).data?.firstOrNull()
             } catch (e: Exception) {
-                null
+                gql.loadViewerCount(gqlClientId, channelLogin).data
             }
         }
     }
@@ -301,10 +305,11 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadClip(clipId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): Clip? = withContext(Dispatchers.IO) {
         try {
-            var user: Clip? = null
-            try {
-                user = gql.loadClipData(gqlClientId, clipId).data
-            } catch (e: Exception) {}
+            val user = try {
+                gql.loadClipData(gqlClientId, clipId).data
+            } catch (e: Exception) {
+                null
+            }
             val video = gql.loadClipVideo(gqlClientId, clipId).data
             Clip(id = clipId, broadcaster_id = user?.broadcaster_id, broadcaster_login = user?.broadcaster_login, broadcaster_name = user?.broadcaster_name,
                 profileImageURL = user?.profileImageURL, video_id = video?.video_id, duration = video?.duration, videoOffsetSeconds = video?.videoOffsetSeconds ?: user?.videoOffsetSeconds)
@@ -319,7 +324,10 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
         try {
-            getApolloClient(gqlClientId).query(UserChannelPageQuery(Optional.Present(channelId), Optional.Present(channelLogin))).execute().data?.user?.let { i ->
+            getApolloClient(gqlClientId).query(UserChannelPageQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
+            )).execute().data?.user?.let { i ->
                 Stream(
                     id = i.stream?.id,
                     user_id = i.id,
@@ -360,8 +368,8 @@ class ApiRepository @Inject constructor(
             helix.getStreams(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                ids = channelId?.let { listOf(channelId) },
-                logins = channelLogin?.let { listOf(channelLogin) }
+                ids = channelId?.let { listOf(it) },
+                logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
             ).data?.firstOrNull()
         }
     }
@@ -370,14 +378,17 @@ class ApiRepository @Inject constructor(
         helix.getUsers(
             clientId = helixClientId,
             token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-            ids = channelId?.let { listOf(channelId) },
-            logins = channelLogin?.let { listOf(channelLogin) }
+            ids = channelId?.let { listOf(it) },
+            logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
         ).data?.firstOrNull()
     }
 
     suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
         try {
-            getApolloClient(gqlClientId).query(UserQuery(Optional.Present(channelId), Optional.Present(channelLogin))).execute().data?.user?.let { i ->
+            getApolloClient(gqlClientId).query(UserQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
+            )).execute().data?.user?.let { i ->
                 User(
                     id = i.id,
                     login = i.login,
@@ -389,15 +400,19 @@ class ApiRepository @Inject constructor(
             helix.getUsers(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                ids = channelId?.let { listOf(channelId) },
-                logins = channelLogin?.let { listOf(channelLogin) }
+                ids = channelId?.let { listOf(it) },
+                logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
             ).data?.firstOrNull()
         }
     }
 
     suspend fun loadUserMessageClicked(channelId: String? = null, channelLogin: String? = null, targetId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
         try {
-            getApolloClient(gqlClientId).query(UserMessageClickedQuery(Optional.Present(channelId), Optional.Present(channelLogin), Optional.Present(targetId))).execute().data?.user?.let { i ->
+            getApolloClient(gqlClientId).query(UserMessageClickedQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
+                targetId = Optional.Present(targetId)
+            )).execute().data?.user?.let { i ->
                 User(
                     id = i.id,
                     login = i.login,
@@ -412,8 +427,8 @@ class ApiRepository @Inject constructor(
             helix.getUsers(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                ids = channelId?.let { listOf(channelId) },
-                logins = channelLogin?.let { listOf(channelLogin) }
+                ids = channelId?.let { listOf(it) },
+                logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
             ).data?.firstOrNull()
         }
     }
@@ -488,7 +503,11 @@ class ApiRepository @Inject constructor(
     suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
             val badges = mutableListOf<TwitchBadge>()
-            val get = getApolloClient(gqlClientId).query(UserBadgesQuery(Optional.Present(channelId), Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute().data
+            val get = getApolloClient(gqlClientId).query(UserBadgesQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
+                quality = Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL})
+            )).execute().data
             get?.user?.broadcastBadges?.forEach {
                 if (it != null) {
                     it.setID?.let { setId ->
@@ -525,7 +544,10 @@ class ApiRepository @Inject constructor(
     suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<CheerEmote>()
-            val get = getApolloClient(gqlClientId).query(UserCheerEmotesQuery(Optional.Present(channelId))).execute().data
+            val get = getApolloClient(gqlClientId).query(UserCheerEmotesQuery(
+                id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
+                login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
+            )).execute().data
             get?.cheerConfig?.displayConfig?.let { config ->
                 config.backgrounds?.let {
                     val background = config.backgrounds.find { it == "dark" } ?: config.backgrounds.last()
@@ -632,10 +654,10 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, userId: String, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<TwitchEmote>()
-            getApolloClient(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }).query(UserEmotesQuery(Optional.Present(userId))).execute().data?.user?.emoteSets?.forEach { set ->
+            getApolloClient(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }).query(UserEmotesQuery()).execute().data?.user?.emoteSets?.forEach { set ->
                 set.emotes?.forEach { emote ->
                     if (emote?.id != null) {
                         emotes.add(TwitchEmote(

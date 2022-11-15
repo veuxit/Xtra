@@ -108,8 +108,8 @@ class GameVideosDataSource private constructor(
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(GameVideosQuery(
-            id = Optional.Present(if (!gameId.isNullOrBlank()) gameId else null),
-            name = Optional.Present(if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null),
+            id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             languages = Optional.Present(gqlQueryLanguages),
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
