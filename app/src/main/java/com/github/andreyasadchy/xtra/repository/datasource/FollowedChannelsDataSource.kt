@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.Optional
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.github.andreyasadchy.xtra.FollowedUsersQuery
+import com.github.andreyasadchy.xtra.UserFollowedUsersQuery
 import com.github.andreyasadchy.xtra.UsersLastBroadcastQuery
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
@@ -159,8 +159,7 @@ class FollowedChannelsDataSource(
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
             gqlToken?.let { addHttpHeader("Authorization", it) }
-        }.build().query(FollowedUsersQuery(
-            id = Optional.Present(userId),
+        }.build().query(UserFollowedUsersQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
         )).execute().data?.user?.follows

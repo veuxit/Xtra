@@ -60,7 +60,7 @@ class SearchGamesDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
-        val get = helixApi.getGames(
+        val get = helixApi.getSearchGames(
             clientId = helixClientId,
             token = helixToken,
             query = query,

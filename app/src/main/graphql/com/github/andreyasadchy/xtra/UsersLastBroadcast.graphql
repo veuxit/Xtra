@@ -1,5 +1,5 @@
-query UsersLastBroadcast($id: [ID!]) {
-    users(ids: $id) {
+query UsersLastBroadcast($ids: [ID!], $logins: [String!]) {
+    users(ids: $ids, logins: $logins) {
         id
         lastBroadcast {
             startedAt

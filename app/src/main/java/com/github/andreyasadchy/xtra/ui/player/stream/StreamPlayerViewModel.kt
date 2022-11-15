@@ -87,29 +87,13 @@ class StreamPlayerViewModel @Inject constructor(
                 viewModelScope.launch {
                     while (isActive) {
                         try {
-                            val s = when {
-                                stream.user_id != null -> {
-                                    repository.loadStream(stream.user_id, stream.user_login, helixClientId, user.helixToken, gqlClientId) ?:
-                                    gql.loadViewerCount(gqlClientId, stream.user_login).let { get ->
-                                        _stream.value?.apply {
-                                            if (!get.streamId.isNullOrBlank()) {
-                                                id = get.streamId
-                                            }
-                                            viewer_count = get.viewers
-                                        }
+                            val s = repository.loadStream(stream.user_id, stream.user_login, helixClientId, user.helixToken, gqlClientId).let { get ->
+                                _stream.value?.apply {
+                                    if (!get?.id.isNullOrBlank()) {
+                                        id = get?.id
                                     }
+                                    viewer_count = get?.viewer_count
                                 }
-                                stream.user_login != null -> {
-                                    gql.loadViewerCount(gqlClientId, stream.user_login).let { get ->
-                                        _stream.value?.apply {
-                                            if (!get.streamId.isNullOrBlank()) {
-                                                id = get.streamId
-                                            }
-                                            viewer_count = get.viewers
-                                        }
-                                    }
-                                }
-                                else -> null
                             }
                             if (!s?.id.isNullOrBlank()) {
                                 stream_id = s?.id

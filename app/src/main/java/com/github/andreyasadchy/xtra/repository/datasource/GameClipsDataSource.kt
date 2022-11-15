@@ -100,8 +100,8 @@ class GameClipsDataSource(
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Clip> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(GameClipsQuery(
-            id = Optional.Present(if (!gameId.isNullOrBlank()) gameId else null),
-            name = Optional.Present(if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null),
+            id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             languages = Optional.Present(gqlQueryLanguages),
             sort = Optional.Present(gqlQueryPeriod),
             first = Optional.Present(20 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),

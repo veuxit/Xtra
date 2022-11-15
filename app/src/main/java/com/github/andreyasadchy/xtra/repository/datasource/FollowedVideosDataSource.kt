@@ -4,7 +4,7 @@ import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
-import com.github.andreyasadchy.xtra.FollowedVideosQuery
+import com.github.andreyasadchy.xtra.UserFollowedVideosQuery
 import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -14,7 +14,6 @@ import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
 
 class FollowedVideosDataSource(
-    private val userId: String?,
     private val gqlClientId: String?,
     private val gqlToken: String?,
     private val gqlQueryType: BroadcastType?,
@@ -53,8 +52,7 @@ class FollowedVideosDataSource(
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
             gqlToken?.let { addHttpHeader("Authorization", it) }
-        }.build().query(FollowedVideosQuery(
-            id = Optional.Present(userId),
+        }.build().query(UserFollowedVideosQuery(
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
             first = Optional.Present(50 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),
@@ -114,7 +112,6 @@ class FollowedVideosDataSource(
     }
 
     class Factory(
-        private val userId: String?,
         private val gqlClientId: String?,
         private val gqlToken: String?,
         private val gqlQueryType: BroadcastType?,
@@ -125,6 +122,6 @@ class FollowedVideosDataSource(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, FollowedVideosDataSource>() {
 
         override fun create(): DataSource<Int, Video> =
-                FollowedVideosDataSource(userId, gqlClientId, gqlToken, gqlQueryType, gqlQuerySort, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
+                FollowedVideosDataSource(gqlClientId, gqlToken, gqlQueryType, gqlQuerySort, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

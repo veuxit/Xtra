@@ -1,5 +1,5 @@
-query UsersStream($id: [ID!]) {
-    users(ids: $id) {
+query UsersStream($id: [ID!], $login: [String!]) {
+    users(ids: $id, logins: $login) {
         displayName
         id
         login
