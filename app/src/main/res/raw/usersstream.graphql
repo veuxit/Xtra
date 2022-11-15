@@ -1,5 +1,5 @@
-query ($id: [ID!]) {
-    users(ids: $id) {
+query ($id: [ID!], $login: [String!]) {
+    users(ids: $id, logins: $login) {
         displayName
         id
         login

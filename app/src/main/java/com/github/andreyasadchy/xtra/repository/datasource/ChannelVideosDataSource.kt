@@ -93,7 +93,8 @@ class ChannelVideosDataSource (
             clientId = gqlClientId,
             query = context.resources.openRawResource(R.raw.uservideos).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
-                addProperty("id", channelId)
+                addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
+                addProperty("login", if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null)
                 addProperty("sort", gqlQuerySort.toString())
                 val typeArray = JsonArray()
                 gqlQueryType?.let {

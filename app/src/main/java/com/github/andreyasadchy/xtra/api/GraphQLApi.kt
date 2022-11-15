@@ -36,18 +36,6 @@ interface GraphQLApi {
     suspend fun getQueryBadges(@Header("Client-ID") clientId: String?, @Body json: JsonObject): BadgesQueryResponse
 
     @POST(".")
-    suspend fun getQueryFollowedGames(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedGamesQueryResponse
-
-    @POST(".")
-    suspend fun getQueryFollowedStreams(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedStreamsQueryResponse
-
-    @POST(".")
-    suspend fun getQueryFollowedUsers(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedUsersQueryResponse
-
-    @POST(".")
-    suspend fun getQueryFollowedVideos(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedVideosQueryResponse
-
-    @POST(".")
     suspend fun getQueryGameBoxArt(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameBoxArtQueryResponse
 
     @POST(".")
@@ -94,6 +82,18 @@ interface GraphQLApi {
 
     @POST(".")
     suspend fun getQueryUserEmotes(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserEmotesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserFollowedGames(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserFollowedGamesQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserFollowedStreams(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserFollowedStreamsQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserFollowedUsers(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserFollowedUsersQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserFollowedVideos(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserFollowedVideosQueryResponse
 
     @POST(".")
     suspend fun getQueryUserHosting(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserHostingQueryResponse

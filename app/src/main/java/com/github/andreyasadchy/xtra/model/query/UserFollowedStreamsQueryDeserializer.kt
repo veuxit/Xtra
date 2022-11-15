@@ -8,10 +8,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import java.lang.reflect.Type
 
-class FollowedStreamsQueryDeserializer : JsonDeserializer<FollowedStreamsQueryResponse> {
+class UserFollowedStreamsQueryDeserializer : JsonDeserializer<UserFollowedStreamsQueryResponse> {
 
     @Throws(JsonParseException::class)
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): FollowedStreamsQueryResponse {
+    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): UserFollowedStreamsQueryResponse {
         val data = mutableListOf<Stream>()
         val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.getAsJsonObject("followedLiveUsers")?.getAsJsonArray("edges")
         val cursor = dataJson?.lastOrNull()?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
@@ -44,6 +44,6 @@ class FollowedStreamsQueryDeserializer : JsonDeserializer<FollowedStreamsQueryRe
                 ))
             }
         }
-        return FollowedStreamsQueryResponse(data, cursor, hasNextPage)
+        return UserFollowedStreamsQueryResponse(data, cursor, hasNextPage)
     }
 }

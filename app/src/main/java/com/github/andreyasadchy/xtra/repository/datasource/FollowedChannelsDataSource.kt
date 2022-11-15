@@ -163,10 +163,10 @@ class FollowedChannelsDataSource(
 
     private suspend fun gqlQueryLoad(): List<Follow> {
         val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryFollowedUsers(
+        val get = gqlApi.loadQueryUserFollowedUsers(
             clientId = gqlClientId,
             token = gqlToken,
-            query = context.resources.openRawResource(R.raw.followedusers).bufferedReader().use { it.readText() },
+            query = context.resources.openRawResource(R.raw.userfollowedusers).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", userId)
                 addProperty("first", 100)

@@ -115,10 +115,10 @@ class FollowedStreamsDataSource(
 
     private suspend fun gqlQueryLoad(): List<Stream> {
         val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryFollowedStreams(
+        val get = gqlApi.loadQueryUserFollowedStreams(
             clientId = gqlClientId,
             token = gqlToken,
-            query = context.resources.openRawResource(R.raw.followedstreams).bufferedReader().use { it.readText() },
+            query = context.resources.openRawResource(R.raw.userfollowedstreams).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", userId)
                 addProperty("first", 100)

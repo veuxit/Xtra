@@ -47,7 +47,7 @@ class SearchStreamsDataSource private constructor(
     }
 
     private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
-        val get = helixApi.getChannels(
+        val get = helixApi.getSearchChannels(
             clientId = helixClientId,
             token = helixToken,
             query = query,

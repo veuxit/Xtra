@@ -13,7 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 
 class FollowedGamesDataSource(
     private val localFollowsGame: LocalFollowGameRepository,
-    private val userId: String?,
     private val gqlClientId: String?,
     private val gqlToken: String?,
     private val gqlApi: GraphQLRepository,
@@ -64,12 +63,11 @@ class FollowedGamesDataSource(
 
     private suspend fun gqlQueryLoad(): List<Game> {
         val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryFollowedGames(
+        val get = gqlApi.loadQueryUserFollowedGames(
             clientId = gqlClientId,
             token = gqlToken,
-            query = context.resources.openRawResource(R.raw.followedgames).bufferedReader().use { it.readText() },
+            query = context.resources.openRawResource(R.raw.userfollowedgames).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
-                addProperty("id", userId)
                 addProperty("first", 100)
             })
         return get.data
@@ -88,7 +86,6 @@ class FollowedGamesDataSource(
 
     class Factory(
         private val localFollowsGame: LocalFollowGameRepository,
-        private val userId: String?,
         private val gqlClientId: String?,
         private val gqlToken: String?,
         private val gqlApi: GraphQLRepository,
@@ -96,6 +93,6 @@ class FollowedGamesDataSource(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Game, FollowedGamesDataSource>() {
 
         override fun create(): DataSource<Int, Game> =
-                FollowedGamesDataSource(localFollowsGame, userId, gqlClientId, gqlToken, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
+                FollowedGamesDataSource(localFollowsGame, gqlClientId, gqlToken, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

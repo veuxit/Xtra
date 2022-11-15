@@ -6,7 +6,6 @@ query ($id: ID) {
             id
             displayName
         }
-        id
         lengthSeconds
         owner {
             displayName

@@ -8,10 +8,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import java.lang.reflect.Type
 
-class FollowedGamesQueryDeserializer : JsonDeserializer<FollowedGamesQueryResponse> {
+class UserFollowedGamesQueryDeserializer : JsonDeserializer<UserFollowedGamesQueryResponse> {
 
     @Throws(JsonParseException::class)
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): FollowedGamesQueryResponse {
+    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): UserFollowedGamesQueryResponse {
         val data = mutableListOf<Game>()
         val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.getAsJsonObject("followedGames")?.getAsJsonArray("nodes")
         dataJson?.forEach { item ->
@@ -35,6 +35,6 @@ class FollowedGamesQueryDeserializer : JsonDeserializer<FollowedGamesQueryRespon
                 ))
             }
         }
-        return FollowedGamesQueryResponse(data)
+        return UserFollowedGamesQueryResponse(data)
     }
 }

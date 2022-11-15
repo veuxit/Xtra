@@ -14,7 +14,6 @@ import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 
 class FollowedVideosDataSource(
-    private val userId: String?,
     private val gqlClientId: String?,
     private val gqlToken: String?,
     private val gqlQueryType: BroadcastType?,
@@ -50,12 +49,11 @@ class FollowedVideosDataSource(
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
         val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryFollowedVideos(
+        val get = gqlApi.loadQueryUserFollowedVideos(
             clientId = gqlClientId,
             token = gqlToken,
-            query = context.resources.openRawResource(R.raw.followedvideos).bufferedReader().use { it.readText() },
+            query = context.resources.openRawResource(R.raw.userfollowedvideos).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
-                addProperty("id", userId)
                 addProperty("sort", gqlQuerySort.toString())
                 val typeArray = JsonArray()
                 gqlQueryType?.let {
@@ -90,7 +88,6 @@ class FollowedVideosDataSource(
     }
 
     class Factory(
-        private val userId: String?,
         private val gqlClientId: String?,
         private val gqlToken: String?,
         private val gqlQueryType: BroadcastType?,
@@ -100,6 +97,6 @@ class FollowedVideosDataSource(
         private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, FollowedVideosDataSource>() {
 
         override fun create(): DataSource<Int, Video> =
-                FollowedVideosDataSource(userId, gqlClientId, gqlToken, gqlQueryType, gqlQuerySort, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
+                FollowedVideosDataSource(gqlClientId, gqlToken, gqlQueryType, gqlQuerySort, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

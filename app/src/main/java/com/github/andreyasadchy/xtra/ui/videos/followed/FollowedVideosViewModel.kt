@@ -39,7 +39,7 @@ class FollowedVideosViewModel @Inject constructor(
         get() = _sortText
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Video>> = Transformations.map(filter) {
-        repository.loadFollowedVideos(it.user.id, it.gqlClientId, it.user.gqlToken,
+        repository.loadFollowedVideos(it.gqlClientId, it.user.gqlToken,
             when (it.broadcastType) {
                 BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
                 BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT

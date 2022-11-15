@@ -1,4 +1,4 @@
-query ($id: ID) {
+query ($id: ID, $login: String) {
     cheerConfig {
         displayConfig {
             backgrounds
@@ -22,7 +22,7 @@ query ($id: ID) {
             templateURL
         }
     }
-    user(id: $id) {
+    user(id: $id, login: $login, lookupType: ALL) {
         cheer {
             cheerGroups {
                 nodes {

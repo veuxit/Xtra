@@ -105,7 +105,8 @@ class ChannelClipsDataSource(
             clientId = gqlClientId,
             query = context.resources.openRawResource(R.raw.userclips).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
-                addProperty("id", channelId)
+                addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
+                addProperty("login", if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null)
                 addProperty("sort", gqlQueryPeriod.toString())
                 addProperty("first", 20 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/)
                 addProperty("after", offset)
