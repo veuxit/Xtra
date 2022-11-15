@@ -101,21 +101,7 @@ class PlayerRepository @Inject constructor(
 
     private fun getPlaybackAccessTokenHeaders(gqlToken: String?, randomDeviceId: Boolean?, xDeviceId: String? = null): MutableMap<String, String> {
         return HashMap<String, String>().apply {
-            put("Accept", "*/*")
-            put("Accept-Encoding", "gzip, deflate, br")
-            put("Accept-Language", "ru-RU")
             gqlToken?.let { put("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
-            put("Connection", "keep-alive")
-            put("Content-Type", "text/plain;charset=UTF-8")
-            put("Host", "gql.twitch.tv")
-            put("Origin", "https://www.twitch.tv")
-            put("Referer", "https://www.twitch.tv/")
-            put("sec-ch-ua", "\"Google Chrome\";v=\"87\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"87\"")
-            put("sec-ch-ua-mobile", "?0")
-            put("Sec-Fetch-Dest", "empty")
-            put("Sec-Fetch-Mode", "cors")
-            put("Sec-Fetch-Site", "same-site")
-            put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36")
             if (randomDeviceId != false) {
                 val randomId = UUID.randomUUID().toString().replace("-", "").substring(0, 32) //X-Device-Id or Device-ID removes "commercial break in progress" (length 16 or 32)
                 put("X-Device-Id", randomId)
