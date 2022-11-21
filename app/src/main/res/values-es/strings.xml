@@ -535,4 +535,5 @@
     <string name="followed_only">Sólo seguido</string>
     <string name="api_gql2">Identificación de cliente GQL 2</string>
     <string name="api_gql_token2">Token GQL 2</string>
+    <string name="debug_api_commands">Use api chat commands</string>
 </resources>

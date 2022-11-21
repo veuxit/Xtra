@@ -106,7 +106,7 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useSSl: Boolean, usePubSub: Boolean, user: User, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
+    fun startLive(useSSl: Boolean, usePubSub: Boolean, user: User, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null, useApiCommands: Boolean) {
         if (chat == null && channelLogin != null) {
             stream_id = streamId
             this.showRaids = showRaids
@@ -122,13 +122,13 @@ class ChatViewModel @Inject constructor(
                 channelId = channelId,
                 channelLogin = channelLogin,
                 displayName = channelName,
-                emoteQuality = emoteQuality,
                 animateGifs = animateGifs,
                 showUserNotice = showUserNotice,
                 showClearMsg = showClearMsg,
                 showClearChat = showClearChat,
                 collectPoints = collectPoints,
-                notifyPoints = notifyPoints
+                notifyPoints = notifyPoints,
+                useApiCommands = useApiCommands
             )
             init(
                 helixClientId = helixClientId,
@@ -389,13 +389,13 @@ class ChatViewModel @Inject constructor(
             private val channelId: String?,
             private val channelLogin: String,
             displayName: String?,
-            private val emoteQuality: String,
             private val animateGifs: Boolean,
             private val showUserNotice: Boolean,
             private val showClearMsg: Boolean,
             private val showClearChat: Boolean,
             private val collectPoints: Boolean,
-            private val notifyPoints: Boolean) : ChatController(), OnUserStateReceivedListener, OnRoomStateReceivedListener, OnCommandReceivedListener, OnRewardReceivedListener, OnPointsEarnedListener, OnClaimPointsListener, OnMinuteWatchedListener, OnRaidListener, ChatView.RaidCallback, OnViewerCountReceivedListener {
+            private val notifyPoints: Boolean,
+            private val useApiCommands: Boolean) : ChatController(), OnUserStateReceivedListener, OnRoomStateReceivedListener, OnCommandReceivedListener, OnRewardReceivedListener, OnPointsEarnedListener, OnClaimPointsListener, OnMinuteWatchedListener, OnRaidListener, ChatView.RaidCallback, OnViewerCountReceivedListener {
 
         private var chat: LiveChatThread? = null
         private var loggedInChat: LoggedInChatThread? = null
@@ -410,19 +410,27 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun send(message: CharSequence) {
-            if (message.toString() == "/dc" || message.toString() == "/disconnect") {
-                if (chat?.isActive == true) {
-                    disconnect()
+            if (useApiCommands) {
+                if (message.toString().startsWith("/")) {
+                    sendCommand(message)
+                } else {
+                    sendMessage(message)
                 }
             } else {
-                loggedInChat?.send(message)
-                val usedEmotes = hashSetOf<RecentEmote>()
-                val currentTime = System.currentTimeMillis()
-                message.split(' ').forEach { word ->
-                    allEmotesMap[word]?.let { usedEmotes.add(RecentEmote(word, it.url1x, it.url2x, it.url3x, it.url4x, currentTime)) }
-                }
-                if (usedEmotes.isNotEmpty()) {
-                    playerRepository.insertRecentEmotes(usedEmotes)
+                if (message.toString() == "/dc" || message.toString() == "/disconnect") {
+                    if (chat?.isActive == true) {
+                        disconnect()
+                    }
+                } else {
+                    loggedInChat?.send(message)
+                    val usedEmotes = hashSetOf<RecentEmote>()
+                    val currentTime = System.currentTimeMillis()
+                    message.split(' ').forEach { word ->
+                        allEmotesMap[word]?.let { usedEmotes.add(RecentEmote(word, it.url1x, it.url2x, it.url3x, it.url4x, currentTime)) }
+                    }
+                    if (usedEmotes.isNotEmpty()) {
+                        playerRepository.insertRecentEmotes(usedEmotes)
+                    }
                 }
             }
         }
@@ -591,6 +599,418 @@ class ChatViewModel @Inject constructor(
                 pubSub?.disconnect()
                 usedRaidId = null
                 command.postValue(Command(type = "disconnect_command"))
+            }
+        }
+
+        private fun sendMessage(message: CharSequence) {
+            loggedInChat?.send(message)
+            val usedEmotes = hashSetOf<RecentEmote>()
+            val currentTime = System.currentTimeMillis()
+            message.split(' ').forEach { word ->
+                allEmotesMap[word]?.let { usedEmotes.add(RecentEmote(word, it.url1x, it.url2x, it.url3x, it.url4x, currentTime)) }
+            }
+            if (usedEmotes.isNotEmpty()) {
+                playerRepository.insertRecentEmotes(usedEmotes)
+            }
+        }
+
+        private fun sendCommand(message: CharSequence) {
+            val command = message.toString().substringBefore(" ")
+            when {
+                command.startsWith("/announce", true) -> {
+                    val splits = message.split(" ", limit = 2)
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.sendAnnouncement(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                message = splits[1],
+                                color = splits[0].substringAfter("/announce", "").ifBlank { null }
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/ban", true) -> {
+                    val splits = message.split(" ", limit = 3)
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.banUser(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1],
+                                reason = if (splits.size >= 3) splits[2] else null
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/unban", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.unbanUser(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/clear", true) -> {
+                    viewModelScope.launch {
+                        repository.deleteMessages(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/color", true) -> {
+                    val splits = message.split(" ")
+                    viewModelScope.launch {
+                        if (splits.size >= 2) {
+                            repository.updateChatColor(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                color = splits[1]
+                            )
+                        } else {
+                            repository.getChatColor(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id
+                            )
+                        }?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/commercial", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.startCommercial(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                channelId = channelId,
+                                length = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/delete", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.deleteMessages(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                channelId = channelId,
+                                userId = user.id,
+                                messageId = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/disconnect", true) -> disconnect()
+                command.equals("/emoteonly", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            emote = true
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/emoteonlyoff", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            emote = false
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/followers", true) -> {
+                    val splits = message.split(" ")
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            followers = true,
+                            followersDuration = if (splits.size >= 2) splits[1] else null
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/followersoff", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            followers = false
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/marker", true) -> {
+                    val splits = message.split(" ", limit = 2)
+                    viewModelScope.launch {
+                        repository.createStreamMarker(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            gqlClientId = gqlClientId2,
+                            gqlToken = user.gqlToken2,
+                            channelLogin = channelLogin,
+                            description = if (splits.size >= 2) splits[1] else null
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/mod", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.addModerator(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/unmod", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.removeModerator(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/mods", true) -> {
+                    viewModelScope.launch {
+                        repository.getModerators(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            gqlClientId = gqlClientId,
+                            channelLogin = channelLogin,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/raid", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.startRaid(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/unraid", true) -> {
+                    viewModelScope.launch {
+                        repository.cancelRaid(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            gqlClientId = gqlClientId2,
+                            gqlToken = user.gqlToken2,
+                            channelId = channelId
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/slow", true) -> {
+                    val splits = message.split(" ")
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            slow = true,
+                            slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/slowoff", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            slow = false
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/subscribers", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            subs = true,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/subscribersoff", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            subs = false,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/timeout", true) -> {
+                    val splits = message.split(" ", limit = 4)
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.banUser(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1],
+                                duration = if (splits.size >= 3) splits[2] else null ?: if (!user.gqlToken2.isNullOrBlank()) "10m" else "600",
+                                reason = if (splits.size >= 4) splits[3] else null,
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/untimeout", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.unbanUser(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/uniquechat", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            unique = true,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/uniquechatoff", true) -> {
+                    viewModelScope.launch {
+                        repository.updateChatSettings(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            userId = user.id,
+                            unique = false,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/vip", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.addVip(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/unvip", true) -> {
+                    val splits = message.split(" ")
+                    if (splits.size >= 2) {
+                        viewModelScope.launch {
+                            repository.removeVip(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                gqlClientId = gqlClientId2,
+                                gqlToken = user.gqlToken2,
+                                channelId = channelId,
+                                targetLogin = splits[1]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                command.equals("/vips", true) -> {
+                    viewModelScope.launch {
+                        repository.getVips(
+                            helixClientId = helixClientId,
+                            helixToken = user.helixToken,
+                            channelId = channelId,
+                            gqlClientId = gqlClientId,
+                            channelLogin = channelLogin,
+                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    }
+                }
+                command.equals("/w", true) -> {
+                    val splits = message.split(" ", limit = 3)
+                    if (splits.size >= 3) {
+                        viewModelScope.launch {
+                            repository.sendWhisper(
+                                helixClientId = helixClientId,
+                                helixToken = user.helixToken,
+                                userId = user.id,
+                                targetLogin = splits[1],
+                                message = splits[2]
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    }
+                }
+                else -> sendMessage(message)
             }
         }
     }

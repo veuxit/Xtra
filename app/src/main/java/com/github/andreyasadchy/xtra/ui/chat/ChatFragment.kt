@@ -55,13 +55,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val autoSwitchRaids = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
         val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
         val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
+        val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, false)
         val disableChat = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
         val isLive = args.getBoolean(KEY_IS_LIVE)
         val enableChat = if (disableChat) {
             false
         } else {
             if (isLive) {
-                viewModel.startLive(useSSl, usePubSub, user, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString())
+                viewModel.startLive(useSSl, usePubSub, user, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), useApiCommands)
                 chatView.init(this)
                 chatView.setCallback(viewModel, (viewModel.chat as? ChatViewModel.LiveChatController))
                 chatView.setChannelId(channelId)

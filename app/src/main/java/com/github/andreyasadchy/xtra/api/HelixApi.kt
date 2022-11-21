@@ -1,9 +1,7 @@
 package com.github.andreyasadchy.xtra.api
 
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchResponse
-import com.github.andreyasadchy.xtra.model.helix.chat.ChatBadgesResponse
-import com.github.andreyasadchy.xtra.model.helix.chat.CheerEmotesResponse
-import com.github.andreyasadchy.xtra.model.helix.chat.EmoteSetResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.*
 import com.github.andreyasadchy.xtra.model.helix.clip.ClipsResponse
 import com.github.andreyasadchy.xtra.model.helix.follows.FollowResponse
 import com.github.andreyasadchy.xtra.model.helix.game.GamesResponse
@@ -12,9 +10,10 @@ import com.github.andreyasadchy.xtra.model.helix.user.UsersResponse
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
 import com.github.andreyasadchy.xtra.model.helix.video.VideosResponse
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.Query
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import retrofit2.Response
+import retrofit2.http.*
 
 interface HelixApi {
 
@@ -146,4 +145,162 @@ interface HelixApi {
         @Header("Authorization") token: String?,
         @Query("broadcaster_id") userId: String?
     ): CheerEmotesResponse
+
+    @GET("chat/chatters")
+    suspend fun getChatters(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Query("first") limit: Int?,
+        @Query("after") offset: String?
+    ): Response<ModeratorsResponse>
+
+    @POST("chat/announcements")
+    suspend fun sendAnnouncement(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @POST("moderation/bans")
+    suspend fun banUser(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @DELETE("moderation/bans")
+    suspend fun unbanUser(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Query("user_id") targetId: String?
+    ): Response<JsonElement>
+
+    @DELETE("moderation/chat")
+    suspend fun deleteMessages(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Query("message_id") messageId: String?
+    ): Response<JsonElement>
+
+    @GET("chat/color")
+    suspend fun getChatColor(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("user_id") userId: String?
+    ): Response<JsonElement>
+
+    @PUT("chat/color")
+    suspend fun updateChatColor(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("user_id") userId: String?,
+        @Query("color") color: String?
+    ): Response<JsonElement>
+
+    @POST("channels/commercial")
+    suspend fun startCommercial(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @PATCH("chat/settings")
+    suspend fun updateChatSettings(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("moderator_id") userId: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @POST("streams/markers")
+    suspend fun createStreamMarker(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @GET("moderation/moderators")
+    suspend fun getModerators(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("first") limit: Int?,
+        @Query("after") offset: String?
+    ): Response<ModeratorsResponse>
+
+    @POST("moderation/moderators")
+    suspend fun addModerator(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("user_id") targetId: String?
+    ): Response<JsonElement>
+
+    @DELETE("moderation/moderators")
+    suspend fun removeModerator(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("user_id") targetId: String?
+    ): Response<JsonElement>
+
+    @POST("raids")
+    suspend fun startRaid(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("from_broadcaster_id") channelId: String?,
+        @Query("to_broadcaster_id") targetId: String?
+    ): Response<JsonElement>
+
+    @DELETE("raids")
+    suspend fun cancelRaid(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+    ): Response<JsonElement>
+
+    @GET("channels/vips")
+    suspend fun getVips(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("first") limit: Int?,
+        @Query("after") offset: String?
+    ): Response<ModeratorsResponse>
+
+    @POST("channels/vips")
+    suspend fun addVip(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("user_id") targetId: String?
+    ): Response<JsonElement>
+
+    @DELETE("channels/vips")
+    suspend fun removeVip(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") channelId: String?,
+        @Query("user_id") targetId: String?
+    ): Response<JsonElement>
+
+    @POST("whispers")
+    suspend fun sendWhisper(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("from_user_id") userId: String?,
+        @Query("to_user_id") targetId: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
 }
