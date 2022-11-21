@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.github.andreyasadchy.xtra.model.query.*
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -244,4 +245,43 @@ interface GraphQLApi {
 
     @POST(".")
     suspend fun getChannelPanel(@Body json: JsonArray): Response<ResponseBody>
+
+    @POST(".")
+    suspend fun sendAnnouncement(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun banUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun unbanUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun updateChatColor(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun createStreamMarker(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun getModerators(@Header("Client-ID") clientId: String?, @Body json: JsonObject): Response<ModeratorsDataResponse>
+
+    @POST(".")
+    suspend fun addModerator(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun removeModerator(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun startRaid(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun cancelRaid(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun getVips(@Header("Client-ID") clientId: String?, @Body json: JsonObject): Response<VipsDataResponse>
+
+    @POST(".")
+    suspend fun addVip(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
+
+    @POST(".")
+    suspend fun removeVip(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>
 }

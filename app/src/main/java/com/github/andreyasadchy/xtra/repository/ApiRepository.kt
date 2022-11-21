@@ -708,4 +708,289 @@ class ApiRepository @Inject constructor(
             .build()
         return Listing.create(factory, config)
     }
+
+    suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.sendAnnouncement(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, message, color)
+        } else {
+            val json = JsonObject().apply {
+                addProperty("message", message)
+                color?.let { addProperty("color", it) }
+            }
+            helix.sendAnnouncement(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun banUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.banUser(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin, duration, reason)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            val json = JsonObject().apply {
+                add("data", JsonObject().apply {
+                    duration?.toIntOrNull()?.let { addProperty("duration", it) }
+                    addProperty("reason", reason)
+                    addProperty("user_id", targetId)
+                })
+            }
+            helix.banUser(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun unbanUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.unbanUser(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.unbanUser(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun deleteMessages(helixClientId: String?, helixToken: String?, channelId: String?, userId: String?, messageId: String? = null): String? = withContext(Dispatchers.IO) {
+        val response = helix.deleteMessages(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, messageId)
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun updateChatColor(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, color: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.updateChatColor(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, color)
+        } else {
+            helix.updateChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, color)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun getChatColor(helixClientId: String?, helixToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
+        val response = helix.getChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId)
+        if (response.isSuccessful) {
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("color")?.takeIf { !it.isJsonNull }?.asString
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun startCommercial(helixClientId: String?, helixToken: String?, channelId: String?, length: String?): String? = withContext(Dispatchers.IO) {
+        val json = JsonObject().apply {
+            addProperty("broadcaster_id", channelId)
+            addProperty("length", length?.toIntOrNull())
+        }
+        val response = helix.startCommercial(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        if (response.isSuccessful) {
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { !it.isJsonNull }?.asString
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun updateChatSettings(helixClientId: String?, helixToken: String?, channelId: String?, userId: String?, emote: Boolean? = null, followers: Boolean? = null, followersDuration: String? = null, slow: Boolean? = null, slowDuration: Int? = null, subs: Boolean? = null, unique: Boolean? = null): String? = withContext(Dispatchers.IO) {
+        val json = JsonObject().apply {
+            emote?.let { addProperty("emote_mode", it) }
+            followers?.let { addProperty("follower_mode", it) }
+            followersDuration?.toIntOrNull()?.let { addProperty("follower_mode_duration", it) }
+            slow?.let { addProperty("slow_mode", it) }
+            slowDuration?.let { addProperty("slow_mode_wait_time", it) }
+            subs?.let { addProperty("subscriber_mode", it) }
+            unique?.let { addProperty("unique_chat_mode", it) }
+        }
+        val response = helix.updateChatSettings(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun createStreamMarker(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, gqlToken: String?, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.createStreamMarker(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelLogin)
+        } else {
+            val json = JsonObject().apply {
+                addProperty("user_id", channelId)
+                description?.let { addProperty("description", it) }
+            }
+            helix.createStreamMarker(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun getModerators(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = gql.getModerators(gqlClientId, channelLogin)
+        //val response = helix.getModerators(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
+        if (response.isSuccessful) {
+            response.body()?.data?.map { it.login }.toString()
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun addModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.addModerator(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.addModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun removeModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.removeModerator(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.removeModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun startRaid(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            val targetId = loadCheckUser(
+                channelLogin = targetLogin,
+                helixClientId = helixClientId,
+                helixToken = helixToken,
+                gqlClientId = gqlClientId
+            )?.id
+            gql.startRaid(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetId)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.startRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun cancelRaid(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.cancelRaid(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId)
+        } else {
+            helix.cancelRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId)
+        }
+        if (response.isSuccessful) {
+            response.body().toString()
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun getVips(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = gql.getVips(gqlClientId, channelLogin)
+        //val response = helix.getVips(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
+        if (response.isSuccessful) {
+            response.body()?.data?.map { it.login }.toString()
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun addVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.addVip(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.addVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun removeVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlToken.isNullOrBlank()) {
+            gql.removeVip(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+        } else {
+            val targetId = helix.getUsers(
+                clientId = helixClientId,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                logins = targetLogin?.let { listOf(it) }
+            ).data?.firstOrNull()?.id
+            helix.removeVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+        }
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun sendWhisper(helixClientId: String?, helixToken: String?, userId: String?, targetLogin: String?, message: String?): String? = withContext(Dispatchers.IO) {
+        val targetId = helix.getUsers(
+            clientId = helixClientId,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+            logins = targetLogin?.let { listOf(it) }
+        ).data?.firstOrNull()?.id
+        val json = JsonObject().apply {
+            addProperty("message", message)
+        }
+        val response = helix.sendWhisper(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, targetId, json)
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
 }

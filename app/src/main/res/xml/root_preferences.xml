@@ -412,6 +412,12 @@
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="debug_api_commands"
+        android:title="@string/debug_api_commands"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="debug_show_conscrypt_error_toast"
         android:title="@string/show_conscrypt_error_toast"
