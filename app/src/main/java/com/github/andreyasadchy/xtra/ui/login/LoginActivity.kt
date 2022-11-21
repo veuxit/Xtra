@@ -26,6 +26,7 @@ import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.net.URLEncoder
 import java.util.regex.Pattern
 import javax.inject.Inject
 
@@ -77,8 +78,27 @@ class LoginActivity : AppCompatActivity() {
         webViewContainer.visible()
         val apiSetting = prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0
         val helixRedirect = prefs().getString(C.HELIX_REDIRECT, "https://localhost")
-        val helixScopes = "chat:read chat:edit channel:moderate channel_editor whispers:edit user:read:follows"
-        val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${helixScopes}"
+        val helixScopes = listOf(
+            "channel:edit:commercial", // channels/commercial
+            "channel:manage:broadcast", // streams/markers
+            "channel:manage:moderators", // moderation/moderators
+            "channel:manage:raids", // raids
+            "channel:manage:vips", // channels/vips
+            "channel:moderate",
+            "chat:edit",
+            "chat:read",
+            "moderator:manage:announcements", // chat/announcements
+            "moderator:manage:banned_users", // moderation/bans
+            "moderator:manage:chat_messages", // moderation/chat
+            "moderator:manage:chat_settings", // chat/settings
+            "moderator:read:chatters", // chat/chatters
+            "user:manage:chat_color", // chat/color
+            "user:manage:whispers", // whispers
+            "user:read:follows", // streams/followed
+            "whispers:edit", // TODO remove
+            "channel_editor", // TODO remove
+        )
+        val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
         val gqlRedirect = prefs().getString(C.GQL_REDIRECT, "https://www.twitch.tv/")
         val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId}&redirect_uri=${gqlRedirect}&scope="
         val gqlAuthUrl2 = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId2}&redirect_uri=${gqlRedirect}&scope="

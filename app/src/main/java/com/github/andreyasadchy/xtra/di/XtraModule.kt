@@ -160,6 +160,9 @@ class XtraModule {
                 .registerTypeAdapter(ChannelPointsContextDataResponse::class.java, ChannelPointsContextDataDeserializer())
                 .registerTypeAdapter(UserEmotesDataResponse::class.java, UserEmotesDataDeserializer())
                 .registerTypeAdapter(ChatBadgesResponse::class.java, ChatBadgesDeserializer())
+                .registerTypeAdapter(ModeratorsResponse::class.java, ModeratorsDeserializer())
+                .registerTypeAdapter(ModeratorsDataResponse::class.java, ModeratorsDataDeserializer())
+                .registerTypeAdapter(VipsDataResponse::class.java, VipsDataDeserializer())
                 .create())
     }
 

@@ -25,9 +25,11 @@ import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -878,5 +880,244 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         }
         array.add(panelOperation)
         graphQL.getChannelPanel(array).body()?.string()
+    }
+
+    suspend fun sendAnnouncement(clientId: String?, token: String?, channelId: String?, message: String?, color: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "SendAnnouncementMessage")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("message", message)
+                    addProperty("color", color)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "f9e37b572ceaca1475d8d50805ae64d6eb388faf758556b2719f44d64e5ba791")
+                })
+            })
+        }
+        return graphQL.sendAnnouncement(clientId, token, json)
+    }
+
+    suspend fun banUser(clientId: String?, token: String?, channelId: String?, targetLogin: String?, duration: String?, reason: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "Chat_BanUserFromChatRoom")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("bannedUserLogin", targetLogin)
+                    addProperty("expiresIn", duration)
+                    addProperty("reason", reason)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "d7be2d2e1e22813c1c2f3d9d5bf7e425d815aeb09e14001a5f2c140b93f6fb67")
+                })
+            })
+        }
+        return graphQL.banUser(clientId, token, json)
+    }
+
+    suspend fun unbanUser(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "Chat_UnbanUserFromChatRoom")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("bannedUserLogin", targetLogin)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "bee22da7ae03569eb9ae41ef857fd1bb75507d4984d764a81fe8775accac71bd")
+                })
+            })
+        }
+        return graphQL.unbanUser(clientId, token, json)
+    }
+
+    suspend fun updateChatColor(clientId: String?, token: String?, color: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "Chat_UpdateChatColor")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("color", color)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "0371259a74a3db4ff4bf4473d998d8ae8e4f135b20403323691d434f2790e081")
+                })
+            })
+        }
+        return graphQL.updateChatColor(clientId, token, json)
+    }
+
+    suspend fun createStreamMarker(clientId: String?, token: String?, channelLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "VideoMarkersChatCommand")
+            add("variables", JsonObject().apply {
+                addProperty("channelLogin", channelLogin)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "c65f8b33e3bcccf2b16057e8f445311d213ecf8729f842ccdc71908231fa9a78")
+                })
+            })
+        }
+        return graphQL.createStreamMarker(clientId, token, json)
+    }
+
+    suspend fun getModerators(clientId: String?, channelLogin: String?): Response<ModeratorsDataResponse> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "Mods")
+            add("variables", JsonObject().apply {
+                addProperty("login", channelLogin)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "cb912a7e0789e0f8a4c85c25041a08324475831024d03d624172b59498caf085")
+                })
+            })
+        }
+        return graphQL.getModerators(clientId, json)
+    }
+
+    suspend fun addModerator(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "ModUser")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("targetLogin", targetLogin)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "46da4ec4229593fe4b1bce911c75625c299638e228262ff621f80d5067695a8a")
+                })
+            })
+        }
+        return graphQL.addModerator(clientId, token, json)
+    }
+
+    suspend fun removeModerator(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "UnmodUser")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("targetLogin", targetLogin)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "1ed42ccb3bc3a6e79f51e954a2df233827f94491fbbb9bd05b22b1aaaf219b8b")
+                })
+            })
+        }
+        return graphQL.removeModerator(clientId, token, json)
+    }
+
+    suspend fun startRaid(clientId: String?, token: String?, channelId: String?, targetId: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "chatCreateRaid")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("sourceID", channelId)
+                    addProperty("targetID", targetId)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "f4fc7ac482599d81dfb6aa37100923c8c9edeea9ca2be854102a6339197f840a")
+                })
+            })
+        }
+        return graphQL.startRaid(clientId, token, json)
+    }
+
+    suspend fun cancelRaid(clientId: String?, token: String?, channelId: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "chatCancelRaid")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("sourceID", channelId)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "c388b89e7616a11a8a07b75e3d7bbe7278d37c3c46f43d7c8d4d0262edc00cd9")
+                })
+            })
+        }
+        return graphQL.cancelRaid(clientId, token, json)
+    }
+
+    suspend fun getVips(clientId: String?, channelLogin: String?): Response<VipsDataResponse> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "VIPs")
+            add("variables", JsonObject().apply {
+                addProperty("login", channelLogin)
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "612a574d07afe5db2f9e878e290225224a0b955e65b5d1235dcd4b68ff668218")
+                })
+            })
+        }
+        return graphQL.getVips(clientId, json)
+    }
+
+    suspend fun addVip(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "VIPUser")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("granteeLogin", targetLogin)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "e8c397f1ed8b1fdbaa201eedac92dd189ecfb2d828985ec159d4ae77f9920170")
+                })
+            })
+        }
+        return graphQL.addVip(clientId, token, json)
+    }
+
+    suspend fun removeVip(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+        val json = JsonObject().apply {
+            addProperty("operationName", "UnVIPUser")
+            add("variables", JsonObject().apply {
+                add("input", JsonObject().apply {
+                    addProperty("channelID", channelId)
+                    addProperty("revokeeLogin", targetLogin)
+                })
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "2ce4fcdf6667d013aa1f820010e699d1d4abdda55e26539ecf4efba8aff2d661")
+                })
+            })
+        }
+        return graphQL.removeVip(clientId, token, json)
     }
 }
