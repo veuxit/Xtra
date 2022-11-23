@@ -28,12 +28,12 @@ class ChannelVideosDataDeserializer : JsonDeserializer<ChannelVideosDataResponse
                     }
                 }
                 data.add(Video(
-                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     user_id = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     user_login = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     user_name = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                    createdAt = obj.get("publishedAt")?.takeIf { !it.isJsonNull }?.asString,
+                    created_at = obj.get("publishedAt")?.takeIf { !it.isJsonNull }?.asString,
                     thumbnail_url = obj.get("previewThumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
                     view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     duration = obj.get("lengthSeconds")?.takeIf { !it.isJsonNull }?.asString,

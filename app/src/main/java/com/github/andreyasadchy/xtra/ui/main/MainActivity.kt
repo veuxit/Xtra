@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     if (!id.isNullOrBlank()) {
                         viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.video.observe(this) { video ->
-                            if (video != null && video.id.isNotBlank()) {
+                            if (video != null && !video.id.isNullOrBlank()) {
                                 startVideo(video, offset)
                             }
                         }
@@ -346,7 +346,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     if (!id.isNullOrBlank()) {
                         viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
-                            if (clip != null && clip.id.isNotBlank()) {
+                            if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
                             }
                         }
@@ -357,7 +357,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     if (!id.isNullOrBlank()) {
                         viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
-                            if (clip != null && clip.id.isNotBlank()) {
+                            if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
                             }
                         }

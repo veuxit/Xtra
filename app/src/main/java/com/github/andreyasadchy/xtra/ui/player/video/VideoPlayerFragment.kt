@@ -104,7 +104,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 showDownloadDialog()
             }
         }
-        if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) {
+        if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false) && !video.id.isNullOrBlank()) {
             viewModel.loadGamesList(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), video.id)
             viewModel.gamesList.observe(viewLifecycleOwner) { list ->
                 if (list.isNotEmpty()) {

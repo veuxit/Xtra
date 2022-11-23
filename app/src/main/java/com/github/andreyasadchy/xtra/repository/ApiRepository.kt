@@ -278,19 +278,19 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadVideo(videoId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): Video? = withContext(Dispatchers.IO) {
+    suspend fun loadVideo(videoId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Video? = withContext(Dispatchers.IO) {
         try {
             val get = getApolloClient(gqlClientId).query(VideoQuery(Optional.Present(videoId))).execute().data
             if (get != null) {
                 Video(id = videoId, user_id = get.video?.owner?.id, user_login = get.video?.owner?.login, user_name = get.video?.owner?.displayName,
-                    profileImageURL = get.video?.owner?.profileImageURL, title = get.video?.title, createdAt = get.video?.createdAt?.toString(), thumbnail_url = get.video?.previewThumbnailURL,
+                    profileImageURL = get.video?.owner?.profileImageURL, title = get.video?.title, created_at = get.video?.createdAt?.toString(), thumbnail_url = get.video?.previewThumbnailURL,
                     type = get.video?.broadcastType?.toString(), duration = get.video?.lengthSeconds?.toString())
             } else null
         } catch (e: Exception) {
             helix.getVideos(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                ids = listOf(videoId)
+                ids = videoId?.let { listOf(it) }
             ).data?.firstOrNull()
         }
     }
@@ -303,7 +303,7 @@ class ApiRepository @Inject constructor(
         ).data
     }
 
-    suspend fun loadClip(clipId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): Clip? = withContext(Dispatchers.IO) {
+    suspend fun loadClip(clipId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Clip? = withContext(Dispatchers.IO) {
         try {
             val user = try {
                 gql.loadClipData(gqlClientId, clipId).data
@@ -312,12 +312,12 @@ class ApiRepository @Inject constructor(
             }
             val video = gql.loadClipVideo(gqlClientId, clipId).data
             Clip(id = clipId, broadcaster_id = user?.broadcaster_id, broadcaster_login = user?.broadcaster_login, broadcaster_name = user?.broadcaster_name,
-                profileImageURL = user?.profileImageURL, video_id = video?.video_id, duration = video?.duration, videoOffsetSeconds = video?.videoOffsetSeconds ?: user?.videoOffsetSeconds)
+                profileImageURL = user?.profileImageURL, video_id = video?.video_id, duration = video?.duration, vod_offset = video?.vod_offset ?: user?.vod_offset)
         } catch (e: Exception) {
             helix.getClips(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                ids = listOf(clipId)
+                ids = clipId?.let { listOf(it) }
             ).data?.firstOrNull()
         }
     }

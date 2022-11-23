@@ -39,12 +39,12 @@ class VideosAdapter(
         val gameListener: (View) -> Unit = { gameClickListener.openGame(item.gameId, item.gameName) }
         with(view) {
             val getDuration = item.duration?.let { TwitchApiHelper.getDuration(it) }
-            val position = positions?.get(item.id.toLong())
+            val position = item.id?.toLongOrNull()?.let { positions?.get(it) }
             setOnClickListener { clickListener.startVideo(item, position?.toDouble()) }
             setOnLongClickListener { showDownloadDialog(item); true }
             thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
-            if (item.createdAt != null) {
-                val text = TwitchApiHelper.formatTimeString(context, item.createdAt)
+            if (item.created_at != null) {
+                val text = TwitchApiHelper.formatTimeString(context, item.created_at)
                 if (text != null) {
                     date.visible()
                     date.text = text
@@ -127,9 +127,9 @@ class VideosAdapter(
             options.setOnClickListener { it ->
                 PopupMenu(context, it).apply {
                     inflate(R.menu.media_item)
-                    if (item.id.isNotBlank()) {
+                    if (!item.id.isNullOrBlank()) {
                         menu.findItem(R.id.bookmark).isVisible = true
-                        if (bookmarks?.find { it.id == item.id } != null) {
+                        if (bookmarks?.find { it.videoId == item.id } != null) {
                             menu.findItem(R.id.bookmark).title = context.getString(R.string.remove_bookmark)
                         } else {
                             menu.findItem(R.id.bookmark).title = context.getString(R.string.add_bookmark)

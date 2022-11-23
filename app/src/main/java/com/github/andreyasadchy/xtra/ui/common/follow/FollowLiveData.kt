@@ -52,9 +52,9 @@ class FollowLiveData(
                 } else {
                     userId?.let {
                         if (localFollowsGame != null) {
-                            localFollowsGame.getFollowById(it)
+                            localFollowsGame.getFollowByGameId(it)
                         } else {
-                            localFollowsChannel?.getFollowById(it)
+                            localFollowsChannel?.getFollowByUserId(it)
                         }
                     } != null
                 }
@@ -111,7 +111,7 @@ class FollowLiveData(
                 }
             } else {
                 if (userId != null) {
-                    localFollowsChannel?.getFollowById(userId)?.let { localFollowsChannel.deleteFollow(context, it) }
+                    localFollowsChannel?.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(context, it) }
                 }
             }
         } catch (e: Exception) {
@@ -172,7 +172,7 @@ class FollowLiveData(
                 }
             } else {
                 if (userId != null) {
-                    localFollowsGame?.getFollowById(userId)?.let { localFollowsGame.deleteFollow(context, it) }
+                    localFollowsGame?.getFollowByGameId(userId)?.let { localFollowsGame.deleteFollow(context, it) }
                 }
             }
         } catch (e: Exception) {

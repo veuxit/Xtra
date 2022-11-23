@@ -113,12 +113,12 @@ class ChannelClipsDataSource(
         if (get != null) {
             for (i in get) {
                 list.add(Clip(
-                    id = i?.node?.slug ?: "",
+                    id = i?.node?.slug,
                     broadcaster_id = channelId,
                     broadcaster_login = get1.login,
                     broadcaster_name = get1.displayName,
                     video_id = i?.node?.video?.id,
-                    videoOffsetSeconds = i?.node?.videoOffsetSeconds,
+                    vod_offset = i?.node?.videoOffsetSeconds,
                     game_id = i?.node?.game?.id,
                     game_name = i?.node?.game?.displayName,
                     title = i?.node?.title,

@@ -58,7 +58,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
-            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, channelLogin, clip.video_id, clip.videoOffsetSeconds?.toDouble())).commit()
+            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, channelLogin, clip.video_id, clip.vod_offset?.toDouble())).commit()
         }
         if (clip.video_id.isNullOrBlank()) {
             watchVideo.gone()
@@ -97,13 +97,13 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         if (!clip.video_id.isNullOrBlank()) {
             watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
-                    id = clip.video_id!!,
+                    id = clip.video_id,
                     user_id = clip.broadcaster_id,
                     user_login = clip.broadcaster_login,
                     user_name = clip.broadcaster_name,
                     profileImageURL = clip.profileImageURL
-                ), (if (clip.videoOffsetSeconds != null) {
-                    (clip.videoOffsetSeconds?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
+                ), (if (clip.vod_offset != null) {
+                    (clip.vod_offset?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
                 } else {
                     0.0
                 }))

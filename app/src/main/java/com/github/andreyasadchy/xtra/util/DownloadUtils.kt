@@ -44,24 +44,26 @@ object DownloadUtils {
             "$path.mp4"
         }
         return with(downloadable) {
-            try {
-                Glide.with(context)
-                    .asBitmap()
-                    .load(thumbnail)
-                    .into(object: CustomTarget<Bitmap>() {
-                        override fun onLoadCleared(placeholder: Drawable?) {
+            if (!id.isNullOrBlank()) {
+                try {
+                    Glide.with(context)
+                        .asBitmap()
+                        .load(thumbnail)
+                        .into(object: CustomTarget<Bitmap>() {
+                            override fun onLoadCleared(placeholder: Drawable?) {
 
-                        }
+                            }
 
-                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            savePng(context, "thumbnails", id, resource)
-                        }
-                    })
-            } catch (e: Exception) {
+                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                savePng(context, "thumbnails", id!!, resource)
+                            }
+                        })
+                } catch (e: Exception) {
 
+                }
             }
-            try {
-                if (channelId != null) {
+            if (!channelId.isNullOrBlank()) {
+                try {
                     Glide.with(context)
                         .asBitmap()
                         .load(channelLogo)
@@ -74,12 +76,12 @@ object DownloadUtils {
                                 savePng(context, "profile_pics", channelId!!, resource)
                             }
                         })
-                }
-            } catch (e: Exception) {
+                } catch (e: Exception) {
 
+                }
             }
-            val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${id}.png").absolutePath
-            val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${channelId}.png").absolutePath
+            val downloadedThumbnail = id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
+            val downloadedLogo = channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
             OfflineVideo(
                 url = offlinePath,
                 sourceUrl = url,

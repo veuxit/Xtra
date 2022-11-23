@@ -13,8 +13,8 @@ interface BookmarksDao {
     @Query("SELECT * FROM bookmarks")
     fun getAll(): List<Bookmark>
 
-    @Query("SELECT * FROM bookmarks WHERE id = :id")
-    fun getById(id: String): Bookmark?
+    @Query("SELECT * FROM bookmarks WHERE videoId = :id")
+    fun getByVideoId(id: String): Bookmark?
 
     @Query("SELECT * FROM bookmarks WHERE userId = :id")
     fun getByUserId(id: String): List<Bookmark>

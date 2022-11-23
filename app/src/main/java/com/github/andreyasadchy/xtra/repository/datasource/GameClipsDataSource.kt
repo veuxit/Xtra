@@ -112,12 +112,12 @@ class GameClipsDataSource(
         if (get != null) {
             for (i in get) {
                 list.add(Clip(
-                    id = i?.node?.slug ?: "",
+                    id = i?.node?.slug,
                     broadcaster_id = i?.node?.broadcaster?.id,
                     broadcaster_login = i?.node?.broadcaster?.login,
                     broadcaster_name = i?.node?.broadcaster?.displayName,
                     video_id = i?.node?.video?.id,
-                    videoOffsetSeconds = i?.node?.videoOffsetSeconds,
+                    vod_offset = i?.node?.videoOffsetSeconds,
                     title = i?.node?.title,
                     view_count = i?.node?.viewCount,
                     created_at = i?.node?.createdAt?.toString(),

@@ -53,7 +53,7 @@ class FollowedChannelsDataSource(
         loadInitial(params, callback) {
             val list = mutableListOf<Follow>()
             for (i in localFollowsChannel.loadFollows().let { if (order == Order.ASC) it.asReversed() else it }) {
-                list.add(Follow(to_id = i.user_id, to_login = i.user_login, to_name = i.user_name, profileImageURL = i.channelLogo, followLocal = true))
+                list.add(Follow(to_id = i.userId, to_login = i.userLogin, to_name = i.userName, profileImageURL = i.channelLogo, followLocal = true))
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
@@ -252,7 +252,7 @@ class FollowedChannelsDataSource(
 
                 }
                 val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${userId}.png").absolutePath
-                localFollowsChannel.getFollowById(userId)?.let { localFollowsChannel.updateFollow(it.apply {
+                localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.updateFollow(it.apply {
                     channelLogo = downloadedLogo }) }
                 for (i in offlineRepository.getVideosByUserId(userId.toInt())) {
                     offlineRepository.updateVideo(i.apply {

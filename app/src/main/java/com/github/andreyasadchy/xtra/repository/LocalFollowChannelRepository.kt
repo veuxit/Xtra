@@ -21,8 +21,8 @@ class LocalFollowChannelRepository @Inject constructor(
 
     fun loadFollows() = localFollowsChannelDao.getAll()
 
-    suspend fun getFollowById(id: String) = withContext(Dispatchers.IO) {
-        localFollowsChannelDao.getById(id)
+    suspend fun getFollowByUserId(id: String) = withContext(Dispatchers.IO) {
+        localFollowsChannelDao.getByUserId(id)
     }
 
     suspend fun saveFollow(item: LocalFollowChannel) = withContext(Dispatchers.IO) {
@@ -31,8 +31,8 @@ class LocalFollowChannelRepository @Inject constructor(
 
     fun deleteFollow(context: Context, item: LocalFollowChannel) {
         GlobalScope.launch {
-            if (item.user_id.isNotBlank() && bookmarksDao.getByUserId(item.user_id).isNullOrEmpty() && videosDao.getByUserId(item.user_id.toInt()).isNullOrEmpty()) {
-                File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${item.user_id}.png").delete()
+            if (!item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
+                File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
             }
             localFollowsChannelDao.delete(item)
         }

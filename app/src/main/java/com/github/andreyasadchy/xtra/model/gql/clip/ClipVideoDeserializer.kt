@@ -13,10 +13,9 @@ class ClipVideoDeserializer : JsonDeserializer<ClipVideoResponse> {
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): ClipVideoResponse {
         val data = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("clip")?.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
             Clip(
-                id = "",
                 video_id = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                 duration = obj.get("durationSeconds")?.takeIf { !it.isJsonNull }?.asDouble,
-                videoOffsetSeconds = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
+                vod_offset = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
             )
         }
         return ClipVideoResponse(data)
