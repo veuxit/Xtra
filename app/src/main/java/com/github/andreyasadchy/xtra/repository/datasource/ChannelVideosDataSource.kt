@@ -109,7 +109,7 @@ class ChannelVideosDataSource (
                     ))
                 }
                 list.add(Video(
-                    id = i?.node?.id ?: "",
+                    id = i?.node?.id,
                     user_id = channelId,
                     user_login = get1.login,
                     user_name = get1.displayName,
@@ -118,7 +118,7 @@ class ChannelVideosDataSource (
                     type = i?.node?.broadcastType?.toString(),
                     title = i?.node?.title,
                     view_count = i?.node?.viewCount,
-                    createdAt = i?.node?.createdAt?.toString(),
+                    created_at = i?.node?.createdAt?.toString(),
                     duration = i?.node?.lengthSeconds?.toString(),
                     thumbnail_url = i?.node?.previewThumbnailURL,
                     profileImageURL = get1.profileImageURL,

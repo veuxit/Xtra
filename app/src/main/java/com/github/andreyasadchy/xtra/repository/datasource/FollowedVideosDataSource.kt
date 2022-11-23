@@ -70,7 +70,7 @@ class FollowedVideosDataSource(
                     ))
                 }
                 list.add(Video(
-                    id = i?.node?.id ?: "",
+                    id = i?.node?.id,
                     user_id = i?.node?.owner?.id,
                     user_login = i?.node?.owner?.login,
                     user_name = i?.node?.owner?.displayName,
@@ -79,7 +79,7 @@ class FollowedVideosDataSource(
                     type = i?.node?.broadcastType?.toString(),
                     title = i?.node?.title,
                     view_count = i?.node?.viewCount,
-                    createdAt = i?.node?.createdAt?.toString(),
+                    created_at = i?.node?.createdAt?.toString(),
                     duration = i?.node?.lengthSeconds?.toString(),
                     thumbnail_url = i?.node?.previewThumbnailURL,
                     profileImageURL = i?.node?.owner?.profileImageURL,

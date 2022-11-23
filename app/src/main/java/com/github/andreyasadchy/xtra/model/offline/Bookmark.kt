@@ -3,13 +3,13 @@ package com.github.andreyasadchy.xtra.model.offline
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 @Entity(tableName = "bookmarks")
 data class Bookmark(
-    @PrimaryKey
-    val id: String,
+    val videoId: String? = null,
     val userId: String? = null,
     var userLogin: String? = null,
     var userName: String? = null,
@@ -22,4 +22,9 @@ data class Bookmark(
     val createdAt: String? = null,
     val thumbnail: String? = null,
     val type: String? = null,
-    val duration: String? = null) : Parcelable
+    val duration: String? = null) : Parcelable {
+
+    @IgnoredOnParcel
+    @PrimaryKey(autoGenerate = true)
+    var id = 0
+}

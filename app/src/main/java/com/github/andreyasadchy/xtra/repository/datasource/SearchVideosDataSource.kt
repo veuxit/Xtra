@@ -62,14 +62,14 @@ class SearchVideosDataSource private constructor(
                     ))
                 }
                 list.add(Video(
-                    id = i.id ?: "",
+                    id = i.id,
                     user_id = i.owner?.id,
                     user_login = i.owner?.login,
                     user_name = i.owner?.displayName,
                     type = i.broadcastType?.toString(),
                     title = i.title,
                     view_count = i.viewCount,
-                    createdAt = i.createdAt?.toString(),
+                    created_at = i.createdAt?.toString(),
                     duration = i.lengthSeconds?.toString(),
                     thumbnail_url = i.previewThumbnailURL,
                     gameId = i.game?.id,

@@ -7,7 +7,7 @@ import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 data class Clip(
-        override val id: String,
+        override val id: String? = null,
         val broadcaster_id: String? = null,
         val broadcaster_name: String? = null,
         val creator_id: String? = null,
@@ -19,8 +19,8 @@ data class Clip(
         val created_at: String? = null,
         val thumbnail_url: String? = null,
         val duration: Double? = null,
+        val vod_offset: Int? = null,
 
-        val videoOffsetSeconds: Int? = null,
         var game_name: String? = null,
         var broadcaster_login: String? = null,
         var profileImageURL: String? = null) : Parcelable, Downloadable {

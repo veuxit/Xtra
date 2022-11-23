@@ -81,7 +81,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadVideo(videoId: String, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
         _video.value = null
         viewModelScope.launch {
             try {
@@ -90,7 +90,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadClip(clipId: String, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
         _clip.value = null
         viewModelScope.launch {
             try {

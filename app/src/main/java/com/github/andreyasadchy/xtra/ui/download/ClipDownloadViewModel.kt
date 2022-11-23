@@ -51,7 +51,12 @@ class ClipDownloadViewModel @Inject constructor(
         GlobalScope.launch {
             val context = getApplication<Application>()
 
-            val filePath = "$path${File.separator}${clip.id}$quality"
+            val filePath = "$path${File.separator}" +
+                    if (!clip.id.isNullOrBlank()) {
+                        "${clip.id}$quality"
+                    } else {
+                        System.currentTimeMillis()
+                    }
             val startPosition = clip.duration.let { (it?.times(1000.0))?.toLong() }
 
             val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, filePath, clip.duration?.toLong()?.times(1000L), startPosition)

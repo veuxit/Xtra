@@ -124,8 +124,8 @@ class StreamsViewModel @Inject constructor(
 
                     }
                     val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${filter.value?.gameId}.png").absolutePath
-                    localFollowsGame.getFollowById(filter.value?.gameId!!)?.let { localFollowsGame.updateFollow(it.apply {
-                        game_name = filter.value?.gameName
+                    localFollowsGame.getFollowByGameId(filter.value?.gameId!!)?.let { localFollowsGame.updateFollow(it.apply {
+                        gameName = filter.value?.gameName
                         boxArt = downloadedLogo }) }
                 }
             } catch (e: Exception) {

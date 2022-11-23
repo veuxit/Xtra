@@ -43,10 +43,10 @@ class OfflineRepository @Inject constructor(
 
     fun deleteVideo(context: Context, video: OfflineVideo) {
         GlobalScope.launch {
-            if (!video.videoId.isNullOrBlank() && bookmarksDao.getById(video.videoId) == null) {
+            if (!video.videoId.isNullOrBlank() && bookmarksDao.getByVideoId(video.videoId) == null) {
                 File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.videoId}.png").delete()
             }
-            if (!video.channelId.isNullOrBlank() && localFollowsChannelDao.getById(video.channelId) == null && bookmarksDao.getByUserId(video.channelId).isNullOrEmpty()) {
+            if (!video.channelId.isNullOrBlank() && localFollowsChannelDao.getByUserId(video.channelId) == null && bookmarksDao.getByUserId(video.channelId).isEmpty()) {
                 File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").delete()
             }
             videosDao.delete(video)

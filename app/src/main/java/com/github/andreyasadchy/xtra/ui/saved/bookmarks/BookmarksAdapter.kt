@@ -31,13 +31,13 @@ class BookmarksAdapter(
     private val clickListener: BaseVideosFragment.OnVideoSelectedListener,
     private val channelClickListener: OnChannelSelectedListener,
     private val gameClickListener: GamesFragment.OnGameSelectedListener,
-    private val refreshVideo: (String) -> Unit,
+    private val refreshVideo: (String?) -> Unit,
     private val showDownloadDialog: (Video) -> Unit,
     private val vodIgnoreUser: (String) -> Unit,
     private val deleteVideo: (Bookmark) -> Unit) : BaseListAdapter<Bookmark>(
     object : DiffUtil.ItemCallback<Bookmark>() {
         override fun areItemsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
-            oldItem.id == newItem.id
+            oldItem.videoId == newItem.videoId
 
         override fun areContentsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
             oldItem.title == newItem.title &&
@@ -69,11 +69,11 @@ class BookmarksAdapter(
         val gameListener: (View) -> Unit = { gameClickListener.openGame(item.gameId, item.gameName) }
         with(view) {
             val getDuration = item.duration?.let { TwitchApiHelper.getDuration(it) }
-            val position = positions?.get(item.id.toLong())
+            val position = item.videoId?.toLongOrNull()?.let { positions?.get(it) }
             val ignore = ignored?.find { it.user_id == item.userId } != null
             val userType = item.userType ?: item.userBroadcasterType
             setOnClickListener { clickListener.startVideo(Video(
-                id = item.id,
+                id = item.videoId,
                 user_id = item.userId,
                 user_login = item.userLogin,
                 user_name = item.userName,
@@ -81,7 +81,7 @@ class BookmarksAdapter(
                 gameId = item.gameId,
                 gameName = item.gameName,
                 title = item.title,
-                createdAt = item.createdAt,
+                created_at = item.createdAt,
                 thumbnail_url = item.thumbnail,
                 type = item.type,
                 duration = item.duration,
@@ -168,7 +168,7 @@ class BookmarksAdapter(
             options.setOnClickListener { it ->
                 PopupMenu(context, it).apply {
                     inflate(R.menu.offline_item)
-                    if (item.id.isNotBlank()) {
+                    if (!item.videoId.isNullOrBlank()) {
                         menu.findItem(R.id.refresh).isVisible = true
                         menu.findItem(R.id.download).isVisible = true
                     }
@@ -184,7 +184,7 @@ class BookmarksAdapter(
                         when(it.itemId) {
                             R.id.delete -> deleteVideo(item)
                             R.id.download -> showDownloadDialog(Video(
-                                id = item.id,
+                                id = item.videoId,
                                 user_id = item.userId,
                                 user_login = item.userLogin,
                                 user_name = item.userName,
@@ -192,13 +192,13 @@ class BookmarksAdapter(
                                 gameId = item.gameId,
                                 gameName = item.gameName,
                                 title = item.title,
-                                createdAt = item.createdAt,
+                                created_at = item.createdAt,
                                 thumbnail_url = item.thumbnail,
                                 type = item.type,
                                 duration = item.duration,
                             ))
                             R.id.vodIgnore -> item.userId?.let { id -> vodIgnoreUser(id) }
-                            R.id.refresh -> refreshVideo(item.id)
+                            R.id.refresh -> refreshVideo(item.videoId)
                             else -> menu.close()
                         }
                         true

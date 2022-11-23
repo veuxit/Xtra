@@ -25,8 +25,8 @@ class BookmarksRepository @Inject constructor(
         bookmarksDao.getAll()
     }
 
-    suspend fun getBookmarkById(id: String) = withContext(Dispatchers.IO) {
-        bookmarksDao.getById(id)
+    suspend fun getBookmarkByVideoId(id: String) = withContext(Dispatchers.IO) {
+        bookmarksDao.getByVideoId(id)
     }
 
     suspend fun getBookmarksByUserId(id: String) = withContext(Dispatchers.IO) {
@@ -39,10 +39,10 @@ class BookmarksRepository @Inject constructor(
 
     fun deleteBookmark(context: Context, item: Bookmark) {
         GlobalScope.launch {
-            if (item.id.isNotBlank() && videosDao.getById(item.id.toInt()) == null) {
-                File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${item.id}.png").delete()
+            if (!item.videoId.isNullOrBlank() && videosDao.getById(item.videoId.toInt()) == null) {
+                File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
             }
-            if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getById(item.userId) == null && videosDao.getByUserId(item.userId.toInt()).isNullOrEmpty()) {
+            if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
                 File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
             }
             bookmarksDao.delete(item)
