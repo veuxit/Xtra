@@ -75,7 +75,8 @@ class SearchVideosDataSource private constructor(
                     gameId = i.game?.id,
                     gameName = i.game?.displayName,
                     profileImageURL = i.owner?.profileImageURL,
-                    tags = tags
+                    tags = tags,
+                    animatedPreviewURL =  i.animatedPreviewURL
                 ))
             }
             offset = get1.cursor

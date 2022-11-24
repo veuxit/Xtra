@@ -536,4 +536,6 @@
     <string name="api_gql2">Identificación de cliente GQL 2</string>
     <string name="api_gql_token2">Token GQL 2</string>
     <string name="debug_api_commands">Use api chat commands</string>
+    <string name="skip_video_access_token">Skip video access token</string>
+    <string name="skip_clip_access_token">Skip clip access token</string>
 </resources>

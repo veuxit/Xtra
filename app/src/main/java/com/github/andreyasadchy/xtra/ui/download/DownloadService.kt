@@ -172,13 +172,21 @@ class DownloadService : IntentService(TAG) {
             })
             GlobalScope.launch {
                 try {
-                    val response = playerRepository.loadVideoPlaylist(
-                        gqlClientId = applicationContext.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                        gqlToken = if (applicationContext.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(applicationContext).gqlToken else null,
-                        videoId = request.videoId!!,
-                        playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
-                    )
-                    playlist = URL("https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value).openStream().use {
+                    playlist = URL(if (applicationContext.prefs().getBoolean(C.SKIP_VIDEO_ACCESS_TOKEN, false)) {
+                        request.url + if (request.videoType?.lowercase() == "highlight") {
+                            "highlight-${request.videoId}.m3u8"
+                        } else {
+                            "index-dvr.m3u8"
+                        }
+                    } else {
+                        val response = playerRepository.loadVideoPlaylist(
+                            gqlClientId = applicationContext.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                            gqlToken = if (applicationContext.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(applicationContext).gqlToken else null,
+                            videoId = request.videoId!!,
+                            playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
+                        )
+                        "https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value
+                    }).openStream().use {
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                     }
                     enqueueNext()

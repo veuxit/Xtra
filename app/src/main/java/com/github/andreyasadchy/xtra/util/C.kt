@@ -137,6 +137,8 @@ object C {
     const val TOKEN_PLAYERTYPE_VIDEO = "token_playertype_video"
     const val TOKEN_INCLUDE_TOKEN_STREAM = "token_include_token_stream"
     const val TOKEN_INCLUDE_TOKEN_VIDEO = "token_include_token_video"
+    const val SKIP_VIDEO_ACCESS_TOKEN = "skip_video_access_token"
+    const val SKIP_CLIP_ACCESS_TOKEN = "skip_clip_access_token"
     const val HELIX = "Helix"
     const val GQL_QUERY = "GQL custom query"
     const val GQL = "GQL"

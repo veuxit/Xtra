@@ -16,6 +16,7 @@ query GameClips($id: ID, $name: String, $languages: [Language!], $sort: ClipsPer
                     thumbnailURL
                     title
                     video {
+                        animatedPreviewURL
                         id
                     }
                     videoOffsetSeconds

@@ -124,6 +124,7 @@ class GameClipsDataSource(
                     duration = i?.node?.durationSeconds?.toDouble(),
                     thumbnail_url = i?.node?.thumbnailURL,
                     profileImageURL = i?.node?.broadcaster?.profileImageURL,
+                    videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()

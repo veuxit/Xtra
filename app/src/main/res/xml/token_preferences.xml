@@ -49,4 +49,16 @@
         android:title="@string/include_gql_token"
         app:iconSpaceReserved="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="skip_video_access_token"
+        android:title="@string/skip_video_access_token"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="skip_clip_access_token"
+        android:title="@string/skip_clip_access_token"
+        app:iconSpaceReserved="false"/>
+
 </androidx.preference.PreferenceScreen>

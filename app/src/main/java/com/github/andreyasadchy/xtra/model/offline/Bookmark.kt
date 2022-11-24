@@ -22,7 +22,8 @@ data class Bookmark(
     val createdAt: String? = null,
     val thumbnail: String? = null,
     val type: String? = null,
-    val duration: String? = null) : Parcelable {
+    val duration: String? = null,
+    val animatedPreviewURL: String? = null) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)

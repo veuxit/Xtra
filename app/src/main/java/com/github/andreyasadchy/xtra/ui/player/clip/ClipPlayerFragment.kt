@@ -101,7 +101,8 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                     user_id = clip.broadcaster_id,
                     user_login = clip.broadcaster_login,
                     user_name = clip.broadcaster_name,
-                    profileImageURL = clip.profileImageURL
+                    profileImageURL = clip.profileImageURL,
+                    animatedPreviewURL = clip.videoAnimatedPreviewURL
                 ), (if (clip.vod_offset != null) {
                     (clip.vod_offset?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
                 } else {

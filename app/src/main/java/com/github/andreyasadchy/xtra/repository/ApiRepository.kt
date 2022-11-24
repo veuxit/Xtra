@@ -284,7 +284,7 @@ class ApiRepository @Inject constructor(
             if (get != null) {
                 Video(id = videoId, user_id = get.video?.owner?.id, user_login = get.video?.owner?.login, user_name = get.video?.owner?.displayName,
                     profileImageURL = get.video?.owner?.profileImageURL, title = get.video?.title, created_at = get.video?.createdAt?.toString(), thumbnail_url = get.video?.previewThumbnailURL,
-                    type = get.video?.broadcastType?.toString(), duration = get.video?.lengthSeconds?.toString())
+                    type = get.video?.broadcastType?.toString(), duration = get.video?.lengthSeconds?.toString(), animatedPreviewURL = get.video?.animatedPreviewURL)
             } else null
         } catch (e: Exception) {
             helix.getVideos(
