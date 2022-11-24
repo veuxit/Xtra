@@ -16,6 +16,7 @@ query ($id: ID, $name: String, $languages: [Language!], $sort: ClipsPeriod, $fir
                     thumbnailURL
                     title
                     video {
+                        animatedPreviewURL
                         id
                     }
                     videoOffsetSeconds

@@ -117,6 +117,7 @@ class BookmarksViewModel @Inject internal constructor(
                         thumbnail = downloadedThumbnail,
                         type = video.type ?: bookmark.type,
                         duration = video.duration ?: bookmark.duration,
+                        animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
                     ))
                 }
             } catch (e: Exception) {
@@ -174,6 +175,7 @@ class BookmarksViewModel @Inject internal constructor(
                                         thumbnail = downloadedThumbnail,
                                         type = video.type ?: bookmark.type,
                                         duration = video.duration ?: bookmark.duration,
+                                        animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
                                     ))
                                 }
                             }

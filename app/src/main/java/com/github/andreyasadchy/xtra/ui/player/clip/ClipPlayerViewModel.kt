@@ -18,6 +18,7 @@ import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerHelper
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.exoplayer2.ExoPlaybackException
@@ -87,7 +88,11 @@ class ClipPlayerViewModel @Inject constructor(
             this.clip = clip
             viewModelScope.launch {
                 try {
-                    val urls = graphQLRepository.loadClipUrls(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), clip.id)
+                    val urls = if (prefs.getBoolean(C.SKIP_CLIP_ACCESS_TOKEN, false) && !clip.thumbnail_url.isNullOrBlank()) {
+                        TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnail_url)
+                    } else {
+                        graphQLRepository.loadClipUrls(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), clip.id)
+                    }
                     val defaultQuality = prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved")
                     val savedQuality = prefs.getString(C.PLAYER_QUALITY, "720p60")
                     val url = when (defaultQuality) {

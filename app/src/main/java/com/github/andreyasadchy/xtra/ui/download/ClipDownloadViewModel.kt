@@ -10,6 +10,7 @@ import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -29,13 +30,17 @@ class ClipDownloadViewModel @Inject constructor(
 
     private lateinit var clip: Clip
 
-    fun init(clientId: String?, clip: Clip, qualities: Map<String, String>?) {
+    fun init(clientId: String?, clip: Clip, qualities: Map<String, String>?, skipAccessToken: Boolean) {
         if (!this::clip.isInitialized) {
             this.clip = clip
             if (qualities.isNullOrEmpty()) {
                 viewModelScope.launch {
                     try {
-                        val urls = graphQLRepository.loadClipUrls(clientId, clip.id)
+                        val urls = if (skipAccessToken && !clip.thumbnail_url.isNullOrBlank()) {
+                            TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnail_url)
+                        } else {
+                            graphQLRepository.loadClipUrls(clientId, clip.id)
+                        }
                         _qualities.postValue(urls)
                     } catch (e: Exception) {
 

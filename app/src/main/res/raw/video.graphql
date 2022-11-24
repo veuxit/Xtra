@@ -1,11 +1,13 @@
 query ($id: ID) {
     video(id: $id) {
+        animatedPreviewURL
         broadcastType
         createdAt
         game {
             id
             displayName
         }
+        id
         lengthSeconds
         owner {
             displayName

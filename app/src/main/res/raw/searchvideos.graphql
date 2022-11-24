@@ -3,6 +3,7 @@ query ($query: String!, $first: Int, $after: String) {
         videos {
             cursor
             items {
+                animatedPreviewURL
                 broadcastType
                 contentTags {
                     id

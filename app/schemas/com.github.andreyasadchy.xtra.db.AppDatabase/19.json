@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 19,
-    "identityHash": "d2e20efcd7f5272054fc9f442b9ef413",
+    "identityHash": "1b64f0b4e2015b879d81b99b6c58f774",
     "entities": [
       {
         "tableName": "videos",
@@ -152,7 +152,7 @@
       },
       {
         "tableName": "requests",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`offline_video_id` INTEGER NOT NULL, `url` TEXT NOT NULL, `path` TEXT NOT NULL, `video_id` TEXT, `segment_from` INTEGER, `segment_to` INTEGER, PRIMARY KEY(`offline_video_id`), FOREIGN KEY(`offline_video_id`) REFERENCES `videos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`offline_video_id` INTEGER NOT NULL, `url` TEXT NOT NULL, `path` TEXT NOT NULL, `video_id` TEXT, `video_type` TEXT, `segment_from` INTEGER, `segment_to` INTEGER, PRIMARY KEY(`offline_video_id`), FOREIGN KEY(`offline_video_id`) REFERENCES `videos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "offlineVideoId",
@@ -175,6 +175,12 @@
           {
             "fieldPath": "videoId",
             "columnName": "video_id",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "videoType",
+            "columnName": "video_type",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -372,7 +378,7 @@
       },
       {
         "tableName": "bookmarks",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`videoId` TEXT, `userId` TEXT, `userLogin` TEXT, `userName` TEXT, `userType` TEXT, `userBroadcasterType` TEXT, `userLogo` TEXT, `gameId` TEXT, `gameName` TEXT, `title` TEXT, `createdAt` TEXT, `thumbnail` TEXT, `type` TEXT, `duration` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`videoId` TEXT, `userId` TEXT, `userLogin` TEXT, `userName` TEXT, `userType` TEXT, `userBroadcasterType` TEXT, `userLogo` TEXT, `gameId` TEXT, `gameName` TEXT, `title` TEXT, `createdAt` TEXT, `thumbnail` TEXT, `type` TEXT, `duration` TEXT, `animatedPreviewURL` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
         "fields": [
           {
             "fieldPath": "videoId",
@@ -455,6 +461,12 @@
           {
             "fieldPath": "duration",
             "columnName": "duration",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "animatedPreviewURL",
+            "columnName": "animatedPreviewURL",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -604,7 +616,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd2e20efcd7f5272054fc9f442b9ef413')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1b64f0b4e2015b879d81b99b6c58f774')"
     ]
   }
 }

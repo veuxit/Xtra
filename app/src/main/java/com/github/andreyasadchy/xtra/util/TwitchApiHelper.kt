@@ -319,6 +319,45 @@ object TwitchApiHelper {
         return map
     }
 
+    fun getVideoUrlFromPreview(url: String, type: String?, quality: String? = null): String {
+        return url
+            .replace("storyboards",
+                quality ?: if (type?.lowercase() == "upload") {
+                    "1080p60"
+                } else {
+                    "chunked"
+                })
+            .replaceAfterLast("/",
+                if (type?.lowercase() == "highlight") {
+                    "highlight-${url.substringAfterLast("/").substringBefore("-")}.m3u8"
+                } else {
+                    "index-dvr.m3u8"
+                }
+            )
+    }
+
+    fun getVideoUrlMapFromPreview(url: String, type: String?): Map<String, String> {
+        val qualityList = listOf("chunked", "1080p60", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
+        val map = mutableMapOf<String, String>()
+        qualityList.forEach { quality ->
+            map[quality] = url
+                .replace("storyboards", quality)
+                .replaceAfterLast("/",
+                    if (type?.lowercase() == "highlight") {
+                        "highlight-${url.substringAfterLast("/").substringBefore("-")}.m3u8"
+                    } else {
+                        "index-dvr.m3u8"
+                    }
+                )
+        }
+        return map
+    }
+
+    fun getClipUrlMapFromPreview(url: String): Map<String, String> {
+        val appContext = XtraApp.INSTANCE.applicationContext
+        return mapOf(kotlin.Pair(appContext.getString(R.string.source), url.substringBefore("-preview") + ".mp4"))
+    }
+
     fun getMessageIdString(msgId: String?): String? {
         val appContext = XtraApp.INSTANCE.applicationContext
         return when (msgId) {

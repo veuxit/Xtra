@@ -64,7 +64,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
             video = video,
             playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
-            offset = requireArguments().getDouble(KEY_OFFSET)
+            offset = requireArguments().getDouble(KEY_OFFSET),
+            skipAccessToken = prefs.getBoolean(C.SKIP_VIDEO_ACCESS_TOKEN, false)
         )
         super.initialize()
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)

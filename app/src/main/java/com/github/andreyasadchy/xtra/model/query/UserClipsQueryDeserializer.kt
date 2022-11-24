@@ -18,7 +18,7 @@ class UserClipsQueryDeserializer : JsonDeserializer<UserClipsQueryResponse> {
         dataJson?.forEach { item ->
             item?.asJsonObject?.getAsJsonObject("node")?.let { obj ->
                 data.add(Clip(
-                    id = obj.get("slug")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    id = obj.get("slug")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_id = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_login = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_name = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
@@ -32,6 +32,7 @@ class UserClipsQueryDeserializer : JsonDeserializer<UserClipsQueryResponse> {
                     thumbnail_url = obj.get("thumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
                     duration = obj.get("durationSeconds")?.takeIf { !it.isJsonNull }?.asDouble,
                     profileImageURL = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
+                    videoAnimatedPreviewURL = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("animatedPreviewURL")?.takeIf { !it.isJsonNull }?.asString
                 ))
             }
         }

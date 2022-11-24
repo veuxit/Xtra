@@ -42,7 +42,12 @@ class ClipDownloadDialog : BaseDownloadDialog() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         with(requireArguments()) {
-            viewModel.init(requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), getParcelable(KEY_CLIP)!!, getSerializable(KEY_QUALITIES) as Map<String, String>?)
+            viewModel.init(
+                clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                clip = getParcelable(KEY_CLIP)!!,
+                qualities = getSerializable(KEY_QUALITIES) as Map<String, String>?,
+                skipAccessToken = requireContext().prefs().getBoolean(C.SKIP_CLIP_ACCESS_TOKEN, false)
+            )
         }
         viewModel.qualities.observe(viewLifecycleOwner) {
             ((requireView() as NestedScrollView).children.first() as ConstraintLayout).children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }

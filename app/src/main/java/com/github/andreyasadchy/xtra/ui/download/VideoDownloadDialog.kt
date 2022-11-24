@@ -64,7 +64,8 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                     gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                     gqlToken = if (requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
                     video = requireArguments().getParcelable(KEY_VIDEO)!!,
-                    playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
+                    playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                    skipAccessToken = requireContext().prefs().getBoolean(C.SKIP_VIDEO_ACCESS_TOKEN, false)
                 )
             } else {
                 viewModel.setVideoInfo(it)

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.Glide
@@ -22,10 +23,7 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.prefs
-import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.*
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
@@ -102,12 +100,16 @@ class VideoPlayerViewModel @Inject constructor(
         player.seekTo(position)
     }
 
-    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, offset: Double) {
+    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, offset: Double, skipAccessToken: Boolean) {
         if (!this::video.isInitialized) {
             this.video = video
             viewModelScope.launch {
                 try {
-                    val url = playerRepository.loadVideoPlaylistUrl(gqlClientId, gqlToken, video.id, playerType)
+                    val url = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
+                        TwitchApiHelper.getVideoUrlFromPreview(video.animatedPreviewURL, video.type).toUri()
+                    } else {
+                        playerRepository.loadVideoPlaylistUrl(gqlClientId, gqlToken, video.id, playerType)
+                    }
                     mediaSource = HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(url))
                     play()
                     if (offset > 0) {
@@ -261,6 +263,7 @@ class VideoPlayerViewModel @Inject constructor(
                     thumbnail = downloadedThumbnail,
                     type = video.type,
                     duration = video.duration,
+                    animatedPreviewURL = video.animatedPreviewURL
                 ))
             }
         }

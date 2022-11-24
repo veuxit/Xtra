@@ -28,7 +28,7 @@ class UserFollowedVideosQueryDeserializer : JsonDeserializer<UserFollowedVideosQ
                     }
                 }
                 data.add(Video(
-                    id = obj.get("id").takeIf { !it.isJsonNull }?.asString ?: "",
+                    id = obj.get("id").takeIf { !it.isJsonNull }?.asString,
                     user_id = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     user_login = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     user_name = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
@@ -41,7 +41,8 @@ class UserFollowedVideosQueryDeserializer : JsonDeserializer<UserFollowedVideosQ
                     gameId = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     gameName = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     profileImageURL = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    tags = tags
+                    tags = tags,
+                    animatedPreviewURL = obj.get("animatedPreviewURL")?.takeIf { !it.isJsonNull }?.asString
                 ))
             }
         }

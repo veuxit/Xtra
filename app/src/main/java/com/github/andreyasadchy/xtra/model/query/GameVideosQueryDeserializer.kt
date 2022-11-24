@@ -28,7 +28,7 @@ class GameVideosQueryDeserializer : JsonDeserializer<GameVideosQueryResponse> {
                     }
                 }
                 data.add(Video(
-                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     user_id = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     user_login = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     user_name = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
@@ -39,7 +39,8 @@ class GameVideosQueryDeserializer : JsonDeserializer<GameVideosQueryResponse> {
                     view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     duration = obj.get("lengthSeconds")?.takeIf { !it.isJsonNull }?.asString,
                     profileImageURL = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    tags = tags
+                    tags = tags,
+                    animatedPreviewURL = obj.get("animatedPreviewURL")?.takeIf { !it.isJsonNull }?.asString
                 ))
             }
         }
