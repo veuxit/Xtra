@@ -19,7 +19,7 @@ class VideoQueryDeserializer : JsonDeserializer<VideoQueryResponse> {
                 user_name = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                 type = obj.get("broadcastType")?.takeIf { !it.isJsonNull }?.asString,
                 title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                createdAt = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
+                created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
                 thumbnail_url = obj.get("previewThumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
                 duration = obj.get("lengthSeconds")?.takeIf { !it.isJsonNull }?.asString,
                 gameId = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,

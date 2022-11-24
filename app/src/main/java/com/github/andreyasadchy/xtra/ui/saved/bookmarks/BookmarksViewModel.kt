@@ -81,27 +81,29 @@ class BookmarksViewModel @Inject internal constructor(
         viewModelScope.launch {
             try {
                 val video = videoId?.let { repository.loadVideo(it, helixClientId, helixToken, gqlClientId) }
-                val bookmark = videoId?.let { bookmarksRepository.getBookmarkById(it) }
+                val bookmark = videoId?.let { bookmarksRepository.getBookmarkByVideoId(it) }
                 if (video != null && bookmark != null) {
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(video.thumbnail)
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
+                    if (!video.id.isNullOrBlank()) {
+                        try {
+                            Glide.with(context)
+                                .asBitmap()
+                                .load(video.thumbnail)
+                                .into(object: CustomTarget<Bitmap>() {
+                                    override fun onLoadCleared(placeholder: Drawable?) {
 
-                                }
+                                    }
 
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "thumbnails", video.id, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
+                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                        DownloadUtils.savePng(context, "thumbnails", video.id, resource)
+                                    }
+                                })
+                        } catch (e: Exception) {
 
+                        }
                     }
-                    val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
+                    val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
                     bookmarksRepository.updateBookmark(Bookmark(
-                        id = bookmark.id,
+                        videoId = bookmark.videoId,
                         userId = video.channelId ?: bookmark.userId,
                         userLogin = video.channelLogin ?: bookmark.userLogin,
                         userName = video.channelName ?: bookmark.userName,
@@ -111,7 +113,7 @@ class BookmarksViewModel @Inject internal constructor(
                         gameId = video.gameId ?: bookmark.gameId,
                         gameName = video.gameName ?: bookmark.gameName,
                         title = video.title ?: bookmark.title,
-                        createdAt = video.createdAt ?: bookmark.createdAt,
+                        createdAt = video.created_at ?: bookmark.createdAt,
                         thumbnail = downloadedThumbnail,
                         type = video.type ?: bookmark.type,
                         duration = video.duration ?: bookmark.duration,
@@ -126,18 +128,18 @@ class BookmarksViewModel @Inject internal constructor(
     fun loadVideos(context: Context, helixClientId: String? = null, helixToken: String? = null) {
         viewModelScope.launch {
             try {
-                val allIds = bookmarksRepository.loadBookmarks().map { it.id }
+                val allIds = bookmarksRepository.loadBookmarks().mapNotNull { it.videoId }
                 if (allIds.isNotEmpty()) {
                     for (ids in allIds.chunked(100)) {
                         val videos = repository.loadVideos(ids, helixClientId, helixToken)
                         if (videos != null) {
                             for (video in videos) {
-                                val bookmark = bookmarksRepository.getBookmarkById(video.id)
+                                val bookmark = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
                                 if (bookmark != null && (bookmark.userId != video.channelId ||
                                             bookmark.userLogin != video.channelLogin ||
                                             bookmark.userName != video.channelName ||
                                             bookmark.title != video.title ||
-                                            bookmark.createdAt != video.createdAt ||
+                                            bookmark.createdAt != video.created_at ||
                                             bookmark.type != video.type ||
                                             bookmark.duration != video.duration)) {
                                     try {
@@ -156,9 +158,9 @@ class BookmarksViewModel @Inject internal constructor(
                                     } catch (e: Exception) {
 
                                     }
-                                    val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
+                                    val downloadedThumbnail = video.id.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
                                     bookmarksRepository.updateBookmark(Bookmark(
-                                        id = bookmark.id,
+                                        videoId = bookmark.videoId,
                                         userId = video.channelId ?: bookmark.userId,
                                         userLogin = video.channelLogin ?: bookmark.userLogin,
                                         userName = video.channelName ?: bookmark.userName,
@@ -168,7 +170,7 @@ class BookmarksViewModel @Inject internal constructor(
                                         gameId = bookmark.gameId,
                                         gameName = bookmark.gameName,
                                         title = video.title ?: bookmark.title,
-                                        createdAt = video.createdAt ?: bookmark.createdAt,
+                                        createdAt = video.created_at ?: bookmark.createdAt,
                                         thumbnail = downloadedThumbnail,
                                         type = video.type ?: bookmark.type,
                                         duration = video.duration ?: bookmark.duration,

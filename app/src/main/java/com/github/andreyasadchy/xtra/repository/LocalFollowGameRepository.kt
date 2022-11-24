@@ -17,8 +17,8 @@ class LocalFollowGameRepository @Inject constructor(
 
     fun loadFollows() = localFollowsGameDao.getAll()
 
-    suspend fun getFollowById(id: String) = withContext(Dispatchers.IO) {
-        localFollowsGameDao.getById(id)
+    suspend fun getFollowByGameId(id: String) = withContext(Dispatchers.IO) {
+        localFollowsGameDao.getByGameId(id)
     }
 
     suspend fun saveFollow(item: LocalFollowGame) = withContext(Dispatchers.IO) {
@@ -27,8 +27,10 @@ class LocalFollowGameRepository @Inject constructor(
 
     fun deleteFollow(context: Context, item: LocalFollowGame) {
         GlobalScope.launch {
+            if (!item.gameId.isNullOrBlank()) {
+                File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${item.gameId}.png").delete()
+            }
             localFollowsGameDao.delete(item)
-            File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${item.game_id}.png").delete()
         }
     }
 

@@ -30,28 +30,30 @@ abstract class BaseVideosViewModel(
 
     fun saveBookmark(context: Context, video: Video) {
         GlobalScope.launch {
-            val item = bookmarksRepository.getBookmarkById(video.id)
+            val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
                 bookmarksRepository.deleteBookmark(context, item)
             } else {
-                try {
-                    Glide.with(context)
-                        .asBitmap()
-                        .load(video.thumbnail)
-                        .into(object: CustomTarget<Bitmap>() {
-                            override fun onLoadCleared(placeholder: Drawable?) {
+                if (!video.id.isNullOrBlank()) {
+                    try {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(video.thumbnail)
+                            .into(object: CustomTarget<Bitmap>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
 
-                            }
+                                }
 
-                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                DownloadUtils.savePng(context, "thumbnails", video.id, resource)
-                            }
-                        })
-                } catch (e: Exception) {
+                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                    DownloadUtils.savePng(context, "thumbnails", video.id, resource)
+                                }
+                            })
+                    } catch (e: Exception) {
 
+                    }
                 }
-                try {
-                    if (video.channelId != null) {
+                if (!video.channelId.isNullOrBlank()) {
+                    try {
                         Glide.with(context)
                             .asBitmap()
                             .load(video.channelLogo)
@@ -64,31 +66,29 @@ abstract class BaseVideosViewModel(
                                     DownloadUtils.savePng(context, "profile_pics", video.channelId!!, resource)
                                 }
                             })
-                    }
-                } catch (e: Exception) {
+                    } catch (e: Exception) {
 
+                    }
                 }
                 val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(context).helixToken, context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")) }?.first()
-                val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
-                val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
-                bookmarksRepository.saveBookmark(
-                    Bookmark(
-                        id = video.id,
-                        userId = video.channelId,
-                        userLogin = video.channelLogin,
-                        userName = video.channelName,
-                        userType = userTypes?.type,
-                        userBroadcasterType = userTypes?.broadcaster_type,
-                        userLogo = downloadedLogo,
-                        gameId = video.gameId,
-                        gameName = video.gameName,
-                        title = video.title,
-                        createdAt = video.createdAt,
-                        thumbnail = downloadedThumbnail,
-                        type = video.type,
-                        duration = video.duration,
-                    )
-                )
+                val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
+                val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
+                bookmarksRepository.saveBookmark(Bookmark(
+                    videoId = video.id,
+                    userId = video.channelId,
+                    userLogin = video.channelLogin,
+                    userName = video.channelName,
+                    userType = userTypes?.type,
+                    userBroadcasterType = userTypes?.broadcaster_type,
+                    userLogo = downloadedLogo,
+                    gameId = video.gameId,
+                    gameName = video.gameName,
+                    title = video.title,
+                    createdAt = video.created_at,
+                    thumbnail = downloadedThumbnail,
+                    type = video.type,
+                    duration = video.duration,
+                ))
             }
         }
     }

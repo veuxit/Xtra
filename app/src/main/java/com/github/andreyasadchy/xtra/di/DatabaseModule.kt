@@ -150,6 +150,22 @@ class DatabaseModule {
                                 database.execSQL("ALTER TABLE recent_emotes1 RENAME TO recent_emotes")
                             }
                         },
+                        object : Migration(18, 19) {
+                            override fun migrate(database: SupportSQLiteDatabase) {
+                                database.execSQL("CREATE TABLE IF NOT EXISTS bookmarks1 (videoId TEXT, userId TEXT, userLogin TEXT, userName TEXT, userType TEXT, userBroadcasterType TEXT, userLogo TEXT, gameId TEXT, gameName TEXT, title TEXT, createdAt TEXT, thumbnail TEXT, type TEXT, duration TEXT, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                                database.execSQL("INSERT INTO bookmarks1 (videoId, userId, userLogin, userName, userType, userBroadcasterType, userLogo, gameId, gameName, title, createdAt, thumbnail, type, duration) SELECT id, userId, userLogin, userName, userType, userBroadcasterType, userLogo, gameId, gameName, title, createdAt, thumbnail, type, duration FROM bookmarks")
+                                database.execSQL("DROP TABLE bookmarks")
+                                database.execSQL("ALTER TABLE bookmarks1 RENAME TO bookmarks")
+                                database.execSQL("CREATE TABLE IF NOT EXISTS local_follows1 (userId TEXT, userLogin TEXT, userName TEXT, channelLogo TEXT, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                                database.execSQL("INSERT INTO local_follows1 (userId, userLogin, userName, channelLogo) SELECT user_id, user_login, user_name, channelLogo FROM local_follows")
+                                database.execSQL("DROP TABLE local_follows")
+                                database.execSQL("ALTER TABLE local_follows1 RENAME TO local_follows")
+                                database.execSQL("CREATE TABLE IF NOT EXISTS local_follows_games1 (gameId TEXT, gameName TEXT, boxArt TEXT, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                                database.execSQL("INSERT INTO local_follows_games1 (gameId, gameName, boxArt) SELECT game_id, game_name, boxArt FROM local_follows_games")
+                                database.execSQL("DROP TABLE local_follows_games")
+                                database.execSQL("ALTER TABLE local_follows_games1 RENAME TO local_follows_games")
+                            }
+                        },
                     )
                     .build()
 }

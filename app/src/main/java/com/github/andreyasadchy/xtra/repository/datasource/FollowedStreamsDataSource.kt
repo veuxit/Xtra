@@ -31,7 +31,7 @@ class FollowedStreamsDataSource(
     override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Stream>) {
         loadInitial(params, callback) {
             val list = mutableListOf<Stream>()
-            val localIds = localFollowsChannel.loadFollows().map { it.user_id }
+            val localIds = localFollowsChannel.loadFollows().mapNotNull { it.userId }
             val local = if (localIds.isNotEmpty()) {
                 try {
                     gqlQueryLocal(localIds)

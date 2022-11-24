@@ -33,7 +33,7 @@ class UserFollowedVideosQueryDeserializer : JsonDeserializer<UserFollowedVideosQ
                     user_login = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     user_name = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                    createdAt = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
+                    created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
                     thumbnail_url = obj.get("previewThumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
                     view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     type = obj.get("broadcastType")?.takeIf { !it.isJsonNull }?.asString,

@@ -23,7 +23,7 @@ class UserClipsQueryDeserializer : JsonDeserializer<UserClipsQueryResponse> {
                     broadcaster_login = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_name = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     video_id = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    videoOffsetSeconds = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
+                    vod_offset = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
                     game_id = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     game_name = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,

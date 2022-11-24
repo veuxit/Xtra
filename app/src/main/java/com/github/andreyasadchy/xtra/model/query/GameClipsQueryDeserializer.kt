@@ -23,7 +23,7 @@ class GameClipsQueryDeserializer : JsonDeserializer<GameClipsQueryResponse> {
                     broadcaster_login = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_name = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     video_id = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    videoOffsetSeconds = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
+                    vod_offset = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
                     view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,

@@ -18,7 +18,7 @@ class ChannelClipsDataDeserializer : JsonDeserializer<ChannelClipsDataResponse> 
         dataJson?.forEach { item ->
             item?.asJsonObject?.getAsJsonObject("node")?.let { obj ->
                 data.add(Clip(
-                    id = obj.get("slug")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    id = obj.get("slug")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_id = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_login = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
                     broadcaster_name = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,

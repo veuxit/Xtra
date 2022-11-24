@@ -114,9 +114,9 @@ class ChannelPagerViewModel @Inject constructor(
 
                     }
                     val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${user.id}.png").absolutePath
-                    localFollowsChannel.getFollowById(user.id)?.let { localFollowsChannel.updateFollow(it.apply {
-                        user_login = user.login
-                        user_name = user.display_name
+                    localFollowsChannel.getFollowByUserId(user.id)?.let { localFollowsChannel.updateFollow(it.apply {
+                        userLogin = user.login
+                        userName = user.display_name
                         channelLogo = downloadedLogo }) }
                     for (i in offlineRepository.getVideosByUserId(user.id.toInt())) {
                         offlineRepository.updateVideo(i.apply {

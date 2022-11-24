@@ -80,14 +80,14 @@ class VideoPlayerViewModel @Inject constructor(
         setSpeed(speed)
     }
 
-    fun loadGamesList(clientId: String?, videoId: String) {
+    fun loadGamesList(clientId: String?, videoId: String?) {
         if (gamesList.value == null && !isLoading) {
             isLoading = true
             viewModelScope.launch {
                 try {
                     val get = repository.loadVideoGames(clientId, videoId)
-                    if (get != null) {
-                        gamesList.postValue(get!!)
+                    if (get.isNotEmpty()) {
+                        gamesList.postValue(get)
                     }
                 } catch (e: Exception) {
                     _errors.postValue(e)
@@ -140,7 +140,7 @@ class VideoPlayerViewModel @Inject constructor(
 
     fun startAudioOnly(showNotification: Boolean = false) {
         (player.currentManifest as? HlsManifest)?.let {
-            startBackgroundAudio(helper.urls.values.last(), video.user_name, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id.toLong(), showNotification)
+            startBackgroundAudio(helper.urls.values.last(), video.user_name, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
             _playerMode.value = PlayerMode.AUDIO_ONLY
         }
     }
@@ -189,14 +189,16 @@ class VideoPlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         if (playerMode.value == PlayerMode.NORMAL && this::video.isInitialized) { //TODO
-            playerRepository.saveVideoPosition(VideoPosition(video.id.toLong(), player.currentPosition))
+            video.id?.toLongOrNull()?.let { playerRepository.saveVideoPosition(VideoPosition(it, player.currentPosition)) }
         }
         super.onCleared()
     }
 
     fun checkBookmark() {
-        viewModelScope.launch {
-            bookmarkItem.postValue(bookmarksRepository.getBookmarkById(video.id))
+        video.id?.let {
+            viewModelScope.launch {
+                bookmarkItem.postValue( bookmarksRepository.getBookmarkByVideoId(it))
+            }
         }
     }
 
@@ -205,24 +207,26 @@ class VideoPlayerViewModel @Inject constructor(
             if (bookmarkItem.value != null) {
                 bookmarksRepository.deleteBookmark(context, bookmarkItem.value!!)
             } else {
-                try {
-                    Glide.with(context)
-                        .asBitmap()
-                        .load(video.thumbnail)
-                        .into(object: CustomTarget<Bitmap>() {
-                            override fun onLoadCleared(placeholder: Drawable?) {
+                if (!video.id.isNullOrBlank()) {
+                    try {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(video.thumbnail)
+                            .into(object: CustomTarget<Bitmap>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
 
-                            }
+                                }
 
-                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                DownloadUtils.savePng(context, "thumbnails", video.id, resource)
-                            }
-                        })
-                } catch (e: Exception) {
+                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                    DownloadUtils.savePng(context, "thumbnails", video.id!!, resource)
+                                }
+                            })
+                    } catch (e: Exception) {
 
+                    }
                 }
-                try {
-                    if (video.channelId != null) {
+                if (!video.channelId.isNullOrBlank()) {
+                    try {
                         Glide.with(context)
                             .asBitmap()
                             .load(video.channelLogo)
@@ -235,16 +239,15 @@ class VideoPlayerViewModel @Inject constructor(
                                     DownloadUtils.savePng(context, "profile_pics", video.channelId!!, resource)
                                 }
                             })
-                    }
-                } catch (e: Exception) {
+                    } catch (e: Exception) {
 
+                    }
                 }
                 val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), helixClientId, helixToken, gqlClientId) }?.first()
-                val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
-                val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
-                bookmarksRepository.saveBookmark(
-                    Bookmark(
-                    id = video.id,
+                val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
+                val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
+                bookmarksRepository.saveBookmark(Bookmark(
+                    videoId = video.id,
                     userId = video.channelId,
                     userLogin = video.channelLogin,
                     userName = video.channelName,
@@ -254,7 +257,7 @@ class VideoPlayerViewModel @Inject constructor(
                     gameId = video.gameId,
                     gameName = video.gameName,
                     title = video.title,
-                    createdAt = video.createdAt,
+                    createdAt = video.created_at,
                     thumbnail = downloadedThumbnail,
                     type = video.type,
                     duration = video.duration,
