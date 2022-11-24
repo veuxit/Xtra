@@ -88,6 +88,7 @@ abstract class BaseVideosViewModel(
                     thumbnail = downloadedThumbnail,
                     type = video.type,
                     duration = video.duration,
+                    animatedPreviewURL = video.animatedPreviewURL
                 ))
             }
         }

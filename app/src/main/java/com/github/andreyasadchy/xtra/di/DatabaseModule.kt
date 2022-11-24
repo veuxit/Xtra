@@ -152,7 +152,7 @@ class DatabaseModule {
                         },
                         object : Migration(18, 19) {
                             override fun migrate(database: SupportSQLiteDatabase) {
-                                database.execSQL("CREATE TABLE IF NOT EXISTS bookmarks1 (videoId TEXT, userId TEXT, userLogin TEXT, userName TEXT, userType TEXT, userBroadcasterType TEXT, userLogo TEXT, gameId TEXT, gameName TEXT, title TEXT, createdAt TEXT, thumbnail TEXT, type TEXT, duration TEXT, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                                database.execSQL("CREATE TABLE IF NOT EXISTS bookmarks1 (videoId TEXT, userId TEXT, userLogin TEXT, userName TEXT, userType TEXT, userBroadcasterType TEXT, userLogo TEXT, gameId TEXT, gameName TEXT, title TEXT, createdAt TEXT, thumbnail TEXT, type TEXT, duration TEXT, animatedPreviewURL TEXT, id INTEGER NOT NULL, PRIMARY KEY (id))")
                                 database.execSQL("INSERT INTO bookmarks1 (videoId, userId, userLogin, userName, userType, userBroadcasterType, userLogo, gameId, gameName, title, createdAt, thumbnail, type, duration) SELECT id, userId, userLogin, userName, userType, userBroadcasterType, userLogo, gameId, gameName, title, createdAt, thumbnail, type, duration FROM bookmarks")
                                 database.execSQL("DROP TABLE bookmarks")
                                 database.execSQL("ALTER TABLE bookmarks1 RENAME TO bookmarks")
@@ -164,6 +164,10 @@ class DatabaseModule {
                                 database.execSQL("INSERT INTO local_follows_games1 (gameId, gameName, boxArt) SELECT game_id, game_name, boxArt FROM local_follows_games")
                                 database.execSQL("DROP TABLE local_follows_games")
                                 database.execSQL("ALTER TABLE local_follows_games1 RENAME TO local_follows_games")
+                                database.execSQL("CREATE TABLE IF NOT EXISTS requests1 (offline_video_id INTEGER NOT NULL, url TEXT NOT NULL, path TEXT NOT NULL, video_id TEXT, video_type TEXT, segment_from INTEGER, segment_to INTEGER, PRIMARY KEY (offline_video_id), FOREIGN KEY('offline_video_id') REFERENCES videos('id') ON DELETE CASCADE)")
+                                database.execSQL("INSERT INTO requests1 (offline_video_id, url, path, video_id, segment_from, segment_to) SELECT offline_video_id, url, path, video_id, segment_from, segment_to FROM requests")
+                                database.execSQL("DROP TABLE requests")
+                                database.execSQL("ALTER TABLE requests1 RENAME TO requests")
                             }
                         },
                     )

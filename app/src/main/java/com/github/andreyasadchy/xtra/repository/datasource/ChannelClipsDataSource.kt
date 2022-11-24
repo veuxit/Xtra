@@ -127,6 +127,7 @@ class ChannelClipsDataSource(
                     duration = i?.node?.durationSeconds?.toDouble(),
                     thumbnail_url = i?.node?.thumbnailURL,
                     profileImageURL = get1.profileImageURL,
+                    videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()

@@ -4,6 +4,7 @@ query GameVideos($id: ID, $name: String, $languages: [String!], $sort: VideoSort
             edges {
                 cursor
                 node {
+                    animatedPreviewURL
                     broadcastType
                     contentTags {
                         id

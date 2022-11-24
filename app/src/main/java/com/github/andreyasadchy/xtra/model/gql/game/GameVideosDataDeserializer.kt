@@ -38,7 +38,8 @@ class GameVideosDataDeserializer : JsonDeserializer<GameVideosDataResponse> {
                     view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     duration = obj.get("lengthSeconds")?.takeIf { !it.isJsonNull }?.asString,
                     profileImageURL = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    tags = tags
+                    tags = tags,
+                    animatedPreviewURL = obj.get("animatedPreviewURL")?.takeIf { !it.isJsonNull }?.asString
                 ))
             }
         }

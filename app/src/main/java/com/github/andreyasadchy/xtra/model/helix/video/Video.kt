@@ -24,7 +24,8 @@ data class Video(
     override val gameId: String? = null,
     override val gameName: String? = null,
     var profileImageURL: String? = null,
-    val tags: List<Tag>? = null) : Parcelable, Downloadable {
+    val tags: List<Tag>? = null,
+    val animatedPreviewURL: String? = null) : Parcelable, Downloadable {
 
     @Parcelize
     data class MutedSegment(

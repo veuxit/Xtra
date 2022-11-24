@@ -4,6 +4,7 @@ query UserFollowedVideos($languages: [String!], $sort: VideoSort, $type: [Broadc
             edges {
                 cursor
                 node {
+                    animatedPreviewURL
                     broadcastType
                     contentTags {
                         id

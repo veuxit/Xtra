@@ -282,6 +282,7 @@ type UserRoles {
 }
 
 type Video {
+  animatedPreviewURL: String
   broadcastType: BroadcastType
   contentTags: [Tag!]
   createdAt: Time

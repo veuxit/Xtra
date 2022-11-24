@@ -23,7 +23,8 @@ data class Clip(
 
         var game_name: String? = null,
         var broadcaster_login: String? = null,
-        var profileImageURL: String? = null) : Parcelable, Downloadable {
+        var profileImageURL: String? = null,
+        val videoAnimatedPreviewURL: String? = null) : Parcelable, Downloadable {
 
         override val thumbnail: String?
                 get() = TwitchApiHelper.getTemplateUrl(thumbnail_url, "clip")

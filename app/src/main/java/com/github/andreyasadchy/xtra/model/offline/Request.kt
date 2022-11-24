@@ -8,9 +8,7 @@ import androidx.room.PrimaryKey
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize
-@Entity(
-        tableName = "requests",
-        foreignKeys = [ForeignKey(entity = OfflineVideo::class, parentColumns = arrayOf("id"), childColumns = arrayOf("offline_video_id"), onDelete = ForeignKey.CASCADE)])
+@Entity(tableName = "requests", foreignKeys = [ForeignKey(entity = OfflineVideo::class, parentColumns = arrayOf("id"), childColumns = arrayOf("offline_video_id"), onDelete = ForeignKey.CASCADE)])
 data class Request(
         @PrimaryKey
         @ColumnInfo(name = "offline_video_id")
@@ -19,6 +17,8 @@ data class Request(
         val path: String,
         @ColumnInfo(name = "video_id")
         val videoId: String? = null,
+        @ColumnInfo(name = "video_type")
+        val videoType: String? = null,
         @ColumnInfo(name = "segment_from")
         val segmentFrom: Int? = null,
         @ColumnInfo(name = "segment_to")

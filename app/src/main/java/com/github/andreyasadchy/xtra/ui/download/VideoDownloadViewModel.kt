@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.toast
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
@@ -36,39 +37,43 @@ class VideoDownloadViewModel @Inject constructor(
     val videoInfo: LiveData<VideoDownloadInfo?>
         get() = _videoInfo
 
-    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?) {
+    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, skipAccessToken: Boolean) {
         if (_videoInfo.value == null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val response = playerRepository.loadVideoPlaylist(gqlClientId, gqlToken, video.id, playerType)
-                    if (response.isSuccessful) {
-                        val playlist = response.body()!!.string()
-                        val qualities = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
-                        val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
-                        val audioIndex = qualities.indexOfFirst { it.equals("Audio Only", true) }
-                        qualities.removeAt(audioIndex)
-                        qualities.add(getApplication<Application>().getString(R.string.audio_only))
-                        urls.add(urls.removeAt(audioIndex))
-                        val map = qualities.zip(urls).toMap()
-                        val mediaPlaylist = URL(map.values.elementAt(0)).openStream().use {
-                            PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
-                        }
-                        var totalDuration = 0L
-                        val size = mediaPlaylist.tracks.size
-                        val relativeTimes = ArrayList<Long>(size)
-                        val durations = ArrayList<Long>(size)
-                        var time = 0L
-                        mediaPlaylist.tracks.forEach {
-                            val duration = (it.trackInfo.duration * 1000f).toLong()
-                            durations.add(duration)
-                            totalDuration += duration
-                            relativeTimes.add(time)
-                            time += duration
-                        }
-                        _videoInfo.postValue(VideoDownloadInfo(video, map, relativeTimes, durations, totalDuration, mediaPlaylist.targetDuration * 1000L, 0))
+                    val map = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
+                        TwitchApiHelper.getVideoUrlMapFromPreview(video.animatedPreviewURL, video.type)
                     } else {
-                        throw IllegalAccessException()
+                        val response = playerRepository.loadVideoPlaylist(gqlClientId, gqlToken, video.id, playerType)
+                        if (response.isSuccessful) {
+                            val playlist = response.body()!!.string()
+                            val qualities = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
+                            val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
+                            val audioIndex = qualities.indexOfFirst { it.equals("Audio Only", true) }
+                            qualities.removeAt(audioIndex)
+                            qualities.add(getApplication<Application>().getString(R.string.audio_only))
+                            urls.add(urls.removeAt(audioIndex))
+                            qualities.zip(urls).toMap()
+                        } else {
+                            throw IllegalAccessException()
+                        }
                     }
+                    val mediaPlaylist = URL(map.values.elementAt(0)).openStream().use {
+                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                    }
+                    var totalDuration = 0L
+                    val size = mediaPlaylist.tracks.size
+                    val relativeTimes = ArrayList<Long>(size)
+                    val durations = ArrayList<Long>(size)
+                    var time = 0L
+                    mediaPlaylist.tracks.forEach {
+                        val duration = (it.trackInfo.duration * 1000f).toLong()
+                        durations.add(duration)
+                        totalDuration += duration
+                        relativeTimes.add(time)
+                        time += duration
+                    }
+                    _videoInfo.postValue(VideoDownloadInfo(video, map, relativeTimes, durations, totalDuration, mediaPlaylist.targetDuration * 1000L, 0))
                 } catch (e: Exception) {
                     if (e is IllegalAccessException) {
                         launch(Dispatchers.Main) {
@@ -104,7 +109,7 @@ class VideoDownloadViewModel @Inject constructor(
 
                 val offlineVideo = DownloadUtils.prepareDownload(context, video, url, directory, duration, startPosition, fromIndex, toIndex)
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                val request = Request(videoId, url, directory, video.id, fromIndex, toIndex)
+                val request = Request(videoId, url, directory, video.id, video.type, fromIndex, toIndex)
                 offlineRepository.saveRequest(request)
 
                 DownloadUtils.download(context, request)

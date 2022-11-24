@@ -37,7 +37,7 @@ class BookmarksAdapter(
     private val deleteVideo: (Bookmark) -> Unit) : BaseListAdapter<Bookmark>(
     object : DiffUtil.ItemCallback<Bookmark>() {
         override fun areItemsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
-            oldItem.videoId == newItem.videoId
+            oldItem.id == newItem.id
 
         override fun areContentsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
             oldItem.title == newItem.title &&
@@ -85,6 +85,7 @@ class BookmarksAdapter(
                 thumbnail_url = item.thumbnail,
                 type = item.type,
                 duration = item.duration,
+                animatedPreviewURL = item.animatedPreviewURL,
             ), position?.toDouble()) }
             setOnLongClickListener { deleteVideo(item); true }
             thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
@@ -196,6 +197,7 @@ class BookmarksAdapter(
                                 thumbnail_url = item.thumbnail,
                                 type = item.type,
                                 duration = item.duration,
+                                animatedPreviewURL = item.animatedPreviewURL,
                             ))
                             R.id.vodIgnore -> item.userId?.let { id -> vodIgnoreUser(id) }
                             R.id.refresh -> refreshVideo(item.videoId)

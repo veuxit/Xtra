@@ -83,7 +83,8 @@ class FollowedVideosDataSource(
                     duration = i?.node?.lengthSeconds?.toString(),
                     thumbnail_url = i?.node?.previewThumbnailURL,
                     profileImageURL = i?.node?.owner?.profileImageURL,
-                    tags = tags
+                    tags = tags,
+                    animatedPreviewURL =  i?.node?.animatedPreviewURL
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()

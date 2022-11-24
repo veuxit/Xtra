@@ -1,5 +1,6 @@
 query Video($id: ID) {
     video(id: $id) {
+        animatedPreviewURL
         broadcastType
         createdAt
         game {
