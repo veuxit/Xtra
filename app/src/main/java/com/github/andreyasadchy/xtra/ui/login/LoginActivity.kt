@@ -62,7 +62,7 @@ class LoginActivity : AppCompatActivity() {
                     if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank()) {
                         repository.revoke(gqlClientId, user.gqlToken)
                     }
-                    if (!gqlClientId2.isNullOrBlank() && !user.gqlToken2.isNullOrBlank()) {
+                    if (!gqlClientId2.isNullOrBlank() && !user.gqlToken2.isNullOrBlank() && user.gqlToken2 != user.gqlToken) {
                         repository.revoke(gqlClientId2, user.gqlToken2)
                     }
                 } catch (e: Exception) {
