@@ -128,9 +128,12 @@ class StreamPlayerViewModel @Inject constructor(
 
     fun startAudioOnly(showNotification: Boolean = false) {
         (player.currentManifest as? HlsManifest)?.let {
-            val s = _stream.value!!
-            startBackgroundAudio(helper.urls.values.last(), s.user_name, s.title, s.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
-            _playerMode.value = AUDIO_ONLY
+            _stream.value?.let { stream ->
+                helper.urls.values.lastOrNull()?.let {
+                    startBackgroundAudio(it, stream.user_name, stream.title, stream.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
+                    _playerMode.value = AUDIO_ONLY
+                }
+            }
         }
     }
 

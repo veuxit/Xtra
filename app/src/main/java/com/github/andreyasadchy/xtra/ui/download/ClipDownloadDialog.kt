@@ -46,7 +46,7 @@ class ClipDownloadDialog : BaseDownloadDialog() {
                 clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 clip = getParcelable(KEY_CLIP)!!,
                 qualities = getSerializable(KEY_QUALITIES) as Map<String, String>?,
-                skipAccessToken = requireContext().prefs().getBoolean(C.SKIP_CLIP_ACCESS_TOKEN, false)
+                skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
             )
         }
         viewModel.qualities.observe(viewLifecycleOwner) {
