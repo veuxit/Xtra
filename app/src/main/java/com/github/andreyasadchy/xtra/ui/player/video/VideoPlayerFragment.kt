@@ -59,14 +59,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     override fun initialize() {
-        viewModel.setVideo(
-            gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-            gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
-            video = video,
-            playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
-            offset = requireArguments().getDouble(KEY_OFFSET),
-            skipAccessToken = prefs.getBoolean(C.SKIP_VIDEO_ACCESS_TOKEN, false)
-        )
+        viewModel.setVideo(video, requireArguments().getDouble(KEY_OFFSET))
         super.initialize()
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
         val playerMenu = requireView().findViewById<ImageButton>(R.id.playerMenu)

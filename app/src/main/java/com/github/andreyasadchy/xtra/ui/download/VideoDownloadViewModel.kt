@@ -37,11 +37,11 @@ class VideoDownloadViewModel @Inject constructor(
     val videoInfo: LiveData<VideoDownloadInfo?>
         get() = _videoInfo
 
-    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, skipAccessToken: Boolean) {
+    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, skipAccessToken: Int) {
         if (_videoInfo.value == null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val map = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
+                    val map = if (skipAccessToken <= 1 && !video.animatedPreviewURL.isNullOrBlank()) {
                         TwitchApiHelper.getVideoUrlMapFromPreview(video.animatedPreviewURL, video.type)
                     } else {
                         val response = playerRepository.loadVideoPlaylist(gqlClientId, gqlToken, video.id, playerType)
@@ -55,7 +55,11 @@ class VideoDownloadViewModel @Inject constructor(
                             urls.add(urls.removeAt(audioIndex))
                             qualities.zip(urls).toMap()
                         } else {
-                            throw IllegalAccessException()
+                            if (skipAccessToken == 2 && !video.animatedPreviewURL.isNullOrBlank()) {
+                                TwitchApiHelper.getVideoUrlMapFromPreview(video.animatedPreviewURL, video.type)
+                            } else {
+                                throw IllegalAccessException()
+                            }
                         }
                     }
                     val mediaPlaylist = URL(map.values.elementAt(0)).openStream().use {

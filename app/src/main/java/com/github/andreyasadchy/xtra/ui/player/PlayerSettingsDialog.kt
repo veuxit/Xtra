@@ -209,12 +209,12 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
     }
 
     private fun setSelectedQuality(index: Int) {
-        qualityValue.text = qualities[index]
+        qualityValue.text = if (qualities.lastIndex >= index) qualities[index] else null
         qualityIndex = index
     }
 
     private fun setSelectedSpeed(index: Int) {
-        speedValue.text = getString(SPEED_LABELS[index])
+        speedValue.text = if (SPEED_LABELS.lastIndex >= index) getString(SPEED_LABELS[index]) else null
         speedIndex = index
     }
 

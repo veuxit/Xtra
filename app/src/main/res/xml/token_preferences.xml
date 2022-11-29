@@ -49,15 +49,21 @@
         android:title="@string/include_gql_token"
         app:iconSpaceReserved="false" />
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="skip_video_access_token"
+    <ListPreference
+        android:defaultValue="2"
+        android:entries="@array/skipVideoTokenEntries"
+        android:entryValues="@array/skipVideoTokenValues"
+        android:key="token_skip_video_access_token"
+        android:summary="%s"
         android:title="@string/skip_video_access_token"
         app:iconSpaceReserved="false"/>
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="skip_clip_access_token"
+    <ListPreference
+        android:defaultValue="2"
+        android:entries="@array/skipVideoTokenEntries"
+        android:entryValues="@array/skipVideoTokenValues"
+        android:key="token_skip_clip_access_token"
+        android:summary="%s"
         android:title="@string/skip_clip_access_token"
         app:iconSpaceReserved="false"/>
 

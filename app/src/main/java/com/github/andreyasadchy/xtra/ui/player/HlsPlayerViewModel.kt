@@ -81,7 +81,7 @@ abstract class HlsPlayerViewModel(
                 val savedQuality = context.prefs().getString(C.PLAYER_QUALITY, "720p60")
                 val index = when (defaultQuality) {
                     "Auto" -> 0
-                    "Source" -> 1
+                    "Source" -> if (helper.urls.size >= 2) 1 else 0
                     "saved" -> {
                         if (savedQuality == "Auto") {
                             0
