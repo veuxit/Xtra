@@ -10,7 +10,10 @@ class ChannelPointsContextDataDeserializer : JsonDeserializer<ChannelPointsConte
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): ChannelPointsContextDataResponse {
-        val obj = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("community")?.getAsJsonObject("channel")?.getAsJsonObject("self")?.getAsJsonObject("communityPoints")?.getAsJsonPrimitive("balance")?.asInt
-        return ChannelPointsContextDataResponse(obj)
+        val obj = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("community")?.getAsJsonObject("channel")?.getAsJsonObject("self")?.getAsJsonObject("communityPoints")
+        return ChannelPointsContextDataResponse(
+            balance = obj?.get("balance")?.takeIf { !it.isJsonNull }?.asInt,
+            availableClaimId = obj?.get("availableClaim")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString
+        )
     }
 }

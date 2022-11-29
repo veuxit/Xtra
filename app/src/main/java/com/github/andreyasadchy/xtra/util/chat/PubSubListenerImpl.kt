@@ -64,15 +64,8 @@ class PubSubListenerImpl(
         ))
     }
 
-    override fun onClaimPoints(text: String) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        val messageData = message?.optString("data")?.let { if (it.isNotBlank() && !message.isNull("data")) JSONObject(it) else null }
-        val claim = messageData?.optString("claim")?.let { if (it.isNotBlank() && !messageData.isNull("claim")) JSONObject(it) else null }
-        callbackClaim.onClaim(Claim(
-            claimId = claim?.optString("id"),
-            channelId = claim?.optString("channel_id")
-        ))
+    override fun onClaimPoints() {
+        callbackClaim.onClaim()
     }
 
     override fun onMinuteWatched() {
