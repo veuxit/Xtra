@@ -529,10 +529,10 @@ class ChatViewModel @Inject constructor(
             pointsEarned.postValue(message)
         }
 
-        override fun onClaim(message: Claim) {
+        override fun onClaim() {
             if (!gqlClientId2.isNullOrBlank() && !user.gqlToken2.isNullOrBlank()) {
                 viewModelScope.launch {
-                    repository.loadClaimPoints(gqlClientId2, user.gqlToken2, message.channelId, message.claimId)
+                    repository.loadClaimPoints(gqlClientId2, user.gqlToken2, channelId, channelLogin)
                 }
             }
         }

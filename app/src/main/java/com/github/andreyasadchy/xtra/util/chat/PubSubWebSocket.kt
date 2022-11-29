@@ -158,7 +158,7 @@ class PubSubWebSocket(
                                             listener.onPointsEarned(text)
                                         }
                                     }
-                                    messageType?.startsWith("claim-available") == true && collectPoints -> listener.onClaimPoints(text)
+                                    messageType?.startsWith("claim-available") == true && collectPoints -> listener.onClaimPoints()
                                 }
                             }
                             topic?.startsWith("raid") == true && showRaids -> {
@@ -182,7 +182,7 @@ class PubSubWebSocket(
         fun onPlaybackMessage(text: String)
         fun onPointReward(text: String)
         fun onPointsEarned(text: String)
-        fun onClaimPoints(text: String)
+        fun onClaimPoints()
         fun onMinuteWatched()
         fun onRaidUpdate(text: String, openStream: Boolean)
     }
