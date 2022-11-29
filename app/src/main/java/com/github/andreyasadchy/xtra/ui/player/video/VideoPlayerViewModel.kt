@@ -11,6 +11,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.helix.game.Game
@@ -72,6 +73,8 @@ class VideoPlayerViewModel @Inject constructor(
     val bookmarkItem = MutableLiveData<Bookmark>()
     val gamesList = MutableLiveData<List<Game>>()
     private var isLoading = false
+    private var startOffset: Long = 0
+    private var shouldRetry = true
 
     init {
         val speed = context.prefs().getFloat(C.PLAYER_SPEED, 1f)
@@ -100,24 +103,35 @@ class VideoPlayerViewModel @Inject constructor(
         player.seekTo(position)
     }
 
-    fun setVideo(gqlClientId: String?, gqlToken: String?, video: Video, playerType: String?, offset: Double, skipAccessToken: Boolean) {
+    fun setVideo(video: Video, offset: Double) {
         if (!this::video.isInitialized) {
             this.video = video
-            viewModelScope.launch {
-                try {
-                    val url = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
-                        TwitchApiHelper.getVideoUrlFromPreview(video.animatedPreviewURL, video.type).toUri()
-                    } else {
-                        playerRepository.loadVideoPlaylistUrl(gqlClientId, gqlToken, video.id, playerType)
-                    }
-                    mediaSource = HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(url))
-                    play()
-                    if (offset > 0) {
-                        player.seekTo(offset.toLong())
-                    }
-                } catch (e: Exception) {
+            startOffset = offset.toLong()
+            playVideo((getApplication<Application>().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1)
+        }
+    }
 
+    private fun playVideo(skipAccessToken: Boolean) {
+        viewModelScope.launch {
+            try {
+                val url = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
+                    TwitchApiHelper.getVideoUrlFromPreview(video.animatedPreviewURL!!, video.type).toUri()
+                } else {
+                    val context = getApplication<Application>()
+                    playerRepository.loadVideoPlaylistUrl(
+                        gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                        gqlToken = if (context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(context).gqlToken else null,
+                        videoId = video.id,
+                        playerType = context.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
+                    )
                 }
+                mediaSource = HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(url))
+                play()
+                if (startOffset > 0) {
+                    player.seekTo(startOffset)
+                }
+            } catch (e: Exception) {
+
             }
         }
     }
@@ -136,14 +150,16 @@ class VideoPlayerViewModel @Inject constructor(
                     player.seekTo(playbackPosition)
                 }
             }
-            else -> startAudioOnly()
+            index == qualities.lastIndex -> startAudioOnly()
         }
     }
 
     fun startAudioOnly(showNotification: Boolean = false) {
         (player.currentManifest as? HlsManifest)?.let {
-            startBackgroundAudio(helper.urls.values.last(), video.user_name, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
-            _playerMode.value = PlayerMode.AUDIO_ONLY
+            helper.urls.values.lastOrNull()?.let {
+                startBackgroundAudio(it, video.user_name, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
+                _playerMode.value = PlayerMode.AUDIO_ONLY
+            }
         }
     }
 
@@ -177,12 +193,23 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val error2 = player.playerError
-        if (error2 != null) {
-            if (error2.type == ExoPlaybackException.TYPE_SOURCE &&
-                error2.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 403 }) {
+        val playerError = player.playerError
+        if (playerError != null) {
+            if (playerError.type == ExoPlaybackException.TYPE_SOURCE &&
+                playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 403 }) {
                 val context = getApplication<Application>()
-                context.toast(R.string.video_subscribers_only)
+                val skipToken = context.prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                when {
+                    skipToken == 1 && shouldRetry -> {
+                        shouldRetry = false
+                        playVideo(false)
+                    }
+                    skipToken == 2 && shouldRetry -> {
+                        shouldRetry = false
+                        playVideo(true)
+                    }
+                    else -> context.toast(R.string.video_subscribers_only)
+                }
             } else {
                 super.onPlayerError(error)
             }

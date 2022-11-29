@@ -172,7 +172,8 @@ class DownloadService : IntentService(TAG) {
             })
             GlobalScope.launch {
                 try {
-                    playlist = URL(if (applicationContext.prefs().getBoolean(C.SKIP_VIDEO_ACCESS_TOKEN, false)) {
+                    val skipAccessToken = applicationContext.prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                    playlist = URL(if (skipAccessToken <= 1) {
                         request.url + if (request.videoType?.lowercase() == "highlight") {
                             "highlight-${request.videoId}.m3u8"
                         } else {
@@ -185,7 +186,17 @@ class DownloadService : IntentService(TAG) {
                             videoId = request.videoId!!,
                             playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
                         )
-                        "https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value
+                        if (response.isSuccessful) {
+                            "https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value
+                        } else {
+                            if (skipAccessToken == 2) {
+                                request.url + if (request.videoType?.lowercase() == "highlight") {
+                                    "highlight-${request.videoId}.m3u8"
+                                } else {
+                                    "index-dvr.m3u8"
+                                }
+                            } else throw Exception()
+                        }
                     }).openStream().use {
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                     }

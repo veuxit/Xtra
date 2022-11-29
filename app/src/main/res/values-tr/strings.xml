@@ -538,4 +538,8 @@
     <string name="debug_api_commands">Use api chat commands</string>
     <string name="skip_video_access_token">Skip video access token</string>
     <string name="skip_clip_access_token">Skip clip access token</string>
+    <string name="skipVideoTokenEntries1">Skip always</string>
+    <string name="skipVideoTokenEntries2">Skip by default, don\'t skip if playback fails</string>
+    <string name="skipVideoTokenEntries3">Don\'t skip by default, skip if playback fails</string>
+    <string name="skipVideoTokenEntries4">Never skip</string>
 </resources>

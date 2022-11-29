@@ -121,7 +121,7 @@ interface GraphQLApi {
     suspend fun getPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonObject): PlaybackAccessTokenResponse
 
     @POST(".")
-    suspend fun getClipUrls(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ClipUrlsResponse
+    suspend fun getClipUrls(@Header("Client-ID") clientId: String?, @Body json: JsonObject): Response<ClipUrlsResponse>
 
     @POST(".")
     suspend fun getClipData(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ClipDataResponse
