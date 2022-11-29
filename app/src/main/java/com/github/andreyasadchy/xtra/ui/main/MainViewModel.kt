@@ -133,7 +133,7 @@ class MainViewModel @Inject constructor(
                             throw IllegalStateException("401")
                         }
                     }
-                    if (!user.gqlToken2.isNullOrBlank()) {
+                    if (!user.gqlToken2.isNullOrBlank() && user.gqlToken2 != user.gqlToken) {
                         val response = authRepository.validate(TwitchApiHelper.addTokenPrefixGQL(user.gqlToken2))
                         if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlClientId2) {
                             if ((!response?.userId.isNullOrBlank() && response?.userId != user.id) || (!response?.login.isNullOrBlank() && response?.login != user.login)) {
