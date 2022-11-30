@@ -973,7 +973,8 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
                     segmentDurationUs = targetDurationUs;
                     line = line.substring(line.indexOf(':') + 1);
                 }
-                String segmentUri = replaceVariableReferences(line, variableDefinitions);
+                String segmentUri = replaceVariableReferences(line, variableDefinitions)
+                        .replace("-unmuted", "-muted"); // TODO .replace("-unmuted", "")
                 @Nullable Segment inferredInitSegment = urlToInferredInitSegment.get(segmentUri);
                 if (segmentByteRangeLength == C.LENGTH_UNSET) {
                     // The segment has no byte range defined.
