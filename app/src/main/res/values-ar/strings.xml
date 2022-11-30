@@ -517,10 +517,8 @@
     <string name="points_collect">Collect channel points automatically</string>
     <string name="connect_chat">Connect to chat</string>
     <string name="raid_text">Raiding %1$s with %2$d viewers</string>
-    <string name="show_raids">Show raids and hosts</string>
+    <string name="show_raids">Show raids</string>
     <string name="auto_switch_raids">Switch stream on raid automatically</string>
-    <string name="host_text">Hosting %s</string>
-    <string name="watch_stream">Watch stream</string>
     <string name="search_streams">Search streams</string>
     <string name="reload_emotes">Reload emotes</string>
     <string name="api_current_login">Current login</string>

@@ -7,7 +7,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.chat.*
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.common.BaseViewModel
@@ -84,8 +83,6 @@ class ChatViewModel @Inject constructor(
     var raidAutoSwitch = false
     var raidNewId = true
     var raidClosed = false
-    val host = MutableLiveData<Stream>()
-    val hostClicked = MutableLiveData<Boolean>()
     val viewerCount = MutableLiveData<Int?>()
 
     private val _chatMessages by lazy {
@@ -566,18 +563,6 @@ class ChatViewModel @Inject constructor(
         override fun onRaidClose() {
             raidAutoSwitch = false
             raidClosed = true
-        }
-
-        override fun onHostClicked() {
-            hostClicked.postValue(true)
-        }
-
-        override fun onCheckHost() {
-            viewModelScope.launch {
-                repository.loadHosting(gqlClientId, channelId, channelLogin)?.let {
-                    host.postValue(it)
-                }
-            }
         }
 
         override fun onViewerCount(viewers: Int?) {

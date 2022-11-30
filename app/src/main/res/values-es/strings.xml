@@ -519,8 +519,6 @@
     <string name="raid_text">Raid %1$s con %2$d espectadores</string>
     <string name="show_raids">Mostrar incursiones y anfitriones</string>
     <string name="auto_switch_raids">Cambiar la transmisión a la incursión automáticamente</string>
-    <string name="host_text">Hosting %s</string>
-    <string name="watch_stream">Ver transmisión</string>
     <string name="search_streams">Buscar transmisiones</string>
     <string name="reload_emotes">Recargar emotes</string>
     <string name="api_current_login">Inicio de sesión actual</string>

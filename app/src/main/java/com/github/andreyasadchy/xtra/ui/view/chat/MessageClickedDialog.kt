@@ -26,7 +26,6 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         fun onReplyClicked(userName: String)
         fun onCopyMessageClicked(message: String)
         fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?)
-        fun onHostClicked()
     }
 
     companion object {
@@ -35,12 +34,11 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         private const val KEY_FORMATTED = "formatted"
         private const val KEY_USERID = "userid"
         private const val KEY_CHANNEL_ID = "channelId"
-        private const val KEY_HOST = "host"
         private const val KEY_FULL_MSG = "full"
         private val savedUsers = mutableListOf<Pair<User, String?>>()
 
-        fun newInstance(messagingEnabled: Boolean, originalMessage: CharSequence, formattedMessage: CharSequence, userId: String?, channelId: String?, host: Boolean?, fullMsg: String?) = MessageClickedDialog().apply {
-            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_ORIGINAL to originalMessage, KEY_FORMATTED to formattedMessage, KEY_USERID to userId, KEY_CHANNEL_ID to channelId, KEY_HOST to host, KEY_FULL_MSG to fullMsg)
+        fun newInstance(messagingEnabled: Boolean, originalMessage: CharSequence, formattedMessage: CharSequence, userId: String?, channelId: String?, fullMsg: String?) = MessageClickedDialog().apply {
+            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_ORIGINAL to originalMessage, KEY_FORMATTED to formattedMessage, KEY_USERID to userId, KEY_CHANNEL_ID to channelId, KEY_FULL_MSG to fullMsg)
         }
     }
 
@@ -110,13 +108,6 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
             copyFullMsg.visible()
             copyFullMsg.setOnClickListener {
                 clipboard?.setPrimaryClip(ClipData.newPlainText("label", fullMsg))
-                dismiss()
-            }
-        }
-        if (args.getBoolean(KEY_HOST)) {
-            watchHost.visible()
-            watchHost.setOnClickListener {
-                listener.onHostClicked()
                 dismiss()
             }
         }

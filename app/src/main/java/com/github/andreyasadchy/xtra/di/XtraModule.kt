@@ -129,7 +129,6 @@ class XtraModule {
                 .registerTypeAdapter(GameDataResponse::class.java, GameDataDeserializer())
                 .registerTypeAdapter(StreamDataResponse::class.java, StreamDataDeserializer())
                 .registerTypeAdapter(ViewersDataResponse::class.java, ViewersDataDeserializer())
-                .registerTypeAdapter(ChannelHostingDataResponse::class.java, ChannelHostingDataDeserializer())
                 .registerTypeAdapter(GameStreamsDataResponse::class.java, GameStreamsDataDeserializer())
                 .registerTypeAdapter(GameVideosDataResponse::class.java, GameVideosDataDeserializer())
                 .registerTypeAdapter(GameClipsDataResponse::class.java, GameClipsDataDeserializer())

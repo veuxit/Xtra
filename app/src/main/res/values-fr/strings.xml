@@ -519,8 +519,6 @@
     <string name="raid_text">Raiding %1$s avec %2$d spectateurs</string>
     <string name="show_raids">Afficher les raids et les hôtes</string>
     <string name="auto_switch_raids">Basculer automatiquement le flux lors d\'un raid</string>
-    <string name="host_text">Hébergement %s</string>
-    <string name="watch_stream">Regarder le flux</string>
     <string name="search_streams">Rechercher des flux</string>
     <string name="reload_emotes">Recharger les emotes</string>
     <string name="api_current_login">Connexion actuelle</string>

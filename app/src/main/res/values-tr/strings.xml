@@ -519,8 +519,6 @@
     <string name="raid_text">%2$d izleyici ile %1$s kanalına baskın</string>
     <string name="show_raids">Baskınları ve paylaşmaları göster</string>
     <string name="auto_switch_raids">Baskın akışını otomatik olarak değiştir</string>
-    <string name="host_text">%s paylaşılıyor</string>
-    <string name="watch_stream">Yayını izle</string>
     <string name="search_streams">Yayın akışlarını ara</string>
     <string name="reload_emotes">İfadeleri yeniden yükle</string>
     <string name="api_current_login">Geçerli giriş</string>

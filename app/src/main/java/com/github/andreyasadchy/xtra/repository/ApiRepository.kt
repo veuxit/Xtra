@@ -355,7 +355,6 @@ class ApiRepository @Inject constructor(
                             else -> null
                         },
                         profile_image_url = i.profileImageURL,
-                        view_count = i.profileViewCount,
                         created_at = i.createdAt?.toString(),
                         followers_count = i.followers?.totalCount,
                         bannerImageURL = i.bannerImageURL
@@ -731,25 +730,6 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadChannelViewerList(clientId: String?, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
         gql.loadChannelViewerList(clientId, channelLogin).data
-    }
-
-    suspend fun loadHosting(gqlClientId: String?, channelId: String?, channelLogin: String?): Stream? = withContext(Dispatchers.IO) {
-        try {
-            getApolloClient(gqlClientId).query(UserHostingQuery(Optional.Present(channelId), Optional.Present(channelLogin))).execute().data?.user?.hosting?.let { get ->
-                Stream(
-                    user_id = get.id,
-                    user_login = get.login,
-                    user_name = get.displayName,
-                    profileImageURL = get.profileImageURL,
-                )
-            }
-        } catch (e: Exception) {
-            if (!channelLogin.isNullOrBlank()) {
-                gql.loadChannelHosting(gqlClientId, channelLogin).data
-            } else {
-                null
-            }
-        }
     }
 
     suspend fun loadClaimPoints(gqlClientId: String?, gqlToken: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
