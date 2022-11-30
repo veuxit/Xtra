@@ -106,8 +106,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             viewModel.pointsEarned.observe(viewLifecycleOwner) { chatView.notifyPointsEarned(it) }
             viewModel.raid.observe(viewLifecycleOwner) { onRaidUpdate(it) }
             viewModel.raidClicked.observe(viewLifecycleOwner) { onRaidClicked() }
-            viewModel.host.observe(viewLifecycleOwner) { onHost(it) }
-            viewModel.hostClicked.observe(viewLifecycleOwner) { onHostClicked() }
             viewModel.viewerCount.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it) }
         }
     }
@@ -174,23 +172,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 user_login = it.targetLogin,
                 user_name = it.targetName,
                 profileImageURL = it.targetProfileImage,
-            ))
-        }
-    }
-
-    private fun onHost(stream: Stream) {
-        if (viewModel.showRaids) {
-            chatView.notifyHost(stream)
-        }
-    }
-
-    override fun onHostClicked() {
-        viewModel.host.value?.let {
-            (requireActivity() as MainActivity).startStream(Stream(
-                user_id = it.user_id,
-                user_login = it.user_login,
-                user_name = it.user_name,
-                profileImageURL = it.channelLogo,
             ))
         }
     }

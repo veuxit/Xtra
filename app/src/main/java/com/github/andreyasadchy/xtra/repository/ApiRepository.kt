@@ -613,25 +613,6 @@ class ApiRepository @Inject constructor(
         gql.loadChannelViewerList(clientId, channelLogin).data
     }
 
-    suspend fun loadHosting(gqlClientId: String?, channelId: String?, channelLogin: String?): Stream? = withContext(Dispatchers.IO) {
-        try {
-            val context = XtraApp.INSTANCE.applicationContext
-            gql.loadQueryUserHosting(
-                clientId = gqlClientId,
-                query = context.resources.openRawResource(R.raw.userhosting).bufferedReader().use { it.readText() },
-                variables = JsonObject().apply {
-                    addProperty("id", channelId)
-                    addProperty("login", channelLogin)
-                }).data
-        } catch (e: Exception) {
-            if (!channelLogin.isNullOrBlank()) {
-                gql.loadChannelHosting(gqlClientId, channelLogin).data
-            } else {
-                null
-            }
-        }
-    }
-
     suspend fun loadClaimPoints(gqlClientId: String?, gqlToken: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
         try {
             val claimId = gql.loadChannelPointsContext(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelLogin).availableClaimId

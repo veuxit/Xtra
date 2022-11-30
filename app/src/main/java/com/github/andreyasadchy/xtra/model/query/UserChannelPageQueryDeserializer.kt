@@ -42,7 +42,6 @@ class UserChannelPageQueryDeserializer : JsonDeserializer<UserChannelPageQueryRe
                         else -> null
                     },
                     profile_image_url = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    view_count = obj.get("profileViewCount")?.takeIf { !it.isJsonNull }?.asInt,
                     created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
                     followers_count = obj.get("followers")?.takeIf { it.isJsonObject }?.asJsonObject?.get("totalCount")?.takeIf { !it.isJsonNull }?.asInt,
                     bannerImageURL = obj.get("bannerImageURL")?.takeIf { !it.isJsonNull }?.asString,

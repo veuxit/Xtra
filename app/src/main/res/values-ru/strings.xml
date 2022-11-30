@@ -519,8 +519,6 @@
     <string name="raid_text">Происходит рейд %1$s с %2$d зрителями</string>
     <string name="show_raids">Показать рейды и хосты</string>
     <string name="auto_switch_raids">Автосмена стрима при рейде</string>
-    <string name="host_text">Хостится %s</string>
-    <string name="watch_stream">Смотреть трансляцию</string>
     <string name="search_streams">Поиск трансляций</string>
     <string name="reload_emotes">Перезагрузить смайлы</string>
     <string name="api_current_login">Текущий логин</string>

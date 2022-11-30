@@ -16,6 +16,5 @@ data class LiveChatMessage(
     val systemMsg: String? = null,
     val timestamp: Long? = null,
     val rewardId: String? = null,
-    var pointReward: PubSubPointReward? = null,
-    val isHostMsg: Boolean = false) : ChatMessage
+    var pointReward: PubSubPointReward? = null) : ChatMessage
 

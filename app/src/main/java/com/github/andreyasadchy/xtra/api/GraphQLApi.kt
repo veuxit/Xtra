@@ -97,9 +97,6 @@ interface GraphQLApi {
     suspend fun getQueryUserFollowedVideos(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserFollowedVideosQueryResponse
 
     @POST(".")
-    suspend fun getQueryUserHosting(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserHostingQueryResponse
-
-    @POST(".")
     suspend fun getQueryUserMessageClicked(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserMessageClickedQueryResponse
 
     @POST(".")
@@ -194,9 +191,6 @@ interface GraphQLApi {
 
     @POST(".")
     suspend fun getViewerCount(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ViewersDataResponse
-
-    @POST(".")
-    suspend fun getChannelHosting(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChannelHostingDataResponse
 
     @POST(".")
     suspend fun getEmoteCard(@Header("Client-ID") clientId: String?, @Body json: JsonObject): EmoteCardResponse

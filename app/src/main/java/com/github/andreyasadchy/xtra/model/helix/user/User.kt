@@ -14,7 +14,6 @@ data class User(
     val description: String? = null,
     val profile_image_url: String? = null,
     val offline_image_url: String? = null,
-    val view_count: Int? = null,
     val created_at: String? = null,
 
     val followers_count: Int? = null,

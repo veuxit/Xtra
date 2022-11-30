@@ -12,7 +12,6 @@ query ($id: ID, $login: String) {
         id
         login
         profileImageURL(width: 300)
-        profileViewCount
         roles {
             isAffiliate
             isGlobalMod

@@ -21,7 +21,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.*
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.ui.common.ChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
@@ -47,8 +46,6 @@ class ChatView : ConstraintLayout {
     interface RaidCallback {
         fun onRaidClicked()
         fun onRaidClose()
-        fun onHostClicked()
-        fun onCheckHost()
     }
 
     private lateinit var adapter: ChatAdapter
@@ -220,8 +217,6 @@ class ChatView : ConstraintLayout {
             "socket_error" -> context.getString(R.string.chat_socket_error, command.message)
             "notice" -> {
                 when (command.duration) { // msg-id
-                    "host_on" -> raidCallback?.onCheckHost()
-                    "host_off" -> hideRaid()
                     "unraid_success" -> hideRaid()
                 }
                 TwitchApiHelper.getNoticeString(context, command.duration, command.message)
@@ -232,7 +227,7 @@ class ChatView : ConstraintLayout {
             "ban" -> context.getString(R.string.chat_ban, command.message)
             else -> command.message
         }
-        adapter.messages?.add(LiveChatMessage(message = message, color = "#999999", isAction = true, emotes = command.emotes, timestamp = command.timestamp, fullMsg = command.fullMsg, isHostMsg = command.duration == "host_on"))
+        adapter.messages?.add(LiveChatMessage(message = message, color = "#999999", isAction = true, emotes = command.emotes, timestamp = command.timestamp, fullMsg = command.fullMsg))
         notifyMessageAdded()
     }
 
@@ -291,21 +286,6 @@ class ChatView : ConstraintLayout {
         raidImage.gone()
         raidText.gone()
         raidClose.gone()
-    }
-
-    fun notifyHost(stream: Stream) {
-        raidLayout.visible()
-        raidLayout.setOnClickListener { raidCallback?.onHostClicked() }
-        if (!stream.channelLogo.isNullOrBlank()) {
-            raidImage.visible()
-            raidImage.loadImage(fragment, stream.channelLogo, circle = true)
-        } else {
-            raidImage.gone()
-        }
-        raidText.visible()
-        raidText.text = context.getString(R.string.host_text, stream.user_name)
-        raidClose.visible()
-        raidClose.setOnClickListener { hideRaid() }
     }
 
     fun addRecentMessages(list: List<LiveChatMessage>) {
@@ -408,10 +388,10 @@ class ChatView : ConstraintLayout {
     }
 
     fun enableChatInteraction(enableMessaging: Boolean) {
-        adapter.setOnClickListener { original, formatted, userId, channelId, host, fullMsg ->
+        adapter.setOnClickListener { original, formatted, userId, channelId, fullMsg ->
             editText.hideKeyboard()
             editText.clearFocus()
-            MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId, channelId, host, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
+            MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId, channelId, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
         }
         if (enableMessaging) {
             editText.addTextChangedListener(onTextChanged = { text, _, _, _ ->

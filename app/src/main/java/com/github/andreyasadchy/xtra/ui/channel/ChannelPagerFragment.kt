@@ -299,16 +299,6 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             userFollowers.gone()
         }
-        if (user.view_count != null) {
-            userViews.visible()
-            userViews.text = TwitchApiHelper.formatViewsCount(requireContext(), user.view_count)
-            /*if (user.bannerImageURL != null) {
-                userViews.setTextColor(Color.LTGRAY)
-                userViews.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-            }*/
-        } else {
-            userViews.gone()
-        }
         val broadcasterType = if (user.broadcaster_type != null) { TwitchApiHelper.getUserType(requireContext(), user.broadcaster_type) } else null
         val type = if (user.type != null) { TwitchApiHelper.getUserType(requireContext(), user.type) } else null
         val typeString = if (broadcasterType != null && type != null) "$broadcasterType, $type" else broadcasterType ?: type
