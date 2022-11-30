@@ -392,7 +392,7 @@ class ChatViewModel @Inject constructor(
             private val showClearChat: Boolean,
             private val collectPoints: Boolean,
             private val notifyPoints: Boolean,
-            private val useApiCommands: Boolean) : ChatController(), OnUserStateReceivedListener, OnRoomStateReceivedListener, OnCommandReceivedListener, OnRewardReceivedListener, OnPointsEarnedListener, OnClaimPointsListener, OnMinuteWatchedListener, OnRaidListener, ChatView.RaidCallback, OnViewerCountReceivedListener {
+            private val useApiCommands: Boolean) : ChatController(), LiveChatListener, PubSubListener, ChatView.RaidCallback {
 
         private var chat: LiveChatThread? = null
         private var loggedInChat: LoggedInChatThread? = null
@@ -434,12 +434,12 @@ class ChatViewModel @Inject constructor(
 
         override fun start() {
             pause()
-            chat = TwitchApiHelper.startChat(useSSl, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this, this, this, this)
+            chat = TwitchApiHelper.startChat(useSSl, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
             if (isLoggedIn) {
-                loggedInChat = TwitchApiHelper.startLoggedInChat(useSSl, user.login, user.gqlToken?.nullIfEmpty() ?: user.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this, this, this, this)
+                loggedInChat = TwitchApiHelper.startLoggedInChat(useSSl, user.login, user.gqlToken?.nullIfEmpty() ?: user.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
-                pubSub = TwitchApiHelper.startPubSub(channelId, user.id, user.gqlToken, collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this, this, this, this, this, this)
+                pubSub = TwitchApiHelper.startPubSub(channelId, user.id, user.gqlToken, collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this)
             }
         }
 
@@ -462,13 +462,21 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onUserState(sets: List<String>?) {
-            if (savedEmoteSets != sets) {
+        override fun onCommand(list: Command) {
+            command.postValue(list)
+        }
+
+        override fun onRoomState(list: RoomState) {
+            roomState.postValue(list)
+        }
+
+        override fun onUserState(emoteSets: List<String>?) {
+            if (savedEmoteSets != emoteSets) {
                 viewModelScope.launch {
                     val emotes = mutableListOf<TwitchEmote>()
                     try {
                         if (!helixClientId.isNullOrBlank() && !user.helixToken.isNullOrBlank()) {
-                            sets?.asReversed()?.chunked(25)?.forEach { list ->
+                            emoteSets?.asReversed()?.chunked(25)?.forEach { list ->
                                 repository.loadEmotesFromSet(helixClientId, user.helixToken, list, animateGifs).let { emotes.addAll(it) }
                             }
                         } else if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank()) {
@@ -477,7 +485,7 @@ class ChatViewModel @Inject constructor(
                     } catch (e: Exception) {
                     }
                     if (emotes.isNotEmpty()) {
-                        savedEmoteSets = sets
+                        savedEmoteSets = emoteSets
                         savedUserEmotes = emotes
                         emoteSetsAdded = true
                         val items = emotes.filter { it.ownerId == channelId }
@@ -510,15 +518,18 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onRoomState(list: RoomState) {
-            roomState.postValue(list)
+        override fun onPlaybackMessage(live: Boolean?, viewers: Int?) {
+            live?.let {
+                if (it) {
+                    command.postValue(Command(duration = channelLogin, type = "stream_live"))
+                } else {
+                    command.postValue(Command(duration = channelLogin, type = "stream_offline"))
+                }
+            }
+            viewerCount.postValue(viewers)
         }
 
-        override fun onCommand(list: Command) {
-            command.postValue(list)
-        }
-
-        override fun onReward(message: ChatMessage) {
+        override fun onRewardMessage(message: ChatMessage) {
             reward.postValue(message)
         }
 
@@ -526,7 +537,7 @@ class ChatViewModel @Inject constructor(
             pointsEarned.postValue(message)
         }
 
-        override fun onClaim() {
+        override fun onClaimAvailable() {
             if (!gqlClientId2.isNullOrBlank() && !user.gqlToken2.isNullOrBlank()) {
                 viewModelScope.launch {
                     repository.loadClaimPoints(gqlClientId2, user.gqlToken2, channelId, channelLogin)
@@ -563,10 +574,6 @@ class ChatViewModel @Inject constructor(
         override fun onRaidClose() {
             raidAutoSwitch = false
             raidClosed = true
-        }
-
-        override fun onViewerCount(viewers: Int?) {
-            viewerCount.postValue(viewers)
         }
 
         fun addEmotes(list: List<Emote>) {

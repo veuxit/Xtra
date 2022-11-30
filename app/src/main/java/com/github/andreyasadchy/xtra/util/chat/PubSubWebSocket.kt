@@ -147,8 +147,8 @@ class PubSubWebSocket(
                         val message = data?.optString("message")?.let { if (it.isNotBlank()) JSONObject(it) else null }
                         val messageType = message?.optString("type")
                         when {
-                            (topic?.startsWith("video-playback-by-id") == true) && (messageType?.startsWith("viewcount") == true || messageType?.startsWith("stream-down") == true) -> listener.onPlaybackMessage(text)
-                            (topic?.startsWith("community-points-channel") == true) && (messageType?.startsWith("reward-redeemed") == true) -> listener.onPointReward(text)
+                            (topic?.startsWith("video-playback-by-id") == true) -> listener.onPlaybackMessage(text)
+                            (topic?.startsWith("community-points-channel") == true) && (messageType?.startsWith("reward-redeemed") == true) -> listener.onRewardMessage(text)
                             topic?.startsWith("community-points-user") == true -> {
                                 when {
                                     messageType?.startsWith("points-earned") == true && notifyPoints -> {
@@ -158,7 +158,7 @@ class PubSubWebSocket(
                                             listener.onPointsEarned(text)
                                         }
                                     }
-                                    messageType?.startsWith("claim-available") == true && collectPoints -> listener.onClaimPoints()
+                                    messageType?.startsWith("claim-available") == true && collectPoints -> listener.onClaimAvailable()
                                 }
                             }
                             topic?.startsWith("raid") == true && showRaids -> {
@@ -180,9 +180,9 @@ class PubSubWebSocket(
 
     interface OnMessageReceivedListener {
         fun onPlaybackMessage(text: String)
-        fun onPointReward(text: String)
+        fun onRewardMessage(text: String)
         fun onPointsEarned(text: String)
-        fun onClaimPoints()
+        fun onClaimAvailable()
         fun onMinuteWatched()
         fun onRaidUpdate(text: String, openStream: Boolean)
     }
