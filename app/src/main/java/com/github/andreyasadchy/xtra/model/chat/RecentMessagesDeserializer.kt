@@ -39,8 +39,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
     private fun onMessage(context: Context, message: String, userNotice: Boolean): LiveChatMessage? {
         if (!userNotice || (userNotice && context.prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true))) {
             val parts = message.substring(1).split(" ".toRegex(), 2)
-            val prefix = parts[0]
-            val prefixes = splitAndMakeMap(prefix, ";", "=")
+            val prefixes = splitAndMakeMap(parts[0], ";", "=")
             val messageInfo = parts[1] //:<user>!<user>@<user>.tmi.twitch.tv PRIVMSG #<channelName> :<message>
             val userLogin = prefixes["login"] ?: try {
                 messageInfo.substring(1, messageInfo.indexOf("!"))
@@ -118,8 +117,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
     private fun onClearMessage(context: Context, message: String): LiveChatMessage? {
         if (context.prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)) {
             val parts = message.substring(1).split(" ".toRegex(), 2)
-            val prefix = parts[0]
-            val prefixes = splitAndMakeMap(prefix, ";", "=")
+            val prefixes = splitAndMakeMap(parts[0], ";", "=")
             val user = prefixes["login"]
             val messageInfo = parts[1]
             val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
@@ -140,8 +138,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
     private fun onClearChat(context: Context, message: String): LiveChatMessage? {
         if (context.prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)) {
             val parts = message.substring(1).split(" ".toRegex(), 2)
-            val prefix = parts[0]
-            val prefixes = splitAndMakeMap(prefix, ";", "=")
+            val prefixes = splitAndMakeMap(parts[0], ";", "=")
             val duration = prefixes["ban-duration"]
             val messageInfo = parts[1]
             val userIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
@@ -167,8 +164,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
 
     private fun onNotice(context: Context, message: String): LiveChatMessage {
         val parts = message.substring(1).split(" ".toRegex(), 2)
-        val prefix = parts[0]
-        val prefixes = splitAndMakeMap(prefix, ";", "=")
+        val prefixes = splitAndMakeMap(parts[0], ";", "=")
         val messageInfo = parts[1]
         val msgId = prefixes["msg-id"]
         val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
@@ -180,41 +176,6 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
             isAction = true,
             fullMsg = message
         )
-    }
-
-    private fun onUserNotice(context: Context, message: String): LiveChatMessage? {
-        if (context.prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)) {
-            val parts = message.substring(1).split(" ".toRegex(), 2)
-            val prefix = parts[0]
-            val prefixes = splitAndMakeMap(prefix, ";", "=")
-            val system = prefixes["system-msg"]?.replace("\\s", " ")
-            val messageInfo = parts[1]
-            val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
-            val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
-            val msg = if (msgIndex != -1) messageInfo.substring(msgIndex + 1) else if (index2 != -1) messageInfo.substring(index2 + 1) else null
-            var emotesList: MutableList<TwitchEmote>? = null
-            val emotes = prefixes["emotes"]
-            if (emotes != null && system != null && msg != null) {
-                val entries = splitAndMakeMap(emotes, "/", ":").entries
-                emotesList = ArrayList(entries.size)
-                entries.forEach { emote ->
-                    emote.value?.split(",")?.forEach { indexes ->
-                        val index = indexes.split("-")
-                        emotesList.add(TwitchEmote(name = emote.key, begin = index[0].toInt() + system.length + 1, end = index[1].toInt() + system.length + 1))
-                    }
-                }
-            }
-            return LiveChatMessage(
-                message = if (system != null) if (msg != null) "$system $msg" else system else msg,
-                color = "#999999",
-                isAction = true,
-                emotes = emotesList,
-                timestamp = prefixes["tmi-sent-ts"]?.toLong(),
-                fullMsg = message
-            )
-        } else {
-            return null
-        }
     }
 
     private fun splitAndMakeMap(string: String, splitRegex: String, mapRegex: String): Map<String, String?> {

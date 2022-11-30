@@ -5,21 +5,21 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import org.json.JSONObject
 
 class PubSubListenerImpl(
-    private val callback: OnChatMessageReceivedListener,
-    private val callbackReward: OnRewardReceivedListener,
-    private val callbackPointsEarned: OnPointsEarnedListener,
-    private val callbackClaim: OnClaimPointsListener,
-    private val callbackMinute: OnMinuteWatchedListener,
-    private val callbackRaid: OnRaidListener,
-    private val callbackViewers: OnViewerCountReceivedListener) : PubSubWebSocket.OnMessageReceivedListener {
+    private val callbackMessage: OnChatMessageReceivedListener,
+    private val callback: PubSubListener) : PubSubWebSocket.OnMessageReceivedListener {
 
     override fun onPlaybackMessage(text: String) {
         val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
         val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        callbackViewers.onViewerCount(if (message?.isNull("viewers") == false) message.optInt("viewers") else null)
+        val messageType = message?.optString("type")
+        when {
+            messageType?.startsWith("viewcount") == true -> callback.onPlaybackMessage(null, if (!message.isNull("viewers")) message.optInt("viewers") else null)
+            messageType?.startsWith("stream-up") == true -> callback.onPlaybackMessage(true, null)
+            messageType?.startsWith("stream-down") == true -> callback.onPlaybackMessage(false, null)
+        }
     }
 
-    override fun onPointReward(text: String) {
+    override fun onRewardMessage(text: String) {
         val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
         val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
         val messageData = message?.optString("data")?.let { if (it.isNotBlank() && !message.isNull("data")) JSONObject(it) else null }
@@ -46,9 +46,9 @@ class PubSubListenerImpl(
             timestamp = messageData?.optString("timestamp")?.let { TwitchApiHelper.parseIso8601Date(it) }
         )
         if (input.isNullOrBlank()) {
-            callback.onMessage(pointReward)
+            callbackMessage.onMessage(pointReward)
         } else {
-            callbackReward.onReward(pointReward)
+            callback.onRewardMessage(pointReward)
         }
     }
 
@@ -57,26 +57,26 @@ class PubSubListenerImpl(
         val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
         val messageData = message?.optString("data")?.let { if (it.isNotBlank() && !message.isNull("data")) JSONObject(it) else null }
         val pointGain = messageData?.optString("point_gain")?.let { if (it.isNotBlank() && !messageData.isNull("point_gain")) JSONObject(it) else null }
-        callbackPointsEarned.onPointsEarned(PointsEarned(
+        callback.onPointsEarned(PointsEarned(
             pointsGained = pointGain?.optInt("total_points"),
             timestamp = messageData?.optString("timestamp")?.let { TwitchApiHelper.parseIso8601Date(it) },
             fullMsg = text
         ))
     }
 
-    override fun onClaimPoints() {
-        callbackClaim.onClaim()
+    override fun onClaimAvailable() {
+        callback.onClaimAvailable()
     }
 
     override fun onMinuteWatched() {
-        callbackMinute.onMinuteWatched()
+        callback.onMinuteWatched()
     }
 
     override fun onRaidUpdate(text: String, openStream: Boolean) {
         val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
         val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
         val raid = message?.optString("raid")?.let { if (it.isNotBlank() && !message.isNull("raid")) JSONObject(it) else null }
-        callbackRaid.onRaidUpdate(Raid(
+        callback.onRaidUpdate(Raid(
             raidId = raid?.optString("id"),
             targetId = raid?.optString("target_id"),
             targetLogin = raid?.optString("target_login"),

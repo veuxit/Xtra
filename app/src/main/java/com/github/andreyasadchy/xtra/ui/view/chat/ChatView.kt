@@ -226,6 +226,8 @@ class ChatView : ConstraintLayout {
             "clearchat" -> context.getString(R.string.chat_clear)
             "timeout" -> context.getString(R.string.chat_timeout, command.message, TwitchApiHelper.getDurationFromSeconds(context, command.duration))
             "ban" -> context.getString(R.string.chat_ban, command.message)
+            "stream_live" -> context.getString(R.string.stream_live, command.duration)
+            "stream_offline" -> context.getString(R.string.stream_offline, command.duration)
             else -> command.message
         }
         adapter.messages?.add(LiveChatMessage(message = message, color = "#999999", isAction = true, emotes = command.emotes, timestamp = command.timestamp, fullMsg = command.fullMsg))

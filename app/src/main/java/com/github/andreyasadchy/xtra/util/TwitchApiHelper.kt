@@ -208,16 +208,16 @@ object TwitchApiHelper {
         return DateUtils.formatDateTime(context, date, format)
     }
 
-    fun startChat(useSSl: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, UserStateListener: OnUserStateReceivedListener, RoomStateListener: OnRoomStateReceivedListener, CommandListener: OnCommandReceivedListener, callbackReward: OnRewardReceivedListener): LiveChatThread {
-        return LiveChatThread(useSSl, loggedIn, channelName, MessageListenerImpl(newMessageListener, UserStateListener, RoomStateListener, CommandListener, callbackReward, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startChat(useSSl: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LiveChatThread {
+        return LiveChatThread(useSSl, loggedIn, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
-    fun startLoggedInChat(useSSl: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, UserStateListener: OnUserStateReceivedListener, RoomStateListener: OnRoomStateReceivedListener, CommandListener: OnCommandReceivedListener, callbackReward: OnRewardReceivedListener): LoggedInChatThread {
-        return LoggedInChatThread(useSSl, userName, userToken, channelName, MessageListenerImpl(newMessageListener, UserStateListener, RoomStateListener, CommandListener, callbackReward, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startLoggedInChat(useSSl: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LoggedInChatThread {
+        return LoggedInChatThread(useSSl, userName, userToken, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
-    fun startPubSub(channelId: String, userId: String?, gqlToken: String?, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, client: OkHttpClient, coroutineScope: CoroutineScope, newMessageListener: OnChatMessageReceivedListener, callbackReward: OnRewardReceivedListener, callbackPointsEarned: OnPointsEarnedListener, callbackClaim: OnClaimPointsListener, callbackMinute: OnMinuteWatchedListener, callbackRaid: OnRaidListener, callbackViewers: OnViewerCountReceivedListener): PubSubWebSocket {
-        return PubSubWebSocket(channelId, userId, gqlToken, collectPoints, notifyPoints, showRaids, client, coroutineScope, PubSubListenerImpl(newMessageListener, callbackReward, callbackPointsEarned, callbackClaim, callbackMinute, callbackRaid, callbackViewers)).apply { connect() }
+    fun startPubSub(channelId: String, userId: String?, gqlToken: String?, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, client: OkHttpClient, coroutineScope: CoroutineScope, newMessageListener: OnChatMessageReceivedListener, callback: PubSubListener): PubSubWebSocket {
+        return PubSubWebSocket(channelId, userId, gqlToken, collectPoints, notifyPoints, showRaids, client, coroutineScope, PubSubListenerImpl(newMessageListener, callback)).apply { connect() }
     }
 
     fun parseClipOffset(url: String): Double {
