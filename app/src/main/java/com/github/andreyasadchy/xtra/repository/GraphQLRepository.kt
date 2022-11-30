@@ -4,7 +4,6 @@ import android.util.Log
 import com.github.andreyasadchy.xtra.api.GraphQLApi
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
-import com.github.andreyasadchy.xtra.model.gql.channel.ChannelHostingDataResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelViewerListDataResponse
 import com.github.andreyasadchy.xtra.model.gql.chat.*
@@ -591,22 +590,6 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             })
         }
         return graphQL.getViewerCount(clientId, json)
-    }
-
-    suspend fun loadChannelHosting(clientId: String?, channelLogin: String?): ChannelHostingDataResponse {
-        val json = JsonObject().apply {
-            addProperty("operationName", "UseHosting")
-            add("variables", JsonObject().apply {
-                addProperty("channelLogin", channelLogin)
-            })
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("version", 1)
-                    addProperty("sha256Hash", "427f55a3daca510f726c02695a898ef3a0de4355b39af328848876052ea6b337")
-                })
-            })
-        }
-        return graphQL.getChannelHosting(clientId, json)
     }
 
     suspend fun loadEmoteCard(clientId: String?, emoteId: String?): EmoteCardResponse {
