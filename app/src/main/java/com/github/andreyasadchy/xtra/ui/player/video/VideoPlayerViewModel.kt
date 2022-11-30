@@ -17,6 +17,7 @@ import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -76,6 +77,9 @@ class VideoPlayerViewModel @Inject constructor(
     private var startOffset: Long = 0
     private var shouldRetry = true
 
+    private val hlsMediaSourceFactory = HlsMediaSource.Factory(dataSourceFactory)
+        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+
     init {
         val speed = context.prefs().getFloat(C.PLAYER_SPEED, 1f)
         setSpeed(speed)
@@ -125,7 +129,7 @@ class VideoPlayerViewModel @Inject constructor(
                         playerType = context.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
                     )
                 }
-                mediaSource = HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(url))
+                mediaSource = hlsMediaSourceFactory.createMediaSource(MediaItem.fromUri(url))
                 play()
                 if (startOffset > 0) {
                     player.seekTo(startOffset)

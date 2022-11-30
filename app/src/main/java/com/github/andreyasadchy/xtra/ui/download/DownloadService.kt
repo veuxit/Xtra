@@ -255,7 +255,9 @@ class DownloadService : IntentService(TAG) {
             try {
                 for (i in current..min(current + ENQUEUE_SIZE, segmentTo!!)) {
                     val track = tracks[i]
-                    requests.add(FetchRequest(url + track.uri, path + track.uri).apply { groupId = offlineVideoId })
+                    track.uri.replace("-unmuted", "-muted").let { // TODO .replace("-unmuted", "")
+                        requests.add(FetchRequest(url + it, path + it).apply { groupId = offlineVideoId })
+                    }
                 }
             } catch (e: IndexOutOfBoundsException) {
                 offlineRepository.updateVideo(offlineVideo.apply { segmentTo = tracks.lastIndex })
@@ -283,7 +285,7 @@ class DownloadService : IntentService(TAG) {
                         val track = playlist.tracks[i] //TODO encrypt files
                         tracks.add(
                             TrackData.Builder()
-                                .withUri("$path${track.uri}")
+                                .withUri("$path${track.uri.replace("-unmuted", "-muted")}") // TODO .replace("-unmuted", "")
                                 .withTrackInfo(TrackInfo(track.trackInfo.duration, track.trackInfo.title))
                                 .build()
                         )
