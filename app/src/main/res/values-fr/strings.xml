@@ -540,4 +540,6 @@
     <string name="skipVideoTokenEntries2">Skip by default, don\'t skip if playback fails</string>
     <string name="skipVideoTokenEntries3">Don\'t skip by default, skip if playback fails</string>
     <string name="skipVideoTokenEntries4">Never skip</string>
+    <string name="stream_live">%s is now live</string>
+    <string name="stream_offline">%s is now offline</string>
 </resources>
