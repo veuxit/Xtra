@@ -129,7 +129,7 @@ class PlayerRepository @Inject constructor(
         misc.getRecentMessages(channelLogin, limit)
     }
 
-    suspend fun loadGlobalStvEmotes(): Response<StvEmotesResponse> = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalStvEmotes(): Response<StvGlobalResponse> = withContext(Dispatchers.IO) {
         misc.getGlobalStvEmotes()
     }
 
@@ -141,7 +141,7 @@ class PlayerRepository @Inject constructor(
         misc.getBttvGlobalFfzEmotes()
     }
 
-    suspend fun loadStvEmotes(channelId: String): Response<StvEmotesResponse> = withContext(Dispatchers.IO) {
+    suspend fun loadStvEmotes(channelId: String): Response<StvChannelResponse> = withContext(Dispatchers.IO) {
         misc.getStvEmotes(channelId)
     }
 
