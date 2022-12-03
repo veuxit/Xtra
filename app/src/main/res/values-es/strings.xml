@@ -542,4 +542,5 @@
     <string name="skipVideoTokenEntries4">Never skip</string>
     <string name="stream_live">%s is now live</string>
     <string name="stream_offline">%s is now offline</string>
+    <string name="keep_screen_on_when_paused">Keep screen on when video is paused</string>
 </resources>

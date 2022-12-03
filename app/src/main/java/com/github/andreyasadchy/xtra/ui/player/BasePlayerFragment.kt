@@ -99,7 +99,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.keepScreenOn = true
         val activity = requireActivity() as MainActivity
         slidingLayout = view as SlidingLayout
         slidingLayout.addListener(activity)
@@ -266,6 +265,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 playerView.controllerHideOnTouch = false
                 playerView.controllerShowTimeoutMs = -1
                 playerView.showController()
+                view.keepScreenOn = true
             }
         }
         if (this !is OfflinePlayerFragment && prefs.getBoolean(C.PLAYER_FOLLOW, true) && (requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
@@ -295,6 +295,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                         showSleepTimerDialog()
                     }
                 }
+            }
+        }
+        if (prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
+            view.keepScreenOn = true
+        } else {
+            viewModel.isPlaying.observe(viewLifecycleOwner) {
+                view.keepScreenOn = it
             }
         }
     }
