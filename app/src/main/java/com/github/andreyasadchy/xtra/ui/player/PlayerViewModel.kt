@@ -70,6 +70,10 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     lateinit var mediaSession: MediaSessionCompat
     lateinit var mediaSessionConnector: MediaSessionConnector
 
+    private val _isPlaying = MutableLiveData<Boolean>()
+    val isPlaying: LiveData<Boolean>
+        get() = _isPlaying
+
     private var timer: Timer? = null
     private val _sleepTimer = MutableLiveData<Boolean>()
     val sleepTimer: LiveData<Boolean>
@@ -182,6 +186,10 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     //Player.EventListener
+
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        _isPlaying.postValue(isPlaying)
+    }
 
     override fun onPlayerError(error: PlaybackException) {
         val playerError = player.playerError

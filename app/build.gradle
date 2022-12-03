@@ -21,8 +21,8 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
         targetSdk 33
-        versionCode 148
-        versionName "2.9.3"
+        versionCode 149
+        versionName "2.9.4"
         resConfigs 'ar', 'de', 'en', 'es', 'fr', 'in', 'ja', 'pt-rBR', 'ru', 'tr'
         javaCompileOptions {
             annotationProcessorOptions {
