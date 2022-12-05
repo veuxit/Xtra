@@ -200,7 +200,7 @@ class VideoPlayerViewModel @Inject constructor(
         val playerError = player.playerError
         if (playerError != null) {
             if (playerError.type == ExoPlaybackException.TYPE_SOURCE &&
-                playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 403 }) {
+                playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException }) {
                 val context = getApplication<Application>()
                 val skipToken = context.prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
                 when {
@@ -212,7 +212,11 @@ class VideoPlayerViewModel @Inject constructor(
                         shouldRetry = false
                         playVideo(true)
                     }
-                    else -> context.toast(R.string.video_subscribers_only)
+                    else -> {
+                        if (playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 403 }) {
+                            context.toast(R.string.video_subscribers_only)
+                        }
+                    }
                 }
             } else {
                 super.onPlayerError(error)
