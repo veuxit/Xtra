@@ -54,7 +54,8 @@ class StreamPlayerViewModel @Inject constructor(
 
     private var gqlClientId: String? = null
     private var gqlToken: String? = null
-    private var useAdBlock: Boolean? = true
+    private var useProxy: Int? = null
+    private var proxyUrl: String? = null
     private var randomDeviceId: Boolean? = true
     private var xDeviceId: String? = null
     private var playerType: String? = null
@@ -68,12 +69,13 @@ class StreamPlayerViewModel @Inject constructor(
         .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
         .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
-    fun startStream(user: User, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useAdBlock: Boolean?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
+    fun startStream(user: User, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
         this.gqlClientId = gqlClientId
         if (includeToken == true) {
             this.gqlToken = user.gqlToken
         }
-        this.useAdBlock = useAdBlock
+        this.useProxy = useProxy
+        this.proxyUrl = proxyUrl
         this.randomDeviceId = randomDeviceId
         this.xDeviceId = xDeviceId
         this.playerType = playerType
@@ -171,14 +173,24 @@ class StreamPlayerViewModel @Inject constructor(
     private fun loadStream(stream: Stream) {
         viewModelScope.launch {
             try {
-                val result = stream.user_login?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useAdBlock, randomDeviceId, xDeviceId, playerType) }
+                val result = stream.user_login?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType) }
                 if (result != null) {
-                    if (useAdBlock == true) {
-                        if (result.second) {
-                            httpDataSourceFactory.setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
-                        } else {
-                            val context = getApplication<Application>()
-                            context.toast(R.string.adblock_not_working)
+                    when (useProxy) {
+                        0 -> {
+                            if (result.second != 0) {
+                                val context = getApplication<Application>()
+                                context.toast(R.string.proxy_error)
+                                useProxy = 2
+                            }
+                        }
+                        1 -> {
+                            if (result.second == 1) {
+                                httpDataSourceFactory.setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
+                            } else {
+                                val context = getApplication<Application>()
+                                context.toast(R.string.adblock_not_working)
+                                useProxy = 2
+                            }
                         }
                     }
                     mediaSource = hlsMediaSourceFactory.createMediaSource(
@@ -216,9 +228,22 @@ class StreamPlayerViewModel @Inject constructor(
                     responseCode == 404 -> {
                         context.toast(R.string.stream_ended)
                     }
-                    useAdBlock == true && responseCode != null && responseCode >= 400 -> {
+                    useProxy == 0 && responseCode != null && responseCode >= 400 -> {
+                        context.toast(R.string.proxy_error)
+                        useProxy = 2
+                        viewModelScope.launch {
+                            delay(1500L)
+                            try {
+                                restartPlayer()
+                            } catch (e: Exception) {
+//                            Crashlytics.log(Log.ERROR, tag, "onPlayerError: Retry error. ${e.message}")
+//                            Crashlytics.logException(e)
+                            }
+                        }
+                    }
+                    useProxy == 1 && responseCode != null && responseCode >= 400 -> {
                         context.toast(R.string.adblock_not_working)
-                        useAdBlock = false
+                        useProxy = 2
                         viewModelScope.launch {
                             delay(1500L)
                             try {

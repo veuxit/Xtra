@@ -81,8 +81,6 @@
     <string name="player_error">プレイヤーエラーです。再試行します</string>
     <string name="picture_in_picture">ピクチャーインピクチャー</string>
     <string name="adblock_not_working">TTV.LOLはオフラインです。Adblockを無効にすると配信を視聴できます</string>
-    <string name="adblock_desc">TTV.LOLのAPIを使用して配信を読み込みます</string>
-    <string name="adblock">Adblockを使用する</string>
     <string name="source_vod_start">開始: %s</string>
     <string name="source_vod_end">終了: %s</string>
     <string name="stream_ended">配信は終了しました</string>
@@ -543,4 +541,10 @@
     <string name="stream_live">%s は現在ライブ中です</string>
     <string name="stream_offline">%s は現在オフラインです</string>
     <string name="keep_screen_on_when_paused">ビデオの一時停止中に画面を表示し続ける</string>
+    <string name="stream_proxy">Stream proxy</string>
+    <string name="stream_proxy_url">Custom proxy url</string>
+    <string name="stream_proxy_url_desc">\"$channel\" will be replaced with channel login</string>
+    <string name="streamProxyEntries1">Custom url</string>
+    <string name="streamProxyEntries2">TTV.LOL</string>
+    <string name="proxy_error">Proxy error</string>
 </resources>

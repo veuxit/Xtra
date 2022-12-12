@@ -81,8 +81,6 @@
     <string name="player_error">Abspielfehler. Erneuter Versuch</string>
     <string name="picture_in_picture">Bild-in-Bild</string>
     <string name="adblock_not_working">TTV.LOL ist offline. Deaktivieren Sie Adblock, um in der Zwischenzeit Streams ansehen zu können</string>
-    <string name="adblock_desc">Verwendet die TTV.LOL api zum Laden von Streams</string>
-    <string name="adblock">Adblocker verwenden</string>
     <string name="source_vod_start">Start: %s</string>
     <string name="source_vod_end">Ende: %s</string>
     <string name="stream_ended">Der Stream ist zu Ende</string>
@@ -543,4 +541,10 @@
     <string name="stream_live">%s is now live</string>
     <string name="stream_offline">%s is now offline</string>
     <string name="keep_screen_on_when_paused">Keep screen on when video is paused</string>
+    <string name="stream_proxy">Stream proxy</string>
+    <string name="stream_proxy_url">Custom proxy url</string>
+    <string name="stream_proxy_url_desc">\"$channel\" will be replaced with channel login</string>
+    <string name="streamProxyEntries1">Custom url</string>
+    <string name="streamProxyEntries2">TTV.LOL</string>
+    <string name="proxy_error">Proxy error</string>
 </resources>

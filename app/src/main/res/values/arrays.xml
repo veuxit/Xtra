@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="streamProxyEntries">
+        <item>@string/streamProxyEntries1</item>
+        <item>@string/streamProxyEntries2</item>
+        <item>@string/disabled</item>
+    </string-array>
+
     <string-array name="skipVideoTokenEntries">
         <item>@string/skipVideoTokenEntries1</item>
         <item>@string/skipVideoTokenEntries2</item>

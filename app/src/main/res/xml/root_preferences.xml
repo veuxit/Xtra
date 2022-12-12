@@ -387,12 +387,21 @@
         android:title="@string/clear_video_positions"
         app:iconSpaceReserved="false" />
 
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="adblock"
-        android:summary="@string/adblock_desc"
-        android:title="@string/adblock"
+    <ListPreference
+        android:defaultValue="1"
+        android:entries="@array/streamProxyEntries"
+        android:entryValues="@array/miscValues"
+        android:key="player_proxy"
+        android:summary="%s"
+        android:title="@string/stream_proxy"
         app:iconSpaceReserved="false"/>
+
+    <EditTextPreference
+        android:defaultValue="https://api.ttv.lol/playlist/$channel.m3u8?allow_source=true&amp;allow_audio_only=true&amp;fast_bread=true"
+        android:key="player_proxy_url"
+        android:summary="@string/stream_proxy_url_desc"
+        android:title="@string/stream_proxy_url"
+        app:iconSpaceReserved="false" />
 
     <Preference
         android:key="token_settings"
