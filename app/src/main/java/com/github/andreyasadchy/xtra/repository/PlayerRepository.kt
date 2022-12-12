@@ -36,32 +36,38 @@ class PlayerRepository @Inject constructor(
     private val videoPositions: VideoPositionsDao,
     private val ttvLolApi: TTVLolApi) {
 
-    suspend fun loadStreamPlaylistUrl(gqlClientId: String?, gqlToken: String?, channelName: String, useAdblock: Boolean?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?): Pair<Uri, Boolean> = withContext(Dispatchers.IO) {
-        if (useAdblock == true && ttvLolApi.ping().let { it.isSuccessful && it.body()?.string() == "1" }) {
-            buildUrl(
-                "https://api.ttv.lol/playlist/$channelName.m3u8%3F", //manually insert "?" everywhere, some problem with encoding, too lazy for a proper solution
-                "allow_source", "true",
-                "allow_audio_only", "true",
-                "fast_bread", "true",
-                "p", Random.nextInt(9999999).toString()
-            ) to true
-        } else {
-            val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlToken, randomDeviceId, xDeviceId)
-            val accessToken = graphQL.loadPlaybackAccessToken(
-                clientId = gqlClientId,
-                headers = accessTokenHeaders,
-                login = channelName,
-                playerType = playerType
-            ).streamToken
-            buildUrl(
-                "https://usher.ttvnw.net/api/channel/hls/$channelName.m3u8?",
-                "allow_source", "true",
-                "allow_audio_only", "true",
-                "fast_bread", "true", //low latency
-                "p", Random.nextInt(9999999).toString(),
-                "sig", accessToken?.signature ?: "",
-                "token", accessToken?.token ?: ""
-            ) to false
+    suspend fun loadStreamPlaylistUrl(gqlClientId: String?, gqlToken: String?, channelLogin: String, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?): Pair<Uri, Int> = withContext(Dispatchers.IO) {
+        when {
+            useProxy == 0 && !proxyUrl.isNullOrBlank() -> {
+                proxyUrl.replace("\$channel", channelLogin).toUri() to 0
+            }
+            useProxy == 1 && ttvLolApi.ping().let { it.isSuccessful && it.body()?.string() == "1" } -> {
+                buildUrl(
+                    "https://api.ttv.lol/playlist/$channelLogin.m3u8%3F", //manually insert "?" everywhere, some problem with encoding, too lazy for a proper solution
+                    "allow_source", "true",
+                    "allow_audio_only", "true",
+                    "fast_bread", "true",
+                    "p", Random.nextInt(9999999).toString()
+                ) to 1
+            }
+            else -> {
+                val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlToken, randomDeviceId, xDeviceId)
+                val accessToken = graphQL.loadPlaybackAccessToken(
+                    clientId = gqlClientId,
+                    headers = accessTokenHeaders,
+                    login = channelLogin,
+                    playerType = playerType
+                ).streamToken
+                buildUrl(
+                    "https://usher.ttvnw.net/api/channel/hls/$channelLogin.m3u8?",
+                    "allow_source", "true",
+                    "allow_audio_only", "true",
+                    "fast_bread", "true", //low latency
+                    "p", Random.nextInt(9999999).toString(),
+                    "sig", accessToken?.signature ?: "",
+                    "token", accessToken?.token ?: ""
+                ) to 2
+            }
         }
     }
 

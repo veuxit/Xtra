@@ -21,8 +21,8 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
         targetSdk 33
-        versionCode 151
-        versionName "2.9.6"
+        versionCode 152
+        versionName "2.10.0"
         resConfigs 'ar', 'de', 'en', 'es', 'fr', 'in', 'ja', 'pt-rBR', 'ru', 'tr'
         javaCompileOptions {
             annotationProcessorOptions {
@@ -109,7 +109,7 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayer"
     implementation "com.google.android.exoplayer:extension-mediasession:$exoplayer"
-    implementation 'org.checkerframework:checker-qual:3.27.0'
+    implementation 'org.checkerframework:checker-qual:3.28.0'
 
     implementation "io.coil-kt:coil:$coil"
     implementation "io.coil-kt:coil-gif:$coil"

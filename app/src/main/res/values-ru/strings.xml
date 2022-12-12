@@ -81,8 +81,6 @@
     <string name="player_error">Ошибка воспроизведения. Переподключение</string>
     <string name="picture_in_picture">Картинка в картинке</string>
     <string name="adblock_not_working">TTV.LOL не работает. Отключите блокировщик перед просмотром стримов</string>
-    <string name="adblock_desc">Использует API TTV.LOL для загрузки стримов</string>
-    <string name="adblock">Включить блокировщик рекламы</string>
     <string name="source_vod_start">Начало: %s</string>
     <string name="source_vod_end">Конец: %s</string>
     <string name="stream_ended">Трансляция завершилась</string>
@@ -543,4 +541,10 @@
     <string name="stream_live">%s is now live</string>
     <string name="stream_offline">%s is now offline</string>
     <string name="keep_screen_on_when_paused">Keep screen on when video is paused</string>
+    <string name="stream_proxy">Stream proxy</string>
+    <string name="stream_proxy_url">Custom proxy url</string>
+    <string name="stream_proxy_url_desc">\"$channel\" will be replaced with channel login</string>
+    <string name="streamProxyEntries1">Custom url</string>
+    <string name="streamProxyEntries2">TTV.LOL</string>
+    <string name="proxy_error">Proxy error</string>
 </resources>
