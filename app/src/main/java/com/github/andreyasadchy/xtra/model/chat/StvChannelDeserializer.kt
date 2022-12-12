@@ -11,8 +11,8 @@ class StvChannelDeserializer : JsonDeserializer<StvChannelResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): StvChannelResponse {
         val emotes = mutableListOf<StvEmote>()
-        val dataJson = json.asJsonObject.getAsJsonObject("emote_set").getAsJsonArray("emotes")
-        dataJson.forEach { emote ->
+        val dataJson = json.asJsonObject.getAsJsonObject("emote_set").get("emotes").takeIf { it?.isJsonArray == true }?.asJsonArray
+        dataJson?.forEach { emote ->
             emote.asJsonObject.let { obj ->
                 obj.get("name").asString.let { name ->
                     val urls = mutableListOf<String>()
