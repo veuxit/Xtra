@@ -10,8 +10,5 @@ data class VideoChatMessage(
     override val color: String?,
     override val isAction: Boolean = false,
     override val emotes: List<TwitchEmote>?,
-    override val badges: List<Badge>?) : ChatMessage {
-
-    override val fullMsg: String
-        get() = this.toString()
-}
+    override val badges: List<Badge>?,
+    override val fullMsg: String?) : ChatMessage
