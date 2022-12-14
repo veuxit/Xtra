@@ -60,6 +60,7 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
                     color = obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("userColor")?.takeIf { !it.isJsonNull }?.asString,
                     emotes = emotes,
                     badges = badges,
+                    fullMsg = item.toString()
                 ))
             }
         }
