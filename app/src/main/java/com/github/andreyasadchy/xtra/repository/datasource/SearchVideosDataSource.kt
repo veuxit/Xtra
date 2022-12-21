@@ -5,8 +5,8 @@ import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.SearchVideosQuery
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Tag
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
@@ -63,18 +63,18 @@ class SearchVideosDataSource private constructor(
                 }
                 list.add(Video(
                     id = i.id,
-                    user_id = i.owner?.id,
-                    user_login = i.owner?.login,
-                    user_name = i.owner?.displayName,
+                    channelId = i.owner?.id,
+                    channelLogin = i.owner?.login,
+                    channelName = i.owner?.displayName,
                     type = i.broadcastType?.toString(),
                     title = i.title,
-                    view_count = i.viewCount,
-                    created_at = i.createdAt?.toString(),
+                    viewCount = i.viewCount,
+                    uploadDate = i.createdAt?.toString(),
                     duration = i.lengthSeconds?.toString(),
-                    thumbnail_url = i.previewThumbnailURL,
+                    thumbnailUrl = i.previewThumbnailURL,
                     gameId = i.game?.id,
                     gameName = i.game?.displayName,
-                    profileImageURL = i.owner?.profileImageURL,
+                    profileImageUrl = i.owner?.profileImageURL,
                     tags = tags,
                     animatedPreviewURL =  i.animatedPreviewURL
                 ))

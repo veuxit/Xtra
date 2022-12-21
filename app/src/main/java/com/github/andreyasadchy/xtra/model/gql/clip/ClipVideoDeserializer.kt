@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.clip
 
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -13,9 +13,9 @@ class ClipVideoDeserializer : JsonDeserializer<ClipVideoResponse> {
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): ClipVideoResponse {
         val data = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("clip")?.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
             Clip(
-                video_id = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                videoId = obj.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                 duration = obj.get("durationSeconds")?.takeIf { !it.isJsonNull }?.asDouble,
-                vod_offset = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
+                vodOffset = obj.get("videoOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
             )
         }
         return ClipVideoResponse(data)

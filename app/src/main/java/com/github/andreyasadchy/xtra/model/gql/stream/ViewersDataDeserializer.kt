@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.stream
 
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -14,7 +14,7 @@ class ViewersDataDeserializer : JsonDeserializer<Stream> {
         val obj = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.getAsJsonObject("stream")
         return Stream(
             id = obj?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-            viewer_count = obj?.getAsJsonPrimitive("viewersCount")?.asInt
+            viewerCount = obj?.getAsJsonPrimitive("viewersCount")?.asInt
         )
     }
 }

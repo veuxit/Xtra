@@ -4,7 +4,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -15,38 +15,38 @@ import kotlinx.android.synthetic.main.fragment_search_channels_list_item.view.*
 
 class ChannelSearchAdapter(
         private val fragment: Fragment,
-        private val listener: OnChannelSelectedListener) : BasePagedListAdapter<ChannelSearch>(
-        object : DiffUtil.ItemCallback<ChannelSearch>() {
-            override fun areItemsTheSame(oldItem: ChannelSearch, newItem: ChannelSearch): Boolean =
-                    oldItem.id == newItem.id
+        private val listener: OnChannelSelectedListener) : BasePagedListAdapter<User>(
+        object : DiffUtil.ItemCallback<User>() {
+            override fun areItemsTheSame(oldItem: User, newItem: User): Boolean =
+                    oldItem.channelId == newItem.channelId
 
-            override fun areContentsTheSame(oldItem: ChannelSearch, newItem: ChannelSearch): Boolean = true
+            override fun areContentsTheSame(oldItem: User, newItem: User): Boolean = true
         }) {
 
     override val layoutId: Int = R.layout.fragment_search_channels_list_item
 
-    override fun bind(item: ChannelSearch, view: View) {
+    override fun bind(item: User, view: View) {
         with(view) {
-            setOnClickListener { listener.viewChannel(item.id, item.broadcaster_login, item.display_name, item.channelLogo) }
+            setOnClickListener { listener.viewChannel(item.channelId, item.channelLogin, item.channelName, item.channelLogo) }
             if (item.channelLogo != null) {
                 userImage.visible()
                 userImage.loadImage(fragment, item.channelLogo, circle = true)
             } else {
                 userImage.gone()
             }
-            if (item.display_name != null) {
+            if (item.channelName != null) {
                 userName.visible()
-                userName.text = item.display_name
+                userName.text = item.channelName
             } else {
                 userName.gone()
             }
-            if (item.followers_count != null) {
+            if (item.followersCount != null) {
                 userFollowers.visible()
-                userFollowers.text = context.getString(R.string.followers, TwitchApiHelper.formatCount(context, item.followers_count))
+                userFollowers.text = context.getString(R.string.followers, TwitchApiHelper.formatCount(context, item.followersCount))
             } else {
                 userFollowers.gone()
             }
-            if (!item.type.isNullOrBlank() || item.is_live == true) {
+            if (!item.type.isNullOrBlank() || item.isLive == true) {
                 typeText.visible()
                 if (item.type == "rerun") {
                     typeText.text = context.getString(R.string.video_type_rerun)

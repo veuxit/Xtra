@@ -7,9 +7,9 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.common.BaseListAdapter
 import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
@@ -74,15 +74,15 @@ class BookmarksAdapter(
             val userType = item.userType ?: item.userBroadcasterType
             setOnClickListener { clickListener.startVideo(Video(
                 id = item.videoId,
-                user_id = item.userId,
-                user_login = item.userLogin,
-                user_name = item.userName,
-                profileImageURL = item.userLogo,
+                channelId = item.userId,
+                channelLogin = item.userLogin,
+                channelName = item.userName,
+                profileImageUrl = item.userLogo,
                 gameId = item.gameId,
                 gameName = item.gameName,
                 title = item.title,
-                created_at = item.createdAt,
-                thumbnail_url = item.thumbnail,
+                uploadDate = item.createdAt,
+                thumbnailUrl = item.thumbnail,
                 type = item.type,
                 duration = item.duration,
                 animatedPreviewURL = item.animatedPreviewURL,
@@ -186,15 +186,15 @@ class BookmarksAdapter(
                             R.id.delete -> deleteVideo(item)
                             R.id.download -> showDownloadDialog(Video(
                                 id = item.videoId,
-                                user_id = item.userId,
-                                user_login = item.userLogin,
-                                user_name = item.userName,
-                                profileImageURL = item.userLogo,
+                                channelId = item.userId,
+                                channelLogin = item.userLogin,
+                                channelName = item.userName,
+                                profileImageUrl = item.userLogo,
                                 gameId = item.gameId,
                                 gameName = item.gameName,
                                 title = item.title,
-                                created_at = item.createdAt,
-                                thumbnail_url = item.thumbnail,
+                                uploadDate = item.createdAt,
+                                thumbnailUrl = item.thumbnail,
                                 type = item.type,
                                 duration = item.duration,
                                 animatedPreviewURL = item.animatedPreviewURL,

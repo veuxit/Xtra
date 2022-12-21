@@ -1,8 +1,5 @@
 package com.github.andreyasadchy.xtra.model.helix.stream
 
-class StreamsResponse(
-    val data: List<Stream>?,
-    val pagination: Pagination?)
+import com.github.andreyasadchy.xtra.model.ui.Stream
 
-data class Pagination(
-    val cursor: String?)
+data class StreamsResponse(val data: List<Stream>, val cursor: String?)

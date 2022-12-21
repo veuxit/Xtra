@@ -10,13 +10,14 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortGame
+import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
@@ -51,20 +52,20 @@ class GameVideosViewModel @Inject constructor(
                 listOf(language)
             } else null,
             when (it.broadcastType) {
-                BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
-                BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
-                BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
+                BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
+                BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
+                BroadcastTypeEnum.UPLOAD -> BroadcastType.UPLOAD
                 else -> null },
-            when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
-            if (it.broadcastType == BroadcastType.ALL) { null }
+            when (it.sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
+            if (it.broadcastType == BroadcastTypeEnum.ALL) { null }
             else { it.broadcastType.value.uppercase() },
             it.sort.value.uppercase(), it.apiPref, viewModelScope)
     }
-    val sort: Sort
+    val sort: VideoSortEnum
         get() = filter.value!!.sort
-    val period: Period
+    val period: VideoPeriodEnum
         get() = filter.value!!.period
-    val type: BroadcastType
+    val type: BroadcastTypeEnum
         get() = filter.value!!.broadcastType
     val languageIndex: Int
         get() = filter.value!!.languageIndex
@@ -86,43 +87,43 @@ class GameVideosViewModel @Inject constructor(
                 apiPref = apiPref,
                 saveSort = sortValues?.saveSort,
                 sort = when (sortValues?.videoSort) {
-                    Sort.TIME.value -> Sort.TIME
-                    else -> Sort.VIEWS
+                    VideoSortEnum.TIME.value -> VideoSortEnum.TIME
+                    else -> VideoSortEnum.VIEWS
                 },
                 period = if (helixToken.isNullOrBlank()) {
-                    Period.WEEK
+                    VideoPeriodEnum.WEEK
                 } else {
                     when (sortValues?.videoPeriod) {
-                        Period.DAY.value -> Period.DAY
-                        Period.MONTH.value -> Period.MONTH
-                        Period.ALL.value -> Period.ALL
-                        else -> Period.WEEK
+                        VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
+                        VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
+                        VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
+                        else -> VideoPeriodEnum.WEEK
                     }
                 },
                 broadcastType = when (sortValues?.videoType) {
-                    BroadcastType.ARCHIVE.value -> BroadcastType.ARCHIVE
-                    BroadcastType.HIGHLIGHT.value -> BroadcastType.HIGHLIGHT
-                    BroadcastType.UPLOAD.value -> BroadcastType.UPLOAD
-                    else -> BroadcastType.ALL
+                    BroadcastTypeEnum.ARCHIVE.value -> BroadcastTypeEnum.ARCHIVE
+                    BroadcastTypeEnum.HIGHLIGHT.value -> BroadcastTypeEnum.HIGHLIGHT
+                    BroadcastTypeEnum.UPLOAD.value -> BroadcastTypeEnum.UPLOAD
+                    else -> BroadcastTypeEnum.ALL
                 },
                 languageIndex = sortValues?.videoLanguageIndex ?: 0
             )
             _sortText.value = context.getString(R.string.sort_and_period,
                 when (sortValues?.videoSort) {
-                    Sort.TIME.value -> context.getString(R.string.upload_date)
+                    VideoSortEnum.TIME.value -> context.getString(R.string.upload_date)
                     else -> context.getString(R.string.view_count)
                 },
                 when (sortValues?.videoPeriod) {
-                    Period.DAY.value -> context.getString(R.string.today)
-                    Period.MONTH.value -> context.getString(R.string.this_month)
-                    Period.ALL.value -> context.getString(R.string.all_time)
+                    VideoPeriodEnum.DAY.value -> context.getString(R.string.today)
+                    VideoPeriodEnum.MONTH.value -> context.getString(R.string.this_month)
+                    VideoPeriodEnum.ALL.value -> context.getString(R.string.all_time)
                     else -> context.getString(R.string.this_week)
                 }
             )
         }
     }
 
-    fun filter(sort: Sort, period: Period, type: BroadcastType, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
+    fun filter(sort: VideoSortEnum, period: VideoPeriodEnum, type: BroadcastTypeEnum, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
         filter.value = filter.value?.copy(saveSort = saveSort, sort = sort, period = period, broadcastType = type, languageIndex = languageIndex)
         _sortText.value = text
         viewModelScope.launch {
@@ -183,9 +184,9 @@ class GameVideosViewModel @Inject constructor(
         val gqlClientId: String?,
         val apiPref: ArrayList<Pair<Long?, String?>?>,
         val saveSort: Boolean?,
-        val sort: Sort = Sort.VIEWS,
-        val period: Period = Period.WEEK,
-        val broadcastType: BroadcastType = BroadcastType.ALL,
+        val sort: VideoSortEnum = VideoSortEnum.VIEWS,
+        val period: VideoPeriodEnum = VideoPeriodEnum.WEEK,
+        val broadcastType: BroadcastTypeEnum = BroadcastTypeEnum.ALL,
         val languageIndex: Int = 0)
 
     override val userId: String?
@@ -200,9 +201,9 @@ class GameVideosViewModel @Inject constructor(
         get() = true
     override lateinit var follow: FollowLiveData
 
-    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
+    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
         }
     }
 }

@@ -6,8 +6,8 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.TopStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
@@ -67,20 +67,18 @@ class StreamsDataSource private constructor(
             offset = offset
         )
         val list = mutableListOf<Stream>()
-        get.data?.let { list.addAll(it) }
-        val ids = list.mapNotNull { it.user_id }
+        get.data.let { list.addAll(it) }
+        val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.user_id == i.id }
-                    for (item in items) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val items = list.filter { it.channelId == i.channelId }
+                for (item in items) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -103,17 +101,17 @@ class StreamsDataSource private constructor(
                 }
                 list.add(Stream(
                     id = i?.node?.id,
-                    user_id = i?.node?.broadcaster?.id,
-                    user_login = i?.node?.broadcaster?.login,
-                    user_name = i?.node?.broadcaster?.displayName,
-                    game_id = i?.node?.game?.id,
-                    game_name = i?.node?.game?.displayName,
+                    channelId = i?.node?.broadcaster?.id,
+                    channelLogin = i?.node?.broadcaster?.login,
+                    channelName = i?.node?.broadcaster?.displayName,
+                    gameId = i?.node?.game?.id,
+                    gameName = i?.node?.game?.displayName,
                     type = i?.node?.type,
                     title = i?.node?.broadcaster?.broadcastSettings?.title,
-                    viewer_count = i?.node?.viewersCount,
-                    started_at = i?.node?.createdAt?.toString(),
-                    thumbnail_url = i?.node?.previewImageURL,
-                    profileImageURL = i?.node?.broadcaster?.profileImageURL,
+                    viewerCount = i?.node?.viewersCount,
+                    startedAt = i?.node?.createdAt?.toString(),
+                    thumbnailUrl = i?.node?.previewImageURL,
+                    profileImageUrl = i?.node?.broadcaster?.profileImageURL,
                     tags = tags
                 ))
             }

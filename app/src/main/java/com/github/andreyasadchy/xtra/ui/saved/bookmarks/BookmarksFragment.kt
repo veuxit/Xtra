@@ -13,7 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -39,7 +39,7 @@ class BookmarksFragment : Fragment(), Scrollable {
             viewModel.loadVideo(
                 context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = User.get(requireContext()).helixToken,
+                helixToken = Account.get(requireContext()).helixToken,
                 gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 videoId = it
             )
@@ -73,15 +73,15 @@ class BookmarksFragment : Fragment(), Scrollable {
             }
             viewModel.loadUsers(
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = User.get(requireContext()).helixToken,
+                helixToken = Account.get(requireContext()).helixToken,
                 gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             )
         }
-        if (!User.get(requireContext()).helixToken.isNullOrBlank()) {
+        if (!Account.get(requireContext()).helixToken.isNullOrBlank()) {
             viewModel.loadVideos(
                 context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = User.get(requireContext()).helixToken,
+                helixToken = Account.get(requireContext()).helixToken,
             )
         }
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {

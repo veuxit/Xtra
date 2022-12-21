@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -44,11 +44,11 @@ class StreamPlayerViewModel @Inject constructor(
     val stream: MutableLiveData<Stream?>
         get() = _stream
     override val userId: String?
-        get() { return _stream.value?.user_id }
+        get() { return _stream.value?.channelId }
     override val userLogin: String?
-        get() { return _stream.value?.user_login }
+        get() { return _stream.value?.channelLogin }
     override val userName: String?
-        get() { return _stream.value?.user_name }
+        get() { return _stream.value?.channelName }
     override val channelLogo: String?
         get() { return _stream.value?.channelLogo }
 
@@ -69,10 +69,10 @@ class StreamPlayerViewModel @Inject constructor(
         .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
         .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
-    fun startStream(user: User, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
+    fun startStream(account: Account, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
         this.gqlClientId = gqlClientId
         if (includeToken == true) {
-            this.gqlToken = user.gqlToken
+            this.gqlToken = account.gqlToken
         }
         this.useProxy = useProxy
         this.proxyUrl = proxyUrl
@@ -89,12 +89,12 @@ class StreamPlayerViewModel @Inject constructor(
                 viewModelScope.launch {
                     while (isActive) {
                         try {
-                            val s = repository.loadStream(stream.user_id, stream.user_login, helixClientId, user.helixToken, gqlClientId).let { get ->
+                            val s = repository.loadStream(stream.channelId, stream.channelLogin, helixClientId, account.helixToken, gqlClientId).let { get ->
                                 _stream.value?.apply {
                                     if (!get?.id.isNullOrBlank()) {
                                         id = get?.id
                                     }
-                                    viewer_count = get?.viewer_count
+                                    viewerCount = get?.viewerCount
                                 }
                             }
                             if (!s?.id.isNullOrBlank()) {
@@ -132,7 +132,7 @@ class StreamPlayerViewModel @Inject constructor(
         (player.currentManifest as? HlsManifest)?.let {
             _stream.value?.let { stream ->
                 helper.urls.values.lastOrNull()?.let {
-                    startBackgroundAudio(it, stream.user_name, stream.title, stream.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
+                    startBackgroundAudio(it, stream.channelName, stream.title, stream.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
                     _playerMode.value = AUDIO_ONLY
                 }
             }
@@ -173,7 +173,7 @@ class StreamPlayerViewModel @Inject constructor(
     private fun loadStream(stream: Stream) {
         viewModelScope.launch {
             try {
-                val result = stream.user_login?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType) }
+                val result = stream.channelLogin?.let { playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, it, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType) }
                 if (result != null) {
                     when (useProxy) {
                         0 -> {

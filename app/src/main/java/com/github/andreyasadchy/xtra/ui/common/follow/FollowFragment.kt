@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.ui.common.follow
 import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.shortToast
@@ -12,10 +12,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 interface FollowFragment {
-    fun initializeFollow(fragment: Fragment, viewModel: FollowViewModel, followButton: ImageButton, setting: Int, user: User, helixClientId: String? = null, gqlClientId: String? = null, gqlClientId2: String? = null) {
+    fun initializeFollow(fragment: Fragment, viewModel: FollowViewModel, followButton: ImageButton, setting: Int, account: Account, helixClientId: String? = null, gqlClientId: String? = null, gqlClientId2: String? = null) {
         val context = fragment.requireContext()
         with(viewModel) {
-            setUser(user, helixClientId, gqlClientId, gqlClientId2, setting)
+            setUser(account, helixClientId, gqlClientId, gqlClientId2, setting)
             followButton.visible()
             var initialized = false
             var errorMessage: String? = null
@@ -31,7 +31,7 @@ interface FollowFragment {
                 } else {
                     initialized = true
                 }
-                if ((!user.id.isNullOrBlank() && user.id == userId || !user.login.isNullOrBlank() && user.login == userLogin) && setting == 0 && !game) {
+                if ((!account.id.isNullOrBlank() && account.id == userId || !account.login.isNullOrBlank() && account.login == userLogin) && setting == 0 && !game) {
                     followButton.gone()
                 } else {
                     if (errorMessage.isNullOrBlank()) {

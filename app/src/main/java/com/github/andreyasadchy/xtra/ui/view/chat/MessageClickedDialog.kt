@@ -13,7 +13,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.user.User
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,7 +65,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         val fullMsg = args.getString(KEY_FULL_MSG)
         val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
         if (userId != null) {
-            val item = savedUsers.find { it.first.id == userId && it.second == targetId }
+            val item = savedUsers.find { it.first.channelId == userId && it.second == targetId }
             if (item != null) {
                 updateUserLayout(item.first)
             } else {
@@ -73,7 +73,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                     channelId = userId,
                     targetId = if (userId != targetId) targetId else null,
                     helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = com.github.andreyasadchy.xtra.model.User.get(requireContext()).helixToken,
+                    helixToken = com.github.andreyasadchy.xtra.model.Account.get(requireContext()).helixToken,
                     gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
                 ).observe(viewLifecycleOwner) { user ->
                     if (user != null) {
@@ -126,18 +126,18 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
             userImage.visible()
             userImage.loadImage(requireParentFragment(), user.channelLogo, circle = true)
             userImage.setOnClickListener {
-                listener.onViewProfileClicked(user.id, user.login, user.display_name, user.channelLogo)
+                listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
                 dismiss()
             }
         } else {
             userImage.gone()
         }
-        if (user.display_name != null) {
+        if (user.channelName != null) {
             userLayout.visible()
             userName.visible()
-            userName.text = user.display_name
+            userName.text = user.channelName
             userName.setOnClickListener {
-                listener.onViewProfileClicked(user.id, user.login, user.display_name, user.channelLogo)
+                listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
                 dismiss()
             }
             if (user.bannerImageURL != null) {
@@ -146,10 +146,10 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         } else {
             userName.gone()
         }
-        if (user.created_at != null) {
+        if (user.createdAt != null) {
             userLayout.visible()
             userCreated.visible()
-            userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.created_at))
+            userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.createdAt))
             if (user.bannerImageURL != null) {
                 userCreated.setTextColor(Color.LTGRAY)
                 userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
@@ -160,7 +160,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         if (user.followedAt != null) {
             userLayout.visible()
             userFollowed.visible()
-            userFollowed.text = requireContext().getString(R.string.followed_at, TwitchApiHelper.formatTimeString(requireContext(), user.followedAt))
+            userFollowed.text = requireContext().getString(R.string.followed_at, TwitchApiHelper.formatTimeString(requireContext(), user.followedAt!!))
             if (user.bannerImageURL != null) {
                 userFollowed.setTextColor(Color.LTGRAY)
                 userFollowed.setShadowLayer(4f, 0f, 0f, Color.BLACK)

@@ -6,8 +6,8 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.TopGamesQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
@@ -66,10 +66,8 @@ class GamesDataSource(
             limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
             offset = offset
         )
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else listOf()
+        offset = get.cursor
+        return get.data
     }
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {
@@ -90,9 +88,9 @@ class GamesDataSource(
                     ))
                 }
                 list.add(Game(
-                    id = i?.node?.id,
-                    name = i?.node?.displayName,
-                    box_art_url = i?.node?.boxArtURL,
+                    gameId = i?.node?.id,
+                    gameName = i?.node?.displayName,
+                    boxArtUrl = i?.node?.boxArtURL,
                     viewersCount = i?.node?.viewersCount,
                     broadcastersCount = i?.node?.broadcastersCount,
                     tags = tags

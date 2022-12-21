@@ -12,19 +12,13 @@ import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelViewerList
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
-import com.github.andreyasadchy.xtra.model.helix.follows.Order
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.model.helix.user.User
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.*
+import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.Tag
+import com.github.andreyasadchy.xtra.model.ui.User
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.datasource.*
 import com.github.andreyasadchy.xtra.type.*
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -81,7 +75,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadGameStreams(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlQuerySort: StreamSort?, gqlSort: com.github.andreyasadchy.xtra.model.helix.stream.Sort?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
+    fun loadGameStreams(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlQuerySort: StreamSort?, gqlSort: StreamSortEnum?, tags: List<String>?, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean, coroutineScope: CoroutineScope): Listing<Stream> {
         val factory = GameStreamsDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlQuerySort, gqlSort, tags, gql, apolloClient, apiPref, coroutineScope)
         val builder = PagedList.Config.Builder().setEnablePlaceholders(false)
         if (thumbnailsEnabled) {
@@ -97,7 +91,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadGameVideos(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixLanguage: String?, helixSort: Sort, gqlClientId: String?, gqlQueryLanguages: List<String>?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+    fun loadGameVideos(gameId: String?, gameName: String?, helixClientId: String?, helixToken: String?, helixPeriod: VideoPeriodEnum, helixBroadcastTypes: BroadcastTypeEnum, helixLanguage: String?, helixSort: VideoSortEnum, gqlClientId: String?, gqlQueryLanguages: List<String>?, gqlQueryType: BroadcastType?, gqlQuerySort: VideoSort, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = GameVideosDataSource.Factory(gameId, gameName, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, helix, gqlClientId, gqlQueryLanguages, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(30)
@@ -119,7 +113,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadChannelVideos(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, helixPeriod: Period, helixBroadcastTypes: BroadcastType, helixSort: Sort, gqlClientId: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+    fun loadChannelVideos(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, helixPeriod: VideoPeriodEnum, helixBroadcastTypes: BroadcastTypeEnum, helixSort: VideoSortEnum, gqlClientId: String?, gqlQueryType: BroadcastType?, gqlQuerySort: VideoSort, gqlType: String?, gqlSort: String?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = ChannelVideosDataSource.Factory(channelId, channelLogin, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helixPeriod, helixBroadcastTypes, helixSort, helix, gqlClientId, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(30)
@@ -141,7 +135,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadSearchChannels(query: String, helixClientId: String?, helixToken: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>?, coroutineScope: CoroutineScope): Listing<ChannelSearch> {
+    fun loadSearchChannels(query: String, helixClientId: String?, helixToken: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>?, coroutineScope: CoroutineScope): Listing<User> {
         val factory = SearchChannelsDataSource.Factory(query, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(15)
@@ -206,7 +200,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadFollowedVideos(gqlClientId: String?, gqlToken: String?, gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?, gqlQuerySort: VideoSort?, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
+    fun loadFollowedVideos(gqlClientId: String?, gqlToken: String?, gqlQueryType: BroadcastType?, gqlQuerySort: VideoSort, apiPref: ArrayList<Pair<Long?, String?>?>, coroutineScope: CoroutineScope): Listing<Video> {
         val factory = FollowedVideosDataSource.Factory(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gqlQueryType, gqlQuerySort, gql, apolloClient, apiPref, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(50)
@@ -217,7 +211,7 @@ class ApiRepository @Inject constructor(
         return Listing.create(factory, config)
     }
 
-    fun loadFollowedChannels(userId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, sort: com.github.andreyasadchy.xtra.model.helix.follows.Sort, order: Order, coroutineScope: CoroutineScope): Listing<Follow> {
+    fun loadFollowedChannels(userId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, apiPref: ArrayList<Pair<Long?, String?>?>, sort: FollowSortEnum, order: FollowOrderEnum, coroutineScope: CoroutineScope): Listing<User> {
         val factory = FollowedChannelsDataSource.Factory(localFollowsChannel, offlineRepository, bookmarksRepository, userId, helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, helix, gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gql, apolloClient, apiPref, sort, order, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(40)
@@ -247,7 +241,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = listOf(gameId)
-            ).data?.firstOrNull()?.boxArt
+            ).data.firstOrNull()?.boxArt
         }
     }
 
@@ -258,10 +252,10 @@ class ApiRepository @Inject constructor(
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(listOf(channelLogin)) else Optional.Absent,
             )).execute().data?.users?.firstOrNull()
             if (get != null) {
-                Stream(id = get.stream?.id, user_id = channelId, user_login = get.login, user_name = get.displayName, game_id = get.stream?.game?.id,
-                    game_name = get.stream?.game?.displayName, type = get.stream?.type, title = get.stream?.broadcaster?.broadcastSettings?.title,
-                    viewer_count = get.stream?.viewersCount, started_at = get.stream?.createdAt?.toString(), thumbnail_url = get.stream?.previewImageURL,
-                    profileImageURL = get.profileImageURL)
+                Stream(id = get.stream?.id, channelId = channelId, channelLogin = get.login, channelName = get.displayName, gameId = get.stream?.game?.id,
+                    gameName = get.stream?.game?.displayName, type = get.stream?.type, title = get.stream?.broadcaster?.broadcastSettings?.title,
+                    viewerCount = get.stream?.viewersCount, startedAt = get.stream?.createdAt?.toString(), thumbnailUrl = get.stream?.previewImageURL,
+                    profileImageUrl = get.profileImageURL)
             } else null
         } catch (e: Exception) {
             try {
@@ -270,7 +264,7 @@ class ApiRepository @Inject constructor(
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                     ids = channelId?.let { listOf(it) },
                     logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-                ).data?.firstOrNull()
+                ).data.firstOrNull()
             } catch (e: Exception) {
                 gql.loadViewerCount(gqlClientId, channelLogin).data
             }
@@ -281,8 +275,8 @@ class ApiRepository @Inject constructor(
         try {
             val get = getApolloClient(gqlClientId).query(VideoQuery(Optional.Present(videoId))).execute().data
             if (get != null) {
-                Video(id = videoId, user_id = get.video?.owner?.id, user_login = get.video?.owner?.login, user_name = get.video?.owner?.displayName,
-                    profileImageURL = get.video?.owner?.profileImageURL, title = get.video?.title, created_at = get.video?.createdAt?.toString(), thumbnail_url = get.video?.previewThumbnailURL,
+                Video(id = videoId, channelId = get.video?.owner?.id, channelLogin = get.video?.owner?.login, channelName = get.video?.owner?.displayName,
+                    profileImageUrl = get.video?.owner?.profileImageURL, title = get.video?.title, uploadDate = get.video?.createdAt?.toString(), thumbnailUrl = get.video?.previewThumbnailURL,
                     type = get.video?.broadcastType?.toString(), duration = get.video?.lengthSeconds?.toString(), animatedPreviewURL = get.video?.animatedPreviewURL)
             } else null
         } catch (e: Exception) {
@@ -290,7 +284,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = videoId?.let { listOf(it) }
-            ).data?.firstOrNull()
+            ).data.firstOrNull()
         }
     }
 
@@ -310,14 +304,14 @@ class ApiRepository @Inject constructor(
                 null
             }
             val video = gql.loadClipVideo(gqlClientId, clipId).data
-            Clip(id = clipId, broadcaster_id = user?.broadcaster_id, broadcaster_login = user?.broadcaster_login, broadcaster_name = user?.broadcaster_name,
-                profileImageURL = user?.profileImageURL, video_id = video?.video_id, duration = video?.duration, vod_offset = video?.vod_offset ?: user?.vod_offset)
+            Clip(id = clipId, channelId = user?.channelId, channelLogin = user?.channelLogin, channelName = user?.channelName,
+                profileImageUrl = user?.profileImageUrl, videoId = video?.videoId, duration = video?.duration, vodOffset = video?.vodOffset ?: user?.vodOffset)
         } catch (e: Exception) {
             helix.getClips(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = clipId?.let { listOf(it) }
-            ).data?.firstOrNull()
+            ).data.firstOrNull()
         }
     }
 
@@ -329,37 +323,37 @@ class ApiRepository @Inject constructor(
             )).execute().data?.user?.let { i ->
                 Stream(
                     id = i.stream?.id,
-                    user_id = i.id,
-                    user_login = i.login,
-                    user_name = i.displayName,
-                    game_id = i.stream?.game?.id,
-                    game_name = i.stream?.game?.displayName,
+                    channelId = i.id,
+                    channelLogin = i.login,
+                    channelName = i.displayName,
+                    gameId = i.stream?.game?.id,
+                    gameName = i.stream?.game?.displayName,
                     type = i.stream?.type,
                     title = i.stream?.title,
-                    viewer_count = i.stream?.viewersCount,
-                    started_at = i.stream?.createdAt?.toString(),
-                    profileImageURL = i.profileImageURL,
-                    channelUser = User(
-                        id = i.id,
-                        login = i.login,
-                        display_name = i.displayName,
+                    viewerCount = i.stream?.viewersCount,
+                    startedAt = i.stream?.createdAt?.toString(),
+                    profileImageUrl = i.profileImageURL,
+                    user = User(
+                        channelId = i.id,
+                        channelLogin = i.login,
+                        channelName = i.displayName,
                         type = when {
                             i.roles?.isStaff == true -> "staff"
                             i.roles?.isSiteAdmin == true -> "admin"
                             i.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
                         },
-                        broadcaster_type = when {
+                        broadcasterType = when {
                             i.roles?.isPartner == true -> "partner"
                             i.roles?.isAffiliate == true -> "affiliate"
                             else -> null
                         },
-                        profile_image_url = i.profileImageURL,
-                        created_at = i.createdAt?.toString(),
-                        followers_count = i.followers?.totalCount,
-                        bannerImageURL = i.bannerImageURL
-                    ),
-                    lastBroadcast = i.lastBroadcast?.startedAt?.toString()
+                        profileImageUrl = i.profileImageURL,
+                        createdAt = i.createdAt?.toString(),
+                        followersCount = i.followers?.totalCount,
+                        bannerImageURL = i.bannerImageURL,
+                        lastBroadcast = i.lastBroadcast?.startedAt?.toString()
+                    )
                 )
             }
         } catch (e: Exception) {
@@ -368,7 +362,7 @@ class ApiRepository @Inject constructor(
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data?.firstOrNull()
+            ).data.firstOrNull()
         }
     }
 
@@ -378,7 +372,7 @@ class ApiRepository @Inject constructor(
             token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             ids = channelId?.let { listOf(it) },
             logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-        ).data?.firstOrNull()
+        ).data.firstOrNull()
     }
 
     suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
@@ -388,10 +382,10 @@ class ApiRepository @Inject constructor(
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             )).execute().data?.user?.let { i ->
                 User(
-                    id = i.id,
-                    login = i.login,
-                    display_name = i.displayName,
-                    profile_image_url = i.profileImageURL
+                    channelId = i.id,
+                    channelLogin = i.login,
+                    channelName = i.displayName,
+                    profileImageUrl = i.profileImageURL
                 )
             }
         } catch (e: Exception) {
@@ -400,7 +394,7 @@ class ApiRepository @Inject constructor(
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data?.firstOrNull()
+            ).data.firstOrNull()
         }
     }
 
@@ -412,12 +406,12 @@ class ApiRepository @Inject constructor(
                 targetId = Optional.Present(targetId)
             )).execute().data?.user?.let { i ->
                 User(
-                    id = i.id,
-                    login = i.login,
-                    display_name = i.displayName,
-                    profile_image_url = i.profileImageURL,
+                    channelId = i.id,
+                    channelLogin = i.login,
+                    channelName = i.displayName,
+                    profileImageUrl = i.profileImageURL,
                     bannerImageURL = i.bannerImageURL,
-                    created_at = i.createdAt?.toString(),
+                    createdAt = i.createdAt?.toString(),
                     followedAt = i.follow?.followedAt?.toString()
                 )
             }
@@ -427,7 +421,7 @@ class ApiRepository @Inject constructor(
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data?.firstOrNull()
+            ).data.firstOrNull()
         }
     }
 
@@ -437,8 +431,8 @@ class ApiRepository @Inject constructor(
                 val list = mutableListOf<User>()
                 for (i in get) {
                     list.add(User(
-                        id = i?.id,
-                        broadcaster_type = when {
+                        channelId = i?.id,
+                        broadcasterType = when {
                             i?.roles?.isPartner == true -> "partner"
                             i?.roles?.isAffiliate == true -> "affiliate"
                             else -> null
@@ -833,7 +827,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             val json = JsonObject().apply {
                 add("data", JsonObject().apply {
                     duration?.toIntOrNull()?.let { addProperty("duration", it) }
@@ -858,7 +852,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.unbanUser(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, targetId)
         }
         if (response.isSuccessful) {
@@ -951,7 +945,7 @@ class ApiRepository @Inject constructor(
         val response = gql.getModerators(gqlClientId, channelLogin)
         //val response = helix.getModerators(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
-            response.body()?.data?.map { it.login }.toString()
+            response.body()?.data?.map { it.channelLogin }.toString()
         } else {
             response.errorBody()?.string()
         }
@@ -965,7 +959,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.addModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
         }
         if (response.isSuccessful) {
@@ -983,7 +977,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.removeModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
         }
         if (response.isSuccessful) {
@@ -1000,14 +994,14 @@ class ApiRepository @Inject constructor(
                 helixClientId = helixClientId,
                 helixToken = helixToken,
                 gqlClientId = gqlClientId
-            )?.id
+            )?.channelId
             gql.startRaid(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetId)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.startRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
         }
         if (response.isSuccessful) {
@@ -1034,7 +1028,7 @@ class ApiRepository @Inject constructor(
         val response = gql.getVips(gqlClientId, channelLogin)
         //val response = helix.getVips(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
-            response.body()?.data?.map { it.login }.toString()
+            response.body()?.data?.map { it.channelLogin }.toString()
         } else {
             response.errorBody()?.string()
         }
@@ -1048,7 +1042,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.addVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
         }
         if (response.isSuccessful) {
@@ -1066,7 +1060,7 @@ class ApiRepository @Inject constructor(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 logins = targetLogin?.let { listOf(it) }
-            ).data?.firstOrNull()?.id
+            ).data.firstOrNull()?.channelId
             helix.removeVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
         }
         if (response.isSuccessful) {
@@ -1081,7 +1075,7 @@ class ApiRepository @Inject constructor(
             clientId = helixClientId,
             token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             logins = targetLogin?.let { listOf(it) }
-        ).data?.firstOrNull()?.id
+        ).data.firstOrNull()?.channelId
         val json = JsonObject().apply {
             addProperty("message", message)
         }

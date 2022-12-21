@@ -7,7 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
@@ -28,7 +28,7 @@ class ClipsAdapter(
                     oldItem.id == newItem.id
 
             override fun areContentsTheSame(oldItem: Clip, newItem: Clip): Boolean =
-                    oldItem.view_count == newItem.view_count &&
+                    oldItem.viewCount == newItem.viewCount &&
                             oldItem.title == newItem.title
 
         }) {
@@ -36,7 +36,7 @@ class ClipsAdapter(
     override val layoutId: Int = R.layout.fragment_videos_list_item
 
     override fun bind(item: Clip, view: View) {
-        val channelListener: (View) -> Unit = { channelClickListener.viewChannel(item.broadcaster_id, item.broadcaster_login, item.broadcaster_name, item.channelLogo) }
+        val channelListener: (View) -> Unit = { channelClickListener.viewChannel(item.channelId, item.channelLogin, item.channelName, item.channelLogo) }
         val gameListener: (View) -> Unit = { gameClickListener.openGame(item.gameId, item.gameName) }
         with(view) {
             setOnClickListener { clickListener.startClip(item) }
@@ -53,9 +53,9 @@ class ClipsAdapter(
             } else {
                 date.gone()
             }
-            if (item.view_count != null) {
+            if (item.viewCount != null) {
                 views.visible()
-                views.text = TwitchApiHelper.formatViewsCount(context, item.view_count)
+                views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount)
             } else {
                 views.gone()
             }
@@ -72,9 +72,9 @@ class ClipsAdapter(
             } else {
                 userImage.gone()
             }
-            if (item.broadcaster_name != null)  {
+            if (item.channelName != null)  {
                 username.visible()
-                username.text = item.broadcaster_name
+                username.text = item.channelName
                 username.setOnClickListener(channelListener)
             } else {
                 username.gone()

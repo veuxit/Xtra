@@ -14,13 +14,27 @@ import com.github.andreyasadchy.xtra.model.gql.game.*
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenDeserializer
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
 import com.github.andreyasadchy.xtra.model.gql.search.*
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataDeserializer
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.*
+import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchDeserializer
+import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchResponse
 import com.github.andreyasadchy.xtra.model.helix.chat.*
+import com.github.andreyasadchy.xtra.model.helix.clip.ClipsDeserializer
+import com.github.andreyasadchy.xtra.model.helix.clip.ClipsResponse
+import com.github.andreyasadchy.xtra.model.helix.follows.FollowDeserializer
+import com.github.andreyasadchy.xtra.model.helix.follows.FollowResponse
+import com.github.andreyasadchy.xtra.model.helix.game.GamesDeserializer
+import com.github.andreyasadchy.xtra.model.helix.game.GamesResponse
+import com.github.andreyasadchy.xtra.model.helix.stream.StreamsDeserializer
+import com.github.andreyasadchy.xtra.model.helix.stream.StreamsResponse
+import com.github.andreyasadchy.xtra.model.helix.user.UsersDeserializer
+import com.github.andreyasadchy.xtra.model.helix.user.UsersResponse
+import com.github.andreyasadchy.xtra.model.helix.video.VideosDeserializer
+import com.github.andreyasadchy.xtra.model.helix.video.VideosResponse
 import com.github.andreyasadchy.xtra.util.FetchProvider
 import com.google.gson.GsonBuilder
 import com.tonyodev.fetch2.FetchConfiguration
@@ -115,20 +129,31 @@ class XtraModule {
     @Provides
     fun providesGsonConverterFactory(): GsonConverterFactory {
         return GsonConverterFactory.create(GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-                .registerTypeAdapter(EmoteSetResponse::class.java, EmoteSetDeserializer())
-                .registerTypeAdapter(CheerEmotesResponse::class.java, CheerEmotesDeserializer())
                 .registerTypeAdapter(RecentMessagesResponse::class.java, RecentMessagesDeserializer())
                 .registerTypeAdapter(StvGlobalResponse::class.java, StvGlobalDeserializer())
                 .registerTypeAdapter(StvChannelResponse::class.java, StvChannelDeserializer())
                 .registerTypeAdapter(BttvGlobalResponse::class.java, BttvGlobalDeserializer())
                 .registerTypeAdapter(BttvChannelResponse::class.java, BttvChannelDeserializer())
                 .registerTypeAdapter(BttvFfzResponse::class.java, BttvFfzDeserializer())
+
+                .registerTypeAdapter(GamesResponse::class.java, GamesDeserializer())
+                .registerTypeAdapter(StreamsResponse::class.java, StreamsDeserializer())
+                .registerTypeAdapter(VideosResponse::class.java, VideosDeserializer())
+                .registerTypeAdapter(ClipsResponse::class.java, ClipsDeserializer())
+                .registerTypeAdapter(UsersResponse::class.java, UsersDeserializer())
+                .registerTypeAdapter(ChannelSearchResponse::class.java, ChannelSearchDeserializer())
+                .registerTypeAdapter(ChatBadgesResponse::class.java, ChatBadgesDeserializer())
+                .registerTypeAdapter(CheerEmotesResponse::class.java, CheerEmotesDeserializer())
+                .registerTypeAdapter(FollowResponse::class.java, FollowDeserializer())
+                .registerTypeAdapter(EmoteSetResponse::class.java, EmoteSetDeserializer())
+                .registerTypeAdapter(ModeratorsResponse::class.java, ModeratorsDeserializer())
+
                 .registerTypeAdapter(PlaybackAccessTokenResponse::class.java, PlaybackAccessTokenDeserializer())
                 .registerTypeAdapter(ClipUrlsResponse::class.java, ClipUrlsDeserializer())
                 .registerTypeAdapter(ClipDataResponse::class.java, ClipDataDeserializer())
                 .registerTypeAdapter(ClipVideoResponse::class.java, ClipVideoDeserializer())
                 .registerTypeAdapter(GameDataResponse::class.java, GameDataDeserializer())
-                .registerTypeAdapter(StreamDataResponse::class.java, StreamDataDeserializer())
+                .registerTypeAdapter(StreamsDataResponse::class.java, StreamsDataDeserializer())
                 .registerTypeAdapter(ViewersDataResponse::class.java, ViewersDataDeserializer())
                 .registerTypeAdapter(GameStreamsDataResponse::class.java, GameStreamsDataDeserializer())
                 .registerTypeAdapter(GameVideosDataResponse::class.java, GameVideosDataDeserializer())
@@ -159,8 +184,6 @@ class XtraModule {
                 .registerTypeAdapter(FollowingGameDataResponse::class.java, FollowingGameDataDeserializer())
                 .registerTypeAdapter(ChannelPointsContextDataResponse::class.java, ChannelPointsContextDataDeserializer())
                 .registerTypeAdapter(UserEmotesDataResponse::class.java, UserEmotesDataDeserializer())
-                .registerTypeAdapter(ChatBadgesResponse::class.java, ChatBadgesDeserializer())
-                .registerTypeAdapter(ModeratorsResponse::class.java, ModeratorsDeserializer())
                 .registerTypeAdapter(ModeratorsDataResponse::class.java, ModeratorsDataDeserializer())
                 .registerTypeAdapter(VipsDataResponse::class.java, VipsDataDeserializer())
                 .create())

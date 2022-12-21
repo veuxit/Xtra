@@ -6,7 +6,7 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.GameClipsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
@@ -77,24 +77,22 @@ class GameClipsDataSource(
             cursor = offset
         )
         val list = mutableListOf<Clip>()
-        get.data?.let { list.addAll(it) }
+        get.data.let { list.addAll(it) }
         val userIds = mutableListOf<String>()
         for (i in list) {
-            i.broadcaster_id?.let { userIds.add(it) }
+            i.channelId?.let { userIds.add(it) }
         }
         if (userIds.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = userIds).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.broadcaster_id == i.id }
-                    for (item in items) {
-                        item.broadcaster_login = i.login
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val items = list.filter { it.channelId == i.channelId }
+                for (item in items) {
+                    item.channelLogin = i.channelLogin
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -113,17 +111,17 @@ class GameClipsDataSource(
             for (i in get) {
                 list.add(Clip(
                     id = i?.node?.slug,
-                    broadcaster_id = i?.node?.broadcaster?.id,
-                    broadcaster_login = i?.node?.broadcaster?.login,
-                    broadcaster_name = i?.node?.broadcaster?.displayName,
-                    video_id = i?.node?.video?.id,
-                    vod_offset = i?.node?.videoOffsetSeconds,
+                    channelId = i?.node?.broadcaster?.id,
+                    channelLogin = i?.node?.broadcaster?.login,
+                    channelName = i?.node?.broadcaster?.displayName,
+                    videoId = i?.node?.video?.id,
+                    vodOffset = i?.node?.videoOffsetSeconds,
                     title = i?.node?.title,
-                    view_count = i?.node?.viewCount,
-                    created_at = i?.node?.createdAt?.toString(),
+                    viewCount = i?.node?.viewCount,
+                    uploadDate = i?.node?.createdAt?.toString(),
                     duration = i?.node?.durationSeconds?.toDouble(),
-                    thumbnail_url = i?.node?.thumbnailURL,
-                    profileImageURL = i?.node?.broadcaster?.profileImageURL,
+                    thumbnailUrl = i?.node?.thumbnailURL,
+                    profileImageUrl = i?.node?.broadcaster?.profileImageURL,
                     videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
                 ))
             }

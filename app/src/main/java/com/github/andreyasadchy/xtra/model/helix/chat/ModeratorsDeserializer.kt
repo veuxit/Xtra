@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.helix.chat
 
-import com.github.andreyasadchy.xtra.model.helix.user.User
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -17,9 +17,9 @@ class ModeratorsDeserializer : JsonDeserializer<ModeratorsResponse> {
         dataJson.forEach { element ->
             element.asJsonObject.let { obj ->
                 data.add(User(
-                    id = obj.get("user_id")?.takeIf { !it.isJsonNull }?.asString,
-                    login = obj.get("user_login")?.takeIf { !it.isJsonNull }?.asString,
-                    display_name = obj.get("user_name")?.takeIf { !it.isJsonNull }?.asString,
+                    channelId = obj.get("user_id")?.takeIf { !it.isJsonNull }?.asString,
+                    channelLogin = obj.get("user_login")?.takeIf { !it.isJsonNull }?.asString,
+                    channelName = obj.get("user_name")?.takeIf { !it.isJsonNull }?.asString,
                 ))
             }
         }

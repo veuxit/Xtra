@@ -21,12 +21,12 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.clips.BaseClipsFragment
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
 
         val notInitialized = savedInstanceState == null
         initNavigation()
-        if ((User.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
+        if ((Account.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (Account.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
             fragNavController.initialize(INDEX_FOLLOWED, savedInstanceState)
             if (notInitialized) {
                 navBar.selectedItemId = R.id.fragment_follow
@@ -171,7 +171,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         onBackPressedDispatcher.addCallback(this) {
             if (!viewModel.isPlayerMaximized) {
                 if (fragNavController.isRootFragment) {
-                    if ((User.get(this@MainActivity) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this@MainActivity) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
+                    if ((Account.get(this@MainActivity) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (Account.get(this@MainActivity) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
                         if (fragNavController.currentStackIndex != INDEX_FOLLOWED) {
                             navBar.selectedItemId = R.id.fragment_follow
                         } else {
@@ -333,7 +333,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.video.observe(this) { video ->
                             if (video != null && !video.id.isNullOrBlank()) {
                                 startVideo(video, offset)
@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 url.contains("/clip/") -> {
                     val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
@@ -355,7 +355,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 url.contains("clips.twitch.tv/") -> {
                     val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
@@ -373,11 +373,11 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 else -> {
                     val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!login.isNullOrBlank()) {
-                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
                         viewModel.user.observe(this) { user ->
-                            if (user != null && (!user.id.isNullOrBlank() || !user.login.isNullOrBlank())) {
+                            if (user != null && (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank())) {
                                 playerFragment?.minimize()
-                                viewChannel(id = user.id, login = user.login, name = user.display_name, channelLogo = user.channelLogo)
+                                viewChannel(id = user.channelId, login = user.channelLogin, name = user.channelName, channelLogo = user.channelLogo)
                             }
                         }
                     }
@@ -496,9 +496,9 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 GamesFragment(),
                 TopFragment(),
                 if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
-                    FollowPagerFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !User.get(this@MainActivity).gqlToken.isNullOrBlank())
+                    FollowPagerFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !Account.get(this@MainActivity).gqlToken.isNullOrBlank())
                 } else {
-                    FollowMediaFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !User.get(this@MainActivity).gqlToken.isNullOrBlank())
+                    FollowMediaFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !Account.get(this@MainActivity).gqlToken.isNullOrBlank())
                 },
                 if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
                     SavedPagerFragment.newInstance(prefs.getString(C.UI_SAVED_DEFAULT_PAGE, "0")?.toInt())

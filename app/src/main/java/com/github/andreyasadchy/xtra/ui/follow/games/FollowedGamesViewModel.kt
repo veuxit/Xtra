@@ -6,8 +6,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
@@ -21,17 +21,17 @@ class FollowedGamesViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadFollowedGames(it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
+        repository.loadFollowedGames(it.gqlClientId, it.account.gqlToken, it.apiPref, viewModelScope)
     }
 
-    fun setUser(user: User, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
+    fun setUser(account: Account, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
         if (filter.value == null) {
-            filter.value = Filter(user, gqlClientId, apiPref)
+            filter.value = Filter(account, gqlClientId, apiPref)
         }
     }
 
     private data class Filter(
-        val user: User,
+        val account: Account,
         val gqlClientId: String?,
         val apiPref: ArrayList<Pair<Long?, String?>?>)
 }

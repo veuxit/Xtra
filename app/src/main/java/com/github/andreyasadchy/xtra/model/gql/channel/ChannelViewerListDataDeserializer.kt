@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.channel
 
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelViewerList
+import com.github.andreyasadchy.xtra.model.ui.ChannelViewerList
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement

@@ -9,13 +9,13 @@ import android.widget.RadioButton
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Period.*
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Sort.TIME
-import com.github.andreyasadchy.xtra.model.helix.video.Sort.VIEWS
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.*
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.TIME
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.VIEWS
 import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -31,7 +31,7 @@ import kotlinx.android.synthetic.main.dialog_videos_sort.*
 class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
 
     interface OnFilter {
-        fun onChange(sort: Sort, sortText: CharSequence, period: Period, periodText: CharSequence, type: BroadcastType, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean)
+        fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean)
     }
 
     companion object {
@@ -46,7 +46,7 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
 
         private const val REQUEST_CODE_LANGUAGE = 0
 
-        fun newInstance(sort: Sort? = VIEWS, period: Period? = ALL, type: BroadcastType? = BroadcastType.ALL, languageIndex: Int? = 0, saveSort: Boolean = false, saveDefault: Boolean = false, clipChannel: Boolean = false): VideosSortDialog {
+        fun newInstance(sort: VideoSortEnum? = VIEWS, period: VideoPeriodEnum? = ALL, type: BroadcastTypeEnum? = BroadcastTypeEnum.ALL, languageIndex: Int? = 0, saveSort: Boolean = false, saveDefault: Boolean = false, clipChannel: Boolean = false): VideosSortDialog {
             return VideosSortDialog().apply {
                 arguments = bundleOf(SORT to sort, PERIOD to period, TYPE to type, LANGUAGE to languageIndex, SAVE_SORT to saveSort, SAVE_DEFAULT to saveDefault, CLIP_CHANNEL to clipChannel)
             }
@@ -96,25 +96,25 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
                 saveSort.gone()
             }
             is GameVideosFragment -> {
-                if (User.get(requireContext()).helixToken.isNullOrBlank()) {
+                if (Account.get(requireContext()).helixToken.isNullOrBlank()) {
                     period.gone()
                 }
                 saveSort.text = requireContext().getString(R.string.save_sort_game)
                 saveSort.isVisible = parentFragment?.arguments?.getString(C.GAME_ID).isNullOrBlank() == false
             }
         }
-        val originalSortId = if (args.getSerializable(SORT) as Sort == TIME) R.id.time else R.id.views
-        val originalPeriodId = when (args.getSerializable(PERIOD) as Period) {
+        val originalSortId = if (args.getSerializable(SORT) as VideoSortEnum == TIME) R.id.time else R.id.views
+        val originalPeriodId = when (args.getSerializable(PERIOD) as VideoPeriodEnum) {
             DAY -> R.id.today
             WEEK -> R.id.week
             MONTH -> R.id.month
             ALL -> R.id.all
         }
-        val originalTypeId = when (args.getSerializable(TYPE) as BroadcastType) {
-            BroadcastType.ARCHIVE -> R.id.typeArchive
-            BroadcastType.HIGHLIGHT -> R.id.typeHighlight
-            BroadcastType.UPLOAD -> R.id.typeUpload
-            BroadcastType.ALL -> R.id.typeAll
+        val originalTypeId = when (args.getSerializable(TYPE) as BroadcastTypeEnum) {
+            BroadcastTypeEnum.ARCHIVE -> R.id.typeArchive
+            BroadcastTypeEnum.HIGHLIGHT -> R.id.typeHighlight
+            BroadcastTypeEnum.UPLOAD -> R.id.typeUpload
+            BroadcastTypeEnum.ALL -> R.id.typeAll
         }
         val originalLanguageIndex = args.getSerializable(LANGUAGE)
         val originalSaveSort = args.getBoolean(SAVE_SORT)
@@ -145,10 +145,10 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
                     },
                     periodBtn.text,
                     when (checkedTypeId) {
-                        R.id.typeArchive -> BroadcastType.ARCHIVE
-                        R.id.typeHighlight -> BroadcastType.HIGHLIGHT
-                        R.id.typeUpload -> BroadcastType.UPLOAD
-                        else -> BroadcastType.ALL
+                        R.id.typeArchive -> BroadcastTypeEnum.ARCHIVE
+                        R.id.typeHighlight -> BroadcastTypeEnum.HIGHLIGHT
+                        R.id.typeUpload -> BroadcastTypeEnum.UPLOAD
+                        else -> BroadcastTypeEnum.ALL
                     },
                     langIndex,
                     checkedSaveSort,

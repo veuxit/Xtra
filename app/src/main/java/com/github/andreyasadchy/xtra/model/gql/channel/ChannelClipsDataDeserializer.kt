@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.channel
 
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -19,17 +19,17 @@ class ChannelClipsDataDeserializer : JsonDeserializer<ChannelClipsDataResponse> 
             item?.asJsonObject?.getAsJsonObject("node")?.let { obj ->
                 data.add(Clip(
                     id = obj.get("slug")?.takeIf { !it.isJsonNull }?.asString,
-                    broadcaster_id = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    broadcaster_login = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                    broadcaster_name = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                    game_id = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    game_name = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("name")?.takeIf { !it.isJsonNull }?.asString,
+                    channelId = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    channelLogin = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
+                    channelName = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    gameId = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    gameName = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("name")?.takeIf { !it.isJsonNull }?.asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                    view_count = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
-                    created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
-                    thumbnail_url = obj.get("thumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
+                    viewCount = obj.get("viewCount")?.takeIf { !it.isJsonNull }?.asInt,
+                    uploadDate = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
+                    thumbnailUrl = obj.get("thumbnailURL")?.takeIf { !it.isJsonNull }?.asString,
                     duration = obj.get("durationSeconds")?.takeIf { !it.isJsonNull }?.asDouble,
-                    profileImageURL = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString
+                    profileImageUrl = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString
                 ))
             }
         }
