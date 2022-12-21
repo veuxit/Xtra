@@ -7,9 +7,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -48,11 +48,11 @@ class ClipPlayerViewModel @Inject constructor(
         get() = _video
 
     override val userId: String?
-        get() { return clip.broadcaster_id }
+        get() { return clip.channelId }
     override val userLogin: String?
-        get() { return clip.broadcaster_login }
+        get() { return clip.channelLogin }
     override val userName: String?
-        get() { return clip.broadcaster_name }
+        get() { return clip.channelName }
     override val channelLogo: String?
         get() { return clip.channelLogo }
     override lateinit var follow: FollowLiveData
@@ -91,7 +91,7 @@ class ClipPlayerViewModel @Inject constructor(
                         clientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                         slug = clip.id,
                         skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
-                        thumbnailUrl = clip.thumbnail_url
+                        thumbnailUrl = clip.thumbnailUrl
                     )
                     val defaultQuality = prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved")
                     val savedQuality = prefs.getString(C.PLAYER_QUALITY, "720p60")
@@ -140,9 +140,9 @@ class ClipPlayerViewModel @Inject constructor(
         }
     }
 
-    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
+    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
         }
     }
 

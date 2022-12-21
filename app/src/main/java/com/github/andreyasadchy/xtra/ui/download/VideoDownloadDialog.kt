@@ -18,9 +18,9 @@ import androidx.core.widget.NestedScrollView
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,7 +62,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
             if (it == null) {
                 viewModel.setVideo(
                     gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                    gqlToken = if (requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
+                    gqlToken = if (requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) Account.get(requireContext()).gqlToken else null,
                     video = requireArguments().getParcelable(KEY_VIDEO)!!,
                     playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                     skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2

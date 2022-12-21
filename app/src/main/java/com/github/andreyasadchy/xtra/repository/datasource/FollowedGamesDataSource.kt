@@ -4,7 +4,7 @@ import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -23,7 +23,7 @@ class FollowedGamesDataSource(
         loadInitial(params, callback) {
             val list = mutableListOf<Game>()
             for (i in localFollowsGame.loadFollows()) {
-                list.add(Game(id = i.gameId, name = i.gameName, box_art_url = i.boxArt, followLocal = true))
+                list.add(Game(gameId = i.gameId, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
@@ -44,19 +44,19 @@ class FollowedGamesDataSource(
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
-                    val item = list.find { it.id == i.id }
+                    val item = list.find { it.gameId == i.gameId }
                     if (item == null) {
-                        i.followTwitch = true
+                        i.followAccount = true
                         list.add(i)
                     } else {
-                        item.followTwitch = true
+                        item.followAccount = true
                         item.viewersCount = i.viewersCount
                         item.broadcastersCount = i.broadcastersCount
                         item.tags = i.tags
                     }
                 }
             }
-            list.sortBy { it.name }
+            list.sortBy { it.gameName }
             list
         }
     }

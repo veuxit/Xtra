@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonObject
@@ -65,10 +65,8 @@ class SearchGamesDataSource private constructor(
             limit = initialParams?.requestedLoadSize ?: rangeParams?.loadSize,
             offset = offset
         )
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else listOf()
+        offset = get.cursor
+        return get.data
     }
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Game> {

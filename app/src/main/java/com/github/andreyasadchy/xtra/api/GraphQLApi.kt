@@ -14,7 +14,7 @@ import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenRespo
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
@@ -130,7 +130,7 @@ interface GraphQLApi {
     suspend fun getTopGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameDataResponse
 
     @POST(".")
-    suspend fun getTopStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): StreamDataResponse
+    suspend fun getTopStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): StreamsDataResponse
 
     @POST(".")
     suspend fun getGameStreams(@Header("Client-ID") clientId: String?, @Body json: JsonObject): GameStreamsDataResponse

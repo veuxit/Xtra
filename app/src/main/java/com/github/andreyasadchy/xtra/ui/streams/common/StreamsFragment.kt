@@ -2,9 +2,9 @@ package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.os.Bundle
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Sort
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -45,7 +45,7 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDial
             gameId = arguments?.getString(C.GAME_ID),
             gameName = arguments?.getString(C.GAME_NAME),
             helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-            helixToken = User.get(requireContext()).helixToken,
+            helixToken = Account.get(requireContext()).helixToken,
             gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             tags = arguments?.getStringArray(C.TAGS)?.toList(),
             apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults),
@@ -67,7 +67,7 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDial
                         viewModel = viewModel,
                         followButton = it,
                         setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                        user = User.get(activity),
+                        account = Account.get(activity),
                         helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                         gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                         gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
@@ -82,7 +82,7 @@ class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDial
         }
     }
 
-    override fun onChange(sort: Sort) {
+    override fun onChange(sort: StreamSortEnum) {
         adapter.submitList(null)
         viewModel.filter(
             sort = sort

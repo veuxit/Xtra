@@ -1,3 +1,5 @@
 package com.github.andreyasadchy.xtra.model.helix.user
 
-data class UsersResponse(val data: List<User>?)
+import com.github.andreyasadchy.xtra.model.ui.User
+
+data class UsersResponse(val data: List<User>)

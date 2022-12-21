@@ -16,10 +16,10 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.offline.Request
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
 import com.github.andreyasadchy.xtra.ui.download.DownloadService
 import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_REQUEST

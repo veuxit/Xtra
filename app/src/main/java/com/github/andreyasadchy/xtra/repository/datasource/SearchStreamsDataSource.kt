@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonObject
@@ -56,19 +56,19 @@ class SearchStreamsDataSource private constructor(
             live = true
         )
         val list = mutableListOf<Stream>()
-        get.data?.forEach {
+        get.data.forEach {
             list.add(Stream(
-                user_id = it.id,
-                user_login = it.broadcaster_login,
-                user_name = it.display_name,
-                game_id = it.game_id,
-                game_name = it.game_name,
-                title = it.title,
-                started_at = it.started_at,
-                profileImageURL = it.thumbnail_url,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                gameId = it.stream?.gameId,
+                gameName = it.stream?.gameName,
+                title = it.stream?.title,
+                startedAt = it.stream?.startedAt,
+                profileImageUrl = it.profileImageUrl,
             ))
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 

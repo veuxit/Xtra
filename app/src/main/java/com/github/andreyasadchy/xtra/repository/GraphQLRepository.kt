@@ -18,7 +18,7 @@ import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenRespo
 import com.github.andreyasadchy.xtra.model.gql.search.SearchChannelDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamDataResponse
+import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
@@ -368,7 +368,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getTopGames(clientId, json)
     }
 
-    suspend fun loadTopStreams(clientId: String?, tags: List<String>?, limit: Int?, cursor: String?): StreamDataResponse {
+    suspend fun loadTopStreams(clientId: String?, tags: List<String>?, limit: Int?, cursor: String?): StreamsDataResponse {
         val array = JsonArray()
         if (tags != null) {
             for (i in tags) {

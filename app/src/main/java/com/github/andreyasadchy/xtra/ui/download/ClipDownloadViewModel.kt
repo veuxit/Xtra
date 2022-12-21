@@ -5,8 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.offline.Request
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
@@ -35,7 +35,7 @@ class ClipDownloadViewModel @Inject constructor(
             if (qualities.isNullOrEmpty()) {
                 viewModelScope.launch {
                     try {
-                        val urls = graphQLRepository.loadClipUrls(clientId, clip.id, skipAccessToken, clip.thumbnail_url)
+                        val urls = graphQLRepository.loadClipUrls(clientId, clip.id, skipAccessToken, clip.thumbnailUrl)
                         _qualities.postValue(urls)
                     } catch (e: Exception) {
 

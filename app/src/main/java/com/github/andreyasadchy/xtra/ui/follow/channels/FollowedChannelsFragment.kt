@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
-import com.github.andreyasadchy.xtra.model.helix.follows.Order
-import com.github.andreyasadchy.xtra.model.helix.follows.Sort
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
+import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
@@ -24,10 +24,10 @@ import kotlinx.android.synthetic.main.fragment_followed_channels.*
 import kotlinx.android.synthetic.main.sort_bar.*
 
 @AndroidEntryPoint
-class FollowedChannelsFragment : PagedListFragment<Follow, FollowedChannelsViewModel, BasePagedListAdapter<Follow>>(), FollowedChannelsSortDialog.OnFilter, Scrollable {
+class FollowedChannelsFragment : PagedListFragment<User, FollowedChannelsViewModel, BasePagedListAdapter<User>>(), FollowedChannelsSortDialog.OnFilter, Scrollable {
 
     override val viewModel: FollowedChannelsViewModel by viewModels()
-    override val adapter: BasePagedListAdapter<Follow> by lazy {
+    override val adapter: BasePagedListAdapter<User> by lazy {
         val activity = requireActivity() as MainActivity
         FollowedChannelsAdapter(this, activity)
     }
@@ -43,7 +43,7 @@ class FollowedChannelsFragment : PagedListFragment<Follow, FollowedChannelsViewM
         }
         viewModel.setUser(
             context = requireContext(),
-            user = User.get(requireContext()),
+            account = Account.get(requireContext()),
             helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
             apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_FOLLOWED_CHANNELS, ""), TwitchApiHelper.followedChannelsApiDefaults),
@@ -58,7 +58,7 @@ class FollowedChannelsFragment : PagedListFragment<Follow, FollowedChannelsViewM
         }
     }
 
-    override fun onChange(sort: Sort, sortText: CharSequence, order: Order, orderText: CharSequence, saveDefault: Boolean) {
+    override fun onChange(sort: FollowSortEnum, sortText: CharSequence, order: FollowOrderEnum, orderText: CharSequence, saveDefault: Boolean) {
         adapter.submitList(null)
         viewModel.filter(
             sort = sort,

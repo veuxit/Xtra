@@ -7,9 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
@@ -37,8 +37,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
         val channelName = args.getString(KEY_CHANNEL_NAME)
         val streamId = args.getString(KEY_STREAM_ID)
-        val user = User.get(requireContext())
-        val isLoggedIn = !user.login.isNullOrBlank() && (!user.gqlToken.isNullOrBlank() || !user.helixToken.isNullOrBlank())
+        val account = Account.get(requireContext())
+        val isLoggedIn = !account.login.isNullOrBlank() && (!account.gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank())
         val useSSl = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
         val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
         val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
@@ -62,12 +62,12 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             false
         } else {
             if (isLive) {
-                viewModel.startLive(useSSl, usePubSub, user, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), useApiCommands)
+                viewModel.startLive(useSSl, usePubSub, account, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), useApiCommands)
                 chatView.init(this)
                 chatView.setCallback(viewModel, (viewModel.chat as? ChatViewModel.LiveChatController))
                 chatView.setChannelId(channelId)
                 if (isLoggedIn) {
-                    user.login?.let { chatView.setUsername(it) }
+                    account.login?.let { chatView.setUsername(it) }
                     chatView.setChatters(viewModel.chatters)
                     val emotesObserver = Observer(chatView::addEmotes)
                     viewModel.userEmotes.observe(viewLifecycleOwner, emotesObserver)
@@ -80,7 +80,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
                         chatView.init(this)
                         val getCurrentPosition = (parentFragment as ChatReplayPlayerFragment)::getCurrentPosition
-                        viewModel.startReplay(user, helixClientId, gqlClientId, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, emoteQuality, animateGifs)
+                        viewModel.startReplay(account, helixClientId, gqlClientId, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, emoteQuality, animateGifs)
                         chatView.setChannelId(channelId)
                         true
                     } else {
@@ -132,7 +132,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelId = requireArguments().getString(KEY_CHANNEL_ID)
         val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
         val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-        val helixToken = User.get(requireContext()).helixToken
+        val helixToken = Account.get(requireContext()).helixToken
         val gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
         val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
@@ -168,10 +168,10 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     private fun onRaidClicked() {
         viewModel.raid.value?.let {
             (requireActivity() as MainActivity).startStream(Stream(
-                user_id = it.targetId,
-                user_login = it.targetLogin,
-                user_name = it.targetName,
-                profileImageURL = it.targetProfileImage,
+                channelId = it.targetId,
+                channelLogin = it.targetLogin,
+                channelName = it.targetName,
+                profileImageUrl = it.targetProfileImage,
             ))
         }
     }

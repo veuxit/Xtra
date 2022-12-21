@@ -1,17 +1,17 @@
 package com.github.andreyasadchy.xtra.model.gql.stream
 
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import java.lang.reflect.Type
 
-class StreamDataDeserializer : JsonDeserializer<StreamDataResponse> {
+class StreamsDataDeserializer : JsonDeserializer<StreamsDataResponse> {
 
     @Throws(JsonParseException::class)
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): StreamDataResponse {
+    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): StreamsDataResponse {
         val data = mutableListOf<Stream>()
         val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("streams")?.getAsJsonArray("edges")
         val cursor = dataJson?.lastOrNull()?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
@@ -29,20 +29,20 @@ class StreamDataDeserializer : JsonDeserializer<StreamDataResponse> {
                 }
                 data.add(Stream(
                     id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    user_id = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    user_login = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                    user_name = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                    game_id = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    game_name = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    channelId = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    channelLogin = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
+                    channelName = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    gameId = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    gameName = obj.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
                     type = obj.get("type")?.takeIf { !it.isJsonNull }?.asString,
                     title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                    viewer_count = obj.get("viewersCount")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
-                    thumbnail_url = obj.get("previewImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    profileImageURL = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
+                    viewerCount = obj.get("viewersCount")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+                    thumbnailUrl = obj.get("previewImageURL")?.takeIf { !it.isJsonNull }?.asString,
+                    profileImageUrl = obj.get("broadcaster")?.takeIf { it.isJsonObject }?.asJsonObject?.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
                     tags = tags
                 ))
             }
         }
-        return StreamDataResponse(data, cursor, hasNextPage)
+        return StreamsDataResponse(data, cursor, hasNextPage)
     }
 }

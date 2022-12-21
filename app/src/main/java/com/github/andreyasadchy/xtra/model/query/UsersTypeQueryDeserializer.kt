@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.query
 
-import com.github.andreyasadchy.xtra.model.helix.user.User
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -16,8 +16,8 @@ class UsersTypeQueryDeserializer : JsonDeserializer<UsersTypeQueryResponse> {
         dataJson?.forEach { item ->
             item?.asJsonObject?.let { obj ->
                 data.add(User(
-                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    broadcaster_type = when {
+                    channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    broadcasterType = when {
                         obj.get("roles")?.takeIf { it.isJsonObject }?.asJsonObject?.get("isPartner")?.takeIf { !it.isJsonNull }?.asBoolean == true -> "partner"
                         obj.get("roles")?.takeIf { it.isJsonObject }?.asJsonObject?.get("isAffiliate")?.takeIf { !it.isJsonNull }?.asBoolean == true -> "affiliate"
                         else -> null

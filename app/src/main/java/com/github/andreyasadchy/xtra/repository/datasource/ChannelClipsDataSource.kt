@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.util.C
@@ -74,11 +74,11 @@ class ChannelClipsDataSource(
             cursor = offset
         )
         val list = mutableListOf<Clip>()
-        get.data?.let { list.addAll(it) }
+        get.data.let { list.addAll(it) }
         val gameIds = mutableListOf<String>()
         for (i in list) {
-            i.broadcaster_login = channelLogin
-            i.game_id?.let { gameIds.add(it) }
+            i.channelLogin = channelLogin
+            i.gameId?.let { gameIds.add(it) }
         }
         if (gameIds.isNotEmpty()) {
             val games = helixApi.getGames(
@@ -86,16 +86,14 @@ class ChannelClipsDataSource(
                 token = helixToken,
                 ids = gameIds
             ).data
-            if (games != null) {
-                for (i in games) {
-                    val items = list.filter { it.game_id == i.id }
-                    for (item in items) {
-                        item.game_name = i.name
-                    }
+            for (i in games) {
+                val items = list.filter { it.gameId == i.gameId }
+                for (item in items) {
+                    item.gameName = i.gameName
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 

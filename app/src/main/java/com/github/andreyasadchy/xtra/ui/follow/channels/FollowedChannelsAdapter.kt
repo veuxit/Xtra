@@ -5,7 +5,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -16,28 +16,28 @@ import kotlinx.android.synthetic.main.fragment_followed_channels_list_item.view.
 
 class FollowedChannelsAdapter(
         private val fragment: Fragment,
-        private val listener: OnChannelSelectedListener) : BasePagedListAdapter<Follow>(
-        object : DiffUtil.ItemCallback<Follow>() {
-            override fun areItemsTheSame(oldItem: Follow, newItem: Follow): Boolean =
-                    oldItem.to_id == newItem.to_id
+        private val listener: OnChannelSelectedListener) : BasePagedListAdapter<User>(
+        object : DiffUtil.ItemCallback<User>() {
+            override fun areItemsTheSame(oldItem: User, newItem: User): Boolean =
+                    oldItem.channelId == newItem.channelId
 
-            override fun areContentsTheSame(oldItem: Follow, newItem: Follow): Boolean = true
+            override fun areContentsTheSame(oldItem: User, newItem: User): Boolean = true
         }) {
 
     override val layoutId: Int = R.layout.fragment_followed_channels_list_item
 
-    override fun bind(item: Follow, view: View) {
+    override fun bind(item: User, view: View) {
         with(view) {
-            setOnClickListener { listener.viewChannel(item.to_id, item.to_login, item.to_name, item.channelLogo, item.followLocal) }
+            setOnClickListener { listener.viewChannel(item.channelId, item.channelLogin, item.channelName, item.channelLogo, item.followLocal) }
             if (item.channelLogo != null)  {
                 userImage.visible()
                 userImage.loadImage(fragment, item.channelLogo, circle = true, diskCacheStrategy = DiskCacheStrategy.NONE)
             } else {
                 userImage.gone()
             }
-            if (item.to_name != null)  {
+            if (item.channelName != null)  {
                 username.visible()
-                username.text = item.to_name
+                username.text = item.channelName
             } else {
                 username.gone()
             }
@@ -52,8 +52,8 @@ class FollowedChannelsAdapter(
             } else {
                 userStream.gone()
             }
-            if (item.followed_at != null) {
-                val text = TwitchApiHelper.formatTimeString(context, item.followed_at!!)
+            if (item.followedAt != null) {
+                val text = TwitchApiHelper.formatTimeString(context, item.followedAt!!)
                 if (text != null) {
                     userFollowed.visible()
                     userFollowed.text = context.getString(R.string.followed_at, text)
@@ -63,7 +63,7 @@ class FollowedChannelsAdapter(
             } else {
                 userFollowed.gone()
             }
-            if (item.followTwitch) {
+            if (item.followAccount) {
                 twitchText.visible()
             } else {
                 twitchText.gone()

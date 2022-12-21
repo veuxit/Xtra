@@ -20,7 +20,7 @@ import androidx.core.view.*
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
@@ -179,7 +179,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (!prefs.getBoolean(C.PLAYER_PAUSE, false)) {
                 view.findViewById<ImageButton>(R.id.exo_pause).layoutParams.height = 0
             }
-            if (!User.get(activity).login.isNullOrBlank() && (!User.get(activity).gqlToken.isNullOrBlank() || !User.get(activity).helixToken.isNullOrBlank())) {
+            if (!Account.get(activity).login.isNullOrBlank() && (!Account.get(activity).gqlToken.isNullOrBlank() || !Account.get(activity).helixToken.isNullOrBlank())) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !disableChat) {
                     view.findViewById<ImageButton>(R.id.playerChatBarToggle).apply {
                         visible()
@@ -274,7 +274,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 viewModel = (viewModel as FollowViewModel),
                 followButton = view.findViewById(R.id.playerFollow),
                 setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                user = User.get(activity),
+                account = Account.get(activity),
                 helixClientId = prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")

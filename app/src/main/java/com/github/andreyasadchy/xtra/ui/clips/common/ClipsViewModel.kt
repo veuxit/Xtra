@@ -10,11 +10,11 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.model.helix.video.Period
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.offline.SortGame
+import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.repository.*
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
@@ -43,22 +43,22 @@ class ClipsViewModel @Inject constructor(
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Clip>> = Transformations.map(filter) {
         val started = when (it.period) {
-            Period.ALL -> null
+            VideoPeriodEnum.ALL -> null
             else -> TwitchApiHelper.getClipTime(it.period)
         }
         val ended = when (it.period) {
-            Period.ALL -> null
+            VideoPeriodEnum.ALL -> null
             else -> TwitchApiHelper.getClipTime()
         }
         val gqlQueryPeriod = when (it.period) {
-            Period.DAY -> ClipsPeriod.LAST_DAY
-            Period.WEEK -> ClipsPeriod.LAST_WEEK
-            Period.MONTH -> ClipsPeriod.LAST_MONTH
+            VideoPeriodEnum.DAY -> ClipsPeriod.LAST_DAY
+            VideoPeriodEnum.WEEK -> ClipsPeriod.LAST_WEEK
+            VideoPeriodEnum.MONTH -> ClipsPeriod.LAST_MONTH
             else -> ClipsPeriod.ALL_TIME }
         val gqlPeriod = when (it.period) {
-            Period.DAY -> "LAST_DAY"
-            Period.WEEK -> "LAST_WEEK"
-            Period.MONTH -> "LAST_MONTH"
+            VideoPeriodEnum.DAY -> "LAST_DAY"
+            VideoPeriodEnum.WEEK -> "LAST_WEEK"
+            VideoPeriodEnum.MONTH -> "LAST_MONTH"
             else -> "ALL_TIME" }
         if (it.gameId == null && it.gameName == null) {
             repository.loadChannelClips(it.channelId, it.channelLogin, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
@@ -76,7 +76,7 @@ class ClipsViewModel @Inject constructor(
                 gqlQueryPeriod, gqlPeriod, it.gameApiPref, viewModelScope)
         }
     }
-    val period: Period
+    val period: VideoPeriodEnum
         get() = filter.value!!.period
     val languageIndex: Int
         get() = filter.value!!.languageIndex
@@ -112,18 +112,18 @@ class ClipsViewModel @Inject constructor(
                 gameApiPref = gameApiPref,
                 saveSort = sortValuesGame?.saveSort ?: sortValuesChannel?.saveSort,
                 period = when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                    Period.DAY.value -> Period.DAY
-                    Period.MONTH.value -> Period.MONTH
-                    Period.ALL.value -> Period.ALL
-                    else -> Period.WEEK
+                    VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
+                    VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
+                    VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
+                    else -> VideoPeriodEnum.WEEK
                 },
                 languageIndex = sortValuesGame?.clipLanguageIndex ?: 0
             )
             _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count),
                 when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                    Period.DAY.value -> context.getString(R.string.today)
-                    Period.MONTH.value -> context.getString(R.string.this_month)
-                    Period.ALL.value -> context.getString(R.string.all_time)
+                    VideoPeriodEnum.DAY.value -> context.getString(R.string.today)
+                    VideoPeriodEnum.MONTH.value -> context.getString(R.string.this_month)
+                    VideoPeriodEnum.ALL.value -> context.getString(R.string.all_time)
                     else -> context.getString(R.string.this_week)
                 }
             )
@@ -135,7 +135,7 @@ class ClipsViewModel @Inject constructor(
         }
     }
 
-    fun filter(period: Period, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
+    fun filter(period: VideoPeriodEnum, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
         filter.value = filter.value?.copy(saveSort = saveSort, period = period, languageIndex = languageIndex)
         _sortText.value = text
         viewModelScope.launch {
@@ -230,7 +230,7 @@ class ClipsViewModel @Inject constructor(
         val channelApiPref: ArrayList<Pair<Long?, String?>?>,
         val gameApiPref: ArrayList<Pair<Long?, String?>?>,
         val saveSort: Boolean?,
-        val period: Period = Period.WEEK,
+        val period: VideoPeriodEnum = VideoPeriodEnum.WEEK,
         val languageIndex: Int = 0)
 
     override val userId: String?
@@ -245,9 +245,9 @@ class ClipsViewModel @Inject constructor(
         get() = true
     override lateinit var follow: FollowLiveData
 
-    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
+    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
         }
     }
 }

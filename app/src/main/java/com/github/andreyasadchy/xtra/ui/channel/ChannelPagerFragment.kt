@@ -14,9 +14,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
@@ -57,7 +58,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
-        val user = User.get(activity)
+        val account = Account.get(activity)
         setAdapter(ChannelPagerAdapter(this, requireArguments()))
         if (activity.isInLandscapeOrientation) {
             appBar.setExpanded(false, false)
@@ -88,17 +89,17 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         menu.setOnClickListener { it ->
             PopupMenu(activity, it).apply {
                 inflate(R.menu.top_menu)
-                menu.findItem(R.id.login).title = if (user !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
+                menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
                 setOnMenuItemClickListener {
                     when(it.itemId) {
                         R.id.settings -> { activity.startActivityFromFragment(this@ChannelPagerFragment, Intent(activity, SettingsActivity::class.java), 3) }
                         R.id.login -> {
-                            if (user is NotLoggedIn) {
+                            if (account is NotLoggedIn) {
                                 activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
                             } else {
                                 AlertDialog.Builder(activity).apply {
                                     setTitle(getString(R.string.logout_title))
-                                    user.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                    account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
                                     setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
                                     setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
                                 }.show()
@@ -140,19 +141,19 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         val activity = requireActivity() as MainActivity
         watchLive.setOnClickListener { activity.startStream(Stream(
             id = requireArguments().getString(C.STREAM_ID),
-            user_id = requireArguments().getString(C.CHANNEL_ID),
-            user_login = requireArguments().getString(C.CHANNEL_LOGIN),
-            user_name = requireArguments().getString(C.CHANNEL_DISPLAYNAME),
-            profileImageURL = requireArguments().getString(C.CHANNEL_PROFILEIMAGE)))
+            channelId = requireArguments().getString(C.CHANNEL_ID),
+            channelLogin = requireArguments().getString(C.CHANNEL_LOGIN),
+            channelName = requireArguments().getString(C.CHANNEL_DISPLAYNAME),
+            profileImageUrl = requireArguments().getString(C.CHANNEL_PROFILEIMAGE)))
         }
         viewModel.init(requireArguments().getString(C.CHANNEL_ID), requireArguments().getString(C.CHANNEL_LOGIN), requireArguments().getString(C.CHANNEL_DISPLAYNAME), requireArguments().getString(C.CHANNEL_PROFILEIMAGE))
-        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
         viewModel.stream.observe(viewLifecycleOwner) { stream ->
             updateStreamLayout(stream)
-            if (stream?.channelUser != null) {
-                updateUserLayout(stream.channelUser)
+            if (stream?.user != null) {
+                updateUserLayout(stream.user)
             } else {
-                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken)
+                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken)
             }
         }
         viewModel.user.observe(viewLifecycleOwner) { user ->
@@ -166,7 +167,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 viewModel = viewModel,
                 followButton = follow,
                 setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                user = User.get(activity),
+                account = Account.get(activity),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                 gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
@@ -180,12 +181,12 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
             watchLive.text = getString(R.string.watch_rerun)
             watchLive.setOnClickListener { activity.startStream(stream) }
         } else {
-            if (stream?.viewer_count != null) {
+            if (stream?.viewerCount != null) {
                 watchLive.text = getString(R.string.watch_live)
                 watchLive.setOnClickListener { activity.startStream(stream) }
             } else {
-                if (stream?.lastBroadcast != null) {
-                    TwitchApiHelper.formatTimeString(requireContext(), stream.lastBroadcast).let {
+                if (stream?.user?.lastBroadcast != null) {
+                    TwitchApiHelper.formatTimeString(requireContext(), stream.user.lastBroadcast!!).let {
                         if (it != null)  {
                             lastBroadcast.visible()
                             lastBroadcast.text = requireContext().getString(R.string.last_broadcast_date, it)
@@ -206,7 +207,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 userImage.gone()
             }
         }
-        stream?.user_name.let {
+        stream?.channelName.let {
             if (it != null && it != requireArguments().getString(C.CHANNEL_DISPLAYNAME)) {
                 userLayout.visible()
                 userName.visible()
@@ -214,7 +215,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
                 requireArguments().putString(C.CHANNEL_DISPLAYNAME, it)
             }
         }
-        stream?.user_login.let {
+        stream?.channelLogin.let {
             if (it != null && it != requireArguments().getString(C.CHANNEL_LOGIN)) {
                 requireArguments().putString(C.CHANNEL_LOGIN, it)
             }
@@ -231,26 +232,26 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             title.gone()
         }
-        if (stream?.game_name != null) {
+        if (stream?.gameName != null) {
             streamLayout.visible()
             gameName.visible()
-            gameName.text = stream.game_name
-            if (stream.game_id != null) {
-                gameName.setOnClickListener { activity.openGame(stream.game_id, stream.game_name) }
+            gameName.text = stream.gameName
+            if (stream.gameId != null) {
+                gameName.setOnClickListener { activity.openGame(stream.gameId, stream.gameName) }
             }
         } else {
             gameName.gone()
         }
-        if (stream?.viewer_count != null) {
+        if (stream?.viewerCount != null) {
             streamLayout.visible()
             viewers.visible()
-            viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewer_count ?: 0)
+            viewers.text = TwitchApiHelper.formatViewersCount(requireContext(), stream.viewerCount ?: 0)
         } else {
             viewers.gone()
         }
         if (requireContext().prefs().getBoolean(C.UI_UPTIME, true)) {
-            if (stream?.started_at != null) {
-                TwitchApiHelper.getUptime(requireContext(), stream.started_at).let {
+            if (stream?.startedAt != null) {
+                TwitchApiHelper.getUptime(requireContext(), stream.startedAt).let {
                     if (it != null)  {
                         streamLayout.visible()
                         uptime.visible()
@@ -263,7 +264,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         }
     }
 
-    private fun updateUserLayout(user: com.github.andreyasadchy.xtra.model.helix.user.User) {
+    private fun updateUserLayout(user: User) {
         if (!userImage.isVisible && user.channelLogo != null) {
             userLayout.visible()
             userImage.visible()
@@ -279,9 +280,9 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             bannerImage.gone()
         }*/
-        if (user.created_at != null) {
+        if (user.createdAt != null) {
             userCreated.visible()
-            userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.created_at))
+            userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.createdAt))
             /*if (user.bannerImageURL != null) {
                 userCreated.setTextColor(Color.LTGRAY)
                 userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
@@ -289,9 +290,9 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             userCreated.gone()
         }
-        if (user.followers_count != null) {
+        if (user.followersCount != null) {
             userFollowers.visible()
-            userFollowers.text = requireContext().getString(R.string.followers, TwitchApiHelper.formatCount(requireContext(), user.followers_count))
+            userFollowers.text = requireContext().getString(R.string.followers, TwitchApiHelper.formatCount(requireContext(), user.followersCount))
             /*if (user.bannerImageURL != null) {
                 userFollowers.setTextColor(Color.LTGRAY)
                 userFollowers.setShadowLayer(4f, 0f, 0f, Color.BLACK)
@@ -299,7 +300,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         } else {
             userFollowers.gone()
         }
-        val broadcasterType = if (user.broadcaster_type != null) { TwitchApiHelper.getUserType(requireContext(), user.broadcaster_type) } else null
+        val broadcasterType = if (user.broadcasterType != null) { TwitchApiHelper.getUserType(requireContext(), user.broadcasterType) } else null
         val type = if (user.type != null) { TwitchApiHelper.getUserType(requireContext(), user.type) } else null
         val typeString = if (broadcasterType != null && type != null) "$broadcasterType, $type" else broadcasterType ?: type
         if (typeString != null) {
@@ -318,7 +319,7 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onNetworkRestored() {
-        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

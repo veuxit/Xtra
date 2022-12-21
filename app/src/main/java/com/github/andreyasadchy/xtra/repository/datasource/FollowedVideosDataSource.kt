@@ -4,7 +4,7 @@ import androidx.core.util.Pair
 import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort

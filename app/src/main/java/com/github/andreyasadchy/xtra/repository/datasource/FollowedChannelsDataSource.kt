@@ -11,9 +11,9 @@ import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
-import com.github.andreyasadchy.xtra.model.helix.follows.Order
-import com.github.andreyasadchy.xtra.model.helix.follows.Sort
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
+import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -40,18 +40,18 @@ class FollowedChannelsDataSource(
     private val gqlToken: String?,
     private val gqlApi: GraphQLRepository,
     private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    private val sort: Sort,
-    private val order: Order,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Follow>(coroutineScope) {
+    private val sort: FollowSortEnum,
+    private val order: FollowOrderEnum,
+    coroutineScope: CoroutineScope) : BasePositionalDataSource<User>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Follow>) {
+    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<User>) {
         loadInitial(params, callback) {
-            val list = mutableListOf<Follow>()
-            for (i in localFollowsChannel.loadFollows().let { if (order == Order.ASC) it.asReversed() else it }) {
-                list.add(Follow(to_id = i.userId, to_login = i.userLogin, to_name = i.userName, profileImageURL = i.channelLogo, followLocal = true))
+            val list = mutableListOf<User>()
+            for (i in localFollowsChannel.loadFollows().let { if (order == FollowOrderEnum.ASC) it.asReversed() else it }) {
+                list.add(User(channelId = i.userId, channelLogin = i.userLogin, channelName = i.userName, profileImageUrl = i.channelLogo, followLocal = true))
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
@@ -83,21 +83,21 @@ class FollowedChannelsDataSource(
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
-                    val item = list.find { it.to_id == i.to_id }
+                    val item = list.find { it.channelId == i.channelId }
                     if (item == null) {
-                        i.followTwitch = true
+                        i.followAccount = true
                         list.add(i)
                     } else {
-                        item.followTwitch = true
-                        item.followed_at = i.followed_at
+                        item.followAccount = true
+                        item.followedAt = i.followedAt
                         item.lastBroadcast = i.lastBroadcast
                     }
                 }
             }
             val allIds = mutableListOf<String>()
             for (i in list) {
-                if (i.profileImageURL == null || i.profileImageURL?.contains("image_manager_disk_cache") == true || i.lastBroadcast == null) {
-                    i.to_id?.let { allIds.add(it) }
+                if (i.profileImageUrl == null || i.profileImageUrl?.contains("image_manager_disk_cache") == true || i.lastBroadcast == null) {
+                    i.channelId?.let { allIds.add(it) }
                 }
             }
             if (allIds.isNotEmpty()) {
@@ -111,19 +111,19 @@ class FollowedChannelsDataSource(
                             ids.forEach {
                                 idArray.add(it)
                             }
-                            add("id", idArray)
+                            add("ids", idArray)
                         }).data
                     for (user in get) {
-                        val item = list.find { it.to_id == user.to_id }
+                        val item = list.find { it.channelId == user.channelId }
                         if (item != null) {
                             if (item.followLocal) {
-                                if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                if (item.profileImageUrl == null || item.profileImageUrl?.contains("image_manager_disk_cache") == true) {
                                     val appContext = XtraApp.INSTANCE.applicationContext
-                                    item.to_id?.let { id -> user.profileImageURL?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                    item.channelId?.let { id -> user.profileImageUrl?.let { profileImageUrl -> updateLocalUser(appContext, id, profileImageUrl) } }
                                 }
                             } else {
-                                if (item.profileImageURL == null) {
-                                    item.profileImageURL = user.profileImageURL
+                                if (item.profileImageUrl == null) {
+                                    item.profileImageUrl = user.profileImageUrl
                                 }
                             }
                             item.lastBroadcast = user.lastBroadcast
@@ -131,23 +131,23 @@ class FollowedChannelsDataSource(
                     }
                 }
             }
-            if (order == Order.ASC) {
+            if (order == FollowOrderEnum.ASC) {
                 when (sort) {
-                    Sort.FOLLOWED_AT -> list.sortedWith(compareBy(nullsLast()) { it.followed_at })
-                    Sort.LAST_BROADCAST -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
-                    else -> list.sortedWith(compareBy(nullsLast()) { it.to_login })
+                    FollowSortEnum.FOLLOWED_AT -> list.sortedWith(compareBy(nullsLast()) { it.followedAt })
+                    FollowSortEnum.LAST_BROADCAST -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
+                    else -> list.sortedWith(compareBy(nullsLast()) { it.channelLogin })
                 }
             } else {
                 when (sort) {
-                    Sort.FOLLOWED_AT -> list.sortedWith(compareByDescending(nullsFirst()) { it.followed_at })
-                    Sort.LAST_BROADCAST -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
-                    else -> list.sortedWith(compareByDescending(nullsFirst()) { it.to_login })
+                    FollowSortEnum.FOLLOWED_AT -> list.sortedWith(compareByDescending(nullsFirst()) { it.followedAt })
+                    FollowSortEnum.LAST_BROADCAST -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
+                    else -> list.sortedWith(compareByDescending(nullsFirst()) { it.channelLogin })
                 }
             }
         }
     }
 
-    private suspend fun helixLoad(): List<Follow> {
+    private suspend fun helixLoad(): List<User> {
         val get = helixApi.getUserFollows(
             clientId = helixClientId,
             token = helixToken,
@@ -155,13 +155,11 @@ class FollowedChannelsDataSource(
             limit = 100,
             offset = offset
         )
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else listOf()
+        offset = get.cursor
+        return get.data
     }
 
-    private suspend fun gqlQueryLoad(): List<Follow> {
+    private suspend fun gqlQueryLoad(): List<User> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserFollowedUsers(
             clientId = gqlClientId,
@@ -177,14 +175,14 @@ class FollowedChannelsDataSource(
         return get.data
     }
 
-    private suspend fun gqlLoad(): List<Follow> {
+    private suspend fun gqlLoad(): List<User> {
         val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Follow>) {
+    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<User>) {
         loadRange(params, callback) {
             val list = if (!offset.isNullOrBlank()) {
                 when (api) {
@@ -196,8 +194,8 @@ class FollowedChannelsDataSource(
             } else listOf()
             val allIds = mutableListOf<String>()
             for (i in list) {
-                if (i.profileImageURL == null || i.lastBroadcast == null) {
-                    i.to_id?.let { allIds.add(it) }
+                if (i.profileImageUrl == null || i.lastBroadcast == null) {
+                    i.channelId?.let { allIds.add(it) }
                 }
             }
             if (allIds.isNotEmpty()) {
@@ -214,16 +212,16 @@ class FollowedChannelsDataSource(
                             add("id", idArray)
                         }).data
                     for (user in get) {
-                        val item = list.find { it.to_id == user.to_id }
+                        val item = list.find { it.channelId == user.channelId }
                         if (item != null) {
                             if (item.followLocal) {
-                                if (item.profileImageURL == null || item.profileImageURL?.contains("image_manager_disk_cache") == true) {
+                                if (item.profileImageUrl == null || item.profileImageUrl?.contains("image_manager_disk_cache") == true) {
                                     val appContext = XtraApp.INSTANCE.applicationContext
-                                    item.to_id?.let { id -> user.profileImageURL?.let { profileImageURL -> updateLocalUser(appContext, id, profileImageURL) } }
+                                    item.channelId?.let { id -> user.profileImageUrl?.let { profileImageUrl -> updateLocalUser(appContext, id, profileImageUrl) } }
                                 }
                             } else {
-                                if (item.profileImageURL == null) {
-                                    item.profileImageURL = user.profileImageURL
+                                if (item.profileImageUrl == null) {
+                                    item.profileImageUrl = user.profileImageUrl
                                 }
                             }
                             item.lastBroadcast = user.lastBroadcast
@@ -283,11 +281,11 @@ class FollowedChannelsDataSource(
         private val gqlToken: String?,
         private val gqlApi: GraphQLRepository,
         private val apiPref: ArrayList<Pair<Long?, String?>?>,
-        private val sort: Sort,
-        private val order: Order,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Follow, FollowedChannelsDataSource>() {
+        private val sort: FollowSortEnum,
+        private val order: FollowOrderEnum,
+        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, User, FollowedChannelsDataSource>() {
 
-        override fun create(): DataSource<Int, Follow> =
+        override fun create(): DataSource<Int, User> =
                 FollowedChannelsDataSource(localFollowsChannel, offlineRepository, bookmarksRepository, userId, helixClientId, helixToken, helixApi, gqlClientId, gqlToken, gqlApi, apiPref, sort, order, coroutineScope).also(sourceLiveData::postValue)
     }
 }

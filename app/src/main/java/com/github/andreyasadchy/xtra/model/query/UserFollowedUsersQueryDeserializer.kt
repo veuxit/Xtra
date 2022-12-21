@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.query
 
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -11,19 +11,19 @@ class UserFollowedUsersQueryDeserializer : JsonDeserializer<UserFollowedUsersQue
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): UserFollowedUsersQueryResponse {
-        val data = mutableListOf<Follow>()
+        val data = mutableListOf<User>()
         val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.getAsJsonObject("follows")?.getAsJsonArray("edges")
         val cursor = dataJson?.lastOrNull()?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
         val hasNextPage = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.getAsJsonObject("follows")?.get("pageInfo")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("hasNextPage")?.takeIf { !it.isJsonNull }?.asBoolean
         dataJson?.forEach { item ->
             item?.asJsonObject?.getAsJsonObject("node")?.let { obj ->
-                data.add(Follow(
-                    to_id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    to_login = obj.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                    to_name = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                    followed_at = item.asJsonObject.get("followedAt")?.takeIf { !it.isJsonNull }?.asString,
+                data.add(User(
+                    channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    channelLogin = obj.get("login")?.takeIf { !it.isJsonNull }?.asString,
+                    channelName = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    followedAt = item.asJsonObject.get("followedAt")?.takeIf { !it.isJsonNull }?.asString,
                     lastBroadcast = obj.get("lastBroadcast")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("startedAt")?.takeIf { !it.isJsonNull }?.asString,
-                    profileImageURL = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
+                    profileImageUrl = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
                 ))
             }
         }

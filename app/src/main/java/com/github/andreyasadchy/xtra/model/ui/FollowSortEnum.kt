@@ -1,6 +1,6 @@
-package com.github.andreyasadchy.xtra.model.helix.follows
+package com.github.andreyasadchy.xtra.model.ui
 
-enum class Sort(val value: String) {
+enum class FollowSortEnum(val value: String) {
     FOLLOWED_AT("created_at"),
     ALPHABETICALLY("login"),
     LAST_BROADCAST("last_broadcast");

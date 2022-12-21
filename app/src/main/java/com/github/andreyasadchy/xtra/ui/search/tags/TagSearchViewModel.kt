@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel

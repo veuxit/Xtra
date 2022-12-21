@@ -6,8 +6,8 @@ import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -32,11 +32,11 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     override val viewModel: ClipPlayerViewModel by viewModels()
     private lateinit var clip: Clip
     override val channelId: String?
-        get() = clip.broadcaster_id
+        get() = clip.channelId
     override val channelLogin: String?
-        get() = clip.broadcaster_login
+        get() = clip.channelLogin
     override val channelName: String?
-        get() = clip.broadcaster_name
+        get() = clip.channelName
     override val channelImage: String?
         get() = clip.channelLogo
 
@@ -58,9 +58,9 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
-            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, channelLogin, clip.video_id, clip.vod_offset?.toDouble())).commit()
+            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, channelLogin, clip.videoId, clip.vodOffset?.toDouble())).commit()
         }
-        if (clip.video_id.isNullOrBlank()) {
+        if (clip.videoId.isNullOrBlank()) {
             watchVideo.gone()
         }
     }
@@ -94,17 +94,17 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 showDownloadDialog()
             }
         }
-        if (!clip.video_id.isNullOrBlank()) {
+        if (!clip.videoId.isNullOrBlank()) {
             watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
-                    id = clip.video_id,
-                    user_id = clip.broadcaster_id,
-                    user_login = clip.broadcaster_login,
-                    user_name = clip.broadcaster_name,
-                    profileImageURL = clip.profileImageURL,
+                    id = clip.videoId,
+                    channelId = clip.channelId,
+                    channelLogin = clip.channelLogin,
+                    channelName = clip.channelName,
+                    profileImageUrl = clip.profileImageUrl,
                     animatedPreviewURL = clip.videoAnimatedPreviewURL
-                ), (if (clip.vod_offset != null) {
-                    (clip.vod_offset?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
+                ), (if (clip.vodOffset != null) {
+                    (clip.vodOffset?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
                 } else {
                     0.0
                 }))

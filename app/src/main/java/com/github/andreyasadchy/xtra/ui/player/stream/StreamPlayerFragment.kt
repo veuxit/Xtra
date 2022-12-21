@@ -7,8 +7,8 @@ import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
@@ -26,11 +26,11 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
     lateinit var chatFragment: ChatFragment
     private lateinit var stream: Stream
     override val channelId: String?
-        get() = stream.user_id
+        get() = stream.channelId
     override val channelLogin: String?
-        get() = stream.user_login
+        get() = stream.channelLogin
     override val channelName: String?
-        get() = stream.user_name
+        get() = stream.channelName
     override val channelImage: String?
         get() = stream.channelLogo
 
@@ -63,13 +63,13 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
     }
 
     override fun initialize() {
-        val user = User.get(requireContext())
+        val account = Account.get(requireContext())
         val disableChat = prefs.getBoolean(C.CHAT_DISABLE, false)
         val usePubSub = prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true)
         val collectPoints = prefs.getBoolean(C.CHAT_POINTS_COLLECT, true)
-        val updateStream = disableChat || !usePubSub || (!disableChat && usePubSub && collectPoints && !user.id.isNullOrBlank() && !user.gqlToken.isNullOrBlank())
+        val updateStream = disableChat || !usePubSub || (!disableChat && usePubSub && collectPoints && !account.id.isNullOrBlank() && !account.gqlToken.isNullOrBlank())
         viewModel.startStream(
-            user = user,
+            account = account,
             includeToken = prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false),
             helixClientId = prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
@@ -100,7 +100,7 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
         }
         viewModel.stream.observe(viewLifecycleOwner) {
             if (disableChat || !usePubSub || viewers.text.isNullOrBlank()) {
-                updateViewerCount(it?.viewer_count)
+                updateViewerCount(it?.viewerCount)
             }
         }
         if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
@@ -155,7 +155,7 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
     }
 
     fun openViewerList() {
-        stream.user_login?.let { login -> FragmentUtils.showPlayerViewerListDialog(childFragmentManager, login, viewModel.repository) }
+        stream.channelLogin?.let { login -> FragmentUtils.showPlayerViewerListDialog(childFragmentManager, login, viewModel.repository) }
     }
 
     override fun changeVolume(volume: Float) {

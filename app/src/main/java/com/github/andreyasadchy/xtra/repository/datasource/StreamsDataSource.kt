@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonArray
@@ -66,20 +66,18 @@ class StreamsDataSource private constructor(
             offset = offset
         )
         val list = mutableListOf<Stream>()
-        get.data?.let { list.addAll(it) }
-        val ids = list.mapNotNull { it.user_id }
+        get.data.let { list.addAll(it) }
+        val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.user_id == i.id }
-                    for (item in items) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val items = list.filter { it.channelId == i.channelId }
+                for (item in items) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 

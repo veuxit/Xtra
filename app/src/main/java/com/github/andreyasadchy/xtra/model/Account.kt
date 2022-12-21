@@ -6,17 +6,17 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 
-sealed class User(val id: String?,
-                  val login: String?,
-                  val helixToken: String?,
-                  val gqlToken: String?,
-                  val gqlToken2: String?) {
+sealed class Account(val id: String?,
+                     val login: String?,
+                     val helixToken: String?,
+                     val gqlToken: String?,
+                     val gqlToken2: String?) {
 
     companion object {
-        private var user: User? = null
+        private var account: Account? = null
 
-        fun get(context: Context): User {
-            return user ?: with(context.prefs()) {
+        fun get(context: Context): Account {
+            return account ?: with(context.prefs()) {
                 val helixToken = getString(C.TOKEN, null)
                 val gqlToken = getString(C.GQL_TOKEN, null)
                 if (!helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
@@ -31,18 +31,18 @@ sealed class User(val id: String?,
                 } else {
                     NotLoggedIn()
                 }
-            }.also { user = it }
+            }.also { account = it }
         }
 
-        fun set(context: Context, user: User?) {
-            this.user = user
+        fun set(context: Context, account: Account?) {
+            this.account = account
             context.prefs().edit {
-                if (user != null) {
-                    putString(C.USER_ID, user.id)
-                    putString(C.USERNAME, user.login)
-                    putString(C.TOKEN, user.helixToken)
-                    putString(C.GQL_TOKEN, user.gqlToken)
-                    putString(C.GQL_TOKEN2, user.gqlToken2)
+                if (account != null) {
+                    putString(C.USER_ID, account.id)
+                    putString(C.USERNAME, account.login)
+                    putString(C.TOKEN, account.helixToken)
+                    putString(C.GQL_TOKEN, account.gqlToken)
+                    putString(C.GQL_TOKEN2, account.gqlToken2)
                 } else {
                     putString(C.USER_ID, null)
                     putString(C.USERNAME, null)
@@ -54,7 +54,7 @@ sealed class User(val id: String?,
         }
 
         fun validated() {
-            user = LoggedIn(user as NotValidated)
+            account = LoggedIn(account as NotValidated)
         }
     }
 
@@ -62,7 +62,7 @@ sealed class User(val id: String?,
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as User
+        other as Account
 
         if (id != other.id) return false
         if (login != other.login) return false
@@ -83,8 +83,8 @@ sealed class User(val id: String?,
     }
 }
 
-class LoggedIn(id: String?, login: String?, helixToken: String?, gqlToken: String?, gqlToken2: String?) : User(id, login, helixToken, gqlToken, gqlToken2) {
-    constructor(user: NotValidated) : this(user.id, user.login, user.helixToken, user.gqlToken, user.gqlToken2)
+class LoggedIn(id: String?, login: String?, helixToken: String?, gqlToken: String?, gqlToken2: String?) : Account(id, login, helixToken, gqlToken, gqlToken2) {
+    constructor(account: NotValidated) : this(account.id, account.login, account.helixToken, account.gqlToken, account.gqlToken2)
 }
-class NotValidated(id: String?, login: String?, helixToken: String?, gqlToken: String?, gqlToken2: String?) : User(id, login, helixToken, gqlToken, gqlToken2)
-class NotLoggedIn : User(null, null, null, null, null)
+class NotValidated(id: String?, login: String?, helixToken: String?, gqlToken: String?, gqlToken2: String?) : Account(id, login, helixToken, gqlToken, gqlToken2)
+class NotLoggedIn : Account(null, null, null, null, null)

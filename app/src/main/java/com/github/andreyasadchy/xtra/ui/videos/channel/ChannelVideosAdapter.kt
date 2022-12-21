@@ -8,7 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
@@ -26,8 +26,8 @@ class ChannelVideosAdapter(
                     oldItem.id == newItem.id
 
             override fun areContentsTheSame(oldItem: Video, newItem: Video): Boolean =
-                    oldItem.view_count == newItem.view_count &&
-                            oldItem.thumbnail_url == newItem.thumbnail_url &&
+                    oldItem.viewCount == newItem.viewCount &&
+                            oldItem.thumbnailUrl == newItem.thumbnailUrl &&
                             oldItem.title == newItem.title &&
                             oldItem.duration == newItem.duration
         }) {
@@ -42,8 +42,8 @@ class ChannelVideosAdapter(
             setOnClickListener { clickListener.startVideo(item, position?.toDouble()) }
             setOnLongClickListener { showDownloadDialog(item); true }
             thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
-            if (item.created_at != null) {
-                val text = TwitchApiHelper.formatTimeString(context, item.created_at)
+            if (item.uploadDate != null) {
+                val text = TwitchApiHelper.formatTimeString(context, item.uploadDate)
                 if (text != null) {
                     date.visible()
                     date.text = text
@@ -53,9 +53,9 @@ class ChannelVideosAdapter(
             } else {
                 date.gone()
             }
-            if (item.view_count != null) {
+            if (item.viewCount != null) {
                 views.visible()
-                views.text = TwitchApiHelper.formatViewsCount(context, item.view_count)
+                views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount)
             } else {
                 views.gone()
             }

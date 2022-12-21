@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -76,13 +76,13 @@ class FollowedStreamsDataSource(
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
-                    val item = list.find { it.user_id == i.user_id }
+                    val item = list.find { it.channelId == i.channelId }
                     if (item == null) {
                         list.add(i)
                     }
                 }
             }
-            list.sortByDescending { it.viewer_count }
+            list.sortByDescending { it.viewerCount }
             list
         }
     }
@@ -96,20 +96,18 @@ class FollowedStreamsDataSource(
             offset = offset
         )
         val list = mutableListOf<Stream>()
-        get.data?.let { list.addAll(it) }
-        val ids = list.mapNotNull { it.user_id }
+        get.data.let { list.addAll(it) }
+        val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val item = list.find { it.user_id == i.id }
-                    if (item != null) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val item = list.find { it.channelId == i.channelId }
+                if (item != null) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -176,24 +174,20 @@ class FollowedStreamsDataSource(
                 token = helixToken,
                 ids = localIds
             ).data
-            if (get != null) {
-                for (i in get) {
-                    if (i.viewer_count != null) {
-                        streams.add(i)
-                    }
+            for (i in get) {
+                if (i.viewerCount != null) {
+                    streams.add(i)
                 }
             }
         }
         if (streams.isNotEmpty()) {
-            val userIds = streams.mapNotNull { it.user_id }
+            val userIds = streams.mapNotNull { it.channelId }
             for (streamIds in userIds.chunked(100)) {
                 val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = streamIds).data
-                if (users != null) {
-                    for (i in users) {
-                        val item = streams.find { it.user_id == i.id }
-                        if (item != null) {
-                            item.profileImageURL = i.profile_image_url
-                        }
+                for (i in users) {
+                    val item = streams.find { it.channelId == i.channelId }
+                    if (item != null) {
+                        item.profileImageUrl = i.profileImageUrl
                     }
                 }
             }

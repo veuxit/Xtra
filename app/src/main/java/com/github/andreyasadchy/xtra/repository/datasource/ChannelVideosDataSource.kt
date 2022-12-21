@@ -5,11 +5,12 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonArray
@@ -21,12 +22,12 @@ class ChannelVideosDataSource (
     private val channelLogin: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
-    private val helixPeriod: Period,
-    private val helixBroadcastTypes: BroadcastType,
-    private val helixSort: Sort,
+    private val helixPeriod: VideoPeriodEnum,
+    private val helixBroadcastTypes: BroadcastTypeEnum,
+    private val helixSort: VideoSortEnum,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
-    private val gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?,
+    private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
     private val gqlType: String?,
     private val gqlSort: String?,
@@ -42,24 +43,24 @@ class ChannelVideosDataSource (
             try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                            C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                            C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                            C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
@@ -81,10 +82,8 @@ class ChannelVideosDataSource (
             limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
             offset = offset
         )
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else listOf()
+        offset = get.cursor
+        return get.data
     }
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
@@ -134,12 +133,12 @@ class ChannelVideosDataSource (
         private val channelLogin: String?,
         private val helixClientId: String?,
         private val helixToken: String?,
-        private val helixPeriod: Period,
-        private val helixBroadcastTypes: BroadcastType,
-        private val helixSort: Sort,
+        private val helixPeriod: VideoPeriodEnum,
+        private val helixBroadcastTypes: BroadcastTypeEnum,
+        private val helixSort: VideoSortEnum,
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
-        private val gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?,
+        private val gqlQueryType: BroadcastType?,
         private val gqlQuerySort: VideoSort?,
         private val gqlType: String?,
         private val gqlSort: String?,

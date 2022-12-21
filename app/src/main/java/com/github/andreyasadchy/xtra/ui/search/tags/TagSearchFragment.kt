@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity

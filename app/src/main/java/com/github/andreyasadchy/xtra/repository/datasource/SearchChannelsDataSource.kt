@@ -5,7 +5,7 @@ import androidx.paging.DataSource
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonObject
@@ -19,12 +19,12 @@ class SearchChannelsDataSource private constructor(
     private val gqlClientId: String?,
     private val gqlApi: GraphQLRepository,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<ChannelSearch>(coroutineScope) {
+    coroutineScope: CoroutineScope) : BasePositionalDataSource<User>(coroutineScope) {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<ChannelSearch>) {
+    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<User>) {
         loadInitial(params, callback) {
             try {
                 when (apiPref?.elementAt(0)?.second) {
@@ -57,7 +57,7 @@ class SearchChannelsDataSource private constructor(
         }
     }
 
-    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<ChannelSearch> {
+    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<User> {
         val get = helixApi.getSearchChannels(
             clientId = helixClientId,
             token = helixToken,
@@ -65,11 +65,11 @@ class SearchChannelsDataSource private constructor(
             limit = initialParams?.requestedLoadSize ?: rangeParams?.loadSize,
             offset = offset
         )
-        offset = get.pagination?.cursor
-        return get.data ?: listOf()
+        offset = get.cursor
+        return get.data
     }
 
-    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<ChannelSearch> {
+    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<User> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQuerySearchChannels(
             clientId = gqlClientId,
@@ -84,13 +84,13 @@ class SearchChannelsDataSource private constructor(
         return get.data
     }
 
-    private suspend fun gqlLoad(): List<ChannelSearch> {
+    private suspend fun gqlLoad(): List<User> {
         val get = gqlApi.loadSearchChannels(gqlClientId, query, offset)
         offset = get.cursor
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<ChannelSearch>) {
+    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<User>) {
         loadRange(params, callback) {
             if (!offset.isNullOrBlank()) {
                 when (api) {
@@ -111,9 +111,9 @@ class SearchChannelsDataSource private constructor(
         private val gqlClientId: String?,
         private val gqlApi: GraphQLRepository,
         private val apiPref: ArrayList<Pair<Long?, String?>?>?,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, ChannelSearch, SearchChannelsDataSource>() {
+        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, User, SearchChannelsDataSource>() {
 
-        override fun create(): DataSource<Int, ChannelSearch> =
+        override fun create(): DataSource<Int, User> =
                 SearchChannelsDataSource(query, helixClientId, helixToken, helixApi, gqlClientId, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

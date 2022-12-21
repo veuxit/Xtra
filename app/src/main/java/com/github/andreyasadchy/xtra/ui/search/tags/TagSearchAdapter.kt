@@ -4,7 +4,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
 import com.github.andreyasadchy.xtra.util.C

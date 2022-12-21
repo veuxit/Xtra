@@ -17,9 +17,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.LoggedIn
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
-import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,20 +51,20 @@ class LoginActivity : AppCompatActivity() {
         val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
         val gqlClientId = prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
         val gqlClientId2 = prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-        val user = User.get(this)
-        if (user !is NotLoggedIn) {
+        val account = Account.get(this)
+        if (account !is NotLoggedIn) {
             TwitchApiHelper.checkedValidation = false
-            User.set(this, null)
+            Account.set(this, null)
             GlobalScope.launch {
                 try {
-                    if (!helixClientId.isNullOrBlank() && !user.helixToken.isNullOrBlank()) {
-                        repository.revoke(helixClientId, user.helixToken)
+                    if (!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank()) {
+                        repository.revoke(helixClientId, account.helixToken)
                     }
-                    if (!gqlClientId.isNullOrBlank() && !user.gqlToken.isNullOrBlank()) {
-                        repository.revoke(gqlClientId, user.gqlToken)
+                    if (!gqlClientId.isNullOrBlank() && !account.gqlToken.isNullOrBlank()) {
+                        repository.revoke(gqlClientId, account.gqlToken)
                     }
-                    if (!gqlClientId2.isNullOrBlank() && !user.gqlToken2.isNullOrBlank() && user.gqlToken2 != user.gqlToken) {
-                        repository.revoke(gqlClientId2, user.gqlToken2)
+                    if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank() && account.gqlToken2 != account.gqlToken) {
+                        repository.revoke(gqlClientId2, account.gqlToken2)
                     }
                 } catch (e: Exception) {
 
@@ -235,7 +235,7 @@ class LoginActivity : AppCompatActivity() {
                             }
                             if ((apiSetting == 0 && tokens.count() == 3) || (apiSetting == 1 && tokens.count() == 2) || (apiSetting == 2)) {
                                 TwitchApiHelper.checkedValidation = true
-                                User.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken, gqlToken, gqlToken2))
+                                Account.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken, gqlToken, gqlToken2))
                                 setResult(RESULT_OK)
                                 finish()
                             }

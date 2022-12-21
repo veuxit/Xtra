@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.video
 
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -16,9 +16,9 @@ class VideoGamesDataDeserializer : JsonDeserializer<VideoGamesDataResponse> {
         dataJson?.forEach { item ->
             item.asJsonObject.getAsJsonObject("node")?.let { obj ->
                 data.add(Game(
-                    id = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    name = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                    box_art_url = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("boxArtURL")?.takeIf { !it.isJsonNull }?.asString,
+                    gameId = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    gameName = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    boxArtUrl = obj.get("details")?.takeIf { it.isJsonObject }?.asJsonObject?.get("game")?.takeIf { it.isJsonObject }?.asJsonObject?.get("boxArtURL")?.takeIf { !it.isJsonNull }?.asString,
                     vodPosition = obj.get("positionMilliseconds")?.takeIf { !it.isJsonNull }?.asInt,
                     vodDuration = obj.get("durationMilliseconds")?.takeIf { !it.isJsonNull }?.asInt,
                 ))

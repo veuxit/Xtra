@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.model.query
 
-import com.github.andreyasadchy.xtra.model.helix.user.User
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -13,11 +13,11 @@ class UserMessageClickedQueryDeserializer : JsonDeserializer<UserMessageClickedQ
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): UserMessageClickedQueryResponse {
         val data = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("user")?.let { obj ->
             User(
-                id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                login = obj.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                display_name = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                created_at = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
-                profile_image_url = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
+                channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                channelLogin = obj.get("login")?.takeIf { !it.isJsonNull }?.asString,
+                channelName = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                createdAt = obj.get("createdAt")?.takeIf { !it.isJsonNull }?.asString,
+                profileImageUrl = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
                 bannerImageURL = obj.get("bannerImageURL")?.takeIf { !it.isJsonNull }?.asString,
                 followedAt = obj.get("follow")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("followedAt")?.takeIf { !it.isJsonNull }?.asString
             )
