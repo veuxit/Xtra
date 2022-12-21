@@ -7,7 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.ui.clips.BaseClipsFragment
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
@@ -27,7 +27,7 @@ class ChannelClipsAdapter(
                     oldItem.id == newItem.id
 
             override fun areContentsTheSame(oldItem: Clip, newItem: Clip): Boolean =
-                    oldItem.view_count == newItem.view_count &&
+                    oldItem.viewCount == newItem.viewCount &&
                             oldItem.title == newItem.title
 
         }) {
@@ -51,9 +51,9 @@ class ChannelClipsAdapter(
             } else {
                 date.gone()
             }
-            if (item.view_count != null) {
+            if (item.viewCount != null) {
                 views.visible()
-                views.text = TwitchApiHelper.formatViewsCount(context, item.view_count)
+                views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount)
             } else {
                 views.gone()
             }

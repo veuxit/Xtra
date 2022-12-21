@@ -7,8 +7,8 @@ import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedStreamsQuery
 import com.github.andreyasadchy.xtra.UsersStreamQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -78,13 +78,13 @@ class FollowedStreamsDataSource(
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
-                    val item = list.find { it.user_id == i.user_id }
+                    val item = list.find { it.channelId == i.channelId }
                     if (item == null) {
                         list.add(i)
                     }
                 }
             }
-            list.sortByDescending { it.viewer_count }
+            list.sortByDescending { it.viewerCount }
             list
         }
     }
@@ -98,20 +98,18 @@ class FollowedStreamsDataSource(
             offset = offset
         )
         val list = mutableListOf<Stream>()
-        get.data?.let { list.addAll(it) }
-        val ids = list.mapNotNull { it.user_id }
+        get.data.let { list.addAll(it) }
+        val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val item = list.find { it.user_id == i.id }
-                    if (item != null) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val item = list.find { it.channelId == i.channelId }
+                if (item != null) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -136,17 +134,17 @@ class FollowedStreamsDataSource(
                 }
                 list.add(Stream(
                     id = i?.node?.stream?.id,
-                    user_id = i?.node?.id,
-                    user_login = i?.node?.login,
-                    user_name = i?.node?.displayName,
-                    game_id = i?.node?.stream?.game?.id,
-                    game_name = i?.node?.stream?.game?.displayName,
+                    channelId = i?.node?.id,
+                    channelLogin = i?.node?.login,
+                    channelName = i?.node?.displayName,
+                    gameId = i?.node?.stream?.game?.id,
+                    gameName = i?.node?.stream?.game?.displayName,
                     type = i?.node?.stream?.type,
                     title = i?.node?.stream?.broadcaster?.broadcastSettings?.title,
-                    viewer_count = i?.node?.stream?.viewersCount,
-                    started_at = i?.node?.stream?.createdAt?.toString(),
-                    thumbnail_url = i?.node?.stream?.previewImageURL,
-                    profileImageURL = i?.node?.profileImageURL,
+                    viewerCount = i?.node?.stream?.viewersCount,
+                    startedAt = i?.node?.stream?.createdAt?.toString(),
+                    thumbnailUrl = i?.node?.stream?.previewImageURL,
+                    profileImageUrl = i?.node?.profileImageURL,
                     tags = tags
                 ))
             }
@@ -190,10 +188,10 @@ class FollowedStreamsDataSource(
                                 name = tag.localizedName
                             ))
                         }
-                        streams.add(Stream(id = i.stream.id, user_id = i.id, user_login = i.login, user_name = i.displayName, game_id = i.stream.game?.id,
-                            game_name = i.stream.game?.displayName, type = i.stream.type, title = i.stream.broadcaster?.broadcastSettings?.title,
-                            viewer_count = i.stream.viewersCount, started_at = i.stream.createdAt?.toString(), thumbnail_url = i.stream.previewImageURL,
-                            profileImageURL = i.profileImageURL, tags = tags)
+                        streams.add(Stream(id = i.stream.id, channelId = i.id, channelLogin = i.login, channelName = i.displayName, gameId = i.stream.game?.id,
+                            gameName = i.stream.game?.displayName, type = i.stream.type, title = i.stream.broadcaster?.broadcastSettings?.title,
+                            viewerCount = i.stream.viewersCount, startedAt = i.stream.createdAt?.toString(), thumbnailUrl = i.stream.previewImageURL,
+                            profileImageUrl = i.profileImageURL, tags = tags)
                         )
                     }
                 }
@@ -210,24 +208,20 @@ class FollowedStreamsDataSource(
                 token = helixToken,
                 ids = localIds
             ).data
-            if (get != null) {
-                for (i in get) {
-                    if (i.viewer_count != null) {
-                        streams.add(i)
-                    }
+            for (i in get) {
+                if (i.viewerCount != null) {
+                    streams.add(i)
                 }
             }
         }
         if (streams.isNotEmpty()) {
-            val userIds = streams.mapNotNull { it.user_id }
+            val userIds = streams.mapNotNull { it.channelId }
             for (streamIds in userIds.chunked(100)) {
                 val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = streamIds).data
-                if (users != null) {
-                    for (i in users) {
-                        val item = streams.find { it.user_id == i.id }
-                        if (item != null) {
-                            item.profileImageURL = i.profile_image_url
-                        }
+                for (i in users) {
+                    val item = streams.find { it.channelId == i.channelId }
+                    if (item != null) {
+                        item.profileImageUrl = i.profileImageUrl
                     }
                 }
             }

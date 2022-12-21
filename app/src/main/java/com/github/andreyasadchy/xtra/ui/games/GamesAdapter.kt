@@ -5,7 +5,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.util.*
 import kotlinx.android.synthetic.main.fragment_games_list_item.view.*
@@ -16,7 +16,7 @@ class GamesAdapter(
         private val gamesListener: GamesFragment.OnTagGames) : BasePagedListAdapter<Game>(
         object : DiffUtil.ItemCallback<Game>() {
             override fun areItemsTheSame(oldItem: Game, newItem: Game): Boolean =
-                    oldItem.id == newItem.id
+                    oldItem.gameId == newItem.gameId
 
             override fun areContentsTheSame(oldItem: Game, newItem: Game): Boolean =
                     oldItem.viewersCount == newItem.viewersCount
@@ -26,16 +26,16 @@ class GamesAdapter(
 
     override fun bind(item: Game, view: View) {
         with(view) {
-            setOnClickListener { listener.openGame(item.id, item.name) }
+            setOnClickListener { listener.openGame(item.gameId, item.gameName) }
             if (item.boxArt != null)  {
                 gameImage.visible()
                 gameImage.loadImage(fragment, item.boxArt)
             } else {
                 gameImage.gone()
             }
-            if (item.name != null)  {
+            if (item.gameName != null)  {
                 gameName.visible()
-                gameName.text = item.name
+                gameName.text = item.gameName
             } else {
                 gameName.gone()
             }

@@ -4,7 +4,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.BaseListAdapter
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
@@ -35,9 +35,9 @@ class PlayerGamesDialogAdapter(
             } else {
                 gameImage.gone()
             }
-            if (item.name != null)  {
+            if (item.gameName != null)  {
                 gameName.visible()
-                gameName.text = item.name
+                gameName.text = item.gameName
             } else {
                 gameName.gone()
             }

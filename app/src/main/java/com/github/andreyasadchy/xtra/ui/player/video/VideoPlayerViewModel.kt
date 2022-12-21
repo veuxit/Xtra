@@ -11,12 +11,12 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
@@ -63,11 +63,11 @@ class VideoPlayerViewModel @Inject constructor(
         }
 
     override val userId: String?
-        get() { return video.user_id }
+        get() { return video.channelId }
     override val userLogin: String?
-        get() { return video.user_login }
+        get() { return video.channelLogin }
     override val userName: String?
-        get() { return video.user_name }
+        get() { return video.channelName }
     override val channelLogo: String?
         get() { return video.channelLogo }
 
@@ -124,7 +124,7 @@ class VideoPlayerViewModel @Inject constructor(
                     val context = getApplication<Application>()
                     playerRepository.loadVideoPlaylistUrl(
                         gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                        gqlToken = if (context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(context).gqlToken else null,
+                        gqlToken = if (context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) Account.get(context).gqlToken else null,
                         videoId = video.id,
                         playerType = context.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
                     )
@@ -161,7 +161,7 @@ class VideoPlayerViewModel @Inject constructor(
     fun startAudioOnly(showNotification: Boolean = false) {
         (player.currentManifest as? HlsManifest)?.let {
             helper.urls.values.lastOrNull()?.let {
-                startBackgroundAudio(it, video.user_name, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
+                startBackgroundAudio(it, video.channelName, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
                 _playerMode.value = PlayerMode.AUDIO_ONLY
             }
         }
@@ -289,12 +289,12 @@ class VideoPlayerViewModel @Inject constructor(
                     userLogin = video.channelLogin,
                     userName = video.channelName,
                     userType = userTypes?.type,
-                    userBroadcasterType = userTypes?.broadcaster_type,
+                    userBroadcasterType = userTypes?.broadcasterType,
                     userLogo = downloadedLogo,
                     gameId = video.gameId,
                     gameName = video.gameName,
                     title = video.title,
-                    createdAt = video.created_at,
+                    createdAt = video.uploadDate,
                     thumbnail = downloadedThumbnail,
                     type = video.type,
                     duration = video.duration,

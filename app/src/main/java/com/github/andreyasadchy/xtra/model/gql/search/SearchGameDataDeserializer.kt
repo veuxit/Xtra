@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.model.gql.search
 
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -27,9 +27,9 @@ class SearchGameDataDeserializer : JsonDeserializer<SearchGameDataResponse> {
                     }
                 }
                 data.add(Game(
-                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    name = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
-                    box_art_url = obj.get("boxArtURL")?.takeIf { !it.isJsonNull }?.asString,
+                    gameId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                    gameName = obj.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    boxArtUrl = obj.get("boxArtURL")?.takeIf { !it.isJsonNull }?.asString,
                     viewersCount = obj.get("viewersCount")?.takeIf { !it.isJsonNull }?.asInt ?: 0, // returns null if 0
                     tags = tags
                 ))

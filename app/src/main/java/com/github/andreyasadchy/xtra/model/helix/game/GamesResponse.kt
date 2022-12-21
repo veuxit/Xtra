@@ -1,8 +1,5 @@
 package com.github.andreyasadchy.xtra.model.helix.game
 
-data class GamesResponse(
-    val data: List<Game>?,
-    val pagination: Pagination?)
+import com.github.andreyasadchy.xtra.model.ui.Game
 
-data class Pagination(
-    val cursor: String?)
+data class GamesResponse(val data: List<Game>, val cursor: String?)

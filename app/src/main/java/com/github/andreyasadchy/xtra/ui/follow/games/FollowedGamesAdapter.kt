@@ -6,7 +6,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.game.Game
+import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
 import com.github.andreyasadchy.xtra.util.*
@@ -18,7 +18,7 @@ class FollowedGamesAdapter(
         private val gamesListener: GamesFragment.OnTagGames) : BasePagedListAdapter<Game>(
         object : DiffUtil.ItemCallback<Game>() {
             override fun areItemsTheSame(oldItem: Game, newItem: Game): Boolean =
-                    oldItem.id == newItem.id
+                    oldItem.gameId == newItem.gameId
 
             override fun areContentsTheSame(oldItem: Game, newItem: Game): Boolean =
                     oldItem.viewersCount == newItem.viewersCount
@@ -28,16 +28,16 @@ class FollowedGamesAdapter(
 
     override fun bind(item: Game, view: View) {
         with(view) {
-            setOnClickListener { listener.openGame(id = item.id, name = item.name, updateLocal = item.followLocal) }
+            setOnClickListener { listener.openGame(id = item.gameId, name = item.gameName, updateLocal = item.followLocal) }
             if (item.boxArt != null)  {
                 gameImage.visible()
                 gameImage.loadImage(fragment, item.boxArt, diskCacheStrategy = DiskCacheStrategy.NONE)
             } else {
                 gameImage.gone()
             }
-            if (item.name != null)  {
+            if (item.gameName != null)  {
                 gameName.visible()
-                gameName.text = item.name
+                gameName.text = item.gameName
             } else {
                 gameName.gone()
             }
@@ -67,7 +67,7 @@ class FollowedGamesAdapter(
             } else {
                 tagsLayout.gone()
             }
-            if (item.followTwitch) {
+            if (item.followAccount) {
                 twitchText.visible()
             } else {
                 twitchText.gone()

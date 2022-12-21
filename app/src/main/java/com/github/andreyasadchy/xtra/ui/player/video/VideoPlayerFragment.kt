@@ -6,8 +6,8 @@ import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -28,11 +28,11 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     override val viewModel: VideoPlayerViewModel by viewModels()
     private lateinit var video: Video
     override val channelId: String?
-        get() = video.user_id
+        get() = video.channelId
     override val channelLogin: String?
-        get() = video.user_login
+        get() = video.channelLogin
     override val channelName: String?
-        get() = video.user_name
+        get() = video.channelName
     override val channelImage: String?
         get() = video.channelLogo
 
@@ -135,7 +135,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     fun saveBookmark() {
-        viewModel.saveBookmark(requireContext(), prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), User.get(requireContext()).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
+        viewModel.saveBookmark(requireContext(), prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"))
     }
 
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {

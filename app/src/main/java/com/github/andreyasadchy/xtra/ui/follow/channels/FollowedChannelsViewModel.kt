@@ -10,11 +10,11 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
-import com.github.andreyasadchy.xtra.model.helix.follows.Order
-import com.github.andreyasadchy.xtra.model.helix.follows.Sort
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
+import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
@@ -30,53 +30,53 @@ import javax.inject.Inject
 class FollowedChannelsViewModel @Inject constructor(
     context: Application,
     private val repository: ApiRepository,
-    private val sortChannelRepository: SortChannelRepository) : PagedListViewModel<Follow>() {
+    private val sortChannelRepository: SortChannelRepository) : PagedListViewModel<User>() {
 
     private val _sortText = MutableLiveData<CharSequence>()
     val sortText: LiveData<CharSequence>
         get() = _sortText
     private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Follow>> = Transformations.map(filter) {
-        repository.loadFollowedChannels(it.user.id, it.helixClientId, it.user.helixToken, it.gqlClientId, it.user.gqlToken, it.apiPref, it.sort, it.order, viewModelScope)
+    override val result: LiveData<Listing<User>> = Transformations.map(filter) {
+        repository.loadFollowedChannels(it.account.id, it.helixClientId, it.account.helixToken, it.gqlClientId, it.account.gqlToken, it.apiPref, it.sort, it.order, viewModelScope)
     }
-    val sort: Sort
+    val sort: FollowSortEnum
         get() = filter.value!!.sort
-    val order: Order
+    val order: FollowOrderEnum
         get() = filter.value!!.order
 
-    fun setUser(context: Context, user: User, helixClientId: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>) {
+    fun setUser(context: Context, account: Account, helixClientId: String?, gqlClientId: String?, apiPref: ArrayList<Pair<Long?, String?>?>) {
         if (filter.value == null) {
             val sortValues = runBlocking { sortChannelRepository.getById("followed_channels") }
             filter.value = Filter(
-                user = user,
+                account = account,
                 helixClientId = helixClientId,
                 gqlClientId = gqlClientId,
                 apiPref = apiPref,
                 sort = when (sortValues?.videoSort) {
-                    Sort.FOLLOWED_AT.value -> Sort.FOLLOWED_AT
-                    Sort.ALPHABETICALLY.value -> Sort.ALPHABETICALLY
-                    else -> Sort.LAST_BROADCAST
+                    FollowSortEnum.FOLLOWED_AT.value -> FollowSortEnum.FOLLOWED_AT
+                    FollowSortEnum.ALPHABETICALLY.value -> FollowSortEnum.ALPHABETICALLY
+                    else -> FollowSortEnum.LAST_BROADCAST
                 },
                 order = when (sortValues?.videoType) {
-                    Order.ASC.value -> Order.ASC
-                    else -> Order.DESC
+                    FollowOrderEnum.ASC.value -> FollowOrderEnum.ASC
+                    else -> FollowOrderEnum.DESC
                 }
             )
             _sortText.value = context.getString(R.string.sort_and_order,
                 when (sortValues?.videoSort) {
-                    Sort.FOLLOWED_AT.value -> context.getString(R.string.time_followed)
-                    Sort.ALPHABETICALLY.value -> context.getString(R.string.alphabetically)
+                    FollowSortEnum.FOLLOWED_AT.value -> context.getString(R.string.time_followed)
+                    FollowSortEnum.ALPHABETICALLY.value -> context.getString(R.string.alphabetically)
                     else -> context.getString(R.string.last_broadcast)
                 },
                 when (sortValues?.videoType) {
-                    Order.ASC.value -> context.getString(R.string.ascending)
+                    FollowOrderEnum.ASC.value -> context.getString(R.string.ascending)
                     else -> context.getString(R.string.descending)
                 }
             )
         }
     }
 
-    fun filter(sort: Sort, order: Order, text: CharSequence, saveDefault: Boolean) {
+    fun filter(sort: FollowSortEnum, order: FollowOrderEnum, text: CharSequence, saveDefault: Boolean) {
         filter.value = filter.value?.copy(sort = sort, order = order)
         _sortText.value = text
         if (saveDefault) {
@@ -99,10 +99,10 @@ class FollowedChannelsViewModel @Inject constructor(
     }
 
     private data class Filter(
-        val user: User,
+        val account: Account,
         val helixClientId: String?,
         val gqlClientId: String?,
         val apiPref: ArrayList<Pair<Long?, String?>?>,
-        val sort: Sort = Sort.LAST_BROADCAST,
-        val order: Order = Order.DESC)
+        val sort: FollowSortEnum = FollowSortEnum.LAST_BROADCAST,
+        val order: FollowOrderEnum = FollowOrderEnum.DESC)
 }

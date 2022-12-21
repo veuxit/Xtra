@@ -5,7 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
@@ -15,14 +15,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChannelSearchViewModel @Inject constructor(
-        private val repository: ApiRepository) : PagedListViewModel<ChannelSearch>() {
+        private val repository: ApiRepository) : PagedListViewModel<User>() {
 
     private val query = MutableLiveData<String>()
     private var helixClientId = MutableLiveData<String>()
     private var helixToken = MutableLiveData<String>()
     private var gqlClientId = MutableLiveData<String>()
     private var apiPref = MutableLiveData<ArrayList<Pair<Long?, String?>?>>()
-    override val result: LiveData<Listing<ChannelSearch>> = Transformations.map(query) {
+    override val result: LiveData<Listing<User>> = Transformations.map(query) {
         repository.loadSearchChannels(it, helixClientId.value?.nullIfEmpty(), helixToken.value?.nullIfEmpty(), gqlClientId.value?.nullIfEmpty(), apiPref.value, viewModelScope)
     }
 

@@ -9,8 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -34,8 +35,8 @@ class ChannelPagerViewModel @Inject constructor(
     private val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>
         get() = _stream
-    private val _user = MutableLiveData<com.github.andreyasadchy.xtra.model.helix.user.User?>()
-    val user: MutableLiveData<com.github.andreyasadchy.xtra.model.helix.user.User?>
+    private val _user = MutableLiveData<User?>()
+    val user: MutableLiveData<User?>
         get() = _user
 
     private val _userId = MutableLiveData<String?>()
@@ -52,9 +53,9 @@ class ChannelPagerViewModel @Inject constructor(
         get() { return _profileImageURL.value }
     override lateinit var follow: FollowLiveData
 
-    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
+    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
         }
     }
 
@@ -87,16 +88,16 @@ class ChannelPagerViewModel @Inject constructor(
         if (_stream.value == null) {
             loadStream(helixClientId, helixToken, gqlClientId)
         } else {
-            if (_stream.value?.channelUser == null && _user.value == null) {
+            if (_stream.value?.user == null && _user.value == null) {
                 loadUser(helixClientId, helixToken)
             }
         }
     }
 
-    fun updateLocalUser(context: Context, user: com.github.andreyasadchy.xtra.model.helix.user.User) {
+    fun updateLocalUser(context: Context, user: User) {
         GlobalScope.launch {
             try {
-                if (user.id != null) {
+                if (user.channelId != null) {
                     try {
                         Glide.with(context)
                             .asBitmap()
@@ -107,27 +108,27 @@ class ChannelPagerViewModel @Inject constructor(
                                 }
 
                                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "profile_pics", user.id, resource)
+                                    DownloadUtils.savePng(context, "profile_pics", user.channelId, resource)
                                 }
                             })
                     } catch (e: Exception) {
 
                     }
-                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${user.id}.png").absolutePath
-                    localFollowsChannel.getFollowByUserId(user.id)?.let { localFollowsChannel.updateFollow(it.apply {
-                        userLogin = user.login
-                        userName = user.display_name
+                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${user.channelId}.png").absolutePath
+                    localFollowsChannel.getFollowByUserId(user.channelId)?.let { localFollowsChannel.updateFollow(it.apply {
+                        userLogin = user.channelLogin
+                        userName = user.channelName
                         channelLogo = downloadedLogo }) }
-                    for (i in offlineRepository.getVideosByUserId(user.id.toInt())) {
+                    for (i in offlineRepository.getVideosByUserId(user.channelId.toInt())) {
                         offlineRepository.updateVideo(i.apply {
-                            channelLogin = user.login
-                            channelName = user.display_name
+                            channelLogin = user.channelLogin
+                            channelName = user.channelName
                             channelLogo = downloadedLogo })
                     }
-                    for (i in bookmarksRepository.getBookmarksByUserId(user.id)) {
+                    for (i in bookmarksRepository.getBookmarksByUserId(user.channelId)) {
                         bookmarksRepository.updateBookmark(i.apply {
-                            userLogin = user.login
-                            userName = user.display_name
+                            userLogin = user.channelLogin
+                            userName = user.channelName
                             userLogo = downloadedLogo })
                     }
                 }

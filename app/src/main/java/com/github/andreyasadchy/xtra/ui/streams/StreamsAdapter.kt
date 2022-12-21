@@ -5,7 +5,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
 import com.github.andreyasadchy.xtra.ui.games.GamesFragment
 import com.github.andreyasadchy.xtra.util.*
@@ -22,15 +22,15 @@ class StreamsAdapter(
     override fun bind(item: Stream, view: View) {
         super.bind(item, view)
         with(view) {
-            if (item.thumbnail_url != null) {
+            if (item.thumbnailUrl != null) {
                 thumbnail.visible()
                 thumbnail.loadImage(fragment, item.thumbnail, true, diskCacheStrategy = DiskCacheStrategy.NONE)
             } else {
                 thumbnail.gone()
             }
-            if (item.viewer_count != null) {
+            if (item.viewerCount != null) {
                 viewers.visible()
-                viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewer_count ?: 0)
+                viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewerCount ?: 0)
             } else {
                 viewers.gone()
             }
@@ -45,8 +45,8 @@ class StreamsAdapter(
             } else {
                 type.gone()
             }
-            if (context.prefs().getBoolean(C.UI_UPTIME, true) && item.started_at != null) {
-                val text = TwitchApiHelper.getUptime(context = context, input = item.started_at)
+            if (context.prefs().getBoolean(C.UI_UPTIME, true) && item.startedAt != null) {
+                val text = TwitchApiHelper.getUptime(context = context, input = item.startedAt)
                 if (text != null) {
                     uptime.visible()
                     uptime.text = context.getString(R.string.uptime, text)

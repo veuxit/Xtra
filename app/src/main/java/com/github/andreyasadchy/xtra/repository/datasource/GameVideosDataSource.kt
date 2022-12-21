@@ -6,10 +6,7 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.GameVideosQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.*
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
@@ -21,10 +18,10 @@ class GameVideosDataSource private constructor(
     private val gameName: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
-    private val helixPeriod: Period,
-    private val helixBroadcastTypes: com.github.andreyasadchy.xtra.model.helix.video.BroadcastType,
+    private val helixPeriod: VideoPeriodEnum,
+    private val helixBroadcastTypes: BroadcastTypeEnum,
     private val helixLanguage: String?,
-    private val helixSort: Sort,
+    private val helixSort: VideoSortEnum,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
     private val gqlQueryLanguages: List<String>?,
@@ -45,24 +42,24 @@ class GameVideosDataSource private constructor(
             try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> if (helixPeriod == Period.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == Period.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> if (helixPeriod == Period.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == Period.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> if (helixPeriod == Period.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                            C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == Period.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                            C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                            C.GQL -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL; gqlLoad(params) } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
@@ -86,23 +83,21 @@ class GameVideosDataSource private constructor(
             offset = offset
         )
         val list = mutableListOf<Video>()
-        get.data?.let { list.addAll(it) }
+        get.data.let { list.addAll(it) }
         val ids = mutableListOf<String>()
         for (i in list) {
-            i.user_id?.let { ids.add(it) }
+            i.channelId?.let { ids.add(it) }
         }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.user_id == i.id }
-                    for (item in items) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val items = list.filter { it.channelId == i.channelId }
+                for (item in items) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -129,16 +124,16 @@ class GameVideosDataSource private constructor(
                 }
                 list.add(Video(
                     id = i?.node?.id,
-                    user_id = i?.node?.owner?.id,
-                    user_login = i?.node?.owner?.login,
-                    user_name = i?.node?.owner?.displayName,
+                    channelId = i?.node?.owner?.id,
+                    channelLogin = i?.node?.owner?.login,
+                    channelName = i?.node?.owner?.displayName,
                     type = i?.node?.broadcastType?.toString(),
                     title = i?.node?.title,
-                    view_count = i?.node?.viewCount,
-                    created_at = i?.node?.createdAt?.toString(),
+                    viewCount = i?.node?.viewCount,
+                    uploadDate = i?.node?.createdAt?.toString(),
                     duration = i?.node?.lengthSeconds?.toString(),
-                    thumbnail_url = i?.node?.previewThumbnailURL,
-                    profileImageURL = i?.node?.owner?.profileImageURL,
+                    thumbnailUrl = i?.node?.previewThumbnailURL,
+                    profileImageUrl = i?.node?.owner?.profileImageURL,
                     tags = tags,
                     animatedPreviewURL =  i?.node?.animatedPreviewURL
                 ))
@@ -174,10 +169,10 @@ class GameVideosDataSource private constructor(
         private val gameName: String?,
         private val helixClientId: String?,
         private val helixToken: String?,
-        private val helixPeriod: Period,
-        private val helixBroadcastTypes: com.github.andreyasadchy.xtra.model.helix.video.BroadcastType,
+        private val helixPeriod: VideoPeriodEnum,
+        private val helixBroadcastTypes: BroadcastTypeEnum,
         private val helixLanguage: String?,
-        private val helixSort: Sort,
+        private val helixSort: VideoSortEnum,
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
         private val gqlQueryLanguages: List<String>?,

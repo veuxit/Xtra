@@ -6,7 +6,7 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserClipsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
+import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.util.C
@@ -75,11 +75,11 @@ class ChannelClipsDataSource(
             cursor = offset
         )
         val list = mutableListOf<Clip>()
-        get.data?.let { list.addAll(it) }
+        get.data.let { list.addAll(it) }
         val gameIds = mutableListOf<String>()
         for (i in list) {
-            i.broadcaster_login = channelLogin
-            i.game_id?.let { gameIds.add(it) }
+            i.channelLogin = channelLogin
+            i.gameId?.let { gameIds.add(it) }
         }
         if (gameIds.isNotEmpty()) {
             val games = helixApi.getGames(
@@ -87,16 +87,14 @@ class ChannelClipsDataSource(
                 token = helixToken,
                 ids = gameIds
             ).data
-            if (games != null) {
-                for (i in games) {
-                    val items = list.filter { it.game_id == i.id }
-                    for (item in items) {
-                        item.game_name = i.name
-                    }
+            for (i in games) {
+                val items = list.filter { it.gameId == i.gameId }
+                for (item in items) {
+                    item.gameName = i.gameName
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -114,19 +112,19 @@ class ChannelClipsDataSource(
             for (i in get) {
                 list.add(Clip(
                     id = i?.node?.slug,
-                    broadcaster_id = channelId,
-                    broadcaster_login = get1.login,
-                    broadcaster_name = get1.displayName,
-                    video_id = i?.node?.video?.id,
-                    vod_offset = i?.node?.videoOffsetSeconds,
-                    game_id = i?.node?.game?.id,
-                    game_name = i?.node?.game?.displayName,
+                    channelId = channelId,
+                    channelLogin = get1.login,
+                    channelName = get1.displayName,
+                    videoId = i?.node?.video?.id,
+                    vodOffset = i?.node?.videoOffsetSeconds,
+                    gameId = i?.node?.game?.id,
+                    gameName = i?.node?.game?.displayName,
                     title = i?.node?.title,
-                    view_count = i?.node?.viewCount,
-                    created_at = i?.node?.createdAt?.toString(),
+                    viewCount = i?.node?.viewCount,
+                    uploadDate = i?.node?.createdAt?.toString(),
                     duration = i?.node?.durationSeconds?.toDouble(),
-                    thumbnail_url = i?.node?.thumbnailURL,
-                    profileImageURL = get1.profileImageURL,
+                    thumbnailUrl = i?.node?.thumbnailURL,
+                    profileImageUrl = get1.profileImageURL,
                     videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
                 ))
             }

@@ -6,9 +6,9 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.GameStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.stream.Sort
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
@@ -22,7 +22,7 @@ class GameStreamsDataSource private constructor(
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
     private val gqlQuerySort: StreamSort?,
-    private val gqlSort: Sort?,
+    private val gqlSort: StreamSortEnum?,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
@@ -36,7 +36,7 @@ class GameStreamsDataSource private constructor(
         loadInitial(params, callback) {
             try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
@@ -44,7 +44,7 @@ class GameStreamsDataSource private constructor(
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
@@ -52,7 +52,7 @@ class GameStreamsDataSource private constructor(
                 } catch (e: Exception) {
                     try {
                         when (apiPref.elementAt(2)?.second) {
-                            C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == Sort.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                             C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                             C.GQL -> { api = C.GQL; gqlLoad(params) }
                             else -> throw Exception()
@@ -74,23 +74,21 @@ class GameStreamsDataSource private constructor(
             offset = offset
         )
         val list = mutableListOf<Stream>()
-        get.data?.let { list.addAll(it) }
+        get.data.let { list.addAll(it) }
         val ids = mutableListOf<String>()
         for (i in list) {
-            i.user_id?.let { ids.add(it) }
+            i.channelId?.let { ids.add(it) }
         }
         if (ids.isNotEmpty()) {
             val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
-            if (users != null) {
-                for (i in users) {
-                    val items = list.filter { it.user_id == i.id }
-                    for (item in items) {
-                        item.profileImageURL = i.profile_image_url
-                    }
+            for (i in users) {
+                val items = list.filter { it.channelId == i.channelId }
+                for (item in items) {
+                    item.profileImageUrl = i.profileImageUrl
                 }
             }
         }
-        offset = get.pagination?.cursor
+        offset = get.cursor
         return list
     }
 
@@ -116,15 +114,15 @@ class GameStreamsDataSource private constructor(
                 }
                 list.add(Stream(
                     id = i?.node?.id,
-                    user_id = i?.node?.broadcaster?.id,
-                    user_login = i?.node?.broadcaster?.login,
-                    user_name = i?.node?.broadcaster?.displayName,
+                    channelId = i?.node?.broadcaster?.id,
+                    channelLogin = i?.node?.broadcaster?.login,
+                    channelName = i?.node?.broadcaster?.displayName,
                     type = i?.node?.type,
                     title = i?.node?.broadcaster?.broadcastSettings?.title,
-                    viewer_count = i?.node?.viewersCount,
-                    started_at = i?.node?.createdAt?.toString(),
-                    thumbnail_url = i?.node?.previewImageURL,
-                    profileImageURL = i?.node?.broadcaster?.profileImageURL,
+                    viewerCount = i?.node?.viewersCount,
+                    startedAt = i?.node?.createdAt?.toString(),
+                    thumbnailUrl = i?.node?.previewImageURL,
+                    profileImageUrl = i?.node?.broadcaster?.profileImageURL,
                     tags = tags
                 ))
             }
@@ -162,7 +160,7 @@ class GameStreamsDataSource private constructor(
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
         private val gqlQuerySort: StreamSort?,
-        private val gqlSort: Sort?,
+        private val gqlSort: StreamSortEnum?,
         private val tags: List<String>?,
         private val gqlApi: GraphQLRepository,
         private val apolloClient: ApolloClient,

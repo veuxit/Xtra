@@ -1,6 +1,6 @@
-package com.github.andreyasadchy.xtra.model.helix.video
+package com.github.andreyasadchy.xtra.model.ui
 
-enum class Period(val value: String) {
+enum class VideoPeriodEnum(val value: String) {
     DAY("day"),
     WEEK("week"),
     MONTH("month"),

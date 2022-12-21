@@ -5,8 +5,8 @@ import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedGamesQuery
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
+import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -25,7 +25,7 @@ class FollowedGamesDataSource(
         loadInitial(params, callback) {
             val list = mutableListOf<Game>()
             for (i in localFollowsGame.loadFollows()) {
-                list.add(Game(id = i.gameId, name = i.gameName, box_art_url = i.boxArt, followLocal = true))
+                list.add(Game(gameId = i.gameId, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
             }
             val remote = try {
                 when (apiPref.elementAt(0)?.second) {
@@ -46,19 +46,19 @@ class FollowedGamesDataSource(
             }
             if (remote.isNotEmpty()) {
                 for (i in remote) {
-                    val item = list.find { it.id == i.id }
+                    val item = list.find { it.gameId == i.gameId }
                     if (item == null) {
-                        i.followTwitch = true
+                        i.followAccount = true
                         list.add(i)
                     } else {
-                        item.followTwitch = true
+                        item.followAccount = true
                         item.viewersCount = i.viewersCount
                         item.broadcastersCount = i.broadcastersCount
                         item.tags = i.tags
                     }
                 }
             }
-            list.sortBy { it.name }
+            list.sortBy { it.gameName }
             list
         }
     }
@@ -82,9 +82,9 @@ class FollowedGamesDataSource(
                     ))
                 }
                 list.add(Game(
-                    id = i?.id,
-                    name = i?.displayName,
-                    box_art_url = i?.boxArtURL,
+                    gameId = i?.id,
+                    gameName = i?.displayName,
+                    boxArtUrl = i?.boxArtURL,
                     viewersCount = i?.viewersCount,
                     broadcastersCount = i?.broadcastersCount,
                     tags = tags

@@ -1,4 +1,4 @@
-package com.github.andreyasadchy.xtra.model.helix.tag
+package com.github.andreyasadchy.xtra.model.ui
 
 import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize

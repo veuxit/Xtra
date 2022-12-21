@@ -57,13 +57,13 @@ class BookmarksViewModel @Inject internal constructor(
                         val users = repository.loadUserTypes(ids, helixClientId, helixToken, gqlClientId)
                         if (users != null) {
                             for (user in users) {
-                                val bookmarks = user.id?.let { bookmarksRepository.getBookmarksByUserId(it) }
+                                val bookmarks = user.channelId?.let { bookmarksRepository.getBookmarksByUserId(it) }
                                 if (bookmarks != null) {
                                     for (bookmark in bookmarks) {
-                                        if (user.type != bookmark.userType || user.broadcaster_type != bookmark.userBroadcasterType) {
+                                        if (user.type != bookmark.userType || user.broadcasterType != bookmark.userBroadcasterType) {
                                             bookmarksRepository.updateBookmark(bookmark.apply {
                                                 userType = user.type
-                                                userBroadcasterType = user.broadcaster_type
+                                                userBroadcasterType = user.broadcasterType
                                             })
                                         }
                                     }
@@ -113,7 +113,7 @@ class BookmarksViewModel @Inject internal constructor(
                         gameId = video.gameId ?: bookmark.gameId,
                         gameName = video.gameName ?: bookmark.gameName,
                         title = video.title ?: bookmark.title,
-                        createdAt = video.created_at ?: bookmark.createdAt,
+                        createdAt = video.uploadDate ?: bookmark.createdAt,
                         thumbnail = downloadedThumbnail,
                         type = video.type ?: bookmark.type,
                         duration = video.duration ?: bookmark.duration,
@@ -140,7 +140,7 @@ class BookmarksViewModel @Inject internal constructor(
                                             bookmark.userLogin != video.channelLogin ||
                                             bookmark.userName != video.channelName ||
                                             bookmark.title != video.title ||
-                                            bookmark.createdAt != video.created_at ||
+                                            bookmark.createdAt != video.uploadDate ||
                                             bookmark.type != video.type ||
                                             bookmark.duration != video.duration)) {
                                     try {
@@ -171,7 +171,7 @@ class BookmarksViewModel @Inject internal constructor(
                                         gameId = bookmark.gameId,
                                         gameName = bookmark.gameName,
                                         title = video.title ?: bookmark.title,
-                                        createdAt = video.created_at ?: bookmark.createdAt,
+                                        createdAt = video.uploadDate ?: bookmark.createdAt,
                                         thumbnail = downloadedThumbnail,
                                         type = video.type ?: bookmark.type,
                                         duration = video.duration ?: bookmark.duration,

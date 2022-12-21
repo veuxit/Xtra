@@ -11,9 +11,9 @@ import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.stream.Sort
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
@@ -41,13 +41,13 @@ class StreamsViewModel @Inject constructor(
         } else {
             repository.loadGameStreams(it.gameId, it.gameName, it.helixClientId, it.helixToken, it.gqlClientId,
                 when (it.sort) {
-                    Sort.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
-                    Sort.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
+                    StreamSortEnum.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
+                    StreamSortEnum.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
                     else -> null },
                 it.sort, it.tags, it.gameApiPref, it.thumbnailsEnabled, viewModelScope)
         }
     }
-    val sort: Sort?
+    val sort: StreamSortEnum?
         get() = filter.value?.sort
 
     fun loadStreams(gameId: String? = null, gameName: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, tags: List<String>? = null, apiPref: ArrayList<Pair<Long?, String?>?>, gameApiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean = true) {
@@ -68,7 +68,7 @@ class StreamsViewModel @Inject constructor(
         }
     }
 
-    fun filter(sort: Sort) {
+    fun filter(sort: StreamSortEnum) {
         filter.value = filter.value?.copy(sort = sort)
     }
 
@@ -78,7 +78,7 @@ class StreamsViewModel @Inject constructor(
         val helixClientId: String?,
         val helixToken: String?,
         val gqlClientId: String?,
-        val sort: Sort? = Sort.VIEWERS_HIGH,
+        val sort: StreamSortEnum? = StreamSortEnum.VIEWERS_HIGH,
         val tags: List<String>?,
         val apiPref: ArrayList<Pair<Long?, String?>?>,
         val gameApiPref: ArrayList<Pair<Long?, String?>?>,
@@ -96,9 +96,9 @@ class StreamsViewModel @Inject constructor(
         get() = true
     override lateinit var follow: FollowLiveData
 
-    override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
+    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
         }
     }
 

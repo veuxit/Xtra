@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.common.follow
 
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 
 interface FollowViewModel {
     val userId: String?
@@ -11,5 +11,5 @@ interface FollowViewModel {
     val game: Boolean
         get() = false
 
-    fun setUser(user: User, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int)
+    fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int)
 }

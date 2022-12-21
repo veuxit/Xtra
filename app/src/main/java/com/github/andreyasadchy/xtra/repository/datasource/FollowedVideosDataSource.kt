@@ -5,8 +5,8 @@ import androidx.paging.DataSource
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedVideosQuery
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.Tag
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
@@ -71,18 +71,18 @@ class FollowedVideosDataSource(
                 }
                 list.add(Video(
                     id = i?.node?.id,
-                    user_id = i?.node?.owner?.id,
-                    user_login = i?.node?.owner?.login,
-                    user_name = i?.node?.owner?.displayName,
+                    channelId = i?.node?.owner?.id,
+                    channelLogin = i?.node?.owner?.login,
+                    channelName = i?.node?.owner?.displayName,
                     gameId = i?.node?.game?.id,
                     gameName = i?.node?.game?.displayName,
                     type = i?.node?.broadcastType?.toString(),
                     title = i?.node?.title,
-                    view_count = i?.node?.viewCount,
-                    created_at = i?.node?.createdAt?.toString(),
+                    viewCount = i?.node?.viewCount,
+                    uploadDate = i?.node?.createdAt?.toString(),
                     duration = i?.node?.lengthSeconds?.toString(),
-                    thumbnail_url = i?.node?.previewThumbnailURL,
-                    profileImageURL = i?.node?.owner?.profileImageURL,
+                    thumbnailUrl = i?.node?.previewThumbnailURL,
+                    profileImageUrl = i?.node?.owner?.profileImageURL,
                     tags = tags,
                     animatedPreviewURL =  i?.node?.animatedPreviewURL
                 ))

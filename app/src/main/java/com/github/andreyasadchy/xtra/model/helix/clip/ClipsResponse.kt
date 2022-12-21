@@ -1,8 +1,5 @@
 package com.github.andreyasadchy.xtra.model.helix.clip
 
-class ClipsResponse(
-    val data: List<Clip>?,
-    val pagination: Pagination?)
+import com.github.andreyasadchy.xtra.model.ui.Clip
 
-data class Pagination(
-    val cursor: String?)
+data class ClipsResponse(val data: List<Clip>, val cursor: String?)

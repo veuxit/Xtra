@@ -8,18 +8,18 @@ import android.view.ViewGroup
 import android.widget.RadioButton
 import androidx.core.os.bundleOf
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.follows.Order
-import com.github.andreyasadchy.xtra.model.helix.follows.Order.ASC
-import com.github.andreyasadchy.xtra.model.helix.follows.Order.DESC
-import com.github.andreyasadchy.xtra.model.helix.follows.Sort
-import com.github.andreyasadchy.xtra.model.helix.follows.Sort.*
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum.ASC
+import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum.DESC
+import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
+import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.*
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import kotlinx.android.synthetic.main.dialog_followed_channels_sort.*
 
 class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
 
     interface OnFilter {
-        fun onChange(sort: Sort, sortText: CharSequence, order: Order, orderText: CharSequence, saveDefault: Boolean)
+        fun onChange(sort: FollowSortEnum, sortText: CharSequence, order: FollowOrderEnum, orderText: CharSequence, saveDefault: Boolean)
     }
 
     companion object {
@@ -28,7 +28,7 @@ class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
         private const val ORDER = "order"
         private const val SAVE_DEFAULT = "save_default"
 
-        fun newInstance(sort: Sort, order: Order, saveDefault: Boolean = false): FollowedChannelsSortDialog {
+        fun newInstance(sort: FollowSortEnum, order: FollowOrderEnum, saveDefault: Boolean = false): FollowedChannelsSortDialog {
             return FollowedChannelsSortDialog().apply {
                 arguments = bundleOf(SORT to sort, ORDER to order, SAVE_DEFAULT to saveDefault)
             }
@@ -49,12 +49,12 @@ class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val args = requireArguments()
-        val originalSortId = when (args.getSerializable(SORT) as Sort) {
+        val originalSortId = when (args.getSerializable(SORT) as FollowSortEnum) {
             FOLLOWED_AT -> R.id.time_followed
             ALPHABETICALLY -> R.id.alphabetically
             LAST_BROADCAST -> R.id.last_broadcast
         }
-        val originalOrderId = if (args.getSerializable(ORDER) as Order == DESC) R.id.newest_first else R.id.oldest_first
+        val originalOrderId = if (args.getSerializable(ORDER) as FollowOrderEnum == DESC) R.id.newest_first else R.id.oldest_first
         val originalSaveDefault = args.getBoolean(SAVE_DEFAULT)
         sort.check(originalSortId)
         order.check(originalOrderId)

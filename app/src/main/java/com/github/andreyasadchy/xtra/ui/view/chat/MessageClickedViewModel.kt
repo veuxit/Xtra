@@ -2,7 +2,7 @@ package com.github.andreyasadchy.xtra.ui.view.chat
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.user.User
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

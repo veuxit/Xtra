@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.stream.Sort
+import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
@@ -16,14 +16,14 @@ import kotlinx.android.synthetic.main.dialog_streams_sort.*
 class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
 
     interface OnFilter {
-        fun onChange(sort: Sort)
+        fun onChange(sort: StreamSortEnum)
     }
 
     companion object {
 
         private const val SORT = "sort"
 
-        fun newInstance(sort: Sort? = Sort.VIEWERS_HIGH): StreamsSortDialog {
+        fun newInstance(sort: StreamSortEnum? = StreamSortEnum.VIEWERS_HIGH): StreamsSortDialog {
             return StreamsSortDialog().apply {
                 arguments = bundleOf(SORT to sort)
             }
@@ -45,13 +45,13 @@ class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         val args = requireArguments()
-        val originalSortId = if (args.getSerializable(SORT) as Sort == Sort.VIEWERS_HIGH) R.id.viewers_high else R.id.viewers_low
+        val originalSortId = if (args.getSerializable(SORT) as StreamSortEnum == StreamSortEnum.VIEWERS_HIGH) R.id.viewers_high else R.id.viewers_low
         sort.check(originalSortId)
         apply.setOnClickListener {
             val checkedSortId = sort.checkedRadioButtonId
             if (checkedSortId != originalSortId) {
                 listener.onChange(
-                    if (checkedSortId == R.id.viewers_high) Sort.VIEWERS_HIGH else Sort.VIEWERS_LOW
+                    if (checkedSortId == R.id.viewers_high) StreamSortEnum.VIEWERS_HIGH else StreamSortEnum.VIEWERS_LOW
                 )
             }
             dismiss()

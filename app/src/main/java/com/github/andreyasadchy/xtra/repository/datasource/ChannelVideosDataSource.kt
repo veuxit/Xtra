@@ -6,12 +6,9 @@ import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserVideosQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.model.ui.*
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
@@ -21,12 +18,12 @@ class ChannelVideosDataSource (
     private val channelLogin: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
-    private val helixPeriod: Period,
-    private val helixBroadcastTypes: BroadcastType,
-    private val helixSort: Sort,
+    private val helixPeriod: VideoPeriodEnum,
+    private val helixBroadcastTypes: BroadcastTypeEnum,
+    private val helixSort: VideoSortEnum,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
-    private val gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?,
+    private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
     private val gqlType: String?,
     private val gqlSort: String?,
@@ -43,24 +40,24 @@ class ChannelVideosDataSource (
             try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> if (helixPeriod == Period.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                            C.GQL -> if (helixPeriod == Period.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                            C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                            C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
@@ -82,10 +79,8 @@ class ChannelVideosDataSource (
             limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
             offset = offset
         )
-        return if (get.data != null) {
-            offset = get.pagination?.cursor
-            get.data
-        } else listOf()
+        offset = get.cursor
+        return get.data
     }
 
     private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
@@ -110,18 +105,18 @@ class ChannelVideosDataSource (
                 }
                 list.add(Video(
                     id = i?.node?.id,
-                    user_id = channelId,
-                    user_login = get1.login,
-                    user_name = get1.displayName,
+                    channelId = channelId,
+                    channelLogin = get1.login,
+                    channelName = get1.displayName,
                     gameId = i?.node?.game?.id,
                     gameName = i?.node?.game?.displayName,
                     type = i?.node?.broadcastType?.toString(),
                     title = i?.node?.title,
-                    view_count = i?.node?.viewCount,
-                    created_at = i?.node?.createdAt?.toString(),
+                    viewCount = i?.node?.viewCount,
+                    uploadDate = i?.node?.createdAt?.toString(),
                     duration = i?.node?.lengthSeconds?.toString(),
-                    thumbnail_url = i?.node?.previewThumbnailURL,
-                    profileImageURL = get1.profileImageURL,
+                    thumbnailUrl = i?.node?.previewThumbnailURL,
+                    profileImageUrl = get1.profileImageURL,
                     tags = tags,
                     animatedPreviewURL =  i?.node?.animatedPreviewURL
                 ))
@@ -157,12 +152,12 @@ class ChannelVideosDataSource (
         private val channelLogin: String?,
         private val helixClientId: String?,
         private val helixToken: String?,
-        private val helixPeriod: Period,
-        private val helixBroadcastTypes: BroadcastType,
-        private val helixSort: Sort,
+        private val helixPeriod: VideoPeriodEnum,
+        private val helixBroadcastTypes: BroadcastTypeEnum,
+        private val helixSort: VideoSortEnum,
         private val helixApi: HelixApi,
         private val gqlClientId: String?,
-        private val gqlQueryType: com.github.andreyasadchy.xtra.type.BroadcastType?,
+        private val gqlQueryType: BroadcastType?,
         private val gqlQuerySort: VideoSort?,
         private val gqlType: String?,
         private val gqlSort: String?,

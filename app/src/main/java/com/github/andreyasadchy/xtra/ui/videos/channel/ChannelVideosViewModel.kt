@@ -10,12 +10,13 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
-import com.github.andreyasadchy.xtra.model.helix.video.Period
-import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
+import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
 import com.github.andreyasadchy.xtra.util.C
@@ -41,20 +42,20 @@ class ChannelVideosViewModel @Inject constructor(
     override val result: LiveData<Listing<Video>> = Transformations.map(filter) {
         repository.loadChannelVideos(it.channelId, it.channelLogin, it.helixClientId, it.helixToken, it.period, it.broadcastType, it.sort, it.gqlClientId,
             when (it.broadcastType) {
-                BroadcastType.ARCHIVE -> com.github.andreyasadchy.xtra.type.BroadcastType.ARCHIVE
-                BroadcastType.HIGHLIGHT -> com.github.andreyasadchy.xtra.type.BroadcastType.HIGHLIGHT
-                BroadcastType.UPLOAD -> com.github.andreyasadchy.xtra.type.BroadcastType.UPLOAD
+                BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
+                BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
+                BroadcastTypeEnum.UPLOAD -> BroadcastType.UPLOAD
                 else -> null },
-            when (it.sort) { Sort.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
-            if (it.broadcastType == BroadcastType.ALL) { null }
+            when (it.sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
+            if (it.broadcastType == BroadcastTypeEnum.ALL) { null }
             else { it.broadcastType.value.uppercase() }, it.sort.value.uppercase(),
             it.apiPref, viewModelScope)
     }
-    val sort: Sort
+    val sort: VideoSortEnum
         get() = filter.value!!.sort
-    val period: Period
+    val period: VideoPeriodEnum
         get() = filter.value!!.period
-    val type: BroadcastType
+    val type: BroadcastTypeEnum
         get() = filter.value!!.broadcastType
     val saveSort: Boolean
         get() = filter.value?.saveSort == true
@@ -74,26 +75,26 @@ class ChannelVideosViewModel @Inject constructor(
                 apiPref = apiPref,
                 saveSort = sortValues?.saveSort,
                 sort = when (sortValues?.videoSort) {
-                    Sort.VIEWS.value -> Sort.VIEWS
-                    else -> Sort.TIME
+                    VideoSortEnum.VIEWS.value -> VideoSortEnum.VIEWS
+                    else -> VideoSortEnum.TIME
                 },
                 broadcastType = when (sortValues?.videoType) {
-                    BroadcastType.ARCHIVE.value -> BroadcastType.ARCHIVE
-                    BroadcastType.HIGHLIGHT.value -> BroadcastType.HIGHLIGHT
-                    BroadcastType.UPLOAD.value -> BroadcastType.UPLOAD
-                    else -> BroadcastType.ALL
+                    BroadcastTypeEnum.ARCHIVE.value -> BroadcastTypeEnum.ARCHIVE
+                    BroadcastTypeEnum.HIGHLIGHT.value -> BroadcastTypeEnum.HIGHLIGHT
+                    BroadcastTypeEnum.UPLOAD.value -> BroadcastTypeEnum.UPLOAD
+                    else -> BroadcastTypeEnum.ALL
                 }
             )
             _sortText.value = context.getString(R.string.sort_and_period,
                 when (sortValues?.videoSort) {
-                    Sort.VIEWS.value -> context.getString(R.string.view_count)
+                    VideoSortEnum.VIEWS.value -> context.getString(R.string.view_count)
                     else -> context.getString(R.string.upload_date)
                 }, context.getString(R.string.all_time)
             )
         }
     }
 
-    fun filter(sort: Sort, type: BroadcastType, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
+    fun filter(sort: VideoSortEnum, type: BroadcastTypeEnum, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
         filter.value = filter.value?.copy(saveSort = saveSort, sort = sort, broadcastType = type)
         _sortText.value = text
         viewModelScope.launch {
@@ -146,7 +147,7 @@ class ChannelVideosViewModel @Inject constructor(
         val gqlClientId: String?,
         val apiPref: ArrayList<Pair<Long?, String?>?>,
         val saveSort: Boolean?,
-        val sort: Sort = Sort.TIME,
-        val period: Period = Period.ALL,
-        val broadcastType: BroadcastType = BroadcastType.ALL)
+        val sort: VideoSortEnum = VideoSortEnum.TIME,
+        val period: VideoPeriodEnum = VideoPeriodEnum.ALL,
+        val broadcastType: BroadcastTypeEnum = BroadcastTypeEnum.ALL)
 }

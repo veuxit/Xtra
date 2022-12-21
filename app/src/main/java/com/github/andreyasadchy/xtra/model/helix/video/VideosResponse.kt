@@ -1,8 +1,5 @@
 package com.github.andreyasadchy.xtra.model.helix.video
 
-class VideosResponse(
-    val data: List<Video>?,
-    val pagination: Pagination?)
+import com.github.andreyasadchy.xtra.model.ui.Video
 
-data class Pagination(
-    val cursor: String?)
+data class VideosResponse(val data: List<Video>, val cursor: String?)

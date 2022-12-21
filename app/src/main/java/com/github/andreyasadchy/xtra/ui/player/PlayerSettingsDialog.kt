@@ -9,7 +9,7 @@ import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -95,7 +95,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
                 }
             }
             if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                val isLoggedIn = !User.get(requireContext()).login.isNullOrBlank() && (!User.get(requireContext()).gqlToken.isNullOrBlank() || !User.get(requireContext()).helixToken.isNullOrBlank())
+                val isLoggedIn = !Account.get(requireContext()).login.isNullOrBlank() && (!Account.get(requireContext()).gqlToken.isNullOrBlank() || !Account.get(requireContext()).helixToken.isNullOrBlank())
                 if (isLoggedIn && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_BAR, true)) {
                     menuChatBar.visible()
                     if (requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {

@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.helix.video.Period
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.util.chat.*
 import kotlinx.coroutines.CoroutineScope
 import okhttp3.OkHttpClient
@@ -168,11 +168,11 @@ object TwitchApiHelper {
         }
     }
 
-    fun getClipTime(period: Period? = null): String {
+    fun getClipTime(period: VideoPeriodEnum? = null): String {
         val days = when (period) {
-            Period.DAY -> -1
-            Period.WEEK -> -7
-            Period.MONTH -> -30
+            VideoPeriodEnum.DAY -> -1
+            VideoPeriodEnum.WEEK -> -7
+            VideoPeriodEnum.MONTH -> -30
             else -> 0 }
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.DAY_OF_YEAR, days)
