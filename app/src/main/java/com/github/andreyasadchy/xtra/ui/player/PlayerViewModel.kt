@@ -18,8 +18,11 @@ import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.util.*
 import com.github.andreyasadchy.xtra.util.C
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.Player.EVENT_PLAYBACK_STATE_CHANGED
+import com.google.android.exoplayer2.Player.EVENT_PLAY_WHEN_READY_CHANGED
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
@@ -28,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.concurrent.schedule
+
 
 abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener {
 
@@ -65,9 +69,17 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     protected var isResumed = true
     var userLeaveHint = false
 
+    private val _showPauseButton = MutableLiveData<Boolean>()
+    val showPauseButton: LiveData<Boolean>
+        get() = _showPauseButton
+
     private val _isPlaying = MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean>
         get() = _isPlaying
+
+    private val _subtitlesAvailable = MutableLiveData<Boolean>()
+    val subtitlesAvailable: LiveData<Boolean>
+        get() = _subtitlesAvailable
 
     private var timer: Timer? = null
     private val _sleepTimer = MutableLiveData<Boolean>()
@@ -180,8 +192,19 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
     //Player.EventListener
 
+    override fun onEvents(player: Player, events: Player.Events) {
+        if (events.containsAny(EVENT_PLAYBACK_STATE_CHANGED, EVENT_PLAY_WHEN_READY_CHANGED)) {
+            _showPauseButton.postValue(player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady)
+        }
+        super.onEvents(player, events)
+    }
+
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         _isPlaying.postValue(isPlaying)
+    }
+
+    override fun onTracksChanged(tracks: Tracks) {
+        _subtitlesAvailable.postValue(tracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT } != null)
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -232,5 +255,25 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
     fun setVolume(volume: Float) {
         player.volume = volume
+    }
+
+    fun subtitlesEnabled(): Boolean {
+        return player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.isSelected == true
+    }
+
+    fun toggleSubtitles(enabled: Boolean) {
+        if (enabled) {
+            player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.let {
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup,0))
+                    .build()
+            }
+        } else {
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .clearOverridesOfType(com.google.android.exoplayer2.C.TRACK_TYPE_TEXT)
+                .build()
+        }
     }
 }

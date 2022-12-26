@@ -6,9 +6,8 @@
 
     <View style="@style/PlayerShadow" />
     <ImageButton
-        style="@style/PlayerPlay"
-        tools:visibility="gone" />
-    <ImageButton style="@style/PlayerPause"/>
+        style="@style/PlayerPlayPause"
+        tools:src="@drawable/baseline_pause_black_48" />
 
     <LinearLayout style="@style/PlayerTopLeftPanel">
         <ImageButton
@@ -73,6 +72,10 @@
 
 
     <LinearLayout style="@style/PlayerBotRightPanel">
+        <ImageButton
+            style="@style/PlayerSubtitleToggle"
+            tools:src="@drawable/exo_ic_subtitle_off"
+            tools:visibility="visible" />
         <ImageButton
             style="@style/PlayerChatBarToggle"
             tools:visibility="visible" />

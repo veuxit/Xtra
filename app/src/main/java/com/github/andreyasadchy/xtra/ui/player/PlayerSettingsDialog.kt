@@ -17,10 +17,7 @@ import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
-import com.github.andreyasadchy.xtra.util.prefs
-import com.github.andreyasadchy.xtra.util.visible
+import com.github.andreyasadchy.xtra.util.*
 import kotlinx.android.synthetic.main.player_settings.*
 
 class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
@@ -184,6 +181,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
                 dismiss()
             }
         }
+        (parentFragment as? BasePlayerFragment)?.setSubtitles()
         if ((parentFragment is StreamPlayerFragment || parentFragment is VideoPlayerFragment) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) && requireContext().prefs().getBoolean(C.PLAYER_MENU_RELOAD_EMOTES, true)) {
             menuReloadEmotes.visible()
             menuReloadEmotes.setOnClickListener {
@@ -244,6 +242,27 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
             menuQuality.setOnClickListener {
                 FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, qualities, qualityIndex, REQUEST_CODE_QUALITY)
             }
+        }
+    }
+
+    fun setSubtitles(available: Boolean, enabled: Boolean) {
+        if (available && requireContext().prefs().getBoolean(C.PLAYER_MENU_SUBTITLES, false)) {
+            menuSubtitles.visible()
+            if (enabled) {
+                menuSubtitles.text = requireContext().getString(R.string.hide_subtitles)
+                menuSubtitles.setOnClickListener {
+                    (parentFragment as? BasePlayerFragment)?.toggleSubtitles(false)
+                    dismiss()
+                }
+            } else {
+                menuSubtitles.text = requireContext().getString(R.string.show_subtitles)
+                menuSubtitles.setOnClickListener {
+                    (parentFragment as? BasePlayerFragment)?.toggleSubtitles(true)
+                    dismiss()
+                }
+            }
+        } else {
+            menuSubtitles.gone()
         }
     }
 }

@@ -47,6 +47,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     private lateinit var fullscreenToggle: ImageButton
     private lateinit var playerAspectRatioToggle: ImageButton
     private lateinit var chatToggle: ImageButton
+    private lateinit var subtitlesToggle: ImageButton
     private var disableChat: Boolean = false
 
     protected abstract val layoutId: Int
@@ -129,6 +130,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 setResizeMode()
             }
         }
+        subtitlesToggle = view.findViewById(R.id.playerSubtitleToggle)
         chatToggle = view.findViewById(R.id.playerChatToggle)
         disableChat = prefs.getBoolean(C.CHAT_DISABLE, false)
         initLayout()
@@ -147,7 +149,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     } else {
                         showChat()
                     }
-                    playerView.hideController()
                 }
             }
         }
@@ -176,9 +177,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
         if (this is StreamPlayerFragment) {
-            if (!prefs.getBoolean(C.PLAYER_PAUSE, false)) {
-                view.findViewById<ImageButton>(R.id.exo_pause).layoutParams.height = 0
-            }
             if (!Account.get(activity).login.isNullOrBlank() && (!Account.get(activity).gqlToken.isNullOrBlank() || !Account.get(activity).helixToken.isNullOrBlank())) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !disableChat) {
                     view.findViewById<ImageButton>(R.id.playerChatBarToggle).apply {
@@ -209,25 +207,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     }
                 }
             }
-        } else {
-            val rewind = prefs.getString(C.PLAYER_REWIND, "10000")!!.toInt()
-            val forward = prefs.getString(C.PLAYER_FORWARD, "10000")!!.toInt()
-            val rewindImage = when {
-                rewind <= 5000 -> R.drawable.baseline_replay_5_black_48
-                rewind <= 10000 -> R.drawable.baseline_replay_10_black_48
-                rewind <= 15000 -> R.drawable.baseline_replay_15_black_48
-                rewind <= 30000 -> R.drawable.baseline_replay_30_black_48
-                else -> R.drawable.baseline_replay_60_black_48
-            }
-            val forwardImage = when {
-                forward <= 5000 -> R.drawable.baseline_forward_5_black_48
-                forward <= 10000 -> R.drawable.baseline_forward_10_black_48
-                forward <= 15000 -> R.drawable.baseline_forward_15_black_48
-                forward <= 30000 -> R.drawable.baseline_forward_30_black_48
-                else -> R.drawable.baseline_forward_60_black_48
-            }
-            view.findViewById<ImageButton>(com.google.android.exoplayer2.ui.R.id.exo_rew).setImageResource(rewindImage)
-            view.findViewById<ImageButton>(com.google.android.exoplayer2.ui.R.id.exo_ffwd).setImageResource(forwardImage)
         }
     }
 
@@ -297,12 +276,26 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
         }
+        if (this is StreamPlayerFragment && !prefs.getBoolean(C.PLAYER_PAUSE, false)) {
+            (this as BasePlayerFragment).viewModel.showPauseButton.observe(viewLifecycleOwner) {
+                playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
+                    if (it) {
+                        gone()
+                    } else {
+                        visible()
+                    }
+                }
+            }
+        }
         if (prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
             view.keepScreenOn = true
         } else {
             viewModel.isPlaying.observe(viewLifecycleOwner) {
                 view.keepScreenOn = it
             }
+        }
+        viewModel.subtitlesAvailable.observe(viewLifecycleOwner) {
+            setSubtitles(available = it)
         }
     }
 
@@ -543,5 +536,29 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     fun isPaused(): Boolean {
         return viewModel.isPaused()
+    }
+
+    fun setSubtitles(available: Boolean? = null, enabled: Boolean? = null) {
+        if (available ?: (viewModel.subtitlesAvailable.value == true) && prefs.getBoolean(C.PLAYER_SUBTITLES, true)) {
+            subtitlesToggle.visible()
+            if (enabled ?: viewModel.subtitlesEnabled()) {
+                subtitlesToggle.setImageResource(R.drawable.exo_ic_subtitle_on)
+                subtitlesToggle.setOnClickListener { toggleSubtitles(false) }
+            } else {
+                subtitlesToggle.setImageResource(R.drawable.exo_ic_subtitle_off)
+                subtitlesToggle.setOnClickListener { toggleSubtitles(true) }
+            }
+        } else {
+            subtitlesToggle.gone()
+        }
+        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSubtitles(
+            available = available ?: (viewModel.subtitlesAvailable.value == true),
+            enabled = enabled ?: viewModel.subtitlesEnabled()
+        )
+    }
+
+    fun toggleSubtitles(enabled: Boolean) {
+        setSubtitles(enabled = enabled)
+        viewModel.toggleSubtitles(enabled)
     }
 }

@@ -74,6 +74,7 @@ abstract class HlsPlayerViewModel(
     }
 
     override fun onTracksChanged(tracks: Tracks) {
+        super.onTracksChanged(tracks)
         if (trackSelector.currentMappedTrackInfo != null) {
             if (helper.loaded.value != true) {
                 val context = getApplication<Application>()
