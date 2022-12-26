@@ -547,4 +547,8 @@
     <string name="streamProxyEntries1">Custom url</string>
     <string name="streamProxyEntries2">TTV.LOL</string>
     <string name="proxy_error">Proxy error</string>
+    <string name="show_subtitles_button">Show subtitles button</string>
+    <string name="show_subtitles">Show subtitles</string>
+    <string name="hide_subtitles">Hide subtitles</string>
+    <string name="toggle_subtitles">Toggle subtitles</string>
 </resources>

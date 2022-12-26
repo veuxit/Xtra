@@ -80,6 +80,12 @@
         android:icon="@drawable/baseline_audiotrack_black_24" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="player_subtitles"
+        android:title="@string/show_subtitles_button"
+        android:icon="@drawable/exo_ic_subtitle_off" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="player_chatbartoggle"
         android:title="@string/player_chatbartoggle"
