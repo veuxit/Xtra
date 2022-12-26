@@ -3,10 +3,11 @@
     <style name="Player">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">match_parent</item>
-        <item name="show_buffering">always</item>
         <item name="android:background">@android:color/black</item>
         <item name="android:animateLayoutChanges">true</item>
+        <item name="show_buffering">always</item>
         <item name="surface_type">surface_view</item>
+        <item name="animation_enabled">false</item>
     </style>
 
     <style name="PlayerImage">
@@ -118,30 +119,27 @@
     </style>
 
     <style name="PlayerRewind" parent="PlayerLargeImage">
-        <item name="android:id">@id/exo_rew</item>
-        <item name="android:layout_centerVertical">true</item>
-        <item name="android:layout_marginLeft">50dp</item>
-        <item name="android:layout_marginStart">50dp</item>
+        <item name="android:id">@id/exo_rew_with_amount</item>
+        <item name="android:foreground">@drawable/exo_styled_controls_rewind</item>
+        <item name="android:gravity">center|bottom</item>
+        <item name="android:paddingBottom">20dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@android:color/white</item>
     </style>
 
     <style name="PlayerForward" parent="PlayerLargeImage">
-        <item name="android:id">@id/exo_ffwd</item>
-        <item name="android:layout_centerVertical">true</item>
-        <item name="android:layout_alignParentEnd">true</item>
-        <item name="android:layout_alignParentRight">true</item>
-        <item name="android:layout_marginEnd">50dp</item>
-        <item name="android:layout_marginRight">50dp</item>
+        <item name="android:id">@id/exo_ffwd_with_amount</item>
+        <item name="android:foreground">@drawable/exo_styled_controls_fastforward</item>
+        <item name="android:gravity">center|bottom</item>
+        <item name="android:paddingBottom">20dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@android:color/white</item>
     </style>
 
-    <style name="PlayerPlay" parent="PlayerLargeImage">
-        <item name="android:id">@id/exo_play</item>
-        <item name="android:src">@drawable/baseline_play_arrow_black_48</item>
-        <item name="android:layout_centerInParent">true</item>
-    </style>
-
-    <style name="PlayerPause" parent="PlayerLargeImage">
-        <item name="android:id">@id/exo_pause</item>
-        <item name="android:src">@drawable/baseline_pause_black_48</item>
+    <style name="PlayerPlayPause" parent="PlayerLargeImage">
+        <item name="android:id">@id/exo_play_pause</item>
         <item name="android:layout_centerInParent">true</item>
     </style>
 
@@ -238,6 +236,11 @@
     <style name="PlayerMode" parent="PlayerSmallImage">
         <item name="android:id">@id/playerMode</item>
         <item name="android:src">@drawable/baseline_audiotrack_black_24</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="PlayerSubtitleToggle" parent="PlayerSmallImage">
+        <item name="android:id">@id/playerSubtitleToggle</item>
         <item name="android:visibility">gone</item>
     </style>
 

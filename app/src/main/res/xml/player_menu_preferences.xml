@@ -57,6 +57,12 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="player_menu_subtitles"
+        android:title="@string/toggle_subtitles"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:key="player_menu_restart"
         android:title="@string/restart_player"
         app:iconSpaceReserved="false"/>

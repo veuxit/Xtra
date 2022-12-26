@@ -5,9 +5,9 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import com.github.andreyasadchy.xtra.ui.isClick
-import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.ui.StyledPlayerView
 
-class CustomPlayerView : PlayerView {
+class CustomPlayerView : StyledPlayerView {
 
     private val clickCallback = Runnable {
         performClick()

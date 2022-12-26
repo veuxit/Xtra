@@ -17,6 +17,7 @@
     <item name="playerRestart" type="id" />
     <item name="playerVolume" type="id" />
     <item name="playerMode" type="id" />
+    <item name="playerSubtitleToggle" type="id" />
     <item name="playerChatBarToggle" type="id" />
     <item name="playerChatToggle" type="id" />
     <item name="playerFullscreenToggle" type="id" />
