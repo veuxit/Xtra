@@ -113,6 +113,7 @@ object C {
     const val PLAYER_KEEP_CHAT_OPEN = "player_keep_chat_open"
     const val PLAYER_PROXY = "player_proxy"
     const val PLAYER_PROXY_URL = "player_proxy_url"
+    const val PLAYER_FORCE_FIRST_DECODER = "player_force_first_decoder"
     const val ANIMATED_EMOTES = "animatedGifEmotes"
     const val CHAT_IMAGE_LIBRARY = "chat_image_library"
     const val CHAT_IMAGE_QUALITY = "chat_image_quality"
