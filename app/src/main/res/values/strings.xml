@@ -571,4 +571,6 @@
     <string name="show_subtitles">Show subtitles</string>
     <string name="hide_subtitles">Hide subtitles</string>
     <string name="toggle_subtitles">Toggle subtitles</string>
+    <string name="first_decoder">Use first media decoder only</string>
+    <string name="first_decoder_desc">Should force the player to use a hardware decoder</string>
 </resources>

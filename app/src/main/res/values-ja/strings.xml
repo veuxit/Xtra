@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="games">ゲーム</string>
     <string name="popular">人気</string>
@@ -551,4 +551,6 @@
     <string name="show_subtitles">字幕の表示</string>
     <string name="hide_subtitles">字幕の非表示</string>
     <string name="toggle_subtitles">字幕の切り替え</string>
+    <string name="first_decoder">Use first media decoder only</string>
+    <string name="first_decoder_desc">Should force the player to use a hardware decoder</string>
 </resources>
