@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="games">ゲーム</string>
     <string name="popular">人気</string>
@@ -531,7 +531,7 @@
     <string name="followed_only">フォローのみ</string>
     <string name="api_gql2">GQLクライアント id 2</string>
     <string name="api_gql_token2">GQLトークン 2</string>
-    <string name="debug_api_commands">Apiのチャットコマンドを使用する</string>
+    <string name="debug_api_commands">APIのチャットコマンドを使用する</string>
     <string name="skip_video_access_token">ビデオアクセストークンをスキップする</string>
     <string name="skip_clip_access_token">クリップアクセストークンをスキップする</string>
     <string name="skipVideoTokenEntries1">常にスキップする</string>
@@ -541,14 +541,14 @@
     <string name="stream_live">%s は現在ライブ中です</string>
     <string name="stream_offline">%s は現在オフラインです</string>
     <string name="keep_screen_on_when_paused">ビデオの一時停止中に画面を表示し続ける</string>
-    <string name="stream_proxy">Stream proxy</string>
-    <string name="stream_proxy_url">Custom proxy url</string>
-    <string name="stream_proxy_url_desc">\"$channel\" will be replaced with channel login</string>
-    <string name="streamProxyEntries1">Custom url</string>
+    <string name="stream_proxy">ストリームプロキシ</string>
+    <string name="stream_proxy_url">カスタムプロキシURL</string>
+    <string name="stream_proxy_url_desc">\"$channel\" はチャンネルログインに置き換えられます</string>
+    <string name="streamProxyEntries1">カスタムURL</string>
     <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="proxy_error">Proxy error</string>
-    <string name="show_subtitles_button">Show subtitles button</string>
-    <string name="show_subtitles">Show subtitles</string>
-    <string name="hide_subtitles">Hide subtitles</string>
-    <string name="toggle_subtitles">Toggle subtitles</string>
+    <string name="proxy_error">プロキシエラー</string>
+    <string name="show_subtitles_button">字幕ボタンの表示</string>
+    <string name="show_subtitles">字幕の表示</string>
+    <string name="hide_subtitles">字幕の非表示</string>
+    <string name="toggle_subtitles">字幕の切り替え</string>
 </resources>
