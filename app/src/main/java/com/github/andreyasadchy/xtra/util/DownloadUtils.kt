@@ -1,15 +1,10 @@
 package com.github.andreyasadchy.xtra.util
 
-import android.Manifest
-import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.os.Environment
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
@@ -105,28 +100,6 @@ object DownloadUtils {
         }
     }
 
-    fun hasStoragePermission(activity: Activity): Boolean {
-        fun requestPermissions() {
-            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), 0)
-        }
-
-        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            return true
-        }
-        if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
-                ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            AlertDialog.Builder(activity)
-                    .setMessage(R.string.storage_permission_message)
-                    .setTitle(R.string.storage_permission_title)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> requestPermissions() }
-                    .setNegativeButton(android.R.string.cancel) { _, _ -> activity.toast(R.string.permission_denied) }
-                    .show()
-        } else {
-            requestPermissions()
-        }
-        return false
-    }
 
     fun getAvailableStorage(context: Context): List<Storage> {
         val storage = ContextCompat.getExternalFilesDirs(context, ".downloads")
