@@ -159,9 +159,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     override fun showDownloadDialog() {
-        if (DownloadUtils.hasStoragePermission(requireActivity())) {
-            viewModel.videoInfo?.let { VideoDownloadDialog.newInstance(it).show(childFragmentManager, null) }
-        }
+        viewModel.videoInfo?.let { VideoDownloadDialog.newInstance(it).show(childFragmentManager, null) }
     }
 
     override fun onMovedToForeground() {
