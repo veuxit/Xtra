@@ -101,25 +101,34 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             0
                         } else {
                             val min = from - targetDuration
-                            relativeStartTimes.binarySearch(comparison = { time ->
+                            val tmpIndex = relativeStartTimes.binarySearch(comparison = { time ->
                                 when {
                                     time > from -> 1
                                     time < min -> -1
                                     else -> 0
                                 }
                             })
+                            /***
+                             * If the item is not found by the binarySearch method, it will return a
+                             * negative value and the app will crash. On that case, the function
+                             * returns the inverted insertion point (-insertion point - 1).
+                             * */
+                            if (tmpIndex < 0) -tmpIndex else tmpIndex
+
                         }
                         val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
                             relativeStartTimes.lastIndex
                         } else {
                             val max = to + targetDuration
-                            relativeStartTimes.binarySearch(comparison = { time ->
+                            val tmpIndex= relativeStartTimes.binarySearch(comparison = { time ->
                                 when {
                                     time > max -> 1
                                     time < to -> -1
                                     else -> 0
                                 }
                             })
+                            //Apply the same check to the toIndex result
+                            if (tmpIndex < 0) -tmpIndex else tmpIndex
                         }
                         fun startDownload() {
                             val quality = spinner.selectedItem.toString()
