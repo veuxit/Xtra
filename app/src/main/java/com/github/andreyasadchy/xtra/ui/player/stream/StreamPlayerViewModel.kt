@@ -194,6 +194,9 @@ class StreamPlayerViewModel @Inject constructor(
                         if (result.second == 1) {
                             setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
                         }
+                        if (useProxy == 3) {
+                            setDefaultRequestProperties(hashMapOf("X-Forwarded-For" to "::1"))
+                        }
                     })).apply {
                         setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
                         setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
