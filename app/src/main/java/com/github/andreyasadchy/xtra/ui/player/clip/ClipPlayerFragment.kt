@@ -109,9 +109,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     }
 
     override fun showDownloadDialog() {
-        if (DownloadUtils.hasStoragePermission(requireActivity())) {
-            ClipDownloadDialog.newInstance(clip, viewModel.qualityMap).show(childFragmentManager, null)
-        }
+        ClipDownloadDialog.newInstance(clip, viewModel.qualityMap).show(childFragmentManager, null)
     }
 
     override fun onNetworkRestored() {
