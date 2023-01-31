@@ -21,7 +21,7 @@ android {
         minSdk 16
         targetSdk 33
         versionCode 121
-        versionName "2.11.1"
+        versionName "2.11.2"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -81,7 +81,7 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     //UI
-    implementation 'com.google.android.material:material:1.8.0-beta01'
+    implementation 'com.google.android.material:material:1.9.0-alpha01'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference-ktx:1.2.0'
@@ -100,7 +100,7 @@ dependencies {
     kapt "androidx.room:room-compiler:$room"
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.fragment:fragment-ktx:1.5.5'
-    implementation 'androidx.webkit:webkit:1.5.0'
+    implementation 'androidx.webkit:webkit:1.6.0'
 
     //Misc
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
@@ -116,7 +116,7 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayer"
-    implementation 'org.checkerframework:checker-qual:3.28.0'
+    implementation 'org.checkerframework:checker-qual:3.29.0'
 
     implementation "com.github.bumptech.glide:glide:$glide"
     kapt "com.github.bumptech.glide:compiler:$glide"

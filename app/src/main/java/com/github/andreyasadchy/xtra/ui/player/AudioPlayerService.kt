@@ -17,23 +17,21 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.source.MediaSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
-import com.google.android.exoplayer2.util.Util
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -49,7 +47,7 @@ class AudioPlayerService : Service() {
     private lateinit var playlistUrl: Uri
 
     private lateinit var player: ExoPlayer
-    private lateinit var mediaSource: MediaSource
+    private lateinit var mediaItem: MediaItem
     private lateinit var playerNotificationManager: PlayerNotificationManager
 
     private var restorePosition = false
@@ -58,20 +56,47 @@ class AudioPlayerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        player = ExoPlayer.Builder(this).setTrackSelector(DefaultTrackSelector(this).apply {
-            parameters = buildUponParameters().setRendererDisabled(0, true).build()
-        }).build()
+        val context = XtraApp.INSTANCE
+        player = ExoPlayer.Builder(this).apply {
+            when (type) {
+                TYPE_STREAM -> {
+                    setMediaSourceFactory(HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()))
+                        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                        .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6)))
+                }
+                TYPE_VIDEO -> {
+                    setMediaSourceFactory(HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()))
+                        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory()))
+                }
+            }
+            setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(
+                context.prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
+                context.prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
+                context.prefs().getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
+                context.prefs().getString(C.PLAYER_BUFFER_REBUFFER, "5000")?.toIntOrNull() ?: 5000
+            ).build())
+            setSeekBackIncrementMs(context.prefs().getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000)
+            setSeekForwardIncrementMs(context.prefs().getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000)
+            setTrackSelector(DefaultTrackSelector(this@AudioPlayerService).apply {
+                parameters = buildUponParameters().setRendererDisabled(0, true).build()
+            })
+        }.build()
     }
 
     override fun onDestroy() {
+        val context = XtraApp.INSTANCE
         when (type) {
             TYPE_VIDEO -> {
                 position = player.currentPosition
-                playerRepository.saveVideoPosition(VideoPosition(videoId as Long, position))
+                if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    playerRepository.saveVideoPosition(VideoPosition(videoId as Long, position))
+                }
             }
             TYPE_OFFLINE -> {
                 position = player.currentPosition
-                offlineRepository.updateVideoPosition(videoId as Int, position)
+                if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    offlineRepository.updateVideoPosition(videoId as Int, position)
+                }
             }
         }
         player.release()
@@ -90,7 +115,7 @@ class AudioPlayerService : Service() {
             }
         }
         playlistUrl = intent.getStringExtra(KEY_PLAYLIST_URL)!!.toUri()
-        createMediaSource()
+        createMediaItem()
         var currentPlaybackPosition = intent.getLongExtra(KEY_CURRENT_POSITION, 0L)
         val usePlayPause = intent.getBooleanExtra(KEY_USE_PLAY_PAUSE, false)
         type = intent.getIntExtra(KEY_TYPE, -1)
@@ -100,8 +125,7 @@ class AudioPlayerService : Service() {
         }
         player.apply {
             addListener(object : Player.Listener  {
-                @Deprecated("Deprecated in Java")
-                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                override fun onPlaybackStateChanged(playbackState: Int) {
                     if (restorePosition && playbackState == Player.STATE_READY) {
                         restorePosition = false
                         player.seekTo(currentPlaybackPosition)
@@ -113,11 +137,16 @@ class AudioPlayerService : Service() {
                         currentPlaybackPosition = player.currentPosition
                         restorePosition = true
                     }
-                    setMediaSource(mediaSource)
+                    setMediaItem(mediaItem)
                     prepare()
                 }
             })
-            setMediaSource(mediaSource)
+            val context = XtraApp.INSTANCE
+            volume = context.prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
+            if (type != TYPE_STREAM) {
+                setPlaybackSpeed(context.prefs().getFloat(C.PLAYER_SPEED, 1f))
+            }
+            setMediaItem(mediaItem)
             prepare()
             playWhenReady = true
             if (currentPlaybackPosition > 0) {
@@ -164,13 +193,18 @@ class AudioPlayerService : Service() {
         return AudioBinder()
     }
 
-    private fun createMediaSource() {
-        mediaSource = HlsMediaSource.Factory(DefaultDataSourceFactory(this, Util.getUserAgent(this, getString(R.string.app_name))))
-                .setAllowChunklessPreparation(true)
-                .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
-                .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
-                .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
-                .createMediaSource(MediaItem.fromUri(playlistUrl))
+    private fun createMediaItem() {
+        val context = XtraApp.INSTANCE
+        mediaItem = MediaItem.Builder().apply {
+            setUri(playlistUrl)
+            if (type == TYPE_STREAM) {
+                setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
+                    context.prefs().getString(C.PLAYER_LIVE_MIN_SPEED, "")?.toFloatOrNull()?.let { setMinPlaybackSpeed(it) }
+                    context.prefs().getString(C.PLAYER_LIVE_MAX_SPEED, "")?.toFloatOrNull()?.let { setMaxPlaybackSpeed(it) }
+                    context.prefs().getString(C.PLAYER_LIVE_TARGET_OFFSET, "5000")?.toLongOrNull()?.let { setTargetOffsetMs(it) }
+                }.build())
+            }
+        }.build()
     }
 
     inner class AudioBinder : Binder() {
@@ -188,8 +222,8 @@ class AudioPlayerService : Service() {
 
         fun restartPlayer() {
             player.stop()
-            createMediaSource()
-            player.setMediaSource(mediaSource)
+            createMediaItem()
+            player.setMediaItem(mediaItem)
             player.prepare()
         }
     }
