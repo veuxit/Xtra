@@ -26,6 +26,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.HttpDataSource
+import com.google.android.exoplayer2.util.MimeTypes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -206,6 +207,7 @@ class StreamPlayerViewModel @Inject constructor(
                     }
                     mediaItem = MediaItem.Builder().apply {
                         setUri(result.first)
+                        setMimeType(MimeTypes.APPLICATION_M3U8)
                         setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
                             prefs.getString(C.PLAYER_LIVE_MIN_SPEED, "")?.toFloatOrNull()?.let { setMinPlaybackSpeed(it) }
                             prefs.getString(C.PLAYER_LIVE_MAX_SPEED, "")?.toFloatOrNull()?.let { setMaxPlaybackSpeed(it) }
