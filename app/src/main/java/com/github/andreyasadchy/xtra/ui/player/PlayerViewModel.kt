@@ -126,7 +126,6 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
                         } ?: emptyList()
                     })
                 }
-                mediaSourceFactory?.let { setMediaSourceFactory(it) }
                 setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(
                     prefs.getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
                     prefs.getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
@@ -149,10 +148,10 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
     protected fun play() {
         if (this::mediaItem.isInitialized) {
-            player?.let {
-                it.setMediaItem(mediaItem)
-                it.prepare()
-                mediaSessionConnector.setPlayer(it)
+            player?.let { player ->
+                mediaSourceFactory?.createMediaSource(mediaItem)?.let { player.setMediaSource(it) } ?: player.setMediaItem(mediaItem)
+                player.prepare()
+                mediaSessionConnector.setPlayer(player)
                 mediaSession.isActive = true
             }
         }
