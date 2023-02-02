@@ -555,4 +555,5 @@
     <string name="enable_bttv">Enable BTTV emotes</string>
     <string name="enable_ffz">Enable FFZ emotes</string>
     <string name="show_speed_button">Show playback speed button</string>
+    <string name="show_seeklive">Show seek to live button</string>
 </resources>
