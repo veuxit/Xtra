@@ -15,8 +15,9 @@ class StvGlobalDeserializer : JsonDeserializer<StvGlobalResponse> {
         dataJson?.forEach { emote ->
             emote.asJsonObject.let { obj ->
                 obj.get("name").asString.let { name ->
+                    val data = obj.getAsJsonObject("data")
                     val urls = mutableListOf<String>()
-                    val host = obj.getAsJsonObject("data").getAsJsonObject("host")
+                    val host = data.getAsJsonObject("host")
                     val template = host.get("url").asString
                     host.getAsJsonArray("files").forEach { file ->
                         file.asJsonObject.let { obj ->
@@ -34,6 +35,7 @@ class StvGlobalDeserializer : JsonDeserializer<StvGlobalResponse> {
                         url3x = if (urls.size >= 3) urls[2] else if (urls.isEmpty()) "https:${template}/3x.webp" else null,
                         url4x = if (urls.size >= 4) urls[3] else if (urls.isEmpty()) "https:${template}/4x.webp" else null,
                         type = if (urls.size >= 1) urls[0].substringAfterLast(".") else "webp",
+                        isAnimated = data.get("animated")?.takeIf { !it.isJsonNull }?.asBoolean,
                         isZeroWidth = obj.get("flags")?.takeIf { !it.isJsonNull }?.asInt == 1
                     ))
                 }

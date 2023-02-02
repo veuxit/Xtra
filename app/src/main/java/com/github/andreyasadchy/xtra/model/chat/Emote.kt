@@ -8,6 +8,8 @@ abstract class Emote {
     abstract val url4x: String?
     open val type: String?
         get() = null
+    open val isAnimated: Boolean?
+        get() = null
     open val isZeroWidth: Boolean
         get() = false
 

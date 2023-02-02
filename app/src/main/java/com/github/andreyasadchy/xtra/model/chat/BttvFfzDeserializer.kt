@@ -21,7 +21,8 @@ class BttvFfzDeserializer : JsonDeserializer<BttvFfzResponse> {
                         url2x = urls.get("2x")?.takeIf { !it.isJsonNull }?.asString,
                         url3x = urls.get("2x")?.takeIf { !it.isJsonNull }?.asString,
                         url4x = urls.get("4x")?.takeIf { !it.isJsonNull }?.asString,
-                        type = obj.get("imageType")?.takeIf { !it.isJsonNull }?.asString
+                        type = obj.get("imageType")?.takeIf { !it.isJsonNull }?.asString,
+                        isAnimated = obj.get("animated")?.takeIf { !it.isJsonNull }?.asBoolean
                     ))
                 }
             }

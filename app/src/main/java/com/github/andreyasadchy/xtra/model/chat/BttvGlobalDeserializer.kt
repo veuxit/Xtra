@@ -18,6 +18,7 @@ class BttvGlobalDeserializer : JsonDeserializer<BttvGlobalResponse> {
                         emotes.add(BttvEmote(
                             id = id,
                             name = name,
+                            isAnimated = obj.get("animated")?.takeIf { !it.isJsonNull }?.asBoolean
                         ))
                     }
                 }
