@@ -108,7 +108,15 @@ class ChatAdapter(
             builder.append("$string ")
             imageIndex += string.length + 1
             builder.append("  ")
-            images.add(Image(pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url2, pointReward?.rewardImage?.url1, null, false, imageIndex++, imageIndex++, false))
+            images.add(Image(
+                url1x = pointReward?.rewardImage?.url1,
+                url2x = pointReward?.rewardImage?.url2,
+                url3x = pointReward?.rewardImage?.url4,
+                url4x = pointReward?.rewardImage?.url4,
+                start = imageIndex++,
+                end = imageIndex++,
+                isEmote = false
+            ))
             badgesCount++
             builder.append("${pointReward?.rewardCost}\n")
             imageIndex += (pointReward?.rewardCost?.toString()?.length ?: 0) + 1
@@ -123,7 +131,15 @@ class ChatAdapter(
             val badge = channelBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version } ?: globalBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version }
             badge?.let {
                 builder.append("  ")
-                images.add(Image(it.url1x, it.url2x, it.url3x, it.url4x, null, false, imageIndex++, imageIndex++, false))
+                images.add(Image(
+                    url1x = it.url1x,
+                    url2x = it.url2x,
+                    url3x = it.url3x,
+                    url4x = it.url4x,
+                    start = imageIndex++,
+                    end = imageIndex++,
+                    isEmote = false
+                ))
                 badgesCount++
             }
         }
@@ -151,7 +167,18 @@ class ChatAdapter(
                 builder.append("$string ")
                 imageIndex += string.length + 1
                 builder.append("  ")
-                images.add(Image(pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url4, pointReward?.rewardImage?.url2, pointReward?.rewardImage?.url1, null, false, imageIndex++, imageIndex++, false))
+                images.add(Image(
+                    url1x = pointReward?.rewardImage?.url1,
+                    url2x = pointReward?.rewardImage?.url2,
+                    url3x = pointReward?.rewardImage?.url4,
+                    url4x = pointReward?.rewardImage?.url4,
+                    type = null,
+                    isAnimated = false,
+                    isZeroWidth = false,
+                    start = imageIndex++,
+                    end = imageIndex++,
+                    isEmote = false
+                ))
                 badgesCount++
                 builder.append("${pointReward?.rewardCost}")
                 imageIndex += pointReward?.rewardCost?.toString()?.length ?: 0
@@ -201,7 +228,18 @@ class ChatAdapter(
                     }
                     e.end -= length
                 }
-                copy.forEach { images.add(Image(it.url1x, it.url2x, it.url3x, it.url4x, it.type, it.isZeroWidth, imageIndex + it.begin, imageIndex + it.end + 1, true)) }
+                copy.forEach { images.add(Image(
+                    url1x = it.url1x,
+                    url2x = it.url2x,
+                    url3x = it.url3x,
+                    url4x = it.url4x,
+                    type = it.type,
+                    isAnimated = it.isAnimated,
+                    isZeroWidth = it.isZeroWidth,
+                    start = imageIndex + it.begin,
+                    end = imageIndex + it.end + 1,
+                    isEmote = true
+                )) }
             }
             val split = builder.substring(userNameWithPostfixLength).split(" ")
             var builderIndex = userNameWithPostfixLength
@@ -256,7 +294,18 @@ class ChatAdapter(
                         builder.replace(builderIndex, endIndex, ".")
                     }
                     builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    images.add(Image(emote.url1x, emote.url2x, emote.url3x, emote.url4x, emote.type, emote.isZeroWidth, builderIndex, builderIndex + 1, true))
+                    images.add(Image(
+                        url1x = emote.url1x,
+                        url2x = emote.url2x,
+                        url3x = emote.url3x,
+                        url4x = emote.url4x,
+                        type = emote.type,
+                        isAnimated = emote.isAnimated,
+                        isZeroWidth = emote.isZeroWidth,
+                        start = builderIndex,
+                        end = builderIndex + 1,
+                        isEmote = true
+                    ))
                     emotesFound++
                     builderIndex += 2
                     if (emote is CheerEmote) {
@@ -285,14 +334,10 @@ class ChatAdapter(
 
     private fun loadImages(holder: ViewHolder, images: List<Image>, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
         images.forEach {
-            if (it.type.equals("webp", true) && animateGifs) {
-                loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-            } else {
-                if (it.type.equals("gif", true) && animateGifs) {
-                    loadGif(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-                } else {
-                    loadDrawable(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-                }
+            when {
+                it.type.equals("webp", true) -> loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
+                it.type.equals("gif", true) -> loadGif(holder, it, originalMessage, builder, userId, channelId, fullMsg)
+                else -> loadDrawable(holder, it, originalMessage, builder, userId, channelId, fullMsg)
             }
         }
     }
@@ -330,7 +375,9 @@ class ChatAdapter(
                                 holder.textView.postDelayed(what, `when`)
                             }
                         }
-                        start()
+                        if (image.isAnimated != false && animateGifs) {
+                            start()
+                        }
                     }
                     try {
                         builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -381,7 +428,9 @@ class ChatAdapter(
                                 holder.textView.postDelayed(what, `when`)
                             }
                         }
-                        start()
+                        if (image.isAnimated != false && animateGifs) {
+                            start()
+                        }
                     }
                     try {
                         builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)

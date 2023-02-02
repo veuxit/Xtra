@@ -7,5 +7,6 @@ class CheerEmote(
     override val url3x: String?,
     override val url4x: String?,
     override val type: String?,
+    override val isAnimated: Boolean?,
     val minBits: Int,
     val color: String? = null) : Emote()

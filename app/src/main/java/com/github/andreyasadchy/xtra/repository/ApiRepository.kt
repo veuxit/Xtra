@@ -489,6 +489,7 @@ class ApiRepository @Inject constructor(
                                                 url3x = (scale.find { it.asString.startsWith("3") })?.let { url.replaceFirst("SCALE", it.asString) },
                                                 url4x = (scale.find { it.asString.startsWith("4") })?.let { url.replaceFirst("SCALE", it.asString) },
                                                 type = if (type.animation == "animated") "gif" else null,
+                                                isAnimated = type.animation == "animated",
                                                 minBits = item.bits,
                                                 color = item.color
                                             ))
@@ -519,6 +520,7 @@ class ApiRepository @Inject constructor(
                         url3x = urls?.get("3")?.takeIf { !it.isJsonNull }?.asString,
                         url4x = urls?.get("4")?.takeIf { !it.isJsonNull }?.asString,
                         type = if (urls == emote.animated) "gif" else null,
+                        isAnimated = urls == emote.animated,
                         minBits = emote.minBits,
                         color = emote.color
                     ))
