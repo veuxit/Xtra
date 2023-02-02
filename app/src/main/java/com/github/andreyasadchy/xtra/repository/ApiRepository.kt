@@ -573,7 +573,7 @@ class ApiRepository @Inject constructor(
                                                                 url2x = (scale.find { it.startsWith("2") })?.let { url.replaceFirst("SCALE", it) },
                                                                 url3x = (scale.find { it.startsWith("3") })?.let { url.replaceFirst("SCALE", it) },
                                                                 url4x = (scale.find { it.startsWith("4") })?.let { url.replaceFirst("SCALE", it) },
-                                                                type = if (type.animation == "animated") "image/gif" else null,
+                                                                type = if (type.animation == "animated") "gif" else null,
                                                                 minBits = item.bits,
                                                                 color = item.color
                                                             ))
@@ -602,7 +602,7 @@ class ApiRepository @Inject constructor(
                                                                 url2x = (scale.find { it.startsWith("2") })?.let { url.replaceFirst("SCALE", it) },
                                                                 url3x = (scale.find { it.startsWith("3") })?.let { url.replaceFirst("SCALE", it) },
                                                                 url4x = (scale.find { it.startsWith("4") })?.let { url.replaceFirst("SCALE", it) },
-                                                                type = if (type.animation == "animated") "image/gif" else null,
+                                                                type = if (type.animation == "animated") "gif" else null,
                                                                 minBits = item.bits,
                                                                 color = item.color
                                                             ))
@@ -636,7 +636,7 @@ class ApiRepository @Inject constructor(
                         url2x = urls?.get("2")?.takeIf { !it.isJsonNull }?.asString,
                         url3x = urls?.get("3")?.takeIf { !it.isJsonNull }?.asString,
                         url4x = urls?.get("4")?.takeIf { !it.isJsonNull }?.asString,
-                        type = if (urls == emote.animated) "image/gif" else null,
+                        type = if (urls == emote.animated) "gif" else null,
                         minBits = emote.minBits,
                         color = emote.color
                     ))
@@ -689,7 +689,7 @@ class ApiRepository @Inject constructor(
                 url2x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
                 url3x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
                 url4x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
-                type = if (format == "animated") "image/gif" else null,
+                type = if (format == "animated") "gif" else null,
                 setId = emote.setId,
                 ownerId = emote.ownerId
             ))

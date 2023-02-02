@@ -291,7 +291,7 @@ class ChatAdapter(
             when (imageLibrary) {
                 "0" -> loadCoil(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                 "1" -> {
-                    if (it.type == "image/webp") {
+                    if (it.type.equals("webp", true)) {
                         if (animateGifs) {
                             loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                         } else {
@@ -302,10 +302,10 @@ class ChatAdapter(
                     }
                 }
                 else -> {
-                    if (it.type == "image/webp" && animateGifs) {
+                    if (it.type.equals("webp", true) && animateGifs) {
                         loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                     } else {
-                        if (it.type == "image/gif" && animateGifs) {
+                        if (it.type.equals("gif", true) && animateGifs) {
                             loadGif(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                         } else {
                             loadDrawable(holder, it, originalMessage, builder, userId, channelId, fullMsg)

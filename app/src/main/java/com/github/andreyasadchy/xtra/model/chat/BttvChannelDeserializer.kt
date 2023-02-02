@@ -21,7 +21,6 @@ class BttvChannelDeserializer : JsonDeserializer<BttvChannelResponse> {
                                 emotes.add(BttvEmote(
                                     id = id,
                                     name = name,
-                                    type = obj.get("imageType")?.takeIf { !it.isJsonNull }?.asString?.let { type -> "image/$type" }
                                 ))
                             }
                         }
