@@ -44,6 +44,12 @@
         android:icon="@drawable/baseline_aspect_ratio_black_24" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="player_speedbutton"
+        android:title="@string/show_speed_button"
+        android:icon="@drawable/exo_ic_speed" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="player_settings"
         android:title="@string/show_quality_options"

@@ -181,6 +181,12 @@
         <item name="android:visibility">gone</item>
     </style>
 
+    <style name="PlayerSpeed" parent="PlayerSmallImage">
+        <item name="android:id">@id/playerSpeed</item>
+        <item name="android:src">@drawable/exo_ic_speed</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
     <style name="PlayerSettings" parent="PlayerSmallImage">
         <item name="android:id">@id/playerSettings</item>
         <item name="android:src">@drawable/baseline_settings_black_24</item>

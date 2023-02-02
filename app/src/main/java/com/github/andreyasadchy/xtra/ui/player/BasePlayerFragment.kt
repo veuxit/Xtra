@@ -214,6 +214,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     }
                 }
             }
+        } else {
+            if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, false)) {
+                view.findViewById<ImageButton>(R.id.playerSpeed).apply {
+                    visible()
+                    setOnClickListener { showSpeedDialog() }
+                }
+            }
         }
     }
 
