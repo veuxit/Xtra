@@ -7,7 +7,8 @@ class BttvEmote(
         override val url2x: String? = "https://cdn.betterttv.net/emote/$id/2x.webp",
         override val url3x: String? = "https://cdn.betterttv.net/emote/$id/2x.webp",
         override val url4x: String? = "https://cdn.betterttv.net/emote/$id/3x.webp",
-        override val type: String? = "webp") : Emote() {
+        override val type: String? = "webp",
+        override val isAnimated: Boolean?) : Emote() {
 
         private val zeroWidthList = listOf("IceCold", "SoSnowy", "SantaHat", "TopHat", "CandyCane", "ReinDeer", "cvHazmat", "cvMask")
         override val isZeroWidth: Boolean = zeroWidthList.contains(name)

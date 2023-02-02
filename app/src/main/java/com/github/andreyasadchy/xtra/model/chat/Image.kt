@@ -5,8 +5,9 @@ data class Image(
         val url2x: String?,
         val url3x: String?,
         val url4x: String?,
-        val type: String?,
-        val isZeroWidth: Boolean,
+        val type: String? = null,
+        val isAnimated: Boolean? = null,
+        val isZeroWidth: Boolean = false,
         var start: Int,
         var end: Int,
         val isEmote: Boolean)

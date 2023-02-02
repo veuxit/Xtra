@@ -7,4 +7,5 @@ class StvEmote(
     override val url3x: String?,
     override val url4x: String?,
     override val type: String?,
+    override val isAnimated: Boolean?,
     override val isZeroWidth: Boolean) : Emote()
