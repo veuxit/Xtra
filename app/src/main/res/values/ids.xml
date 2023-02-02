@@ -16,6 +16,7 @@
     <item name="playerMenu" type="id" />
     <item name="playerGames" type="id" />
     <item name="playerRestart" type="id" />
+    <item name="playerSeekLive" type="id" />
     <item name="playerVolume" type="id" />
     <item name="playerMode" type="id" />
     <item name="playerSubtitleToggle" type="id" />

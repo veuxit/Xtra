@@ -233,6 +233,12 @@
         <item name="android:visibility">gone</item>
     </style>
 
+    <style name="PlayerSeekLive" parent="PlayerSmallImage">
+        <item name="android:id">@id/playerSeekLive</item>
+        <item name="android:src">@drawable/exo_icon_fastforward</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
     <style name="PlayerVolume" parent="PlayerSmallImage">
         <item name="android:id">@id/playerVolume</item>
         <item name="android:src">@drawable/baseline_volume_up_black_24</item>

@@ -100,6 +100,12 @@ class StreamPlayerFragment : BasePlayerFragment() {
             restart.visible()
             restart.setOnClickListener { restartPlayer() }
         }
+        if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
+            requireView().findViewById<ImageButton>(R.id.playerSeekLive).apply {
+                visible()
+                setOnClickListener { viewModel.player?.seekToDefaultPosition() }
+            }
+        }
         if (prefs.getBoolean(C.PLAYER_MODE, false)) {
             mode.visible()
             mode.setOnClickListener {
