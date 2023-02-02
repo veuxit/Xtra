@@ -55,6 +55,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val autoSwitchRaids = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
         val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
         val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
+        val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
+        val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
+        val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
         val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, false)
         val disableChat = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
         val isLive = args.getBoolean(KEY_IS_LIVE)
@@ -62,7 +65,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             false
         } else {
             if (isLive) {
-                viewModel.startLive(useSSl, usePubSub, account, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), useApiCommands)
+                viewModel.startLive(useSSl, usePubSub, account, isLoggedIn, helixClientId, gqlClientId, gqlClientId2, channelId, channelLogin, channelName, streamId, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, useApiCommands)
                 chatView.init(this)
                 chatView.setCallback(viewModel, (viewModel.chat as? ChatViewModel.LiveChatController))
                 chatView.setChannelId(channelId)
@@ -80,7 +83,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
                         chatView.init(this)
                         val getCurrentPosition = (parentFragment as ChatReplayPlayerFragment)::getCurrentPosition
-                        viewModel.startReplay(account, helixClientId, gqlClientId, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, emoteQuality, animateGifs)
+                        viewModel.startReplay(account, helixClientId, gqlClientId, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz)
                         chatView.setChannelId(channelId)
                         true
                     } else {
@@ -136,7 +139,10 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
         val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
-        viewModel.reloadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs)
+        val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
+        val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
+        val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
+        viewModel.reloadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz)
     }
 
     fun updateStreamId(id: String?) {
