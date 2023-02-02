@@ -551,4 +551,7 @@
     <string name="toggle_subtitles">Toggle subtitles</string>
     <string name="first_decoder">Use first media decoder only</string>
     <string name="first_decoder_desc">Should force the player to use a hardware decoder</string>
+    <string name="enable_stv">Enable 7TV emotes</string>
+    <string name="enable_bttv">Enable BTTV emotes</string>
+    <string name="enable_ffz">Enable FFZ emotes</string>
 </resources>

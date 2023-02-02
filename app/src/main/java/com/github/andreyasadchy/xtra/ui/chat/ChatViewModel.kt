@@ -103,7 +103,7 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useSSl: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null, useApiCommands: Boolean) {
+    fun startLive(useSSl: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, useApiCommands: Boolean) {
         if (chat == null && channelLogin != null) {
             this.streamId = streamId
             this.showRaids = showRaids
@@ -127,7 +127,8 @@ class ChatViewModel @Inject constructor(
                 notifyPoints = notifyPoints,
                 useApiCommands = useApiCommands
             )
-            init(
+            chat?.start()
+            loadEmotes(
                 helixClientId = helixClientId,
                 helixToken = account.helixToken,
                 gqlClientId = gqlClientId,
@@ -135,13 +136,17 @@ class ChatViewModel @Inject constructor(
                 channelLogin = channelLogin,
                 emoteQuality = emoteQuality,
                 animateGifs = animateGifs,
-                enableRecentMsg = enableRecentMsg,
-                recentMsgLimit = recentMsgLimit
+                enableStv = enableStv,
+                enableBttv = enableBttv,
+                enableFfz = enableFfz
             )
+            if (enableRecentMsg) {
+                loadRecentMessages(channelLogin, recentMsgLimit)
+            }
         }
     }
 
-    fun startReplay(account: Account, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, emoteQuality: String, animateGifs: Boolean) {
+    fun startReplay(account: Account, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean) {
         if (chat == null) {
             chat = VideoChatController(
                 clientId = gqlClientId,
@@ -149,14 +154,18 @@ class ChatViewModel @Inject constructor(
                 startTime = startTime,
                 getCurrentPosition = getCurrentPosition
             )
-            init(
+            chat?.start()
+            loadEmotes(
                 helixClientId = helixClientId,
                 helixToken = account.helixToken,
                 gqlClientId = gqlClientId,
                 channelId = channelId,
                 channelLogin = channelLogin,
                 emoteQuality = emoteQuality,
-                animateGifs = animateGifs
+                animateGifs = animateGifs,
+                enableStv = enableStv,
+                enableBttv = enableBttv,
+                enableFfz = enableFfz
             )
         }
     }
@@ -178,15 +187,7 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
     }
 
-    private fun init(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableRecentMsg: Boolean? = false, recentMsgLimit: String? = null) {
-        chat?.start()
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs)
-        if (channelLogin != null && enableRecentMsg == true) {
-            loadRecentMessages(channelLogin, recentMsgLimit)
-        }
-    }
-
-    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean) {
+    private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean) {
         val list = mutableListOf<Emote>()
         savedGlobalBadges.also {
             if (!it.isNullOrEmpty()) {
@@ -208,74 +209,128 @@ class ChatViewModel @Inject constructor(
                 }
             }
         }
-        globalStvEmotes.also {
-            if (!it.isNullOrEmpty()) {
-                (chat as? LiveChatController)?.addEmotes(it)
-                list.addAll(it)
-                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                reloadMessages.value = true
-            } else {
+        if (enableStv) {
+            globalStvEmotes.also {
+                if (!it.isNullOrEmpty()) {
+                    (chat as? LiveChatController)?.addEmotes(it)
+                    list.addAll(it)
+                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                    reloadMessages.value = true
+                } else {
+                    viewModelScope.launch {
+                        try {
+                            playerRepository.loadGlobalStvEmotes().body()?.emotes?.let { emotes ->
+                                if (emotes.isNotEmpty()) {
+                                    globalStvEmotes = emotes
+                                    (chat as? LiveChatController)?.addEmotes(emotes)
+                                    list.addAll(emotes)
+                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                                    reloadMessages.value = true
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to load global 7tv emotes", e)
+                        }
+                    }
+                }
+            }
+            if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadGlobalStvEmotes().body()?.emotes?.let { emotes ->
-                            if (emotes.isNotEmpty()) {
-                                globalStvEmotes = emotes
-                                (chat as? LiveChatController)?.addEmotes(emotes)
-                                list.addAll(emotes)
+                        playerRepository.loadStvEmotes(channelId).body()?.emotes?.let {
+                            if (it.isNotEmpty()) {
+                                (chat as? LiveChatController)?.addEmotes(it)
+                                list.addAll(it)
                                 _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 reloadMessages.value = true
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load global 7tv emotes", e)
+                        Log.e(TAG, "Failed to load 7tv emotes for channel $channelId", e)
                     }
                 }
             }
         }
-        globalBttvEmotes.also {
-            if (!it.isNullOrEmpty()) {
-                (chat as? LiveChatController)?.addEmotes(it)
-                list.addAll(it)
-                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                reloadMessages.value = true
-            } else {
+        if (enableBttv) {
+            globalBttvEmotes.also {
+                if (!it.isNullOrEmpty()) {
+                    (chat as? LiveChatController)?.addEmotes(it)
+                    list.addAll(it)
+                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                    reloadMessages.value = true
+                } else {
+                    viewModelScope.launch {
+                        try {
+                            playerRepository.loadGlobalBttvEmotes().body()?.emotes?.let { emotes ->
+                                if (emotes.isNotEmpty()) {
+                                    globalBttvEmotes = emotes
+                                    (chat as? LiveChatController)?.addEmotes(emotes)
+                                    list.addAll(emotes)
+                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                                    reloadMessages.value = true
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to load global BTTV emotes", e)
+                        }
+                    }
+                }
+            }
+            if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadGlobalBttvEmotes().body()?.emotes?.let { emotes ->
-                            if (emotes.isNotEmpty()) {
-                                globalBttvEmotes = emotes
-                                (chat as? LiveChatController)?.addEmotes(emotes)
-                                list.addAll(emotes)
+                        playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let {
+                            if (it.isNotEmpty()) {
+                                (chat as? LiveChatController)?.addEmotes(it)
+                                list.addAll(it)
                                 _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 reloadMessages.value = true
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load global BTTV emotes", e)
+                        Log.e(TAG, "Failed to load BTTV emotes for channel $channelId", e)
                     }
                 }
             }
         }
-        globalFfzEmotes.also {
-            if (!it.isNullOrEmpty()) {
-                (chat as? LiveChatController)?.addEmotes(it)
-                list.addAll(it)
-                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                reloadMessages.value = true
-            } else {
+        if (enableFfz) {
+            globalFfzEmotes.also {
+                if (!it.isNullOrEmpty()) {
+                    (chat as? LiveChatController)?.addEmotes(it)
+                    list.addAll(it)
+                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                    reloadMessages.value = true
+                } else {
+                    viewModelScope.launch {
+                        try {
+                            playerRepository.loadBttvGlobalFfzEmotes().body()?.emotes?.let { emotes ->
+                                if (emotes.isNotEmpty()) {
+                                    globalFfzEmotes = emotes
+                                    (chat as? LiveChatController)?.addEmotes(emotes)
+                                    list.addAll(emotes)
+                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
+                                    reloadMessages.value = true
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to load global FFZ emotes", e)
+                        }
+                    }
+                }
+            }
+            if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadBttvGlobalFfzEmotes().body()?.emotes?.let { emotes ->
-                            if (emotes.isNotEmpty()) {
-                                globalFfzEmotes = emotes
-                                (chat as? LiveChatController)?.addEmotes(emotes)
-                                list.addAll(emotes)
+                        playerRepository.loadBttvFfzEmotes(channelId).body()?.emotes?.let {
+                            if (it.isNotEmpty()) {
+                                (chat as? LiveChatController)?.addEmotes(it)
+                                list.addAll(it)
                                 _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 reloadMessages.value = true
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load global FFZ emotes", e)
+                        Log.e(TAG, "Failed to load FFZ emotes for channel $channelId", e)
                     }
                 }
             }
@@ -306,56 +361,12 @@ class ChatViewModel @Inject constructor(
                 }
             }
         }
-        if (!channelId.isNullOrBlank()) {
-            viewModelScope.launch {
-                try {
-                    playerRepository.loadStvEmotes(channelId).body()?.emotes?.let {
-                        if (it.isNotEmpty()) {
-                            (chat as? LiveChatController)?.addEmotes(it)
-                            list.addAll(it)
-                            _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                            reloadMessages.value = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load 7tv emotes for channel $channelId", e)
-                }
-            }
-            viewModelScope.launch {
-                try {
-                    playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let {
-                        if (it.isNotEmpty()) {
-                            (chat as? LiveChatController)?.addEmotes(it)
-                            list.addAll(it)
-                            _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                            reloadMessages.value = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load BTTV emotes for channel $channelId", e)
-                }
-            }
-            viewModelScope.launch {
-                try {
-                    playerRepository.loadBttvFfzEmotes(channelId).body()?.emotes?.let {
-                        if (it.isNotEmpty()) {
-                            (chat as? LiveChatController)?.addEmotes(it)
-                            list.addAll(it)
-                            _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
-                            reloadMessages.value = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load FFZ emotes for channel $channelId", e)
-                }
-            }
-        }
     }
 
-    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String?) {
+    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String) {
         viewModelScope.launch {
             try {
-                playerRepository.loadRecentMessages(channelLogin, (recentMsgLimit ?: "100")).body()?.messages?.let {
+                playerRepository.loadRecentMessages(channelLogin, recentMsgLimit).body()?.messages?.let {
                     if (it.isNotEmpty()) {
                         recentMessages.postValue(it)
                         reloadMessages.value = true
@@ -367,12 +378,12 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean) {
+    fun reloadEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean) {
         savedGlobalBadges = null
         globalStvEmotes = null
         globalBttvEmotes = null
         globalFfzEmotes = null
-        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs)
+        loadEmotes(helixClientId, helixToken, gqlClientId, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz)
     }
 
     inner class LiveChatController(
