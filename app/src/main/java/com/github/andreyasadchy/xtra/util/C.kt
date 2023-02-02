@@ -65,6 +65,7 @@ object C {
     const val PLAYER_FOLLOW = "player_follow"
     const val PLAYER_SLEEP = "player_sleep"
     const val PLAYER_ASPECT = "player_aspect"
+    const val PLAYER_SPEEDBUTTON = "player_speedbutton"
     const val PLAYER_SETTINGS = "player_settings"
     const val PLAYER_RESTART = "player_restart"
     const val PLAYER_MODE = "player_mode"

@@ -61,6 +61,9 @@
             style="@style/PlayerRatio"
             tools:visibility="visible" />
         <ImageButton
+            style="@style/PlayerSpeed"
+            tools:visibility="visible" />
+        <ImageButton
             style="@style/PlayerSettings"
             tools:visibility="visible" />
         <ImageButton

@@ -11,6 +11,7 @@
     <item name="playerFollow" type="id" />
     <item name="playerSleepTimer" type="id" />
     <item name="playerAspectRatio" type="id" />
+    <item name="playerSpeed" type="id" />
     <item name="playerSettings" type="id" />
     <item name="playerMenu" type="id" />
     <item name="playerGames" type="id" />
