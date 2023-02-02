@@ -245,6 +245,24 @@
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="chat_enable_stv"
+        android:title="@string/enable_stv"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="chat_enable_bttv"
+        android:title="@string/enable_bttv"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="chat_enable_ffz"
+        android:title="@string/enable_ffz"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="player_keep_chat_open"
         android:title="@string/keep_chat_open"
