@@ -74,6 +74,12 @@
         android:icon="@drawable/baseline_replay_black_24" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="player_seeklive"
+        android:title="@string/show_seeklive"
+        android:icon="@drawable/exo_icon_fastforward" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="player_volumebutton"
         android:title="@string/player_volumebutton"

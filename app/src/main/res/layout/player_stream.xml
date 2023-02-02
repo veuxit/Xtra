@@ -41,6 +41,9 @@
             style="@style/PlayerRestart"
             tools:visibility="visible" />
         <ImageButton
+            style="@style/PlayerSeekLive"
+            tools:visibility="visible" />
+        <ImageButton
             style="@style/PlayerVolume"
             tools:visibility="visible" />
         <ImageButton
