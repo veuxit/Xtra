@@ -285,10 +285,10 @@ class ChatAdapter(
 
     private fun loadImages(holder: ViewHolder, images: List<Image>, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
         images.forEach {
-            if (it.type == "image/webp" && animateGifs) {
+            if (it.type.equals("webp", true) && animateGifs) {
                 loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
             } else {
-                if (it.type == "image/gif" && animateGifs) {
+                if (it.type.equals("gif", true) && animateGifs) {
                     loadGif(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                 } else {
                     loadDrawable(holder, it, originalMessage, builder, userId, channelId, fullMsg)

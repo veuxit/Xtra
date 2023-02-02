@@ -742,7 +742,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                     url2x = (scale.find { it.asString.startsWith("2") })?.asString?.let { url.replaceFirst("SCALE", it) },
                     url3x = (scale.find { it.asString.startsWith("3") })?.asString?.let { url.replaceFirst("SCALE", it) },
                     url4x = (scale.find { it.asString.startsWith("4") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    type = if (type.get("animation").asString == "animated") "image/gif" else null,
+                    type = if (type.get("animation").asString == "animated") "gif" else null,
                     minBits = item.get("bits").asInt,
                     color = item.get("color").asString
                 ))

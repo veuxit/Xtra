@@ -33,7 +33,7 @@ class StvChannelDeserializer : JsonDeserializer<StvChannelResponse> {
                         url2x = if (urls.size >= 2) urls[1] else if (urls.isEmpty()) "https:${template}/2x.webp" else null,
                         url3x = if (urls.size >= 3) urls[2] else if (urls.isEmpty()) "https:${template}/3x.webp" else null,
                         url4x = if (urls.size >= 4) urls[3] else if (urls.isEmpty()) "https:${template}/4x.webp" else null,
-                        type = if (urls.size >= 1) urls[0].substringAfterLast(".").let { "image/$it" } else "image/webp",
+                        type = if (urls.size >= 1) urls[0].substringAfterLast(".") else "webp",
                         isZeroWidth = obj.get("flags")?.takeIf { !it.isJsonNull }?.asInt == 1
                     ))
                 }
