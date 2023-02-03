@@ -17,12 +17,12 @@ sealed class Account(val id: String?,
 
         fun get(context: Context): Account {
             return account ?: with(context.prefs()) {
-                val helixToken = getString(C.TOKEN, null)
-                val gqlToken = getString(C.GQL_TOKEN, null)
+                val helixToken = getString(C.TOKEN, null).takeUnless { it.isNullOrBlank() }
+                val gqlToken = getString(C.GQL_TOKEN, null).takeUnless { it.isNullOrBlank() }
                 if (!helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
-                    val id = getString(C.USER_ID, null)
-                    val name = getString(C.USERNAME, null)
-                    val gqlToken2 = getString(C.GQL_TOKEN2, null)
+                    val id = getString(C.USER_ID, null).takeUnless { it.isNullOrBlank() }
+                    val name = getString(C.USERNAME, null).takeUnless { it.isNullOrBlank() }
+                    val gqlToken2 = getString(C.GQL_TOKEN2, null).takeUnless { it.isNullOrBlank() }
                     if (TwitchApiHelper.checkedValidation) {
                         LoggedIn(id, name, helixToken, gqlToken, gqlToken2)
                     } else {
