@@ -57,6 +57,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
     protected var isResumed = true
     var pauseHandled = false
+    private var playing = true
 
     private val _showPauseButton = MutableLiveData<Boolean>()
     val showPauseButton: LiveData<Boolean>
@@ -135,7 +136,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
                 if (this@PlayerViewModel !is StreamPlayerViewModel) {
                     setPlaybackSpeed(prefs.getFloat(C.PLAYER_SPEED, 1f))
                 }
-                playWhenReady = true
+                playWhenReady = playing
             }
             _playerUpdated.postValue(true)
         }
@@ -151,12 +152,16 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     protected fun releasePlayer() {
+        if (playerMode.value != PlayerMode.DISABLED) {
+            player?.let { playing = it.isPlaying }
+        }
         player?.release()
         player = null
         _playerUpdated.postValue(true)
     }
 
     protected fun startBackgroundAudio(playlistUrl: String, channelName: String?, title: String?, imageUrl: String?, usePlayPause: Boolean, type: Int, videoId: Number?, showNotification: Boolean) {
+        releasePlayer()
         val context = XtraApp.INSTANCE //TODO
         val intent = Intent(context, AudioPlayerService::class.java).apply {
             putExtra(AudioPlayerService.KEY_PLAYLIST_URL, playlistUrl)
@@ -167,8 +172,8 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
             putExtra(AudioPlayerService.KEY_CURRENT_POSITION, player?.currentPosition)
             putExtra(AudioPlayerService.KEY_TYPE, type)
             putExtra(AudioPlayerService.KEY_VIDEO_ID, videoId)
+            putExtra(AudioPlayerService.KEY_PLAYING, playing)
         }
-        releasePlayer()
         val connection = object : ServiceConnection {
 
             override fun onServiceDisconnected(name: ComponentName) {

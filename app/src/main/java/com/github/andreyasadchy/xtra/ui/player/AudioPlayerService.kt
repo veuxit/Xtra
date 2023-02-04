@@ -148,7 +148,7 @@ class AudioPlayerService : Service() {
             }
             setMediaItem(mediaItem)
             prepare()
-            playWhenReady = true
+            playWhenReady = intent.getBooleanExtra(KEY_PLAYING, true)
             if (currentPlaybackPosition > 0) {
                 player.seekTo(currentPlaybackPosition)
             }
@@ -289,6 +289,7 @@ class AudioPlayerService : Service() {
         const val KEY_CURRENT_POSITION = "currentPosition"
         const val KEY_TYPE = "type"
         const val KEY_VIDEO_ID = "videoId"
+        const val KEY_PLAYING = "playing"
 
         const val REQUEST_CODE_RESUME = 2
 
