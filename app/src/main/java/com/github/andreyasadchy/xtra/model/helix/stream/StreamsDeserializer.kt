@@ -28,6 +28,7 @@ class StreamsDeserializer : JsonDeserializer<StreamsResponse> {
                     viewerCount = obj.get("viewer_count")?.takeIf { !it.isJsonNull }?.asInt,
                     startedAt = obj.get("started_at")?.takeIf { !it.isJsonNull }?.asString,
                     thumbnailUrl = obj.get("thumbnail_url")?.takeIf { !it.isJsonNull }?.asString,
+                    tags = obj.get("tags")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { it?.takeIf { !it.isJsonNull }?.asString }
                 ))
             }
         }

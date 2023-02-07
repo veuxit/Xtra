@@ -462,8 +462,8 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         fragNavController.pushFragment(SearchFragment())
     }
 
-    fun openTagSearch(getGameTags: Boolean = false, gameId: String? = null, gameName: String? = null) {
-        fragNavController.pushFragment(BaseTagSearchFragment.newInstance(getGameTags, gameId, gameName))
+    fun openTagSearch(getGameTags: Boolean = false) {
+        fragNavController.pushFragment(BaseTagSearchFragment.newInstance(getGameTags))
     }
 
     private fun initNavigation() {

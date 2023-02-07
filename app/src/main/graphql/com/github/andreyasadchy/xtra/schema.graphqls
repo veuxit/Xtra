@@ -131,6 +131,10 @@ type FollowerConnection {
   totalCount: Int
 }
 
+type FreeformTag {
+  name: String
+}
+
 type Game {
   boxArtURL(width: Int, height: Int): String
   broadcastersCount: Int
@@ -220,10 +224,10 @@ type SearchUserEdge {
 type Stream {
   broadcaster: User
   createdAt: Time
+  freeformTags: [FreeformTag!]
   game: Game
   id: ID
   previewImageURL: String
-  tags: [Tag!]
   title: String
   type: String
   viewersCount: Int
@@ -314,8 +318,8 @@ input GameOptions {
 }
 
 input GameStreamOptions {
+  freeformTags: [String!]
   sort: StreamSort
-  tags: [String!]
 }
 
 input SearchForTarget {
@@ -325,8 +329,8 @@ input SearchForTarget {
 }
 
 input StreamOptions {
+  freeformTags: [String!]
   sort: StreamSort
-  tags: [String!]
 }
 
 input UserClipsInput {

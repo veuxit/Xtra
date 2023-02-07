@@ -794,8 +794,8 @@ class ApiRepository @Inject constructor(
         gql.loadUnfollowGame(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, gameId).error
     }
 
-    fun loadTagsGQL(clientId: String?, getGameTags: Boolean, gameId: String?, gameName: String?, query: String?, coroutineScope: CoroutineScope): Listing<Tag> {
-        val factory = TagsDataSourceGQL.Factory(clientId, getGameTags, gameId, gameName, query, gql, coroutineScope)
+    fun loadTagsGQL(clientId: String?, getGameTags: Boolean, query: String?, coroutineScope: CoroutineScope): Listing<Tag> {
+        val factory = TagsDataSourceGQL.Factory(clientId, getGameTags, query, gql, coroutineScope)
         val config = PagedList.Config.Builder()
             .setPageSize(10000)
             .setInitialLoadSizeHint(10000)

@@ -10,7 +10,6 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.util.C
 import kotlinx.android.synthetic.main.dialog_streams_sort.*
 
 class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
@@ -57,7 +56,7 @@ class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
             dismiss()
         }
         selectTags.setOnClickListener {
-            activity.openTagSearch(gameId = parentFragment?.arguments?.getString(C.GAME_ID), gameName = parentFragment?.arguments?.getString(C.GAME_NAME))
+            activity.openTagSearch()
             dismiss()
         }
     }

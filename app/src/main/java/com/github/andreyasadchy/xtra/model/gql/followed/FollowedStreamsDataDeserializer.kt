@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.followed
 
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -18,15 +17,6 @@ class FollowedStreamsDataDeserializer : JsonDeserializer<FollowedStreamsDataResp
         val hasNextPage = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("currentUser")?.getAsJsonObject("followedLiveUsers")?.get("pageInfo")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("hasNextPage")?.takeIf { !it.isJsonNull }?.asBoolean
         dataJson?.forEach { item ->
             item?.asJsonObject?.getAsJsonObject("node")?.let { obj ->
-                val tags = mutableListOf<Tag>()
-                obj.get("tags")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { tagElement ->
-                    tagElement?.takeIf { it.isJsonObject }?.asJsonObject.let { tag ->
-                        tags.add(Tag(
-                            id = tag?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                            name = tag?.get("localizedName")?.takeIf { !it.isJsonNull }?.asString,
-                        ))
-                    }
-                }
                 data.add(Stream(
                     id = obj.get("stream")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
                     channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
@@ -38,8 +28,9 @@ class FollowedStreamsDataDeserializer : JsonDeserializer<FollowedStreamsDataResp
                     title = obj.get("stream")?.takeIf { it.isJsonObject }?.asJsonObject?.get("title")?.takeIf { !it.isJsonNull }?.asString,
                     viewerCount = obj.get("stream")?.takeIf { it.isJsonObject }?.asJsonObject?.get("viewersCount")?.takeIf { !it.isJsonNull }?.asInt,
                     thumbnailUrl = obj.get("stream")?.takeIf { it.isJsonObject }?.asJsonObject?.get("previewImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    profileImageUrl = obj.get("profileImageURL")?.takeIf { !it.isJsonNull }?.asString,
-                    tags = tags
+                    tags = obj.get("freeformTags")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { tagElement ->
+                        tagElement?.takeIf { it.isJsonObject }?.asJsonObject?.get("name")?.takeIf { !it.isJsonNull }?.asString
+                    }
                 ))
             }
         }
