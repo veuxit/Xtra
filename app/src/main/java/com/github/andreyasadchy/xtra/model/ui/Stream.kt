@@ -19,7 +19,7 @@ data class Stream(
         val thumbnailUrl: String? = null,
 
         var profileImageUrl: String? = null,
-        val tags: List<Tag>? = null,
+        val tags: List<String>? = null,
         val user: User? = null) : Parcelable {
 
         val thumbnail: String?

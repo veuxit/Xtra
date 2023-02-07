@@ -7,7 +7,6 @@ import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.TopStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
@@ -92,13 +91,6 @@ class StreamsDataSource private constructor(
         val list = mutableListOf<Stream>()
         if (get != null) {
             for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i?.node?.tags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
                 list.add(Stream(
                     id = i?.node?.id,
                     channelId = i?.node?.broadcaster?.id,
@@ -112,7 +104,7 @@ class StreamsDataSource private constructor(
                     startedAt = i?.node?.createdAt?.toString(),
                     thumbnailUrl = i?.node?.previewImageURL,
                     profileImageUrl = i?.node?.broadcaster?.profileImageURL,
-                    tags = tags
+                    tags = i?.node?.freeformTags?.mapNotNull { it.name }
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()

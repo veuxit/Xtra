@@ -19,9 +19,8 @@ query SearchStreams($query: String!, $first: Int, $after: Cursor) {
                 }
                 id
                 previewImageURL
-                tags {
-                    id
-                    localizedName
+                freeformTags {
+                    name
                 }
                 type
                 viewersCount

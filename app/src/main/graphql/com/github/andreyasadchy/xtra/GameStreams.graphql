@@ -1,6 +1,6 @@
 query GameStreams($id: ID, $name: String, $sort: StreamSort, $tags: [String!], $first: Int, $after: Cursor) {
     game(id: $id, name: $name) {
-        streams(first: $first, after: $after, options: { sort: $sort, tags: $tags }) {
+        streams(first: $first, after: $after, options: { sort: $sort, freeformTags: $tags }) {
             edges {
                 cursor
                 node {
@@ -16,9 +16,8 @@ query GameStreams($id: ID, $name: String, $sort: StreamSort, $tags: [String!], $
                     createdAt
                     id
                     previewImageURL
-                    tags {
-                        id
-                        localizedName
+                    freeformTags {
+                        name
                     }
                     type
                     viewersCount

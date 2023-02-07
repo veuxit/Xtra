@@ -23,11 +23,9 @@ import kotlinx.coroutines.delay
 class BaseTagSearchFragment : MediaPagerFragment() {
 
     companion object {
-        fun newInstance(getGameTags: Boolean, gameId: String?, gameName: String?) = BaseTagSearchFragment().apply {
+        fun newInstance(getGameTags: Boolean) = BaseTagSearchFragment().apply {
             arguments = Bundle().apply {
                 putBoolean(C.GET_GAME_TAGS, getGameTags)
-                putString(C.GAME_ID, gameId)
-                putString(C.GAME_NAME, gameName)
             }
         }
     }

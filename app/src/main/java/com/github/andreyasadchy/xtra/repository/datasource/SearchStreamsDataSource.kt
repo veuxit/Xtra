@@ -7,7 +7,6 @@ import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.SearchStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.util.C
 import kotlinx.coroutines.CoroutineScope
 
@@ -66,6 +65,7 @@ class SearchStreamsDataSource private constructor(
                 title = it.stream?.title,
                 startedAt = it.stream?.startedAt,
                 profileImageUrl = it.profileImageUrl,
+                tags = it.stream?.tags
             ))
         }
         offset = get.cursor
@@ -83,13 +83,6 @@ class SearchStreamsDataSource private constructor(
         if (get != null) {
             for (edge in get) {
                 edge.node?.let { i ->
-                    val tags = mutableListOf<Tag>()
-                    i.tags?.forEach { tag ->
-                        tags.add(Tag(
-                            id = tag.id,
-                            name = tag.localizedName
-                        ))
-                    }
                     list.add(Stream(
                         id = i.id,
                         channelId = i.broadcaster?.id,
@@ -103,7 +96,7 @@ class SearchStreamsDataSource private constructor(
                         startedAt = i.createdAt?.toString(),
                         thumbnailUrl = i.previewImageURL,
                         profileImageUrl = i.broadcaster?.profileImageURL,
-                        tags = tags
+                        tags = i.freeformTags?.mapNotNull { it.name }
                     ))
                 }
             }

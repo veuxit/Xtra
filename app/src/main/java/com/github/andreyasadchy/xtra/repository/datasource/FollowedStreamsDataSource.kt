@@ -8,7 +8,6 @@ import com.github.andreyasadchy.xtra.UserFollowedStreamsQuery
 import com.github.andreyasadchy.xtra.UsersStreamQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -125,13 +124,6 @@ class FollowedStreamsDataSource(
         val list = mutableListOf<Stream>()
         if (get != null) {
             for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i?.node?.stream?.tags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
                 list.add(Stream(
                     id = i?.node?.stream?.id,
                     channelId = i?.node?.id,
@@ -145,7 +137,7 @@ class FollowedStreamsDataSource(
                     startedAt = i?.node?.stream?.createdAt?.toString(),
                     thumbnailUrl = i?.node?.stream?.previewImageURL,
                     profileImageUrl = i?.node?.profileImageURL,
-                    tags = tags
+                    tags = i?.node?.stream?.freeformTags?.mapNotNull { it.name }
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()
@@ -181,17 +173,10 @@ class FollowedStreamsDataSource(
             if (get != null) {
                 for (i in get) {
                     if (i?.stream?.viewersCount != null) {
-                        val tags = mutableListOf<Tag>()
-                        i.stream.tags?.forEach { tag ->
-                            tags.add(Tag(
-                                id = tag.id,
-                                name = tag.localizedName
-                            ))
-                        }
                         streams.add(Stream(id = i.stream.id, channelId = i.id, channelLogin = i.login, channelName = i.displayName, gameId = i.stream.game?.id,
                             gameName = i.stream.game?.displayName, type = i.stream.type, title = i.stream.broadcaster?.broadcastSettings?.title,
                             viewerCount = i.stream.viewersCount, startedAt = i.stream.createdAt?.toString(), thumbnailUrl = i.stream.previewImageURL,
-                            profileImageUrl = i.profileImageURL, tags = tags)
+                            profileImageUrl = i.profileImageURL, tags = i.stream.freeformTags?.mapNotNull { it.name })
                         )
                     }
                 }

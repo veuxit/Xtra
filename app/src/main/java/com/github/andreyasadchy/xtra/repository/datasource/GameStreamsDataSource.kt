@@ -8,7 +8,6 @@ import com.github.andreyasadchy.xtra.GameStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
-import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
@@ -105,13 +104,6 @@ class GameStreamsDataSource private constructor(
         val list = mutableListOf<Stream>()
         if (get != null) {
             for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i?.node?.tags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
                 list.add(Stream(
                     id = i?.node?.id,
                     channelId = i?.node?.broadcaster?.id,
@@ -123,7 +115,7 @@ class GameStreamsDataSource private constructor(
                     startedAt = i?.node?.createdAt?.toString(),
                     thumbnailUrl = i?.node?.previewImageURL,
                     profileImageUrl = i?.node?.broadcaster?.profileImageURL,
-                    tags = tags
+                    tags = i?.node?.freeformTags?.mapNotNull { it.name }
                 ))
             }
             offset = get.lastOrNull()?.cursor?.toString()
