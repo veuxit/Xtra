@@ -66,6 +66,7 @@ class SearchStreamsDataSource private constructor(
                 title = it.stream?.title,
                 startedAt = it.stream?.startedAt,
                 profileImageUrl = it.profileImageUrl,
+                tags = it.stream?.tags
             ))
         }
         offset = get.cursor

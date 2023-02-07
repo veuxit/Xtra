@@ -61,10 +61,8 @@ class StreamsAdapter(
                 tagsLayout.visible()
                 for (tag in item.tags) {
                     val text = TextView(context)
-                    text.text = tag.name
-                    if (tag.id != null) {
-                        text.setOnClickListener { gameClickListener.openGame(tags = listOf(tag.id), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
-                    }
+                    text.text = tag
+                    text.setOnClickListener { gameClickListener.openGame(tags = listOf(tag), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
                     tagsLayout.addView(text)
                 }
             } else {

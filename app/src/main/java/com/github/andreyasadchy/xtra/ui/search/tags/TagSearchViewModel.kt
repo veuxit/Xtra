@@ -17,11 +17,11 @@ class TagSearchViewModel @Inject constructor(
 
     private val filter = MutableLiveData<Filter>()
     override val result: LiveData<Listing<Tag>> = Transformations.map(filter) {
-        repository.loadTagsGQL(it.clientId, it.getGameTags, it.gameId, it.gameName, it.query, viewModelScope)
+        repository.loadTagsGQL(it.clientId, it.getGameTags, it.query, viewModelScope)
     }
 
-    fun loadTags(clientId: String?, getGameTags: Boolean, gameId: String?, gameName: String?) {
-        Filter(clientId, getGameTags, gameId, gameName).let {
+    fun loadTags(clientId: String?, getGameTags: Boolean) {
+        Filter(clientId, getGameTags).let {
             if (filter.value != it) {
                 filter.value = it
             }
@@ -37,7 +37,5 @@ class TagSearchViewModel @Inject constructor(
     private data class Filter(
         val clientId: String?,
         val getGameTags: Boolean,
-        val gameId: String?,
-        val gameName: String?,
         val query: String? = null)
 }

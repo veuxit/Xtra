@@ -160,19 +160,10 @@ interface GraphQLApi {
     suspend fun getSearchVideos(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchVideosDataResponse
 
     @POST(".")
+    suspend fun getFreeformTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): FreeformTagDataResponse
+
+    @POST(".")
     suspend fun getGameTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagGameDataResponse
-
-    @POST(".")
-    suspend fun getGameStreamTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagGameStreamDataResponse
-
-    @POST(".")
-    suspend fun getStreamTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagStreamDataResponse
-
-    @POST(".")
-    suspend fun getSearchGameTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagSearchGameStreamDataResponse
-
-    @POST(".")
-    suspend fun getSearchStreamTags(@Header("Client-ID") clientId: String?, @Body json: JsonObject): TagSearchDataResponse
 
     @POST(".")
     suspend fun getChatBadges(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChatBadgesDataResponse

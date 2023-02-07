@@ -33,11 +33,13 @@ class TagSearchAdapter(
             } else {
                 userName.gone()
             }
-            if (item.id != null) {
-                if (item.scope == "CATEGORY") {
+            if (item.scope == "CATEGORY") {
+                if (item.id != null) {
                     setOnClickListener { gamesListener.openTagGames(listOf(item.id)) }
-                } else {
-                    setOnClickListener { streamsListener.openGame(tags = listOf(item.id), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
+                }
+            } else {
+                if (item.name != null) {
+                    setOnClickListener { streamsListener.openGame(tags = listOf(item.name), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
                 }
             }
         }

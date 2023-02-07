@@ -116,8 +116,8 @@ class VideosAdapter(
                 for (tag in item.tags) {
                     val text = TextView(context)
                     text.text = tag.name
-                    if (tag.id != null) {
-                        text.setOnClickListener { gameClickListener.openGame(tags = listOf(tag.id)) }
+                    if (tag.name != null) {
+                        text.setOnClickListener { gameClickListener.openGame(tags = listOf(tag.name)) }
                     }
                     tagsLayout.addView(text)
                 }

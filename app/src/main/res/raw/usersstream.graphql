@@ -17,9 +17,8 @@ query ($id: [ID!], $login: [String!]) {
             }
             id
             previewImageURL
-            tags {
-                id
-                localizedName
+            freeformTags {
+                name
             }
             type
             viewersCount

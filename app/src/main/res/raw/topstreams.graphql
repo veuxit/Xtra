@@ -1,5 +1,5 @@
 query ($tags: [String!], $first: Int, $after: Cursor) {
-    streams(first: $first, after: $after, options: { tags: $tags }) {
+    streams(first: $first, after: $after, options: { freeformTags: $tags }) {
         edges {
             cursor
             node {
@@ -19,9 +19,8 @@ query ($tags: [String!], $first: Int, $after: Cursor) {
                 }
                 id
                 previewImageURL
-                tags {
-                    id
-                    localizedName
+                freeformTags {
+                    name
                 }
                 type
                 viewersCount

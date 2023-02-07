@@ -28,6 +28,7 @@ class ChannelSearchDeserializer : JsonDeserializer<ChannelSearchResponse> {
                         gameName = obj.get("game_name")?.takeIf { !it.isJsonNull }?.asString,
                         title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
                         startedAt = obj.get("started_at")?.takeIf { !it.isJsonNull }?.asString,
+                        tags = obj.get("tags")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { it?.takeIf { !it.isJsonNull }?.asString }
                     )
                 ))
             }

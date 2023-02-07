@@ -20,7 +20,8 @@ import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
-import com.github.andreyasadchy.xtra.model.gql.tag.*
+import com.github.andreyasadchy.xtra.model.gql.tag.FreeformTagDataResponse
+import com.github.andreyasadchy.xtra.model.gql.tag.TagGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
 import com.github.andreyasadchy.xtra.model.query.*
@@ -375,14 +376,14 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("platformType", "all")
                 addProperty("sortTypeIsRecency", false)
                 add("options", JsonObject().apply {
+                    add("freeformTags", array)
                     addProperty("sort", "VIEWER_COUNT")
-                    add("tags", array)
                 })
             })
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
                     addProperty("version", 1)
-                    addProperty("sha256Hash", "4de7f2166105c1a034ba40251f55593b90500f69cf44c8735db4f62ad2760c39")
+                    addProperty("sha256Hash", "b32fa28ffd43e370b42de7d9e6e3b8a7ca310035fdbb83932150443d6b693e4d")
                 })
             })
         }
@@ -404,14 +405,14 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("name", gameName)
                 addProperty("sortTypeIsRecency", false)
                 add("options", JsonObject().apply {
+                    add("freeformTags", array)
                     addProperty("sort", sort)
-                    add("tags", array)
                 })
             })
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
                     addProperty("version", 1)
-                    addProperty("sha256Hash", "d5c5df7ab9ae65c3ea0f225738c08a36a4a76e4c6c31db7f8c4b8dc064227f9e")
+                    addProperty("sha256Hash", "df4bb6cc45055237bfaf3ead608bbafb79815c7100b6ee126719fac3762ddf8b")
                 })
             })
         }
@@ -590,91 +591,38 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getSearchVideos(clientId, json)
     }
 
-    suspend fun loadGameTags(clientId: String?): TagGameDataResponse {
+    suspend fun loadFreeformTags(clientId: String?, query: String?): FreeformTagDataResponse {
+        val json = JsonObject().apply {
+            addProperty("operationName", "SearchFreeformTags")
+            add("variables", JsonObject().apply {
+                addProperty("first", 100)
+                addProperty("userQuery", query ?: "")
+            })
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("version", 1)
+                    addProperty("sha256Hash", "8bc91a618bb5f0c5f9bc19195028c9f4a6a1b8651cf5bd8e4f2408124cdf465a")
+                })
+            })
+        }
+        return graphQL.getFreeformTags(clientId, json)
+    }
+
+    suspend fun loadGameTags(clientId: String?, query: String?): TagGameDataResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "SearchCategoryTags")
             add("variables", JsonObject().apply {
                 addProperty("limit", 100)
-                addProperty("userQuery", "")
+                addProperty("userQuery", query ?: "")
             })
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
                     addProperty("version", 1)
-                    addProperty("sha256Hash", "e8811c72159b644b87971a4f36872028355ce5349eb8b7fb5cc478cd79d4fd92")
+                    addProperty("sha256Hash", "b4cb189d8d17aadf29c61e9d7c7e7dcfc932e93b77b3209af5661bffb484195f")
                 })
             })
         }
         return graphQL.getGameTags(clientId, json)
-    }
-
-    suspend fun loadGameStreamTags(clientId: String?, gameName: String? = null): TagGameStreamDataResponse {
-        val json = JsonObject().apply {
-            addProperty("operationName", "TopTags")
-            add("variables", JsonObject().apply {
-                addProperty("categoryName", gameName)
-                addProperty("limit", 10000)
-                addProperty("showTopTagsByCategory", gameName != null)
-            })
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("version", 1)
-                    addProperty("sha256Hash", "16c030e5b84bf696f9cf25bee7ddde328c93f2b481a0519a806c19d0e91ab9c1")
-                })
-            })
-        }
-        return graphQL.getGameStreamTags(clientId, json)
-    }
-
-    suspend fun loadStreamTags(clientId: String?): TagStreamDataResponse {
-        val json = JsonObject().apply {
-            addProperty("operationName", "TopTags")
-            add("variables", JsonObject().apply {
-                addProperty("limit", 10000)
-                addProperty("showTopTagsByCategory", false)
-            })
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("version", 1)
-                    addProperty("sha256Hash", "16c030e5b84bf696f9cf25bee7ddde328c93f2b481a0519a806c19d0e91ab9c1")
-                })
-            })
-        }
-        return graphQL.getStreamTags(clientId, json)
-    }
-
-    suspend fun loadSearchGameTags(clientId: String?, gameId: String?, query: String?): TagSearchGameStreamDataResponse {
-        val json = JsonObject().apply {
-            addProperty("operationName", "SearchSingleCategoryTags")
-            add("variables", JsonObject().apply {
-                addProperty("categoryID", gameId)
-                addProperty("limit", 100)
-                addProperty("userQuery", query)
-            })
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("version", 1)
-                    addProperty("sha256Hash", "0928a2ec27d51a3be8562d1b724a4b03164b94d26e415be1485a7c6230eb5cac")
-                })
-            })
-        }
-        return graphQL.getSearchGameTags(clientId, json)
-    }
-
-    suspend fun loadSearchAllTags(clientId: String?, query: String?): TagSearchDataResponse {
-        val json = JsonObject().apply {
-            addProperty("operationName", "SearchLiveTags")
-            add("variables", JsonObject().apply {
-                addProperty("limit", 100)
-                addProperty("userQuery", query)
-            })
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("version", 1)
-                    addProperty("sha256Hash", "e184321982c7a58cb6c819e9b7acdac8892f50a9501cd3a36e8cdbd0e427aeac")
-                })
-            })
-        }
-        return graphQL.getSearchStreamTags(clientId, json)
     }
 
     suspend fun loadChatBadges(clientId: String?, channelLogin: String?): ChatBadgesDataResponse {
