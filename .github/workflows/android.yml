@@ -33,11 +33,16 @@ jobs:
         git tag -f api16
         git push -f origin api16
 
+    - name: Delete Release
+      uses: cb80/delrel@latest
+      with:
+        tag: api16
+
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
         allowUpdates: true
         artifacts: app/build/outputs/apk/release/*.apk
-        generateReleaseNotes: true
+        generateReleaseNotes: false
         makeLatest: false
         tag: "api16"
