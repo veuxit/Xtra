@@ -33,6 +33,11 @@ jobs:
         git tag -f latest
         git push -f origin latest
 
+    - name: Delete Release
+      uses: cb80/delrel@latest
+      with:
+        tag: latest
+
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
