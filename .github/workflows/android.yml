@@ -36,7 +36,6 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
-        allowUpdates: true
         artifacts: app/build/outputs/apk/release/*.apk
         generateReleaseNotes: true
         makeLatest: true
