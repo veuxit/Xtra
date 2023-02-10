@@ -43,6 +43,6 @@ jobs:
       with:
         allowUpdates: true
         artifacts: app/build/outputs/apk/release/*.apk
-        generateReleaseNotes: true
+        generateReleaseNotes: false
         makeLatest: true
         tag: "latest"
