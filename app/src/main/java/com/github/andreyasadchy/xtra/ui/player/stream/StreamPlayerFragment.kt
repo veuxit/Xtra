@@ -14,6 +14,7 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.android.synthetic.main.fragment_player_stream.*
 import kotlinx.android.synthetic.main.player_stream.*
 
 @AndroidEntryPoint
@@ -118,6 +119,17 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
         if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
             viewersLayout.setOnClickListener { openViewerList() }
+        }
+        if (!prefs.getBoolean(C.PLAYER_PAUSE, false)) {
+            viewModel.showPauseButton.observe(viewLifecycleOwner) {
+                playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
+                    if (it) {
+                        gone()
+                    } else {
+                        visible()
+                    }
+                }
+            }
         }
     }
 

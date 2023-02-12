@@ -81,7 +81,6 @@ class OfflinePlayerViewModel @Inject constructor(
 
     fun startAudioOnly(showNotification: Boolean = false) {
         startBackgroundAudio(video.url, video.channelName, video.name, video.channelLogo, true, AudioPlayerService.TYPE_OFFLINE, video.id, showNotification)
-        _playerMode.value = PlayerMode.AUDIO_ONLY
     }
 
     override fun onCleared() {

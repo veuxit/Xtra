@@ -176,7 +176,6 @@ class VideoPlayerViewModel @Inject constructor(
     fun startAudioOnly(showNotification: Boolean = false, quality: Int? = null) {
         (helper.urls.values.lastOrNull()?.takeUnless { it.isBlank() } ?: helper.urls.values.elementAtOrNull((quality ?: qualityIndex) - 1) ?: helper.urls.values.firstOrNull())?.let {
             startBackgroundAudio(it, video.channelName, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
-            _playerMode.value = PlayerMode.AUDIO_ONLY
         }
     }
 
