@@ -21,8 +21,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.Player.EVENT_PLAYBACK_STATE_CHANGED
-import com.google.android.exoplayer2.Player.EVENT_PLAY_WHEN_READY_CHANGED
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
 import com.google.android.exoplayer2.source.MediaSource
@@ -64,9 +62,6 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     lateinit var mediaSession: MediaSessionCompat
     lateinit var mediaSessionConnector: MediaSessionConnector
 
-    private val _showPauseButton = MutableLiveData<Boolean>()
-    val showPauseButton: LiveData<Boolean>
-        get() = _showPauseButton
     private val _isPlaying = MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean>
         get() = _isPlaying
@@ -193,6 +188,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
                 binder = service as AudioPlayerService.AudioBinder
                 player = service.player
                 _playerUpdated.postValue(true)
+                _playerMode.value = PlayerMode.AUDIO_ONLY
                 if (showNotification) {
                     showAudioNotification()
                 }
@@ -264,12 +260,6 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     //Player.Listener
-
-    override fun onEvents(player: Player, events: Player.Events) {
-        if (events.containsAny(EVENT_PLAYBACK_STATE_CHANGED, EVENT_PLAY_WHEN_READY_CHANGED)) {
-            _showPauseButton.postValue(player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady)
-        }
-    }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         _isPlaying.postValue(isPlaying)

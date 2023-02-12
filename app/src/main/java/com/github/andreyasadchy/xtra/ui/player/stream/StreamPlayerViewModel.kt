@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.app.Application
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
@@ -21,6 +22,7 @@ import com.github.andreyasadchy.xtra.util.toast
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
+import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
@@ -40,6 +42,9 @@ class StreamPlayerViewModel @Inject constructor(
     repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository) : HlsPlayerViewModel(context, repository, localFollowsChannel) {
 
+    private val _showPauseButton = MutableLiveData<Boolean>()
+    val showPauseButton: LiveData<Boolean>
+        get() = _showPauseButton
     private val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>
         get() = _stream
@@ -116,7 +121,7 @@ class StreamPlayerViewModel @Inject constructor(
         _stream.value?.let { stream ->
             (helper.urls.values.lastOrNull()?.takeUnless { it.isBlank() } ?: helper.urls.values.elementAtOrNull((quality ?: qualityIndex) - 1) ?: helper.urls.values.firstOrNull())?.let {
                 startBackgroundAudio(it, stream.channelName, stream.title, stream.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
-                _playerMode.value = PlayerMode.AUDIO_ONLY
+                _showPauseButton.postValue(false)
             }
         }
     }
@@ -220,6 +225,12 @@ class StreamPlayerViewModel @Inject constructor(
                 val context = getApplication<Application>()
                 context.toast(R.string.error_stream)
             }
+        }
+    }
+
+    override fun onEvents(player: Player, events: Player.Events) {
+        if (events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
+            _showPauseButton.postValue(player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady)
         }
     }
 

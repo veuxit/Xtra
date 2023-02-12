@@ -290,17 +290,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
         }
-        if (this is StreamPlayerFragment && !prefs.getBoolean(C.PLAYER_PAUSE, false)) {
-            (this as BasePlayerFragment).viewModel.showPauseButton.observe(viewLifecycleOwner) {
-                playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
-                    if (it) {
-                        gone()
-                    } else {
-                        visible()
-                    }
-                }
-            }
-        }
         if (prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
             view.keepScreenOn = true
         } else {
