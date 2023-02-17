@@ -1089,4 +1089,30 @@ class ApiRepository @Inject constructor(
             response.errorBody()?.string()
         }
     }
+
+    suspend fun loadUserResult(channelId: String? = null, channelLogin: String? = null, gqlClientId: String?): Pair<String?, String?>? = withContext(Dispatchers.IO) {
+        try {
+            if (!channelId.isNullOrBlank()) {
+                getApolloClient(gqlClientId).query(UserResultIDQuery(channelId)).execute().data?.userResultByID?.let {
+                    when {
+                        it.onUser != null -> Pair(null, null)
+                        it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)
+                        it.onUserError != null -> Pair(it.__typename, null)
+                        else -> null
+                    }
+                }
+            } else if (!channelLogin.isNullOrBlank()) {
+                getApolloClient(gqlClientId).query(UserResultLoginQuery(channelLogin)).execute().data?.userResultByLogin?.let {
+                    when {
+                        it.onUser != null -> Pair(null, null)
+                        it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)
+                        it.onUserError != null -> Pair(it.__typename, null)
+                        else -> null
+                    }
+                }
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
