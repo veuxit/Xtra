@@ -556,4 +556,6 @@
     <string name="enable_ffz">Включить смайлы FFZ</string>
     <string name="show_speed_button">Показать кнопку скорости воспроизведения</string>
     <string name="show_seeklive">Показать кнопку перехода к прямому эфиру</string>
+    <string name="user_id">User ID</string>
+    <string name="user_login">User login</string>
 </resources>

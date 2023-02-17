@@ -9,6 +9,8 @@ type Query {
   searchUsers(userQuery: String!, first: Int, after: Cursor): SearchUserConnection
   streams(first: Int, after: Cursor, options: StreamOptions): StreamConnection
   user(id: ID, login: String, lookupType: UserLookupType): User
+  userResultByID(id: ID!): UserResult
+  userResultByLogin(login: String!): UserResult
   users(ids: [ID!], logins: [String!]): [User]
   video(id: ID): Video
 }
@@ -274,6 +276,15 @@ type User {
   videos(first: Int, after: Cursor, types: [BroadcastType!], sort: VideoSort): VideoConnection
 }
 
+type UserDoesNotExist {
+  key: String!
+  reason: String!
+}
+
+type UserError {
+  key: String!
+}
+
 type UserRoles {
   isAffiliate: Boolean
   isExtensionsDeveloper: Boolean
@@ -448,6 +459,8 @@ enum VideoSort {
   TIME_ASC
   VIEWS
 }
+
+union UserResult = User | UserDoesNotExist | UserError
 
 scalar Cursor
 scalar Time

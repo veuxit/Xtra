@@ -8,19 +8,19 @@ import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.User
+import com.github.andreyasadchy.xtra.ui.common.AlertDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.ui.search.SearchFragment
 import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.android.synthetic.main.fragment_search.*
 
 @AndroidEntryPoint
-class ChannelSearchFragment : PagedListFragment<User, ChannelSearchViewModel, BasePagedListAdapter<User>>(), Searchable {
+class ChannelSearchFragment : PagedListFragment<User, ChannelSearchViewModel, BasePagedListAdapter<User>>(), Searchable, UserResultDialog.OnUserResultListener, AlertDialogFragment.OnDialogResultListener {
 
     override val viewModel: ChannelSearchViewModel by viewModels()
     override val adapter: BasePagedListAdapter<User> by lazy { ChannelSearchAdapter(this, requireActivity() as MainActivity) }
@@ -32,6 +32,12 @@ class ChannelSearchFragment : PagedListFragment<User, ChannelSearchViewModel, Ba
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         swipeRefresh.isEnabled = false
+        (parentFragment as? SearchFragment)?.menu?.apply {
+            visible()
+            setOnClickListener {
+                UserResultDialog.show(childFragmentManager)
+            }
+        }
     }
 
     override fun search(query: String) {
@@ -46,6 +52,52 @@ class ChannelSearchFragment : PagedListFragment<User, ChannelSearchViewModel, Ba
         } else {
             adapter.submitList(null)
             nothingHere?.gone()
+        }
+    }
+
+    private var userResult: Pair<Int?, String?>? = null
+
+    private fun viewUserResult() {
+        userResult?.let {
+            when (it.first) {
+                0 -> (requireActivity() as? MainActivity)?.viewChannel(it.second, null, null, null)
+                1 -> (requireActivity() as? MainActivity)?.viewChannel(null, it.second, null, null)
+                else -> {}
+            }
+        }
+    }
+
+    override fun onUserResult(resultCode: Int, checkedId: Int, result: String) {
+        if (result.isNotBlank()) {
+            userResult = Pair(checkedId, result)
+            when (resultCode) {
+                UserResultDialog.RESULT_POSITIVE -> {
+                    viewModel.loadUserResult(requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), checkedId, result)
+                    viewModel.userResult.observe(viewLifecycleOwner) {
+                        if (it != null) {
+                            if (!it.first.isNullOrBlank()) {
+                                AlertDialogFragment.show(
+                                    fragmentManager = childFragmentManager,
+                                    requestCode = 0,
+                                    title = it.first,
+                                    message = it.second,
+                                    positiveButton = getString(R.string.view_profile),
+                                    negativeButton = getString(android.R.string.cancel),
+                                )
+                            } else {
+                                viewUserResult()
+                            }
+                        }
+                    }
+                }
+                UserResultDialog.RESULT_NEUTRAL -> viewUserResult()
+            }
+        }
+    }
+
+    override fun onDialogResult(requestCode: Int, resultCode: Int) {
+        if (requestCode == 0 && resultCode == AlertDialogFragment.RESULT_POSITIVE) {
+            viewUserResult()
         }
     }
 }
