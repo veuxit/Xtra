@@ -11,6 +11,7 @@ import com.github.andreyasadchy.xtra.repository.Listing
 import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,6 +42,30 @@ class ChannelSearchViewModel @Inject constructor(
         }
         if (this.query.value != query) {
             this.query.value = query
+        }
+    }
+
+    val userResult = MutableLiveData<Pair<String?, String?>?>()
+    private var isLoading = false
+
+    fun loadUserResult(clientId: String?, checkedId: Int, result: String) {
+        if (!isLoading) {
+            isLoading = true
+            userResult.value = null
+            viewModelScope.launch {
+                try {
+                    val get = if (checkedId == 0) {
+                        repository.loadUserResult(channelId = result, gqlClientId = clientId)
+                    } else {
+                        repository.loadUserResult(channelLogin = result, gqlClientId = clientId)
+                    }
+                    userResult.postValue(get)
+                } catch (e: Exception) {
+                    _errors.postValue(e)
+                } finally {
+                    isLoading = false
+                }
+            }
         }
     }
 }

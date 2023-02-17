@@ -115,6 +115,12 @@ interface GraphQLApi {
     suspend fun getQueryVideo(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VideoQueryResponse
 
     @POST(".")
+    suspend fun getQueryUserResultID(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserResultIDQueryResponse
+
+    @POST(".")
+    suspend fun getQueryUserResultLogin(@Header("Client-ID") clientId: String?, @Body json: JsonObject): UserResultLoginQueryResponse
+
+    @POST(".")
     suspend fun getPlaybackAccessToken(@Header("Client-ID") clientId: String?, @HeaderMap headers: Map<String, String>, @Body json: JsonObject): PlaybackAccessTokenResponse
 
     @POST(".")

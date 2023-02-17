@@ -61,7 +61,7 @@ class ChannelVideosViewModel @Inject constructor(
         get() = filter.value?.saveSort == true
 
     fun setChannelId(context: Context, channelId: String? = null, channelLogin: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (filter.value?.channelId != channelId) {
+        if (filter.value?.channelId != channelId || filter.value?.channelLogin != channelLogin) {
             var sortValues = channelId?.let { runBlocking { sortChannelRepository.getById(it) } }
             if (sortValues?.saveSort != true) {
                 sortValues = runBlocking { sortChannelRepository.getById("default") }

@@ -964,4 +964,28 @@ class ApiRepository @Inject constructor(
             response.errorBody()?.string()
         }
     }
+
+    suspend fun loadUserResult(channelId: String? = null, channelLogin: String? = null, gqlClientId: String?): Pair<String?, String?>? = withContext(Dispatchers.IO) {
+        try {
+            if (!channelId.isNullOrBlank()) {
+                val context = XtraApp.INSTANCE.applicationContext
+                gql.loadQueryUserResultID(
+                    clientId = gqlClientId,
+                    query = context.resources.openRawResource(R.raw.userresultid).bufferedReader().use { it.readText() },
+                    variables = JsonObject().apply {
+                        addProperty("id", channelId)
+                    }).data
+            } else if (!channelLogin.isNullOrBlank()) {
+                val context = XtraApp.INSTANCE.applicationContext
+                gql.loadQueryUserResultLogin(
+                    clientId = gqlClientId,
+                    query = context.resources.openRawResource(R.raw.userresultlogin).bufferedReader().use { it.readText() },
+                    variables = JsonObject().apply {
+                        addProperty("login", channelLogin)
+                    }).data
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

@@ -255,6 +255,22 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getQueryVideo(clientId, json)
     }
 
+    suspend fun loadQueryUserResultID(clientId: String?, query: String?, variables: JsonObject): UserResultIDQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserResultID(clientId, json)
+    }
+
+    suspend fun loadQueryUserResultLogin(clientId: String?, query: String?, variables: JsonObject): UserResultLoginQueryResponse {
+        val json = JsonObject().apply {
+            add("variables", variables)
+            addProperty("query", query)
+        }
+        return graphQL.getQueryUserResultLogin(clientId, json)
+    }
+
     suspend fun loadPlaybackAccessToken(clientId: String?, headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
         val json = JsonObject().apply {
             addProperty("operationName", "PlaybackAccessToken")

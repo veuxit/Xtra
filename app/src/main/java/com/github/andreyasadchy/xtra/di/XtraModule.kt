@@ -220,6 +220,8 @@ class XtraModule {
                 .registerTypeAdapter(UsersTypeQueryResponse::class.java, UsersTypeQueryDeserializer())
                 .registerTypeAdapter(UserVideosQueryResponse::class.java, UserVideosQueryDeserializer())
                 .registerTypeAdapter(VideoQueryResponse::class.java, VideoQueryDeserializer())
+                .registerTypeAdapter(UserResultIDQueryResponse::class.java, UserResultIDDeserializer())
+                .registerTypeAdapter(UserResultLoginQueryResponse::class.java, UserResultLoginDeserializer())
                 .create())
     }
 
