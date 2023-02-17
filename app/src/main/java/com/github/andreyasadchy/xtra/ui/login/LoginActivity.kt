@@ -95,8 +95,6 @@ class LoginActivity : AppCompatActivity() {
             "user:manage:chat_color", // chat/color
             "user:manage:whispers", // whispers
             "user:read:follows", // streams/followed
-            "whispers:edit", // TODO remove
-            "channel_editor", // TODO remove
         )
         val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
         val gqlRedirect = prefs().getString(C.GQL_REDIRECT, "https://www.twitch.tv/")
