@@ -58,7 +58,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
         val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
-        val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, false)
+        val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
         val disableChat = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
         val isLive = args.getBoolean(KEY_IS_LIVE)
         val enableChat = if (disableChat) {
