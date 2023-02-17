@@ -671,14 +671,16 @@ class ChatViewModel @Inject constructor(
                     }
                 }
                 command.equals("/clear", true) -> {
-                    viewModelScope.launch {
-                        repository.deleteMessages(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.deleteMessages(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/color", true) -> {
                     val splits = message.split(" ")
@@ -702,78 +704,90 @@ class ChatViewModel @Inject constructor(
                     }
                 }
                 command.equals("/commercial", true) -> {
-                    val splits = message.split(" ")
-                    if (splits.size >= 2) {
-                        viewModelScope.launch {
-                            repository.startCommercial(
-                                helixClientId = helixClientId,
-                                helixToken = account.helixToken,
-                                channelId = channelId,
-                                length = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        val splits = message.split(" ")
+                        if (splits.size >= 2) {
+                            viewModelScope.launch {
+                                repository.startCommercial(
+                                    helixClientId = helixClientId,
+                                    helixToken = account.helixToken,
+                                    channelId = channelId,
+                                    length = splits[1]
+                                )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            }
                         }
-                    }
+                    } else sendMessage(message)
                 }
                 command.equals("/delete", true) -> {
-                    val splits = message.split(" ")
-                    if (splits.size >= 2) {
+                    if (!account.helixToken.isNullOrBlank()) {
+                        val splits = message.split(" ")
+                        if (splits.size >= 2) {
+                            viewModelScope.launch {
+                                repository.deleteMessages(
+                                    helixClientId = helixClientId,
+                                    helixToken = account.helixToken,
+                                    channelId = channelId,
+                                    userId = account.id,
+                                    messageId = splits[1]
+                                )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            }
+                        }
+                    } else sendMessage(message)
+                }
+                command.equals("/disconnect", true) -> disconnect()
+                command.equals("/emoteonly", true) -> {
+                    if (!account.helixToken.isNullOrBlank()) {
                         viewModelScope.launch {
-                            repository.deleteMessages(
+                            repository.updateChatSettings(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 channelId = channelId,
                                 userId = account.id,
-                                messageId = splits[1]
+                                emote = true
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
-                    }
-                }
-                command.equals("/disconnect", true) -> disconnect()
-                command.equals("/emoteonly", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            emote = true
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    } else sendMessage(message)
                 }
                 command.equals("/emoteonlyoff", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            emote = false
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                emote = false
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/followers", true) -> {
-                    val splits = message.split(" ")
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            followers = true,
-                            followersDuration = if (splits.size >= 2) splits[1] else null
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        val splits = message.split(" ")
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                followers = true,
+                                followersDuration = if (splits.size >= 2) splits[1] else null
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/followersoff", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            followers = false
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                followers = false
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/marker", true) -> {
                     val splits = message.split(" ", limit = 2)
@@ -857,50 +871,58 @@ class ChatViewModel @Inject constructor(
                     }
                 }
                 command.equals("/slow", true) -> {
-                    val splits = message.split(" ")
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            slow = true,
-                            slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        val splits = message.split(" ")
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                slow = true,
+                                slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/slowoff", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            slow = false
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                slow = false
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/subscribers", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            subs = true,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                subs = true,
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/subscribersoff", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            subs = false,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                subs = false,
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/timeout", true) -> {
                     val splits = message.split(" ", limit = 4)
@@ -937,26 +959,30 @@ class ChatViewModel @Inject constructor(
                     }
                 }
                 command.equals("/uniquechat", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            unique = true,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                unique = true,
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/uniquechatoff", true) -> {
-                    viewModelScope.launch {
-                        repository.updateChatSettings(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
-                            userId = account.id,
-                            unique = false,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
-                    }
+                    if (!account.helixToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateChatSettings(
+                                helixClientId = helixClientId,
+                                helixToken = account.helixToken,
+                                channelId = channelId,
+                                userId = account.id,
+                                unique = false,
+                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }
+                    } else sendMessage(message)
                 }
                 command.equals("/vip", true) -> {
                     val splits = message.split(" ")

@@ -255,7 +255,7 @@ class DownloadService : IntentService(TAG) {
             try {
                 for (i in current..min(current + ENQUEUE_SIZE, segmentTo!!)) {
                     val track = tracks[i]
-                    track.uri.replace("-unmuted", "-muted").let { // TODO .replace("-unmuted", "")
+                    track.uri.replace("-unmuted", "-muted").let {
                         requests.add(FetchRequest(url + it, path + it).apply { groupId = offlineVideoId })
                     }
                 }
@@ -285,7 +285,7 @@ class DownloadService : IntentService(TAG) {
                         val track = playlist.tracks[i] //TODO encrypt files
                         tracks.add(
                             TrackData.Builder()
-                                .withUri("$path${track.uri.replace("-unmuted", "-muted")}") // TODO .replace("-unmuted", "")
+                                .withUri("$path${track.uri.replace("-unmuted", "-muted")}")
                                 .withTrackInfo(TrackInfo(track.trackInfo.duration, track.trackInfo.title))
                                 .build()
                         )

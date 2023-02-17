@@ -467,7 +467,7 @@
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="debug_api_commands"
         android:title="@string/debug_api_commands"
         app:iconSpaceReserved="false"/>
