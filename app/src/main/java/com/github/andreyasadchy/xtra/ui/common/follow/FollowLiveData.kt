@@ -37,28 +37,26 @@ class FollowLiveData(
     init {
         viewModelScope.launch {
             try {
-                val isFollowing = when {
-                    localFollowsGame != null -> {
-                        when {
-                            setting == 0 && !account.gqlToken.isNullOrBlank() && !userName.isNullOrBlank() -> {
-                                repository.loadGameFollowing(gqlClientId, account.gqlToken, userName)
-                            }
-                            !userId.isNullOrBlank() -> localFollowsGame.getFollowByGameId(userId) != null
-                            else -> false
+                val isFollowing = if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
+                    when {
+                        localFollowsGame != null && !userName.isNullOrBlank() -> {
+                            repository.loadGameFollowing(gqlClientId, account.gqlToken, userName)
                         }
-                    }
-                    localFollowsChannel != null -> {
-                        when {
-                            setting == 0 && (
-                                    (!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !userId.isNullOrBlank() && account.id != userId) ||
-                                            (!account.gqlToken.isNullOrBlank() && !account.login.isNullOrBlank() && !userLogin.isNullOrBlank() && account.login != userLogin)) -> {
-                                repository.loadUserFollowing(helixClientId, account.helixToken, userId, account.id, gqlClientId, account.gqlToken, userLogin)
-                            }
-                            !userId.isNullOrBlank() -> localFollowsChannel.getFollowByUserId(userId) != null
-                            else -> false
+                        localFollowsChannel != null && (
+                                (!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !userId.isNullOrBlank() && account.id != userId) ||
+                                (!account.login.isNullOrBlank() && !userLogin.isNullOrBlank() && account.login != userLogin)) -> {
+                            repository.loadUserFollowing(helixClientId, account.helixToken, userId, account.id, gqlClientId, account.gqlToken, userLogin)
                         }
+                        else -> false
                     }
-                    else -> false
+                } else {
+                    userId?.let {
+                        if (localFollowsGame != null) {
+                            localFollowsGame.getFollowByGameId(it)
+                        } else {
+                            localFollowsChannel?.getFollowByUserId(it)
+                        }
+                    } != null
                 }
                 super.setValue(isFollowing)
             } catch (e: Exception) {
