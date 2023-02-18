@@ -110,12 +110,22 @@ interface HelixApi {
         @Query("live_only") live: Boolean? = null
     ): ChannelSearchResponse
 
-    @GET("users/follows")
+    @GET("channels/followed")
     suspend fun getUserFollows(
         @Header("Client-ID") clientId: String?,
         @Header("Authorization") token: String?,
-        @Query("to_id") targetId: String? = null,
-        @Query("from_id") userId: String?,
+        @Query("broadcaster_id") targetId: String? = null,
+        @Query("user_id") userId: String?,
+        @Query("first") limit: Int? = null,
+        @Query("after") offset: String? = null
+    ): FollowResponse
+
+    @GET("channels/followers")
+    suspend fun getUserFollowers(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("broadcaster_id") userId: String?,
+        @Query("user_id") targetId: String? = null,
         @Query("first") limit: Int? = null,
         @Query("after") offset: String? = null
     ): FollowResponse
