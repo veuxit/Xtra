@@ -18,9 +18,9 @@ class FollowDeserializer : JsonDeserializer<FollowResponse> {
         dataJson?.forEach { item ->
             item?.asJsonObject?.let { obj ->
                 data.add(User(
-                    channelId = obj.get("to_id")?.takeIf { !it.isJsonNull }?.asString,
-                    channelLogin = obj.get("to_login")?.takeIf { !it.isJsonNull }?.asString,
-                    channelName = obj.get("to_name")?.takeIf { !it.isJsonNull }?.asString,
+                    channelId = obj.get("broadcaster_id")?.takeIf { !it.isJsonNull }?.asString,
+                    channelLogin = obj.get("broadcaster_login")?.takeIf { !it.isJsonNull }?.asString,
+                    channelName = obj.get("broadcaster_name")?.takeIf { !it.isJsonNull }?.asString,
                     followedAt = obj.get("followed_at")?.takeIf { !it.isJsonNull }?.asString,
                 ))
             }
