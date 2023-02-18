@@ -709,7 +709,7 @@ class ApiRepository @Inject constructor(
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 targetId = targetId,
                 userId = userId
-            ).total == 1
+            ).data.firstOrNull()?.channelId == targetId
         }
     }
 
