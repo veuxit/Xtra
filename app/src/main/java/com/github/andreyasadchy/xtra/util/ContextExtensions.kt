@@ -14,7 +14,10 @@ import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
 
-val Context.isNetworkAvailable get() = getConnectivityManager(this).activeNetworkInfo?.isConnectedOrConnecting == true
+val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
+    val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
+    activeNetwork?.isConnectedOrConnecting == true
+}
 
 private fun getConnectivityManager(context: Context) = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
