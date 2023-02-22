@@ -20,7 +20,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
 import kotlinx.coroutines.delay
@@ -110,13 +109,6 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         if (player == null) {
             val context = getApplication<Application>()
             player = ExoPlayer.Builder(context).apply {
-                if (prefs.getBoolean(C.PLAYER_FORCE_FIRST_DECODER, false)) {
-                    setRenderersFactory(DefaultRenderersFactory(context).setMediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
-                        MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder).firstOrNull()?.let {
-                            listOf(it)
-                        } ?: emptyList()
-                    })
-                }
                 setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(
                     prefs.getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
                     prefs.getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,

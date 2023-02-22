@@ -549,8 +549,6 @@
     <string name="show_subtitles">Показать сутитры</string>
     <string name="hide_subtitles">Скрыть субтитры</string>
     <string name="toggle_subtitles">Переключить субтитры</string>
-    <string name="first_decoder">Использовать только первый декодер медиа</string>
-    <string name="first_decoder_desc">Должно заставить плеер использовать аппаратный декодер</string>
     <string name="enable_stv">Включить смайлы 7TV</string>
     <string name="enable_bttv">Включить смайлы BTTV</string>
     <string name="enable_ffz">Включить смайлы FFZ</string>
