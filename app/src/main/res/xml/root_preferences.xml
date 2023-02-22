@@ -385,13 +385,6 @@
         android:title="@string/buffer_settings"
         app:iconSpaceReserved="false" />
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="player_force_first_decoder"
-        android:summary="@string/first_decoder_desc"
-        android:title="@string/first_decoder"
-        app:iconSpaceReserved="false" />
-
     <ListPreference
         android:defaultValue="saved"
         android:entries="@array/playerQualityEntries"
