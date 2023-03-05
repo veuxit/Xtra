@@ -35,9 +35,9 @@ interface MiscApi {
     @GET("https://api.betterttv.net/3/cached/users/twitch/{channelId}")
     suspend fun getBttvEmotes(@Path("channelId") channelId: String): Response<BttvChannelResponse>
 
-    @GET("https://api.betterttv.net/3/cached/frankerfacez/emotes/global")
-    suspend fun getBttvGlobalFfzEmotes(): Response<BttvFfzResponse>
+    @GET("https://api.frankerfacez.com/v1/set/global")
+    suspend fun getGlobalFfzEmotes(): Response<FfzGlobalResponse>
 
-    @GET("https://api.betterttv.net/3/cached/frankerfacez/users/twitch/{channelId}")
-    suspend fun getBttvFfzEmotes(@Path("channelId") channelId: String): Response<BttvFfzResponse>
+    @GET("https://api.frankerfacez.com/v1/room/id/{channelId}")
+    suspend fun getFfzEmotes(@Path("channelId") channelId: String): Response<FfzChannelResponse>
 }
