@@ -303,7 +303,7 @@ class ChatViewModel @Inject constructor(
                 } else {
                     viewModelScope.launch {
                         try {
-                            playerRepository.loadBttvGlobalFfzEmotes().body()?.emotes?.let { emotes ->
+                            playerRepository.loadGlobalFfzEmotes().body()?.emotes?.let { emotes ->
                                 if (emotes.isNotEmpty()) {
                                     globalFfzEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
@@ -321,7 +321,7 @@ class ChatViewModel @Inject constructor(
             if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadBttvFfzEmotes(channelId).body()?.emotes?.let {
+                        playerRepository.loadFfzEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
                                 list.addAll(it)

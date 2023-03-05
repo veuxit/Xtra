@@ -134,7 +134,8 @@ class XtraModule {
                 .registerTypeAdapter(StvChannelResponse::class.java, StvChannelDeserializer())
                 .registerTypeAdapter(BttvGlobalResponse::class.java, BttvGlobalDeserializer())
                 .registerTypeAdapter(BttvChannelResponse::class.java, BttvChannelDeserializer())
-                .registerTypeAdapter(BttvFfzResponse::class.java, BttvFfzDeserializer())
+                .registerTypeAdapter(FfzGlobalResponse::class.java, FfzGlobalDeserializer())
+                .registerTypeAdapter(FfzChannelResponse::class.java, FfzChannelDeserializer())
 
                 .registerTypeAdapter(GamesResponse::class.java, GamesDeserializer())
                 .registerTypeAdapter(StreamsResponse::class.java, StreamsDeserializer())
