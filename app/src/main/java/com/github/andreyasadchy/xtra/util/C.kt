@@ -113,6 +113,7 @@ object C {
     const val PLAYER_LOCK_SCREEN_AUDIO = "player_lock_screen_audio"
     const val PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED = "player_keep_screen_on_when_paused"
     const val PLAYER_KEEP_CHAT_OPEN = "player_keep_chat_open"
+    const val PLAYER_HIDE_ADS = "player_hide_ads"
     const val PLAYER_PROXY = "player_proxy"
     const val PLAYER_PROXY_URL = "player_proxy_url"
     const val ANIMATED_EMOTES = "animatedGifEmotes"

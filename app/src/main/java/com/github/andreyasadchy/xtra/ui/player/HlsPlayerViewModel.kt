@@ -107,16 +107,18 @@ abstract class HlsPlayerViewModel(
             manifest.multivariantPlaylist.let {
                 val context = getApplication<Application>()
                 val tags = it.tags
-                val urls = LinkedHashMap<String, String>(tags.size)
+                val urls = mutableMapOf<String, String>()
                 val audioOnly = context.getString(R.string.audio_only)
-                val pattern = Pattern.compile("NAME=\"(.+)\"")
+                val pattern = Pattern.compile("NAME=\"(.+?)\"")
                 var trackIndex = 0
                 tags.forEach { tag ->
-                    val matcher = pattern.matcher(tag)
-                    if (matcher.find()) {
-                        val quality = matcher.group(1)!!
-                        val url = it.variants[trackIndex++].url.toString()
-                        urls[if (!quality.startsWith("audio", true)) quality else audioOnly] = url
+                    if (tag.startsWith("#EXT-X-MEDIA")) {
+                        val matcher = pattern.matcher(tag)
+                        if (matcher.find()) {
+                            val quality = matcher.group(1)!!
+                            val url = it.variants[trackIndex++].url.toString()
+                            urls[if (!quality.startsWith("audio", true)) quality else audioOnly] = url
+                        }
                     }
                 }
                 helper.urls = urls.apply {
