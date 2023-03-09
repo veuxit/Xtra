@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
+import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
@@ -19,10 +20,8 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
-import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
@@ -58,6 +57,7 @@ class StreamPlayerViewModel @Inject constructor(
         get() { return _stream.value?.channelLogo }
 
     private var useProxy: Int? = null
+    private var playingAds = false
 
     fun startStream(stream: Stream) {
         useProxy = prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() ?: 1
@@ -205,6 +205,7 @@ class StreamPlayerViewModel @Inject constructor(
                         }
                     })).apply {
                         setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                        setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
                         setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
                         if (prefs.getBoolean(C.PLAYER_SUBTITLES, false) || prefs.getBoolean(C.PLAYER_MENU_SUBTITLES, false)) {
                             setAllowChunklessPreparation(false)
@@ -224,6 +225,18 @@ class StreamPlayerViewModel @Inject constructor(
             } catch (e: Exception) {
                 val context = getApplication<Application>()
                 context.toast(R.string.error_stream)
+            }
+        }
+    }
+
+    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+        super.onTimelineChanged(timeline, reason)
+        (player?.currentManifest as? HlsManifest)?.mediaPlaylist?.tags?.lastOrNull()?.let {
+            val oldValue = playingAds
+            playingAds = it == "ads=true"
+            if (!oldValue && playingAds) {
+                val context = getApplication<Application>()
+                context.toast(R.string.waiting_ads)
             }
         }
     }
