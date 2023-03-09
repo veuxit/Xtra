@@ -556,4 +556,6 @@
     <string name="show_seeklive">Show seek to live button</string>
     <string name="user_id">User ID</string>
     <string name="user_login">User login</string>
+    <string name="hide_ads">Hide ad segments</string>
+    <string name="waiting_ads">Waiting for ads to finish</string>
 </resources>
