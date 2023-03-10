@@ -1,10 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.player.stream
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.os.Bundle
 import android.view.View
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -13,6 +20,7 @@ import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.*
+import com.google.android.exoplayer2.source.hls.HlsManifest
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_player_stream.*
 import kotlinx.android.synthetic.main.player_stream.*
@@ -151,6 +159,33 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     fun openViewerList() {
         stream.channelLogin?.let { login -> FragmentUtils.showPlayerViewerListDialog(childFragmentManager, login, viewModel.repository) }
+    }
+
+    fun showPlaylistTags(mediaPlaylist: Boolean) {
+        val tags = if (mediaPlaylist) {
+            (viewModel.player?.currentManifest as? HlsManifest)?.mediaPlaylist?.tags?.dropLastWhile { it == "ads=true" }?.joinToString("\n")
+        } else {
+            (viewModel.player?.currentManifest as? HlsManifest)?.multivariantPlaylist?.tags?.joinToString("\n")
+        }
+        if (!tags.isNullOrBlank()) {
+            AlertDialog.Builder(requireContext()).apply {
+                setView(NestedScrollView(context).apply {
+                    addView(HorizontalScrollView(context).apply {
+                        addView(TextView(context).apply {
+                            text = tags
+                            textSize = 12F
+                            setTextIsSelectable(true)
+                        })
+                    })
+                })
+                setNegativeButton(R.string.copy_clip) { dialog, _ ->
+                    val clipboard = ContextCompat.getSystemService(requireContext(), ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("label", tags))
+                    dialog.dismiss()
+                }
+                setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
+            }.show()
+        }
     }
 
     fun hideEmotesMenu() = chatFragment.hideEmotesMenu()

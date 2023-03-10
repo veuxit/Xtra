@@ -177,5 +177,6 @@ object C {
     const val DEBUG_CHAT_FULLMSG = "debug_chat_fullmsg"
     const val DEBUG_SECONDVIEW = "debug_secondview"
     const val DEBUG_API_COMMANDS = "debug_api_commands"
+    const val DEBUG_PLAYER_MENU_PLAYLIST_TAGS = "debug_player_menu_playlist_tags"
     const val DEBUG_SHOW_CONSCRYPT_ERROR_TOAST = "debug_show_conscrypt_error_toast"
 }
