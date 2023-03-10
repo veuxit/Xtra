@@ -471,4 +471,10 @@
         android:title="@string/debug_api_commands"
         app:iconSpaceReserved="false"/>
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="debug_player_menu_playlist_tags"
+        android:title="@string/show_playlist_tags"
+        app:iconSpaceReserved="false"/>
+
 </androidx.preference.PreferenceScreen>

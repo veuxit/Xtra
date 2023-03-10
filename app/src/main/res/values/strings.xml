@@ -578,4 +578,7 @@
     <string name="user_login">User login</string>
     <string name="hide_ads">Hide ad segments</string>
     <string name="waiting_ads">Waiting for ads to finish</string>
+    <string name="show_playlist_tags">Show playlist tags</string>
+    <string name="show_media_playlist_tags">Show media playlist tags</string>
+    <string name="show_multivariant_playlist_tags">Show multivariant playlist tags</string>
 </resources>

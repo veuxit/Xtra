@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
+import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -67,6 +68,7 @@ class AudioPlayerService : Service() {
                 TYPE_STREAM -> {
                     setMediaSourceFactory(HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()))
                         .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                        .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
                         .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6)))
                 }
                 TYPE_VIDEO -> {

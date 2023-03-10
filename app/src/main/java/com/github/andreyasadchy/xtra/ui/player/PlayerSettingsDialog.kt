@@ -117,6 +117,18 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
                     }
                 }
             }
+            if (requireContext().prefs().getBoolean(C.DEBUG_PLAYER_MENU_PLAYLIST_TAGS, false)) {
+                menuMediaPlaylistTags.visible()
+                menuMediaPlaylistTags.setOnClickListener {
+                    (parentFragment as? StreamPlayerFragment)?.showPlaylistTags(true)
+                    dismiss()
+                }
+                menuMultivariantPlaylistTags.visible()
+                menuMultivariantPlaylistTags.setOnClickListener {
+                    (parentFragment as? StreamPlayerFragment)?.showPlaylistTags(false)
+                    dismiss()
+                }
+            }
         }
         if (parentFragment is VideoPlayerFragment) {
             if (arguments.getBoolean(VOD_GAMES)) {
