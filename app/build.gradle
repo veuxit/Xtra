@@ -21,7 +21,7 @@ android {
         minSdk 16
         targetSdk 33
         versionCode 121
-        versionName "2.16.1"
+        versionName "2.16.2"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -81,7 +81,7 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     //UI
-    implementation 'com.google.android.material:material:1.9.0-alpha01'
+    implementation 'com.google.android.material:material:1.9.0-alpha02'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference-ktx:1.2.0'
