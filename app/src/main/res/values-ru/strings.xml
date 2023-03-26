@@ -334,7 +334,7 @@
     <string name="irc_notice_unraid_error_unexpected">Возникла проблема при остановке рейда. Пожалуйста, попробуйте через минуту.</string>
     <string name="irc_notice_unraid_success">Рейд был отменён.</string>
     <string name="irc_notice_unrecognized_cmd">Неизвестная команда: %s</string>
-    <string name="irc_notice_untimeout_banned">%s заблокирован навсегда. Используйте “/unban” для удаления бана.</string>
+    <string name="irc_notice_untimeout_banned">%s заблокирован навсегда. Используйте “/unban” для удаления блокировки.</string>
     <string name="irc_notice_untimeout_success">%s более не отстранён от этого чата.</string>
     <string name="irc_notice_unvip_success">Вы удалили %s из VIP-пользователей этого канала.</string>
     <string name="irc_notice_usage_ban">Использование: \"/ban &lt;имя_пользователя&gt; [причина]\" - Навсегда отстранить пользователя от чата. Причина не является обязательной и будет показана отстранённому и другим модераторам. Используйте \"/unban\" для снятия блокировки.</string>
@@ -360,7 +360,7 @@
     <string name="irc_notice_usage_slow_on">Использование: \"/slow [duration]\" - Включает медленный режим (ограничивает частоту отправки сообщений пользователями). Длительность (необязательно, стандарт=%s) должна быть положительным числом секунд. Используйте \"/slowoff\" для отключения.</string>
     <string name="irc_notice_usage_subs_off">Использование: \"/subscribersoff\" - Отключает режим только для подписчиков.</string>
     <string name="irc_notice_usage_subs_on">Использование: \"/subscribers\" - Включает режим только для подписчиков (только подписчики могут отправлять сообщения в чате этого канала). Используйте \"/subscribersoff\" для отключения.</string>
-    <string name="irc_notice_usage_timeout">Использование: \"/timeout &lt;username&gt; [длительность][единица времени] [причина]\" - Временно отстранить пользователя от чата. Длительность (необязательно, стандарт=10 минут) должна быть положительным целым числом; единица времени (необязательно, стандарт=s) может быть одной из s, m, h, d, w; максимальная длительнгость — 2 недели. Сочетания вроде 1d2h также допускаются. Причина необязательна и будет показана целевому пользователю и другим модераторам. Используйте \"/untimeout\" для снятия отстранения.</string>
+    <string name="irc_notice_usage_timeout">Использование: \"/timeout &lt;username&gt; [длительность][единица времени] [причина]\" - Временно отстранить пользователя от чата. Длительность (необязательно, стандарт=10 минут) должна быть положительным целым числом; единица времени (необязательно, стандарт=s) может быть одной из s, m, h, d, w; максимальная длительность — 2 недели. Сочетания вроде 1d2h также допускаются. Причина необязательна и будет показана целевому пользователю и другим модераторам. Используйте \"/untimeout\" для снятия отстранения.</string>
     <string name="irc_notice_usage_unban">Использование: \"/unban &lt;username&gt;\" - Убрать блокировку пользователя.</string>
     <string name="irc_notice_usage_unhost">Использование: \"/unhost\" - Остановить хост другого канала.</string>
     <string name="irc_notice_usage_unmod">Использование: \"/unmod &lt;username&gt;\" - Снять статус модератора с пользователя. Используйте \"/mods\" для вывода списка всех модераторов этого канала.</string>
@@ -546,7 +546,7 @@
     <string name="streamProxyEntries3">Подделывать X-Forwarded-For</string>
     <string name="proxy_error">Ошибка прокси</string>
     <string name="show_subtitles_button">Показывать кнопку субтитров</string>
-    <string name="show_subtitles">Показать сутитры</string>
+    <string name="show_subtitles">Показать субтитры</string>
     <string name="hide_subtitles">Скрыть субтитры</string>
     <string name="toggle_subtitles">Переключить субтитры</string>
     <string name="enable_stv">Включить смайлы 7TV</string>
@@ -554,11 +554,11 @@
     <string name="enable_ffz">Включить смайлы FFZ</string>
     <string name="show_speed_button">Показать кнопку скорости воспроизведения</string>
     <string name="show_seeklive">Показать кнопку перехода к прямому эфиру</string>
-    <string name="user_id">User ID</string>
-    <string name="user_login">User login</string>
-    <string name="hide_ads">Hide ad segments</string>
-    <string name="waiting_ads">Waiting for ads to finish</string>
-    <string name="show_playlist_tags">Show playlist tags</string>
-    <string name="show_media_playlist_tags">Show media playlist tags</string>
-    <string name="show_multivariant_playlist_tags">Show multivariant playlist tags</string>
+    <string name="user_id">ИД пользователя</string>
+    <string name="user_login">Логин пользователя</string>
+    <string name="hide_ads">Скрывать участки рекламы</string>
+    <string name="waiting_ads">Ожидается завершение рекламы</string>
+    <string name="show_playlist_tags">Показать метки плейлиста</string>
+    <string name="show_media_playlist_tags">Показать метки плейлиста медиа</string>
+    <string name="show_multivariant_playlist_tags">Показать многовариантные метки плейлиста</string>
 </resources>
