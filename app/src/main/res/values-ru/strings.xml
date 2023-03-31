@@ -461,14 +461,14 @@
     <string name="buffer_settings">Настройки буфера</string>
     <string name="player_buttons">Кнопки проигрывателя</string>
     <string name="keep_chat_open">Поддерживать связь с чатом в фоне</string>
-    <string name="lock_screen_audio">Продолжать проигрывание звука, если экран отключён</string>
+    <string name="lock_screen_audio">Продолжать играть звук, если экран отключён</string>
     <string name="save_sort_channel">Запомнить сортировку для этого канала</string>
-    <string name="save_sort_game">Запомните варианты выбора для этой игры</string>
+    <string name="save_sort_game">Запомнить варианты выбора для этой игры</string>
     <string name="show_chat">Показать чат</string>
     <string name="hide_chat">Скрыть чат</string>
     <string name="show_chat_bar">Показать область ввода чата</string>
     <string name="hide_chat_bar">Скрыть область ввода чата</string>
-    <string name="toggle_chat_bar">Переключить ввода чата</string>
+    <string name="toggle_chat_bar">Переключить область ввода чата</string>
     <string name="toggle_chat">Переключить чат</string>
     <string name="viewer_list">Список зрителей</string>
     <string name="vod_games">Игры в этом видео</string>
