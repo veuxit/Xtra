@@ -1,112 +1,123 @@
 package com.github.andreyasadchy.xtra.ui.saved.bookmarks
 
-import android.app.Activity
 import android.app.AlertDialog
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentSavedBinding
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.fragment_saved.*
 
 @AndroidEntryPoint
-class BookmarksFragment : Fragment(), Scrollable {
+class BookmarksFragment : BaseNetworkFragment(), Scrollable {
 
+    private var _binding: FragmentSavedBinding? = null
+    private val binding get() = _binding!!
     private val viewModel: BookmarksViewModel by viewModels()
+    private lateinit var adapter: ListAdapter<Bookmark, out RecyclerView.ViewHolder>
+    override var enableNetworkCheck = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_saved, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentSavedBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        val activity = requireActivity() as MainActivity
-        val adapter = BookmarksAdapter(this, activity, activity, activity, {
-            viewModel.loadVideo(
-                context = requireContext(),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                videoId = it
-            )
-        }, {
-            VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
-        }, {
-            viewModel.vodIgnoreUser(it)
-        }, {
-            val delete = getString(R.string.delete)
-            AlertDialog.Builder(activity)
-                .setTitle(delete)
-                .setMessage(getString(R.string.are_you_sure))
-                .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }
-                .setNegativeButton(getString(android.R.string.cancel), null)
-                .show()
-        })
-        recyclerView.adapter = adapter
-        (recyclerView.itemAnimator as SimpleItemAnimator).supportsChangeAnimations = false
-        viewModel.bookmarks.observe(viewLifecycleOwner) {
-            adapter.submitList(it.reversed())
-            nothingHere?.isVisible = it.isEmpty()
-        }
-        if (requireContext().prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-            viewModel.positions.observe(viewLifecycleOwner) {
-                adapter.setVideoPositions(it)
-            }
-        }
-        if (requireContext().prefs().getBoolean(C.UI_BOOKMARK_TIME_LEFT, true)) {
-            viewModel.ignoredUsers.observe(viewLifecycleOwner) {
-                adapter.setIgnoredUsers(it)
-            }
-            viewModel.loadUsers(
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-            )
-        }
-        if (!Account.get(requireContext()).helixToken.isNullOrBlank()) {
-            viewModel.loadVideos(
-                context = requireContext(),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-            )
-        }
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                adapter.unregisterAdapterDataObserver(this)
-                adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                        if (positionStart == 0) {
-                            recyclerView.smoothScrollToPosition(0)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        with(binding) {
+            val activity = requireActivity() as MainActivity
+            adapter = BookmarksAdapter(this@BookmarksFragment, {
+                viewModel.updateVideo(
+                    context = requireContext(),
+                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(requireContext()).helixToken,
+                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    videoId = it
+                )
+            }, {
+                VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+            }, {
+                viewModel.vodIgnoreUser(it)
+            }, {
+                val delete = getString(R.string.delete)
+                AlertDialog.Builder(activity)
+                    .setTitle(delete)
+                    .setMessage(getString(R.string.are_you_sure))
+                    .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }
+                    .setNegativeButton(getString(android.R.string.cancel), null)
+                    .show()
+            })
+            adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                    adapter.unregisterAdapterDataObserver(this)
+                    adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                            if (positionStart == 0) {
+                                recyclerView.smoothScrollToPosition(0)
+                            }
                         }
-                    }
-                })
+                    })
+                }
+            })
+            recyclerView.adapter = adapter
+            (recyclerView.itemAnimator as SimpleItemAnimator).supportsChangeAnimations = false
+        }
+    }
+
+    override fun initialize() {
+        with(binding) {
+            viewModel.bookmarks.observe(viewLifecycleOwner) {
+                adapter.submitList(it.reversed())
+                nothingHere.isVisible = it.isEmpty()
             }
-        })
+            if (requireContext().prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                viewModel.positions.observe(viewLifecycleOwner) {
+                    (adapter as BookmarksAdapter).setVideoPositions(it)
+                }
+            }
+            if (requireContext().prefs().getBoolean(C.UI_BOOKMARK_TIME_LEFT, true)) {
+                viewModel.ignoredUsers.observe(viewLifecycleOwner) {
+                    (adapter as BookmarksAdapter).setIgnoredUsers(it)
+                }
+                viewModel.updateUsers(
+                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(requireContext()).helixToken,
+                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                )
+            }
+            if (!Account.get(requireContext()).helixToken.isNullOrBlank()) {
+                viewModel.updateVideos(
+                    context = requireContext(),
+                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(requireContext()).helixToken,
+                )
+            }
+        }
     }
 
     override fun scrollToTop() {
-        recyclerView?.scrollToPosition(0)
+        binding.recyclerView.scrollToPosition(0)
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
-            requireActivity().recreate()
-        }
+    override fun onNetworkRestored() {
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

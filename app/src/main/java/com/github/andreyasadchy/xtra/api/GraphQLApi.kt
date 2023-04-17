@@ -19,8 +19,35 @@ import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.*
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
-import com.github.andreyasadchy.xtra.model.query.*
-import com.google.gson.JsonArray
+import com.github.andreyasadchy.xtra.model.query.BadgesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.GameBoxArtQueryResponse
+import com.github.andreyasadchy.xtra.model.query.GameClipsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.GameStreamsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.GameVideosQueryResponse
+import com.github.andreyasadchy.xtra.model.query.SearchChannelsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.SearchGamesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.SearchStreamsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.SearchVideosQueryResponse
+import com.github.andreyasadchy.xtra.model.query.TopGamesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.TopStreamsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserBadgesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserChannelPageQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserCheerEmotesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserClipsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserEmotesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserFollowedGamesQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserFollowedStreamsQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserFollowedUsersQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserFollowedVideosQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserMessageClickedQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserResultIDQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserResultLoginQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UserVideosQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UsersLastBroadcastQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UsersStreamQueryResponse
+import com.github.andreyasadchy.xtra.model.query.UsersTypeQueryResponse
+import com.github.andreyasadchy.xtra.model.query.VideoQueryResponse
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import okhttp3.ResponseBody
@@ -154,9 +181,6 @@ interface GraphQLApi {
     suspend fun getChannelClips(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChannelClipsDataResponse
 
     @POST(".")
-    suspend fun getChannelViewerList(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChannelViewerListDataResponse
-
-    @POST(".")
     suspend fun getSearchChannels(@Header("Client-ID") clientId: String?, @Body json: JsonObject): SearchChannelDataResponse
 
     @POST(".")
@@ -187,10 +211,16 @@ interface GraphQLApi {
     suspend fun getVideoGames(@Header("Client-ID") clientId: String?, @Body json: JsonObject): VideoGamesDataResponse
 
     @POST(".")
+    suspend fun getChannelViewerList(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ChannelViewerListDataResponse
+
+    @POST(".")
     suspend fun getViewerCount(@Header("Client-ID") clientId: String?, @Body json: JsonObject): ViewersDataResponse
 
     @POST(".")
     suspend fun getEmoteCard(@Header("Client-ID") clientId: String?, @Body json: JsonObject): EmoteCardResponse
+
+    @POST(".")
+    suspend fun getChannelPanel(@Header("Client-ID") clientId: String?, @Body json: JsonObject): Response<ResponseBody>
 
     @POST(".")
     suspend fun getFollowedStreams(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedStreamsDataResponse
@@ -205,16 +235,16 @@ interface GraphQLApi {
     suspend fun getFollowedGames(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowedGamesDataResponse
 
     @POST(".")
-    suspend fun getFollowUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject): FollowDataResponse
+    suspend fun getFollowUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowDataResponse
 
     @POST(".")
-    suspend fun getUnfollowUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject): FollowDataResponse
+    suspend fun getUnfollowUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowDataResponse
 
     @POST(".")
-    suspend fun getFollowGame(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject): FollowDataResponse
+    suspend fun getFollowGame(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowDataResponse
 
     @POST(".")
-    suspend fun getUnfollowGame(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject): FollowDataResponse
+    suspend fun getUnfollowGame(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowDataResponse
 
     @POST(".")
     suspend fun getFollowingUser(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): FollowingUserDataResponse
@@ -226,16 +256,13 @@ interface GraphQLApi {
     suspend fun getChannelPointsContext(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): ChannelPointsContextDataResponse
 
     @POST(".")
-    suspend fun getClaimPoints(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject)
+    suspend fun getClaimPoints(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject)
 
     @POST(".")
-    suspend fun getJoinRaid(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("Client-Integrity") integrityToken: String?, @Header("X-Device-Id") deviceId: String?, @Body json: JsonObject)
+    suspend fun getJoinRaid(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject)
 
     @POST(".")
     suspend fun getUserEmotes(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): UserEmotesDataResponse
-
-    @POST(".")
-    suspend fun getChannelPanel(@Body json: JsonArray): Response<ResponseBody>
 
     @POST(".")
     suspend fun sendAnnouncement(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Body json: JsonObject): Response<JsonElement>

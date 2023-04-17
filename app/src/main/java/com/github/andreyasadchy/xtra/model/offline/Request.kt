@@ -5,7 +5,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 @Entity(tableName = "requests", foreignKeys = [ForeignKey(entity = OfflineVideo::class, parentColumns = arrayOf("id"), childColumns = arrayOf("offline_video_id"), onDelete = ForeignKey.CASCADE)])

@@ -1,39 +1,46 @@
 package com.github.andreyasadchy.xtra.ui.streams.followed
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.datasource.FollowedStreamsDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 @HiltViewModel
 class FollowedStreamsViewModel @Inject constructor(
-        private val repository: ApiRepository) : PagedListViewModel<Stream>() {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val localFollowsChannel: LocalFollowChannelRepository) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Stream>> = Transformations.map(filter) {
-        repository.loadFollowedStreams(it.account.id, it.helixClientId, it.account.helixToken, it.gqlClientId, it.account.gqlToken, it.apiPref, it.thumbnailsEnabled, viewModelScope)
-    }
-
-    fun loadStreams(account: Account, helixClientId: String? = null, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean) {
-        Filter(account, helixClientId, gqlClientId, apiPref, thumbnailsEnabled).let {
-            if (filter.value != it) {
-                filter.value = it
-            }
+    val flow = Pager(
+        if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") != "disabled") {
+            PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+        } else {
+            PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         }
-    }
-
-    private data class Filter(
-        val account: Account,
-        val helixClientId: String?,
-        val gqlClientId: String?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>,
-        val thumbnailsEnabled: Boolean)
+    ) {
+        FollowedStreamsDataSource(
+            localFollowsChannel = localFollowsChannel,
+            userId = Account.get(context).id,
+            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixToken = Account.get(context).helixToken,
+            helixApi = helix,
+            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+            gqlToken = Account.get(context).gqlToken,
+            gqlApi = graphQLRepository,
+            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults))
+    }.flow.cachedIn(viewModelScope)
 }

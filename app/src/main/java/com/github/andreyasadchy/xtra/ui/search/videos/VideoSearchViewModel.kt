@@ -1,42 +1,47 @@
 package com.github.andreyasadchy.xtra.ui.search.videos
 
-import android.app.Application
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.BookmarksRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.datasource.SearchVideosDataSource
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoSearchViewModel @Inject constructor(
-    context: Application,
-    private val repository: ApiRepository,
+    @ApplicationContext context: Context,
     playerRepository: PlayerRepository,
-    bookmarksRepository: BookmarksRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
+    bookmarksRepository: BookmarksRepository,
+    repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
 
-    private val query = MutableLiveData<String>()
-    private var gqlClientId = MutableLiveData<String>()
-    private var apiPref = MutableLiveData<ArrayList<Pair<Long?, String?>?>>()
-    override val result: LiveData<Listing<Video>> = Transformations.map(query) {
-        repository.loadSearchVideos(it, gqlClientId.value?.nullIfEmpty(), apiPref.value, viewModelScope)
-    }
+    val query = MutableStateFlow("")
 
-    fun setQuery(query: String, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (this.gqlClientId.value != gqlClientId) {
-            this.gqlClientId.value = gqlClientId
-        }
-        if (this.apiPref.value != apiPref) {
-            this.apiPref.value = apiPref
-        }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = query.flatMapLatest { query ->
+        Pager(
+            PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
+        ) {
+            SearchVideosDataSource(
+                query = query,
+                gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                gqlApi = graphQLRepository,
+                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults))
+        }.flow
+    }.cachedIn(viewModelScope)
+
+    fun setQuery(query: String) {
         if (this.query.value != query) {
             this.query.value = query
         }

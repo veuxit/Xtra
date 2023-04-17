@@ -5,7 +5,12 @@ import android.content.Context
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.multidex.MultiDex
 import com.github.andreyasadchy.xtra.di.AppInjector
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.LifecycleListener
+import com.github.andreyasadchy.xtra.util.TlsSocketFactory
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
@@ -63,4 +68,5 @@ class XtraApp : Application() {
     fun removeLifecycleListener(listener: LifecycleListener) {
         appLifecycleObserver.removeListener(listener)
     }
+
 }

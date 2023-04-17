@@ -2,6 +2,7 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -42,13 +43,13 @@
                         android:layout_width="0dp"
                         android:layout_height="0dp"
                         android:scaleType="centerCrop"
-                        android:tintMode="src_atop"
                         android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:tint="#8C000000"
+                        app:tintMode="src_atop"
                         tools:src="@tools:sample/backgrounds/scenic"
                         tools:visibility="visible" />
 
@@ -254,7 +255,7 @@
                     style="@style/Search"/>
 
                 <ImageButton
-                    android:id="@+id/follow"
+                    android:id="@+id/followButton"
                     style="@style/FollowButton"
                     android:visibility="gone"
                     tools:visibility="visible" />

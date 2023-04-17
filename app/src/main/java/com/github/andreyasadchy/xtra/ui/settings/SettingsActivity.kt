@@ -9,25 +9,38 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.fragment.app.viewModels
-import androidx.preference.*
+import androidx.preference.ListPreference
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.SeekBarPreference
+import androidx.preference.SwitchPreferenceCompat
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.settings.api.DragListFragment
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DisplayUtils
+import com.github.andreyasadchy.xtra.util.applyTheme
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.shortToast
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.activity_settings.*
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
 
     var recreate = false
 
+    private lateinit var binding: ActivitySettingsBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyTheme()
-        setContentView(R.layout.activity_settings)
-        toolbar.navigationIcon = Utils.getNavigationIcon(this)
-        toolbar.setNavigationOnClickListener { onBackPressed() }
+        binding = ActivitySettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.toolbar.apply {
+            navigationIcon = Utils.getNavigationIcon(this@SettingsActivity)
+            setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        }
         recreate = savedInstanceState?.getBoolean(SettingsFragment.KEY_CHANGED) == true
         if (savedInstanceState == null || recreate) {
             recreate = false

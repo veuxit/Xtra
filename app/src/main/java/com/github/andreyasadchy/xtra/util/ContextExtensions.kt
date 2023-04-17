@@ -13,7 +13,7 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
-import java.util.*
+import java.util.Locale
 
 val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
     val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)

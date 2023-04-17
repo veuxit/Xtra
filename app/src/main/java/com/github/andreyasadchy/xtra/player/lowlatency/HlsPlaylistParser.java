@@ -1006,7 +1006,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         String segmentUri = replaceVariableReferences(line, variableDefinitions)
                 .replace("-unmuted", "-muted"); // unmuted segments
         if (hideAds) { // ad segments
-          if (segmentTitle.contains("Amazon")) {
+          if (segmentTitle.contains("Amazon") || segmentTitle.contains("Adform") || segmentTitle.contains("DCM")) {
             segmentUri = null;
           } else {
             for (DateRange range : adRanges) {

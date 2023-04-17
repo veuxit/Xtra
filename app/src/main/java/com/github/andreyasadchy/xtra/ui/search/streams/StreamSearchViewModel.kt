@@ -1,48 +1,54 @@
 package com.github.andreyasadchy.xtra.ui.search.streams
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.datasource.SearchStreamsDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 @HiltViewModel
 class StreamSearchViewModel @Inject constructor(
-        private val repository: ApiRepository) : PagedListViewModel<Stream>() {
+    @ApplicationContext context: Context,
+    private val helix: HelixApi,
+    private val graphQLRepository: GraphQLRepository) : ViewModel() {
 
-    private val query = MutableLiveData<String>()
-    private var helixClientId = MutableLiveData<String>()
-    private var helixToken = MutableLiveData<String>()
-    private var gqlClientId = MutableLiveData<String>()
-    private var apiPref = MutableLiveData<ArrayList<Pair<Long?, String?>?>>()
-    private var thumbnailsEnabled = MutableLiveData<Boolean>()
-    override val result: LiveData<Listing<Stream>> = Transformations.map(query) {
-        repository.loadSearchStreams(it, helixClientId.value?.nullIfEmpty(), helixToken.value?.nullIfEmpty(), gqlClientId.value?.nullIfEmpty(), apiPref.value, thumbnailsEnabled.value, viewModelScope)
-    }
+    val query = MutableStateFlow("")
 
-    fun setQuery(query: String, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean = true) {
-        if (this.helixClientId.value != helixClientId) {
-            this.helixClientId.value = helixClientId
-        }
-        if (this.helixToken.value != helixToken) {
-            this.helixToken.value = helixToken
-        }
-        if (this.gqlClientId.value != gqlClientId) {
-            this.gqlClientId.value = gqlClientId
-        }
-        if (this.apiPref.value != apiPref) {
-            this.apiPref.value = apiPref
-        }
-        if (this.thumbnailsEnabled.value != thumbnailsEnabled) {
-            this.thumbnailsEnabled.value = thumbnailsEnabled
-        }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = query.flatMapLatest { query ->
+        Pager(
+            if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+                PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+            } else {
+                PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
+            }
+        ) {
+            SearchStreamsDataSource(
+                query = query,
+                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                helixToken = Account.get(context).helixToken,
+                helixApi = helix,
+                gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                gqlApi = graphQLRepository,
+                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults))
+        }.flow
+    }.cachedIn(viewModelScope)
+
+    fun setQuery(query: String) {
         if (this.query.value != query) {
             this.query.value = query
         }

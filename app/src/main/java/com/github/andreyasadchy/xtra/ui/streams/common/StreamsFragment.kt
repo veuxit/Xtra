@@ -1,91 +1,90 @@
 package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.model.Account
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.paging.PagingData
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.FragmentStreamsBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.ui.streams.BaseStreamsFragment
+import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
+import com.github.andreyasadchy.xtra.ui.common.Scrollable
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
+import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
+import com.github.andreyasadchy.xtra.ui.streams.StreamsAdapter
 import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.fragment_media.*
-import kotlinx.android.synthetic.main.fragment_streams.*
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class StreamsFragment : BaseStreamsFragment<StreamsViewModel>(), StreamsSortDialog.OnFilter, FollowFragment {
+class StreamsFragment : PagedListFragment(), Scrollable, StreamsSortDialog.OnFilter {
 
-    override val viewModel: StreamsViewModel by viewModels()
+    private var _binding: FragmentStreamsBinding? = null
+    private val binding get() = _binding!!
+    private val args: GamePagerFragmentArgs by navArgs()
+    private val viewModel: StreamsViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Stream, out RecyclerView.ViewHolder>
 
-    override val adapter: BasePagedListAdapter<Stream> by lazy {
-        if (!compactStreams) {
-            super.adapter
-        } else {
-            val activity = requireActivity() as MainActivity
-            StreamsCompactAdapter(this, activity, activity, activity)
-        }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentStreamsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    private var compactStreams = false
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        compactStreams = requireContext().prefs().getString(C.COMPACT_STREAMS, "disabled") == "all"
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        pagingAdapter = if (requireContext().prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+            StreamsCompactAdapter(this, args)
+        } else {
+            StreamsAdapter(this, args)
+        }
+        setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
     }
 
     override fun initialize() {
-        super.initialize()
-        viewModel.loadStreams(
-            gameId = arguments?.getString(C.GAME_ID),
-            gameName = arguments?.getString(C.GAME_NAME),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-            helixToken = Account.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-            tags = arguments?.getStringArray(C.TAGS)?.toList(),
-            apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults),
-            gameApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults),
-            thumbnailsEnabled = !compactStreams
-        )
-        val activity = requireActivity() as MainActivity
-        sortBar.visible()
-        if (arguments?.getString(C.GAME_ID) != null && arguments?.getString(C.GAME_NAME) != null) {
-            sortBar.setOnClickListener {
-                StreamsSortDialog.newInstance(
-                    sort = viewModel.sort
-                ).show(childFragmentManager, null)
-            }
-            if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-                parentFragment?.followGame?.let {
-                    initializeFollow(
-                        fragment = this,
-                        viewModel = viewModel,
-                        followButton = it,
-                        setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                        account = Account.get(activity),
-                        helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                        gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                        gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-                    )
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow, enableScrollTopButton = args.gameId != null || args.gameName != null || !args.tags.isNullOrEmpty())
+        with(binding) {
+            sortBar.root.visible()
+            if (args.gameId != null && args.gameName != null) {
+                sortBar.root.setOnClickListener {
+                    StreamsSortDialog.newInstance(
+                        sort = viewModel.sort
+                    ).show(childFragmentManager, null)
                 }
+            } else {
+                sortBar.root.setOnClickListener { findNavController().navigate(TagSearchFragmentDirections.actionGlobalTagSearchFragment()) }
             }
-            if (arguments?.getBoolean(C.CHANNEL_UPDATELOCAL) == true) {
-                viewModel.updateLocalGame(requireContext())
-            }
-        } else {
-            sortBar.setOnClickListener { activity.openTagSearch() }
         }
     }
 
     override fun onChange(sort: StreamSortEnum) {
-        adapter.submitList(null)
-        viewModel.filter(
-            sort = sort
-        )
+        viewLifecycleOwner.lifecycleScope.launch {
+            pagingAdapter.submitData(PagingData.empty())
+            viewModel.filter(
+                sort = sort
+            )
+        }
+    }
+
+    override fun scrollToTop() {
+        binding.recyclerViewLayout.recyclerView.scrollToPosition(0)
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

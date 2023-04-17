@@ -1,21 +1,22 @@
 package com.github.andreyasadchy.xtra.ui.common
 
-import android.os.Bundle
-import android.view.View
 import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.github.andreyasadchy.xtra.repository.LoadingState
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import com.github.andreyasadchy.xtra.util.prefs
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePagedListAdapter<T>> : BaseNetworkFragment() {
+abstract class PagedListFragment : BaseNetworkFragment() {
 
-    protected abstract val viewModel: VM
-    protected abstract val adapter: Adapter
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    fun <T : Any, VH : RecyclerView.ViewHolder> setAdapter(recyclerView: RecyclerView, adapter: PagingDataAdapter<T, VH>) {
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
 
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -24,7 +25,7 @@ abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePa
                     override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                         try {
                             if (positionStart == 0) {
-                                recyclerView?.scrollToPosition(0)
+                                recyclerView.scrollToPosition(0)
                             }
                         } catch (e: Exception) {
 
@@ -33,32 +34,52 @@ abstract class PagedListFragment<T, VM : PagedListViewModel<T>, Adapter : BasePa
                 })
             }
         })
-        recyclerView?.adapter = adapter
+        recyclerView.adapter = adapter
     }
 
-    override fun initialize() {
-        viewModel.list.observe(viewLifecycleOwner) {
-            adapter.submitList(it)
-            nothingHere?.isVisible = it.isEmpty()
+    private fun shouldShowButton(recyclerView: RecyclerView): Boolean {
+        val offset = recyclerView.computeVerticalScrollOffset()
+        if (offset < 0) {
+            return false
         }
-        viewModel.loadingState.observe(viewLifecycleOwner) {
-            val isLoading = it == LoadingState.LOADING
-            val isListEmpty = adapter.currentList.isNullOrEmpty()
-            if (isLoading) {
-                nothingHere?.gone()
-            }
-            progressBar?.isVisible = isLoading && isListEmpty
-            if (swipeRefresh?.isEnabled == true) {
-                swipeRefresh.isRefreshing = isLoading && !isListEmpty
-            }
-        }
-        viewModel.pagingState.observe(viewLifecycleOwner, Observer(adapter::setPagingState))
-        if (swipeRefresh?.isEnabled == true) {
-            swipeRefresh.setOnRefreshListener { viewModel.refresh() }
-        }
+        val extent = recyclerView.computeVerticalScrollExtent()
+        val range = recyclerView.computeVerticalScrollRange()
+        val percentage = (100f * offset / (range - extent).toFloat())
+        return percentage > 3f
     }
 
-    override fun onNetworkRestored() {
-        viewModel.retry()
+    fun <T : Any, VH : RecyclerView.ViewHolder> initializeAdapter(binding: CommonRecyclerViewLayoutBinding, pagingAdapter: PagingDataAdapter<T, VH>, flow: Flow<PagingData<T>>, enableSwipeRefresh: Boolean = true, enableScrollTopButton: Boolean = true) {
+        with(binding) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                    if (enableSwipeRefresh) {
+                        swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount != 0
+                    }
+                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0
+                }
+            }
+            if (enableSwipeRefresh) {
+                swipeRefresh.isEnabled = true
+                swipeRefresh.setOnRefreshListener { pagingAdapter.refresh() }
+            }
+            if (enableScrollTopButton && requireContext().prefs().getBoolean(C.UI_SCROLLTOP, true)) {
+                recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        super.onScrollStateChanged(recyclerView, newState)
+                        scrollTop.isVisible = shouldShowButton(recyclerView)
+                    }
+                })
+                scrollTop.setOnClickListener {
+                    (parentFragment as? Scrollable)?.scrollToTop()
+                    it.gone()
+                }
+            }
+        }
     }
 }

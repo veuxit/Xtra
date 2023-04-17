@@ -55,6 +55,12 @@
         android:title="@string/broadcastersCount"
         app:iconSpaceReserved="false"/>
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="ui_gamepager"
+        android:title="@string/use_gamepager"
+        app:iconSpaceReserved="false"/>
+
     <ListPreference
         android:defaultValue="1"
         android:entries="@array/followedEntries"
@@ -107,6 +113,12 @@
         android:key="ui_follow_button"
         android:summary="%s"
         android:title="@string/follow_button"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="ui_scrolltop"
+        android:title="@string/show_scrolltop"
         app:iconSpaceReserved="false"/>
 
     <ListPreference

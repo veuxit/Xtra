@@ -1,16 +1,16 @@
 package com.github.andreyasadchy.xtra.ui.view.chat
 
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class MessageClickedViewModel @Inject constructor(private val repository: ApiRepository) : BaseViewModel() {
+class MessageClickedViewModel @Inject constructor(private val repository: ApiRepository) : ViewModel() {
 
     private val user = MutableLiveData<User?>()
     private var isLoading = false
@@ -23,7 +23,6 @@ class MessageClickedViewModel @Inject constructor(private val repository: ApiRep
                     val u = repository.loadUserMessageClicked(channelId = channelId, targetId = targetId, helixClientId = helixClientId, helixToken = helixToken, gqlClientId = gqlClientId)
                     user.postValue(u)
                 } catch (e: Exception) {
-                    _errors.postValue(e)
                 } finally {
                     isLoading = false
                 }

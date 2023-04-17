@@ -40,7 +40,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.*
+import java.util.LinkedList
 import javax.inject.Inject
 
 @HiltViewModel
@@ -67,33 +67,17 @@ class VideoPlayerViewModel @Inject constructor(
             return VideoDownloadInfo(video, helper.urls, relativeTimes, durations, playlist.durationUs / 1000L, playlist.targetDurationUs / 1000L, player?.currentPosition ?: 0)
         }
 
-    override val userId: String?
-        get() { return video.channelId }
-    override val userLogin: String?
-        get() { return video.channelLogin }
-    override val userName: String?
-        get() { return video.channelName }
-    override val channelLogo: String?
-        get() { return video.channelLogo }
-
     val bookmarkItem = MutableLiveData<Bookmark>()
     val gamesList = MutableLiveData<List<Game>>()
-    private var isLoading = false
     private var shouldRetry = true
 
     fun loadGamesList(clientId: String?, videoId: String?) {
-        if (gamesList.value == null && !isLoading) {
-            isLoading = true
+        if (!gamesList.isInitialized) {
             viewModelScope.launch {
                 try {
                     val get = repository.loadVideoGames(clientId, videoId)
-                    if (get.isNotEmpty()) {
-                        gamesList.postValue(get)
-                    }
+                    gamesList.postValue(get)
                 } catch (e: Exception) {
-                    _errors.postValue(e)
-                } finally {
-                    isLoading = false
                 }
             }
         }
@@ -262,9 +246,11 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun checkBookmark() {
-        video.id?.let {
-            viewModelScope.launch {
-                bookmarkItem.postValue(bookmarksRepository.getBookmarkByVideoId(it))
+        if (this::video.isInitialized) {
+            video.id?.let {
+                viewModelScope.launch {
+                    bookmarkItem.postValue(bookmarksRepository.getBookmarkByVideoId(it))
+                }
             }
         }
     }

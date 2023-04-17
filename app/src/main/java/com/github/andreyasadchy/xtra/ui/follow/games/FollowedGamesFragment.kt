@@ -5,42 +5,47 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.FragmentFollowedChannelsBinding
 import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
 
 @AndroidEntryPoint
-class FollowedGamesFragment : PagedListFragment<Game, FollowedGamesViewModel, BasePagedListAdapter<Game>>(), Scrollable {
+class FollowedGamesFragment : PagedListFragment(), Scrollable {
 
-    override val viewModel: FollowedGamesViewModel by viewModels()
-    override val adapter: BasePagedListAdapter<Game> by lazy {
-        val activity = requireActivity() as MainActivity
-        FollowedGamesAdapter(this, activity, activity)
+    private var _binding: FragmentFollowedChannelsBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: FollowedGamesViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Game, out RecyclerView.ViewHolder>
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentFollowedChannelsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_followed_channels, container, false)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        pagingAdapter = FollowedGamesAdapter(this)
+        setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
     }
 
     override fun initialize() {
-        super.initialize()
-        viewModel.setUser(
-            account = Account.get(requireContext()),
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-            apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults)
-        )
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow, enableScrollTopButton = false)
     }
 
     override fun scrollToTop() {
-        recyclerView?.scrollToPosition(0)
+        binding.recyclerViewLayout.recyclerView.scrollToPosition(0)
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

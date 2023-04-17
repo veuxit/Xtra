@@ -1,15 +1,20 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.util.Log
+import com.github.andreyasadchy.xtra.util.TlsSocketFactory
+import okhttp3.TlsVersion
 import java.io.*
 import java.net.Socket
+import java.security.KeyStore
 import java.util.*
-import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 private const val TAG = "LiveChatThread"
 
 class LiveChatThread(
-    private val useSSl: Boolean,
+    private val useSSL: Boolean,
     private val loggedIn: Boolean,
     private val channelName: String,
     private val listener: OnMessageReceivedListener) : Thread() {
@@ -62,9 +67,15 @@ class LiveChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
+        Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketIn = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
+                init(null as KeyStore?)
+                trustManagers.first { it is X509TrustManager } as X509TrustManager
+            }
+            val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
+            sslContext.init(null, arrayOf(trustManager), null)
+            socketIn = (if (useSSL) TlsSocketFactory(sslContext.socketFactory).createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667))?.apply {
                 readerIn = BufferedReader(InputStreamReader(getInputStream()))
                 writerIn = BufferedWriter(OutputStreamWriter(getOutputStream()))
             }

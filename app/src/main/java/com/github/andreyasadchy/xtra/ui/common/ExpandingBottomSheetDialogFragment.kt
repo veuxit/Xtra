@@ -16,9 +16,7 @@ open class ExpandingBottomSheetDialogFragment : BottomSheetDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         dialog.setOnShowListener {
-            val d = it as BottomSheetDialog
-            val bottomSheet = d.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet) as FrameLayout
-            BottomSheetBehavior.from(bottomSheet).state = BottomSheetBehavior.STATE_EXPANDED
+            val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet) as FrameLayout
             bottomSheet.setBackgroundColor(resources.getColor(
                 when (requireContext().prefs().getString(C.THEME, "0")) {
                     "1" -> R.color.primaryAmoled
@@ -26,6 +24,9 @@ open class ExpandingBottomSheetDialogFragment : BottomSheetDialogFragment() {
                     "3" -> R.color.primaryBlue
                     else -> R.color.primaryDark
                 }))
+            val behavior = BottomSheetBehavior.from(bottomSheet)
+            behavior.skipCollapsed = true
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
         }
         return dialog
     }

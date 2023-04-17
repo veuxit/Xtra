@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.ui.Game
@@ -9,55 +10,64 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.google.gson.JsonObject
-import kotlinx.coroutines.CoroutineScope
 
 class FollowedGamesDataSource(
     private val localFollowsGame: LocalFollowGameRepository,
     private val gqlClientId: String?,
     private val gqlToken: String?,
     private val gqlApi: GraphQLRepository,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Game>(coroutineScope) {
+    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Game>() {
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Game>) {
-        loadInitial(params, callback) {
-            val list = mutableListOf<Game>()
-            for (i in localFollowsGame.loadFollows()) {
-                list.add(Game(gameId = i.gameId, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
-            }
-            val remote = try {
-                when (apiPref.elementAt(0)?.second) {
-                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                    C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
-                    else -> throw Exception()
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
+        return try {
+            val response = try {
+                val list = mutableListOf<Game>()
+                for (i in localFollowsGame.loadFollows()) {
+                    list.add(Game(gameId = i.gameId, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
                 }
-            } catch (e: Exception) {
-                try {
-                    when (apiPref.elementAt(1)?.second) {
+                val remote = try {
+                    when (apiPref.elementAt(0)?.second) {
                         C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
                         C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    listOf()
-                }
-            }
-            if (remote.isNotEmpty()) {
-                for (i in remote) {
-                    val item = list.find { it.gameId == i.gameId }
-                    if (item == null) {
-                        i.followAccount = true
-                        list.add(i)
-                    } else {
-                        item.followAccount = true
-                        item.viewersCount = i.viewersCount
-                        item.broadcastersCount = i.broadcastersCount
-                        item.tags = i.tags
+                    try {
+                        when (apiPref.elementAt(1)?.second) {
+                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                            C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
+                            else -> throw Exception()
+                        }
+                    } catch (e: Exception) {
+                        listOf()
                     }
                 }
+                if (remote.isNotEmpty()) {
+                    for (i in remote) {
+                        val item = list.find { it.gameId == i.gameId }
+                        if (item == null) {
+                            i.followAccount = true
+                            list.add(i)
+                        } else {
+                            item.followAccount = true
+                            item.viewersCount = i.viewersCount
+                            item.broadcastersCount = i.broadcastersCount
+                            item.tags = i.tags
+                        }
+                    }
+                }
+                list.sortBy { it.gameName }
+                list
+            } catch (e: Exception) {
+                listOf()
             }
-            list.sortBy { it.gameName }
-            list
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
@@ -78,21 +88,10 @@ class FollowedGamesDataSource(
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Game>) {
-        loadRange(params, callback) {
-            listOf()
+    override fun getRefreshKey(state: PagingState<Int, Game>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory(
-        private val localFollowsGame: LocalFollowGameRepository,
-        private val gqlClientId: String?,
-        private val gqlToken: String?,
-        private val gqlApi: GraphQLRepository,
-        private val apiPref: ArrayList<Pair<Long?, String?>?>,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Game, FollowedGamesDataSource>() {
-
-        override fun create(): DataSource<Int, Game> =
-                FollowedGamesDataSource(localFollowsGame, gqlClientId, gqlToken, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

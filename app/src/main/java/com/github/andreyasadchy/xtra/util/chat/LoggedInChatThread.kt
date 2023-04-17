@@ -1,21 +1,25 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.util.Log
-import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
+import com.github.andreyasadchy.xtra.util.TlsSocketFactory
+import okhttp3.TlsVersion
 import java.io.*
 import java.net.Socket
+import java.security.KeyStore
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 private const val TAG = "LoggedInChatThread"
 
 class LoggedInChatThread(
-    private val useSSl: Boolean,
+    private val useSSL: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
     private val channelName: String,
-    private val listener: OnMessageReceivedListener) : Thread(), ChatView.MessageSenderCallback {
+    private val listener: OnMessageReceivedListener) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter
@@ -60,9 +64,15 @@ class LoggedInChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
+        Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketOut = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
+                init(null as KeyStore?)
+                trustManagers.first { it is X509TrustManager } as X509TrustManager
+            }
+            val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
+            sslContext.init(null, arrayOf(trustManager), null)
+            socketOut = (if (useSSL) TlsSocketFactory(sslContext.socketFactory).createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667))?.apply {
                 readerOut = BufferedReader(InputStreamReader(getInputStream()))
                 writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
                 write("PASS oauth:$userToken", writerOut)
@@ -103,7 +113,7 @@ class LoggedInChatThread(
         writers.forEach { it?.write(message + System.getProperty("line.separator")) }
     }
 
-    override fun send(message: CharSequence) {
+    fun send(message: CharSequence) {
         messageSenderExecutor.execute {
             try {
                 write("PRIVMSG $hashChannelName :$message", writerOut)

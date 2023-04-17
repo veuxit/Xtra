@@ -1,8 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
-import android.app.Application
 import android.content.Context
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.FetchProvider
@@ -18,9 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DownloadsViewModel @Inject internal constructor(
-    application: Application,
     private val repository: OfflineRepository,
-    private val fetchProvider: FetchProvider) : AndroidViewModel(application) {
+    private val fetchProvider: FetchProvider) : ViewModel() {
 
     val list = repository.loadAllVideos()
 

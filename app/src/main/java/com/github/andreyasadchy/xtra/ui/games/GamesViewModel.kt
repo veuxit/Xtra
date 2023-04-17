@@ -1,38 +1,41 @@
 package com.github.andreyasadchy.xtra.ui.games
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.datasource.GamesDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 @HiltViewModel
 class GamesViewModel @Inject constructor(
-        private val repository: ApiRepository) : PagedListViewModel<Game>() {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    savedStateHandle: SavedStateHandle) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadTopGames(it.helixClientId, it.helixToken, it.gqlClientId, it.tags, it.apiPref, viewModelScope)
-    }
-
-    fun loadGames(helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, tags: List<String>? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        Filter(helixClientId, helixToken, gqlClientId, tags, apiPref).let {
-            if (filter.value != it) {
-                filter.value = it
-            }
-        }
-    }
-
-    private data class Filter(
-        val helixClientId: String?,
-        val helixToken: String?,
-        val gqlClientId: String?,
-        val tags: List<String>?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>)
+    private val args = GamesFragmentArgs.fromSavedStateHandle(savedStateHandle)
+    val flow = Pager(
+        PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+    ) {
+        GamesDataSource(
+            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixToken = Account.get(context).helixToken,
+            helixApi = helix,
+            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+            tags = args.tags?.toList(),
+            gqlApi = graphQLRepository,
+            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAMES, ""), TwitchApiHelper.gamesApiDefaults))
+    }.flow.cachedIn(viewModelScope)
 }

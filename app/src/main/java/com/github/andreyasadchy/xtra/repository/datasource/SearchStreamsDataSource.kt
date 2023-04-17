@@ -1,32 +1,32 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonObject
-import kotlinx.coroutines.CoroutineScope
 
-class SearchStreamsDataSource private constructor(
+class SearchStreamsDataSource(
     private val query: String,
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
     private val gqlClientId: String?,
     private val gqlApi: GraphQLRepository,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>?,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Stream>(coroutineScope) {
+    private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Stream>) {
-        loadInitial(params, callback) {
-            try {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Stream> {
+        return try {
+            val response = if (query.isBlank()) listOf() else try {
                 when (apiPref?.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
@@ -43,15 +43,22 @@ class SearchStreamsDataSource private constructor(
                     listOf()
                 }
             }
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) (params.key ?: 1) + 1 else null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
+    private suspend fun helixLoad(params: LoadParams<Int>): List<Stream> {
         val get = helixApi.getSearchChannels(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             query = query,
-            limit = initialParams?.requestedLoadSize ?: rangeParams?.loadSize,
+            limit = params.loadSize,
             offset = offset,
             live = true
         )
@@ -73,14 +80,14 @@ class SearchStreamsDataSource private constructor(
         return list
     }
 
-    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Stream> {
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQuerySearchStreams(
             clientId = gqlClientId,
             query = context.resources.openRawResource(R.raw.searchstreams).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("query", query)
-                addProperty("first", initialParams?.requestedLoadSize ?: rangeParams?.loadSize)
+                addProperty("first", params.loadSize)
                 addProperty("after", offset)
             })
         offset = get.cursor
@@ -88,29 +95,10 @@ class SearchStreamsDataSource private constructor(
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Stream>) {
-        loadRange(params, callback) {
-            if (!offset.isNullOrBlank()) {
-                when (api) {
-                    C.HELIX -> helixLoad(rangeParams = params)
-                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
-                    else -> listOf()
-                }
-            } else listOf()
+    override fun getRefreshKey(state: PagingState<Int, Stream>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory(
-        private val query: String,
-        private val helixClientId: String?,
-        private val helixToken: String?,
-        private val helixApi: HelixApi,
-        private val gqlClientId: String?,
-        private val gqlApi: GraphQLRepository,
-        private val apiPref: ArrayList<Pair<Long?, String?>?>?,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Stream, SearchStreamsDataSource>() {
-
-        override fun create(): DataSource<Int, Stream> =
-                SearchStreamsDataSource(query, helixClientId, helixToken, helixApi, gqlClientId, gqlApi, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

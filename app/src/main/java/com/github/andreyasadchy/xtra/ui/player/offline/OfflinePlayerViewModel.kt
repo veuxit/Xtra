@@ -25,7 +25,6 @@ class OfflinePlayerViewModel @Inject constructor(
         if (!this::video.isInitialized) {
             this.video = video
             mediaItem = MediaItem.fromUri(video.url.toUri())
-            initializePlayer()
             play()
             player?.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) video.lastWatchPosition ?: 0 else 0)
         }

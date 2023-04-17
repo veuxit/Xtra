@@ -1,94 +1,113 @@
 package com.github.andreyasadchy.xtra.ui.videos.game
 
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.PagingData
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.databinding.FragmentVideosBinding
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.fragment_media.*
-import kotlinx.android.synthetic.main.fragment_videos.*
-import kotlinx.android.synthetic.main.sort_bar.*
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GameVideosFragment : BaseVideosFragment<GameVideosViewModel>(), VideosSortDialog.OnFilter, FollowFragment {
+class GameVideosFragment : BaseVideosFragment(), Scrollable, VideosSortDialog.OnFilter {
 
-    override val viewModel: GameVideosViewModel by viewModels()
+    private var _binding: FragmentVideosBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: GameVideosViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Video, out RecyclerView.ViewHolder>
 
-    override val adapter: BaseVideosAdapter by lazy {
-        val activity = requireActivity() as MainActivity
-        VideosAdapter(this, activity, activity, activity, {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentVideosBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        pagingAdapter = VideosAdapter(this, {
             lastSelectedItem = it
             showDownloadDialog()
         }, {
             lastSelectedItem = it
             viewModel.saveBookmark(requireContext(), it)
         })
+        setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
     }
 
     override fun initialize() {
-        super.initialize()
-        viewModel.sortText.observe(viewLifecycleOwner) {
-            sortText.text = it
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow)
+        initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
+        if (requireContext().prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            viewModel.positions.observe(viewLifecycleOwner) {
+                (pagingAdapter as BaseVideosAdapter).setVideoPositions(it)
+            }
         }
-        viewModel.setGame(
-            context = requireContext(),
-            gameId = arguments?.getString(C.GAME_ID),
-            gameName = arguments?.getString(C.GAME_NAME),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-            helixToken = Account.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-            apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAME_VIDEOS, ""), TwitchApiHelper.gameVideosApiDefaults)
-        )
-        sortBar.visible()
-        sortBar.setOnClickListener {
-            VideosSortDialog.newInstance(
-                sort = viewModel.sort,
-                period = viewModel.period,
-                type = viewModel.type,
-                languageIndex = viewModel.languageIndex,
-                saveSort = viewModel.saveSort,
-                saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_VIDEOS, false)
-            ).show(childFragmentManager, null)
+        viewModel.bookmarks.observe(viewLifecycleOwner) {
+            (pagingAdapter as BaseVideosAdapter).setBookmarksList(it)
         }
-        val activity = requireActivity() as MainActivity
-        if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-            parentFragment?.followGame?.let {
-                initializeFollow(
-                    fragment = this,
-                    viewModel = viewModel,
-                    followButton = it,
-                    setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                    account = Account.get(activity),
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                    gqlClientId2 = requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-                )
+        with(binding) {
+            sortBar.root.visible()
+            sortBar.root.setOnClickListener {
+                VideosSortDialog.newInstance(
+                    sort = viewModel.sort,
+                    period = viewModel.period,
+                    type = viewModel.type,
+                    languageIndex = viewModel.languageIndex,
+                    saveSort = viewModel.saveSort,
+                    saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_VIDEOS, false)
+                ).show(childFragmentManager, null)
+            }
+            viewModel.sortText.observe(viewLifecycleOwner) {
+                sortBar.sortText.text = it
             }
         }
     }
 
     override fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
-        adapter.submitList(null)
-        viewModel.filter(
-            sort = sort,
-            period = period,
-            type = type,
-            languageIndex = languageIndex,
-            text = getString(R.string.sort_and_period, sortText, periodText),
-            saveSort = saveSort,
-            saveDefault = saveDefault
-        )
+        viewLifecycleOwner.lifecycleScope.launch {
+            binding.recyclerViewLayout.scrollTop.gone()
+            pagingAdapter.submitData(PagingData.empty())
+            viewModel.filter(
+                context = requireContext(),
+                sort = sort,
+                period = period,
+                type = type,
+                languageIndex = languageIndex,
+                text = getString(R.string.sort_and_period, sortText, periodText),
+                saveSort = saveSort,
+                saveDefault = saveDefault
+            )
+        }
+    }
+
+    override fun scrollToTop() {
+        binding.recyclerViewLayout.recyclerView.scrollToPosition(0)
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

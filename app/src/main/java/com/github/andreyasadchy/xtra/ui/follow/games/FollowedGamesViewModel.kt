@@ -1,37 +1,36 @@
 package com.github.andreyasadchy.xtra.ui.follow.games
 
-import android.app.Application
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
+import com.github.andreyasadchy.xtra.repository.datasource.FollowedGamesDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 @HiltViewModel
 class FollowedGamesViewModel @Inject constructor(
-        context: Application,
-        private val repository: ApiRepository) : PagedListViewModel<Game>() {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val localFollowsGame: LocalFollowGameRepository) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadFollowedGames(it.gqlClientId, it.account.gqlToken, it.apiPref, viewModelScope)
-    }
-
-    fun setUser(account: Account, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (filter.value == null) {
-            filter.value = Filter(account, gqlClientId, apiPref)
-        }
-    }
-
-    private data class Filter(
-        val account: Account,
-        val gqlClientId: String?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>)
+    val flow = Pager(
+        PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+    ) {
+        FollowedGamesDataSource(
+            localFollowsGame = localFollowsGame,
+            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+            gqlToken = Account.get(context).gqlToken,
+            gqlApi = graphQLRepository,
+            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults))
+    }.flow.cachedIn(viewModelScope)
 }
