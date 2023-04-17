@@ -128,7 +128,7 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    fun submitList(list: MutableList<ChatMessage>) {
+    fun submitList(list: MutableList<ChatMessage>?) {
         adapter.messages = list
     }
 
