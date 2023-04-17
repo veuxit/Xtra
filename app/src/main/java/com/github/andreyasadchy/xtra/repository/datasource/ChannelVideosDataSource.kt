@@ -1,19 +1,24 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserVideosQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.ui.*
+import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.Tag
+import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
-import kotlinx.coroutines.CoroutineScope
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
-class ChannelVideosDataSource (
+class ChannelVideosDataSource(
     private val channelId: String?,
     private val channelLogin: String?,
     private val helixClientId: String?,
@@ -29,15 +34,14 @@ class ChannelVideosDataSource (
     private val gqlSort: String?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Video>(coroutineScope) {
+    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Video>) {
-        loadInitial(params, callback) {
-            try {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
+        return try {
+            val response = try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
@@ -65,31 +69,38 @@ class ChannelVideosDataSource (
                     }
                 }
             }
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+    private suspend fun helixLoad(params: LoadParams<Int>): List<Video> {
         val get = helixApi.getVideos(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             channelId = channelId,
             period = helixPeriod,
             broadcastType = helixBroadcastTypes,
             sort = helixSort,
-            limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            limit = params.loadSize,
             offset = offset
         )
         offset = get.cursor
         return get.data
     }
 
-    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(UserVideosQuery(
             id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
             login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             sort = Optional.Present(gqlQuerySort),
             types = Optional.Present(gqlQueryType?.let { listOf(it) }),
-            first = Optional.Present(30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),
+            first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
         )).execute().data?.user
         val get = get1?.videos?.edges
@@ -127,46 +138,17 @@ class ChannelVideosDataSource (
         return list
     }
 
-    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = gqlApi.loadChannelVideos(gqlClientId, channelLogin, gqlType, gqlSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+    private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
+        val get = gqlApi.loadChannelVideos(gqlClientId, channelLogin, gqlType, gqlSort, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
-        loadRange(params, callback) {
-            if (!offset.isNullOrBlank()) {
-                when (api) {
-                    C.HELIX -> helixLoad(rangeParams = params)
-                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
-                    C.GQL -> if (nextPage) gqlLoad(rangeParams = params) else listOf()
-                    else -> listOf()
-                }
-            } else listOf()
+    override fun getRefreshKey(state: PagingState<Int, Video>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory(
-        private val channelId: String?,
-        private val channelLogin: String?,
-        private val helixClientId: String?,
-        private val helixToken: String?,
-        private val helixPeriod: VideoPeriodEnum,
-        private val helixBroadcastTypes: BroadcastTypeEnum,
-        private val helixSort: VideoSortEnum,
-        private val helixApi: HelixApi,
-        private val gqlClientId: String?,
-        private val gqlQueryType: BroadcastType?,
-        private val gqlQuerySort: VideoSort?,
-        private val gqlType: String?,
-        private val gqlSort: String?,
-        private val gqlApi: GraphQLRepository,
-        private val apolloClient: ApolloClient,
-        private val apiPref: ArrayList<Pair<Long?, String?>?>,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, ChannelVideosDataSource>() {
-
-        override fun create(): DataSource<Int, Video> =
-                ChannelVideosDataSource(channelId, channelLogin, helixClientId, helixToken, helixPeriod, helixBroadcastTypes, helixSort, helixApi, gqlClientId, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

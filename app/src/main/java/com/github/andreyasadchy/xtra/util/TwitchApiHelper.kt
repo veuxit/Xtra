@@ -7,14 +7,24 @@ import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.util.chat.*
+import com.github.andreyasadchy.xtra.util.chat.LiveChatListener
+import com.github.andreyasadchy.xtra.util.chat.LiveChatThread
+import com.github.andreyasadchy.xtra.util.chat.LoggedInChatThread
+import com.github.andreyasadchy.xtra.util.chat.MessageListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
+import com.github.andreyasadchy.xtra.util.chat.PubSubListener
+import com.github.andreyasadchy.xtra.util.chat.PubSubListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import kotlinx.coroutines.CoroutineScope
 import okhttp3.OkHttpClient
 import java.lang.Integer.parseInt
 import java.lang.Long.parseLong
 import java.text.ParseException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 object TwitchApiHelper {
 
@@ -208,12 +218,12 @@ object TwitchApiHelper {
         return DateUtils.formatDateTime(context, date, format)
     }
 
-    fun startChat(useSSl: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LiveChatThread {
-        return LiveChatThread(useSSl, loggedIn, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startChat(useSSL: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LiveChatThread {
+        return LiveChatThread(useSSL, loggedIn, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
-    fun startLoggedInChat(useSSl: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LoggedInChatThread {
-        return LoggedInChatThread(useSSl, userName, userToken, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startLoggedInChat(useSSL: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LoggedInChatThread {
+        return LoggedInChatThread(useSSL, userName, userToken, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
     fun startPubSub(channelId: String, userId: String?, gqlToken: String?, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, client: OkHttpClient, coroutineScope: CoroutineScope, newMessageListener: OnChatMessageReceivedListener, callback: PubSubListener): PubSubWebSocket {
@@ -338,7 +348,7 @@ object TwitchApiHelper {
     }
 
     fun getVideoUrlMapFromPreview(url: String, type: String?): MutableMap<String, String> {
-        val qualityList = listOf("chunked", "1080p60", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
+        val qualityList = listOf("chunked", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
         val map = mutableMapOf<String, String>()
         qualityList.forEach { quality ->
             map[quality] = url

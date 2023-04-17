@@ -17,9 +17,9 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
                 android:text="@string/sort"
-                android:textStyle="bold"
-                android:layout_marginStart="5dp" />
+                android:textStyle="bold" />
 
             <RadioButton
                 android:id="@+id/time_followed"
@@ -45,9 +45,9 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
                 android:text="@string/order"
-                android:textStyle="bold"
-                android:layout_marginStart="5dp" />
+                android:textStyle="bold" />
 
             <RadioButton
                 android:id="@+id/newest_first"

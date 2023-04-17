@@ -17,9 +17,6 @@ interface MiscApi {
     @POST
     suspend fun postUrl(@Url url: String, @Body body: RequestBody): Response<Unit>
 
-    @POST("https://gql.twitch.tv/integrity")
-    suspend fun getClientIntegrityToken(@Header("Client-ID") clientId: String?, @Header("Authorization") token: String?, @Header("X-Device-Id") deviceId: String?): ResponseBody
-
     @GET("https://recent-messages.robotty.de/api/v2/recent-messages/{channelLogin}")
     suspend fun getRecentMessages(@Path("channelLogin") channelLogin: String, @Query("limit") limit: String): Response<RecentMessagesResponse>
 

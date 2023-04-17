@@ -4,55 +4,74 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.LoadState
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
+import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.search.Searchable
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchable {
+class VideoSearchFragment : BaseVideosFragment(), Searchable {
 
-    override val viewModel: VideoSearchViewModel by viewModels()
+    private var _binding: CommonRecyclerViewLayoutBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: VideoSearchViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Video, out RecyclerView.ViewHolder>
 
-    override val adapter: BaseVideosAdapter by lazy {
-        val activity = requireActivity() as MainActivity
-        VideosAdapter(this, activity, activity, activity, {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = CommonRecyclerViewLayoutBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        pagingAdapter = VideosAdapter(this, {
             lastSelectedItem = it
             showDownloadDialog()
         }, {
             lastSelectedItem = it
             viewModel.saveBookmark(requireContext(), it)
         })
+        setAdapter(binding.recyclerView, pagingAdapter)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
+    override fun initialize() {
+        with(binding) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
+                }
+            }
+        }
+        initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
     }
 
     override fun search(query: String) {
-        if (query.isNotEmpty()) {
-            viewModel.setQuery(
-                query = query,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults)
-            )
-        } else {
-            adapter.submitList(null)
-            nothingHere?.gone()
-        }
+        viewModel.setQuery(query)
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

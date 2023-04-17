@@ -170,6 +170,14 @@ class DatabaseModule {
                                 database.execSQL("ALTER TABLE requests1 RENAME TO requests")
                             }
                         },
+                        object : Migration(19, 20) {
+                            override fun migrate(database: SupportSQLiteDatabase) {
+                                database.execSQL("CREATE TABLE IF NOT EXISTS recent_emotes1 (name TEXT NOT NULL, used_at INTEGER NOT NULL, PRIMARY KEY (name))")
+                                database.execSQL("INSERT INTO recent_emotes1 (name, used_at) SELECT name, used_at FROM recent_emotes")
+                                database.execSQL("DROP TABLE recent_emotes")
+                                database.execSQL("ALTER TABLE recent_emotes1 RENAME TO recent_emotes")
+                            }
+                        },
                     )
                     .build()
 }

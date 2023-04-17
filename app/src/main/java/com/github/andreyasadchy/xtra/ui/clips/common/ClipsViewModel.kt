@@ -1,152 +1,175 @@
 package com.github.andreyasadchy.xtra.ui.clips.common
 
-import android.app.Application
 import android.content.Context
 import androidx.core.content.edit
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.offline.SortGame
-import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.datasource.ChannelClipsDataSource
+import com.github.andreyasadchy.xtra.repository.datasource.GameClipsDataSource
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
 class ClipsViewModel @Inject constructor(
-        context: Application,
-        private val repository: ApiRepository,
-        private val localFollowsGame: LocalFollowGameRepository,
-        private val sortChannelRepository: SortChannelRepository,
-        private val sortGameRepository: SortGameRepository) : PagedListViewModel<Clip>(), FollowViewModel {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val apolloClient: ApolloClient,
+    private val sortChannelRepository: SortChannelRepository,
+    private val sortGameRepository: SortGameRepository,
+    savedStateHandle: SavedStateHandle) : ViewModel() {
 
     private val _sortText = MutableLiveData<CharSequence>()
     val sortText: LiveData<CharSequence>
         get() = _sortText
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Clip>> = Transformations.map(filter) {
-        val started = when (it.period) {
-            VideoPeriodEnum.ALL -> null
-            else -> TwitchApiHelper.getClipTime(it.period)
-        }
-        val ended = when (it.period) {
-            VideoPeriodEnum.ALL -> null
-            else -> TwitchApiHelper.getClipTime()
-        }
-        val gqlQueryPeriod = when (it.period) {
-            VideoPeriodEnum.DAY -> ClipsPeriod.LAST_DAY
-            VideoPeriodEnum.WEEK -> ClipsPeriod.LAST_WEEK
-            VideoPeriodEnum.MONTH -> ClipsPeriod.LAST_MONTH
-            else -> ClipsPeriod.ALL_TIME }
-        val gqlPeriod = when (it.period) {
-            VideoPeriodEnum.DAY -> "LAST_DAY"
-            VideoPeriodEnum.WEEK -> "LAST_WEEK"
-            VideoPeriodEnum.MONTH -> "LAST_MONTH"
-            else -> "ALL_TIME" }
-        if (it.gameId == null && it.gameName == null) {
-            repository.loadChannelClips(it.channelId, it.channelLogin, it.helixClientId, it.helixToken, started, ended, it.gqlClientId,
-                gqlQueryPeriod, gqlPeriod, it.channelApiPref, viewModelScope)
-        } else {
-            val langList = mutableListOf<Language>()
-            val langValues = context.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
-            if (languageIndex != 0) {
-                val item = Language.values().find { lang -> lang.rawValue == langValues.elementAt(languageIndex) }
-                if (item != null) {
-                    langList.add(item)
-                }
-            }
-            repository.loadGameClips(it.gameId, it.gameName, it.helixClientId, it.helixToken, started, ended, it.gqlClientId, langList.ifEmpty { null },
-                gqlQueryPeriod, gqlPeriod, it.gameApiPref, viewModelScope)
-        }
-    }
-    val period: VideoPeriodEnum
-        get() = filter.value!!.period
-    val languageIndex: Int
-        get() = filter.value!!.languageIndex
-    val saveSort: Boolean
-        get() = filter.value?.saveSort == true
 
-    fun loadClips(context: Context, channelId: String? = null, channelLogin: String? = null, gameId: String? = null, gameName: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, channelApiPref: ArrayList<Pair<Long?, String?>?>, gameApiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (filter.value == null) {
-            var sortValuesGame: SortGame? = null
-            var sortValuesChannel: SortChannel? = null
-            if (!gameId.isNullOrBlank() || !gameName.isNullOrBlank()) {
-                sortValuesGame = gameId?.let { runBlocking { sortGameRepository.getById(it) } }
-                if (sortValuesGame?.saveSort != true) {
-                    sortValuesGame = runBlocking { sortGameRepository.getById("default") }
-                }
+    private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
+    private val filter = MutableStateFlow(loadClips(context))
+
+    val period: VideoPeriodEnum
+        get() = filter.value.period
+    val languageIndex: Int
+        get() = filter.value.languageIndex
+    val saveSort: Boolean
+        get() = filter.value.saveSort == true
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = filter.flatMapLatest { filter ->
+        Pager(
+            PagingConfig(pageSize = 20, prefetchDistance = 3, initialLoadSize = 20)
+        ) {
+            val started = when (filter.period) {
+                VideoPeriodEnum.ALL -> null
+                else -> TwitchApiHelper.getClipTime(filter.period)
+            }
+            val ended = when (filter.period) {
+                VideoPeriodEnum.ALL -> null
+                else -> TwitchApiHelper.getClipTime()
+            }
+            val gqlQueryPeriod = when (filter.period) {
+                VideoPeriodEnum.DAY -> ClipsPeriod.LAST_DAY
+                VideoPeriodEnum.WEEK -> ClipsPeriod.LAST_WEEK
+                VideoPeriodEnum.MONTH -> ClipsPeriod.LAST_MONTH
+                else -> ClipsPeriod.ALL_TIME }
+            val gqlPeriod = when (filter.period) {
+                VideoPeriodEnum.DAY -> "LAST_DAY"
+                VideoPeriodEnum.WEEK -> "LAST_WEEK"
+                VideoPeriodEnum.MONTH -> "LAST_MONTH"
+                else -> "ALL_TIME" }
+            if (args.channelId != null || args.channelLogin != null) {
+                ChannelClipsDataSource(
+                    channelId = args.channelId,
+                    channelLogin = args.channelLogin,
+                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(context).helixToken,
+                    started_at = started,
+                    ended_at = ended,
+                    helixApi = helix,
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlQueryPeriod = gqlQueryPeriod,
+                    gqlPeriod = gqlPeriod,
+                    gqlApi = graphQLRepository,
+                    apolloClient = apolloClient,
+                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             } else {
-                if (!channelId.isNullOrBlank() || !channelLogin.isNullOrBlank()) {
-                    sortValuesChannel = channelId?.let { runBlocking { sortChannelRepository.getById(it) } }
-                    if (sortValuesChannel?.saveSort != true) {
-                        sortValuesChannel = runBlocking { sortChannelRepository.getById("default") }
+                val langList = mutableListOf<Language>()
+                val langValues = context.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
+                if (filter.languageIndex != 0) {
+                    val item = Language.values().find { lang -> lang.rawValue == langValues.elementAt(filter.languageIndex) }
+                    if (item != null) {
+                        langList.add(item)
                     }
                 }
+                GameClipsDataSource(
+                    gameId = args.gameId,
+                    gameName = args.gameName,
+                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(context).helixToken,
+                    started_at = started,
+                    ended_at = ended,
+                    helixApi = helix,
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlQueryLanguages = langList.ifEmpty { null },
+                    gqlQueryPeriod = gqlQueryPeriod,
+                    gqlPeriod = gqlPeriod,
+                    gqlApi = graphQLRepository,
+                    apolloClient = apolloClient,
+                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             }
-            filter.value = Filter(
-                channelId = channelId,
-                channelLogin = channelLogin,
-                gameId = gameId,
-                gameName = gameName,
-                helixClientId = helixClientId,
-                helixToken = helixToken,
-                gqlClientId = gqlClientId,
-                channelApiPref = channelApiPref,
-                gameApiPref = gameApiPref,
-                saveSort = sortValuesGame?.saveSort ?: sortValuesChannel?.saveSort,
-                period = when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                    VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
-                    VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
-                    VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
-                    else -> VideoPeriodEnum.WEEK
-                },
-                languageIndex = sortValuesGame?.clipLanguageIndex ?: 0
-            )
-            _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count),
-                when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                    VideoPeriodEnum.DAY.value -> context.getString(R.string.today)
-                    VideoPeriodEnum.MONTH.value -> context.getString(R.string.this_month)
-                    VideoPeriodEnum.ALL.value -> context.getString(R.string.all_time)
-                    else -> context.getString(R.string.this_week)
-                }
-            )
+        }.flow
+    }.cachedIn(viewModelScope)
+
+    private fun loadClips(context: Context): Filter {
+        var sortValuesGame: SortGame? = null
+        var sortValuesChannel: SortChannel? = null
+        if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
+            sortValuesGame = args.gameId?.let { runBlocking { sortGameRepository.getById(it) } }
+            if (sortValuesGame?.saveSort != true) {
+                sortValuesGame = runBlocking { sortGameRepository.getById("default") }
+            }
         } else {
-            filter.value?.copy(channelId = channelId, channelLogin = channelLogin, gameId = gameId, gameName = gameName, helixClientId = helixClientId, helixToken = helixToken, gqlClientId = gqlClientId, channelApiPref = channelApiPref, gameApiPref = gameApiPref).let {
-                if (filter.value != it)
-                    filter.value = it
+            if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
+                sortValuesChannel = args.channelId?.let { runBlocking { sortChannelRepository.getById(it) } }
+                if (sortValuesChannel?.saveSort != true) {
+                    sortValuesChannel = runBlocking { sortChannelRepository.getById("default") }
+                }
             }
         }
+        _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count),
+            when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
+                VideoPeriodEnum.DAY.value -> context.getString(R.string.today)
+                VideoPeriodEnum.MONTH.value -> context.getString(R.string.this_month)
+                VideoPeriodEnum.ALL.value -> context.getString(R.string.all_time)
+                else -> context.getString(R.string.this_week)
+            }
+        )
+        return Filter(
+            saveSort = sortValuesGame?.saveSort ?: sortValuesChannel?.saveSort,
+            period = when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
+                VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
+                VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
+                VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
+                else -> VideoPeriodEnum.WEEK
+            },
+            languageIndex = sortValuesGame?.clipLanguageIndex ?: 0
+        )
     }
 
     fun filter(period: VideoPeriodEnum, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
-        filter.value = filter.value?.copy(saveSort = saveSort, period = period, languageIndex = languageIndex)
+        filter.value = filter.value.copy(saveSort = saveSort, period = period, languageIndex = languageIndex)
         _sortText.value = text
         viewModelScope.launch {
-            if (!filter.value?.gameId.isNullOrBlank() || !filter.value?.gameName.isNullOrBlank()) {
-                val sortValues = filter.value?.gameId?.let { sortGameRepository.getById(it) }
+            if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
+                val sortValues = args.gameId?.let { sortGameRepository.getById(it) }
                 if (saveSort) {
                     sortValues?.apply {
                         this.saveSort = true
                         clipPeriod = period.value
                         clipLanguageIndex = languageIndex
-                    } ?: filter.value?.gameId?.let { SortGame(
+                    } ?: args.gameId?.let { SortGame(
                         id = it,
                         saveSort = true,
                         clipPeriod = period.value,
@@ -160,7 +183,7 @@ class ClipsViewModel @Inject constructor(
                 if (saveDefault) {
                     (sortValues?.apply {
                         this.saveSort = saveSort
-                    } ?: filter.value?.gameId?.let { SortGame(
+                    } ?: args.gameId?.let { SortGame(
                         id = it,
                         saveSort = saveSort)
                     })?.let { sortGameRepository.save(it) }
@@ -179,13 +202,13 @@ class ClipsViewModel @Inject constructor(
                     appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_CLIPS, saveDefault) }
                 }
             } else {
-                if (!filter.value?.channelId.isNullOrBlank() || !filter.value?.channelLogin.isNullOrBlank()) {
-                    val sortValues = filter.value?.channelId?.let { sortChannelRepository.getById(it) }
+                if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
+                    val sortValues = args.channelId?.let { sortChannelRepository.getById(it) }
                     if (saveSort) {
                         sortValues?.apply {
                             this.saveSort = true
                             clipPeriod = period.value
-                        } ?: filter.value?.channelId?.let { SortChannel(
+                        } ?: args.channelId?.let { SortChannel(
                             id = it,
                             saveSort = true,
                             clipPeriod = period.value)
@@ -198,7 +221,7 @@ class ClipsViewModel @Inject constructor(
                     if (saveDefault) {
                         (sortValues?.apply {
                             this.saveSort = saveSort
-                        } ?: filter.value?.channelId?.let { SortChannel(
+                        } ?: args.channelId?.let { SortChannel(
                             id = it,
                             saveSort = saveSort)
                         })?.let { sortChannelRepository.save(it) }
@@ -220,34 +243,7 @@ class ClipsViewModel @Inject constructor(
     }
 
     private data class Filter(
-        val channelId: String?,
-        val channelLogin: String?,
-        val gameId: String?,
-        val gameName: String?,
-        val helixClientId: String?,
-        val helixToken: String?,
-        val gqlClientId: String?,
-        val channelApiPref: ArrayList<Pair<Long?, String?>?>,
-        val gameApiPref: ArrayList<Pair<Long?, String?>?>,
         val saveSort: Boolean?,
         val period: VideoPeriodEnum = VideoPeriodEnum.WEEK,
         val languageIndex: Int = 0)
-
-    override val userId: String?
-        get() { return filter.value?.gameId }
-    override val userLogin: String?
-        get() = null
-    override val userName: String?
-        get() { return filter.value?.gameName }
-    override val channelLogo: String?
-        get() = null
-    override val game: Boolean
-        get() = true
-    override lateinit var follow: FollowLiveData
-
-    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
-        if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
-        }
-    }
 }

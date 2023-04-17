@@ -8,29 +8,34 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.ui.common.BaseAndroidViewModel
 import com.github.andreyasadchy.xtra.ui.common.OnQualityChangeListener
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerViewModel
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
-import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.DefaultLoadControl
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.PlaybackException
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.Tracks
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.*
+import java.util.Timer
 import kotlin.concurrent.schedule
 
 
-abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener {
+abstract class PlayerViewModel(context: Application) : AndroidViewModel(context), Player.Listener, OnQualityChangeListener {
 
     protected val tag: String = javaClass.simpleName
     protected val prefs = context.prefs()
@@ -110,7 +115,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         player?.seekTo(playbackPosition)
     }
 
-    protected fun initializePlayer() {
+    fun initializePlayer() {
         if (player == null) {
             val context = getApplication<Application>()
             player = ExoPlayer.Builder(context).apply {
@@ -230,19 +235,16 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
                 }
                 else -> {
                     defaultQuality?.split("p")?.let { default ->
-                        default[0].toIntOrNull()?.let { res ->
-                            val fps = if (default.size >= 2) default[1].toIntOrNull() ?: 0 else 0
-                            val map = mutableMapOf<Int, Int>()
-                            qualities.forEach { quality ->
-                                quality.split("p").let {
-                                    it[0].toIntOrNull()?.let { res ->
-                                        map[res] = if (it.size >= 2) it[1].toIntOrNull() ?: 0 else 0
-                                    }
+                        default[0].filter(Char::isDigit).toIntOrNull()?.let { defaultRes ->
+                            val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
+                            qualities.indexOf(qualities.find { qualityString ->
+                                qualityString.split("p").let { quality ->
+                                    quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
+                                        val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
+                                        (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes
+                                    } ?: false
                                 }
-                            }
-                            map.filter { (res == it.key && fps >= it.value) || res > it.key }.entries.firstOrNull()?.let { entry ->
-                                qualities.indexOf("${entry.key}p" + if (entry.value != 0) "${entry.value}" else "").let { if (it != -1) it else null }
-                            }
+                            }).let { if (it != -1) it else null }
                         }
                     }
                 }

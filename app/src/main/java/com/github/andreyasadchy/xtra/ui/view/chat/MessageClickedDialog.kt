@@ -13,11 +13,16 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.loadImage
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.dialog_chat_message_click.*
 
 @AndroidEntryPoint
 class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
@@ -42,6 +47,8 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         }
     }
 
+    private var _binding: DialogChatMessageClickBinding? = null
+    private val binding get() = _binding!!
     private val viewModel: MessageClickedViewModel by viewModels()
 
     private lateinit var listener: OnButtonClickListener
@@ -51,125 +58,130 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         listener = parentFragment as OnButtonClickListener
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_chat_message_click, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = DialogChatMessageClickBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val args = requireArguments()
-        message.text = args.getCharSequence(KEY_FORMATTED)!!
-        val msg = args.getCharSequence(KEY_ORIGINAL)!!
-        val userId = args.getString(KEY_USERID)
-        val targetId = args.getString(KEY_CHANNEL_ID)
-        val fullMsg = args.getString(KEY_FULL_MSG)
-        val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
-        if (userId != null) {
-            val item = savedUsers.find { it.first.channelId == userId && it.second == targetId }
-            if (item != null) {
-                updateUserLayout(item.first)
-            } else {
-                viewModel.loadUser(
-                    channelId = userId,
-                    targetId = if (userId != targetId) targetId else null,
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = com.github.andreyasadchy.xtra.model.Account.get(requireContext()).helixToken,
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
-                ).observe(viewLifecycleOwner) { user ->
-                    if (user != null) {
-                        savedUsers.add(Pair(user, targetId))
-                        updateUserLayout(user)
-                    } else {
-                        viewProfile.visible()
+        with(binding) {
+            val args = requireArguments()
+            message.text = args.getCharSequence(KEY_FORMATTED)!!
+            val msg = args.getCharSequence(KEY_ORIGINAL)!!
+            val userId = args.getString(KEY_USERID)
+            val targetId = args.getString(KEY_CHANNEL_ID)
+            val fullMsg = args.getString(KEY_FULL_MSG)
+            val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
+            if (userId != null) {
+                val item = savedUsers.find { it.first.channelId == userId && it.second == targetId }
+                if (item != null) {
+                    updateUserLayout(item.first)
+                } else {
+                    viewModel.loadUser(
+                        channelId = userId,
+                        targetId = if (userId != targetId) targetId else null,
+                        helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                        helixToken = com.github.andreyasadchy.xtra.model.Account.get(requireContext()).helixToken,
+                        gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+                    ).observe(viewLifecycleOwner) { user ->
+                        if (user != null) {
+                            savedUsers.add(Pair(user, targetId))
+                            updateUserLayout(user)
+                        } else {
+                            viewProfile.visible()
+                        }
                     }
                 }
-            }
-            if (args.getBoolean(KEY_MESSAGING)) {
-                reply.visible()
-                reply.setOnClickListener {
-                    listener.onReplyClicked(extractUserName(msg))
-                    dismiss()
+                if (args.getBoolean(KEY_MESSAGING)) {
+                    reply.visible()
+                    reply.setOnClickListener {
+                        listener.onReplyClicked(extractUserName(msg))
+                        dismiss()
+                    }
+                    copyMessage.visible()
+                    copyMessage.setOnClickListener {
+                        listener.onCopyMessageClicked(msg.substring(msg.indexOf(':') + 2))
+                        dismiss()
+                    }
+                } else {
+                    reply.gone()
+                    copyMessage.gone()
                 }
-                copyMessage.visible()
-                copyMessage.setOnClickListener {
-                    listener.onCopyMessageClicked(msg.substring(msg.indexOf(':') + 2))
-                    dismiss()
-                }
-            } else {
-                reply.gone()
-                copyMessage.gone()
             }
-        }
-        copyClip.setOnClickListener {
-            clipboard?.setPrimaryClip(ClipData.newPlainText("label", if (userId != null) msg.substring(msg.indexOf(':') + 2) else msg))
-            dismiss()
-        }
-        if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false) && fullMsg != null) {
-            copyFullMsg.visible()
-            copyFullMsg.setOnClickListener {
-                clipboard?.setPrimaryClip(ClipData.newPlainText("label", fullMsg))
+            copyClip.setOnClickListener {
+                clipboard?.setPrimaryClip(ClipData.newPlainText("label", if (userId != null) msg.substring(msg.indexOf(':') + 2) else msg))
                 dismiss()
+            }
+            if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false) && fullMsg != null) {
+                copyFullMsg.visible()
+                copyFullMsg.setOnClickListener {
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("label", fullMsg))
+                    dismiss()
+                }
             }
         }
     }
 
     private fun updateUserLayout(user: User) {
-        if (user.bannerImageURL != null) {
-            userLayout.visible()
-            bannerImage.visible()
-            bannerImage.loadImage(requireParentFragment(), user.bannerImageURL)
-        } else {
-            bannerImage.gone()
-        }
-        if (user.channelLogo != null) {
-            userLayout.visible()
-            userImage.visible()
-            userImage.loadImage(requireParentFragment(), user.channelLogo, circle = true)
-            userImage.setOnClickListener {
-                listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
-                dismiss()
-            }
-        } else {
-            userImage.gone()
-        }
-        if (user.channelName != null) {
-            userLayout.visible()
-            userName.visible()
-            userName.text = user.channelName
-            userName.setOnClickListener {
-                listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
-                dismiss()
-            }
+        with(binding) {
             if (user.bannerImageURL != null) {
-                userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                userLayout.visible()
+                bannerImage.visible()
+                bannerImage.loadImage(requireParentFragment(), user.bannerImageURL)
+            } else {
+                bannerImage.gone()
             }
-        } else {
-            userName.gone()
-        }
-        if (user.createdAt != null) {
-            userLayout.visible()
-            userCreated.visible()
-            userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.createdAt))
-            if (user.bannerImageURL != null) {
-                userCreated.setTextColor(Color.LTGRAY)
-                userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+            if (user.channelLogo != null) {
+                userLayout.visible()
+                userImage.visible()
+                userImage.loadImage(requireParentFragment(), user.channelLogo, circle = true)
+                userImage.setOnClickListener {
+                    listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
+                    dismiss()
+                }
+            } else {
+                userImage.gone()
             }
-        } else {
-            userCreated.gone()
-        }
-        if (user.followedAt != null) {
-            userLayout.visible()
-            userFollowed.visible()
-            userFollowed.text = requireContext().getString(R.string.followed_at, TwitchApiHelper.formatTimeString(requireContext(), user.followedAt!!))
-            if (user.bannerImageURL != null) {
-                userFollowed.setTextColor(Color.LTGRAY)
-                userFollowed.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+            if (user.channelName != null) {
+                userLayout.visible()
+                userName.visible()
+                userName.text = user.channelName
+                userName.setOnClickListener {
+                    listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
+                    dismiss()
+                }
+                if (user.bannerImageURL != null) {
+                    userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                }
+            } else {
+                userName.gone()
             }
-        } else {
-            userFollowed.gone()
-        }
-        if (!userImage.isVisible && !userName.isVisible) {
-            viewProfile.visible()
+            if (user.createdAt != null) {
+                userLayout.visible()
+                userCreated.visible()
+                userCreated.text = requireContext().getString(R.string.created_at, TwitchApiHelper.formatTimeString(requireContext(), user.createdAt))
+                if (user.bannerImageURL != null) {
+                    userCreated.setTextColor(Color.LTGRAY)
+                    userCreated.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                }
+            } else {
+                userCreated.gone()
+            }
+            if (user.followedAt != null) {
+                userLayout.visible()
+                userFollowed.visible()
+                userFollowed.text = requireContext().getString(R.string.followed_at, TwitchApiHelper.formatTimeString(requireContext(), user.followedAt!!))
+                if (user.bannerImageURL != null) {
+                    userFollowed.setTextColor(Color.LTGRAY)
+                    userFollowed.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                }
+            } else {
+                userFollowed.gone()
+            }
+            if (!userImage.isVisible && !userName.isVisible) {
+                viewProfile.visible()
+            }
         }
     }
 
@@ -185,5 +197,10 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
             }
         }
         return userName.toString()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

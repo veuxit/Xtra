@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.model.ui
 import android.os.Parcelable
 import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Video(
