@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.util.Log
-import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import java.io.*
 import java.net.Socket
 import java.util.concurrent.Executor
@@ -11,11 +10,11 @@ import javax.net.ssl.SSLSocketFactory
 private const val TAG = "LoggedInChatThread"
 
 class LoggedInChatThread(
-    private val useSSl: Boolean,
+    private val useSSL: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
     private val channelName: String,
-    private val listener: OnMessageReceivedListener) : Thread(), ChatView.MessageSenderCallback {
+    private val listener: OnMessageReceivedListener) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter
@@ -60,9 +59,9 @@ class LoggedInChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
+        Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketOut = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            socketOut = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
                 readerOut = BufferedReader(InputStreamReader(getInputStream()))
                 writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
                 write("PASS oauth:$userToken", writerOut)
@@ -103,7 +102,7 @@ class LoggedInChatThread(
         writers.forEach { it?.write(message + System.getProperty("line.separator")) }
     }
 
-    override fun send(message: CharSequence) {
+    fun send(message: CharSequence) {
         messageSenderExecutor.execute {
             try {
                 write("PRIVMSG $hashChannelName :$message", writerOut)

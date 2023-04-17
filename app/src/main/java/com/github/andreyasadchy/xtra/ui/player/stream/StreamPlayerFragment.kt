@@ -3,9 +3,12 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -13,37 +16,36 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerStreamBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
+import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.disable
+import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.fragment_player_stream.*
-import kotlinx.android.synthetic.main.player_stream.*
 
 @AndroidEntryPoint
 class StreamPlayerFragment : BasePlayerFragment() {
 
+    private var _binding: FragmentPlayerStreamBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: StreamPlayerViewModel by viewModels()
     lateinit var chatFragment: ChatFragment
     private lateinit var stream: Stream
-    override val channelId: String?
-        get() = stream.channelId
-    override val channelLogin: String?
-        get() = stream.channelLogin
-    override val channelName: String?
-        get() = stream.channelName
-    override val channelImage: String?
-        get() = stream.channelLogo
-
-    override val layoutId: Int
-        get() = R.layout.fragment_player_stream
-    override val chatContainerId: Int
-        get() = R.id.chatFragmentContainer
 
     override val shouldEnterPictureInPicture: Boolean
         get() = viewModel.playerMode.value == PlayerMode.NORMAL
@@ -55,82 +57,82 @@ class StreamPlayerFragment : BasePlayerFragment() {
         stream = requireArguments().getParcelable(KEY_STREAM)!!
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
-            if (it != null) {
-                it as ChatFragment
-            } else {
-                val fragment = ChatFragment.newInstance(channelId, channelLogin, channelName, stream.id)
-                childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
-                fragment
-            }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerStreamBinding.inflate(inflater, container, false).also {
+            (it.slidingLayout as LinearLayout).orientation = if (isPortrait) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         }
+        return binding.root
     }
 
-    override fun initialize() {
-        viewModel.startStream(stream)
-        super.initialize()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
-        val playerMenu = requireView().findViewById<ImageButton>(R.id.playerMenu)
-        val restart = requireView().findViewById<ImageButton>(R.id.playerRestart)
         val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
-        val viewersLayout = requireView().findViewById<LinearLayout>(R.id.viewersLayout)
         viewModel.loaded.observe(viewLifecycleOwner) {
             if (it) {
-                settings.enable()
-                mode.enable()
+                settings?.enable()
+                mode?.enable()
                 (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(viewModel.qualities?.getOrNull(viewModel.qualityIndex))
             } else {
-                settings.disable()
-                mode.disable()
+                settings?.disable()
+                mode?.disable()
             }
         }
         viewModel.stream.observe(viewLifecycleOwner) {
             chatFragment.updateStreamId(it?.id)
-            if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || viewers.text.isNullOrBlank()) {
+            if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.viewers)?.text.isNullOrBlank()) {
                 updateViewerCount(it?.viewerCount)
             }
         }
         if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
-            settings.visible()
-            settings.setOnClickListener { showQualityDialog() }
+            settings?.apply {
+                visible()
+                setOnClickListener { showQualityDialog() }
+            }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
-            playerMenu.visible()
-            playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(
-                    fragmentManager = childFragmentManager,
-                    quality = if (viewModel.loaded.value == true) viewModel.qualities?.getOrNull(viewModel.qualityIndex) else null
-                )
+            requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
+                visible()
+                setOnClickListener {
+                    FragmentUtils.showPlayerSettingsDialog(
+                        fragmentManager = childFragmentManager,
+                        quality = if (viewModel.loaded.value == true) viewModel.qualities?.getOrNull(viewModel.qualityIndex) else null
+                    )
+                }
             }
         }
         if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
-            restart.visible()
-            restart.setOnClickListener { restartPlayer() }
+            requireView().findViewById<ImageButton>(R.id.playerRestart)?.apply {
+                visible()
+                setOnClickListener { restartPlayer() }
+            }
         }
         if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
-            requireView().findViewById<ImageButton>(R.id.playerSeekLive).apply {
+            requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
                 visible()
                 setOnClickListener { viewModel.player?.seekToDefaultPosition() }
             }
         }
         if (prefs.getBoolean(C.PLAYER_MODE, false)) {
-            mode.visible()
-            mode.setOnClickListener {
-                if (viewModel.playerMode.value != PlayerMode.AUDIO_ONLY) {
-                    viewModel.qualities?.lastIndex?.minus(1)?.let { viewModel.changeQuality(it) }
-                } else {
-                    viewModel.changeQuality(viewModel.previousQuality)
+            mode?.apply {
+                visible()
+                setOnClickListener {
+                    if (viewModel.playerMode.value != PlayerMode.AUDIO_ONLY) {
+                        viewModel.qualities?.lastIndex?.minus(1)?.let { viewModel.changeQuality(it) }
+                    } else {
+                        viewModel.changeQuality(viewModel.previousQuality)
+                    }
                 }
             }
         }
         if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
-            viewersLayout.setOnClickListener { openViewerList() }
+            requireView().findViewById<LinearLayout>(R.id.viewersLayout)?.apply {
+                setOnClickListener { openViewerList() }
+            }
         }
         if (!prefs.getBoolean(C.PLAYER_PAUSE, false)) {
             viewModel.showPauseButton.observe(viewLifecycleOwner) {
-                playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
+                binding.playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
                     if (it) {
                         gone()
                     } else {
@@ -139,17 +141,87 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 }
             }
         }
+        if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
+            requireView().findViewById<TextView>(R.id.playerChannel)?.apply {
+                visible()
+                text = stream.channelName
+                setOnClickListener {
+                    findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                        channelId = stream.channelId,
+                        channelLogin = stream.channelLogin,
+                        channelName = stream.channelName,
+                        channelLogo = stream.channelLogo
+                    ))
+                    slidingLayout.minimize()
+                }
+            }
+        }
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
+            val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
+            followButton?.visible()
+            var initialized = false
+            viewModel.follow.observe(viewLifecycleOwner) { pair ->
+                val following = pair.first
+                val errorMessage = pair.second
+                if (initialized) {
+                    if (!errorMessage.isNullOrBlank()) {
+                        requireContext().shortToast(errorMessage)
+                    } else {
+                        requireContext().shortToast(requireContext().getString(if (following) R.string.now_following else R.string.unfollowed, stream.channelName))
+                    }
+                } else {
+                    initialized = true
+                }
+                if (errorMessage.isNullOrBlank()) {
+                    followButton?.setOnClickListener {
+                        if (!following) {
+                            viewModel.saveFollowChannel(requireContext(), stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo)
+                        } else {
+                            FragmentUtils.showUnfollowDialog(requireContext(), stream.channelName) {
+                                viewModel.deleteFollowChannel(requireContext(), stream.channelId)
+                            }
+                        }
+                    }
+                    followButton?.setImageResource(if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
+                }
+            }
+        }
+        viewModel.initializePlayer()
+        chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
+            if (it != null) {
+                it as ChatFragment
+            } else {
+                val fragment = ChatFragment.newInstance(stream.channelId, stream.channelLogin, stream.channelName, stream.id)
+                childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
+                fragment
+            }
+        }
+    }
+
+    override fun initialize() {
+        viewModel.startStream(stream)
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
+            viewModel.isFollowingChannel(requireContext(), stream.channelId, stream.channelLogin)
+        }
     }
 
     fun updateViewerCount(viewerCount: Int?) {
+        val viewers = requireView().findViewById<TextView>(R.id.viewers)
+        val viewerIcon = requireView().findViewById<ImageView>(R.id.viewerIcon)
         if (viewerCount != null) {
-            viewers.text = TwitchApiHelper.formatCount(requireContext(), viewerCount)
+            viewers?.text = TwitchApiHelper.formatCount(requireContext(), viewerCount)
             if (prefs.getBoolean(C.PLAYER_VIEWERICON, true)) {
-                viewerIcon.visible()
+                viewerIcon?.visible()
             }
         } else {
-            viewers.text = null
-            viewerIcon.gone()
+            viewers?.text = null
+            viewerIcon?.gone()
         }
     }
 
@@ -188,7 +260,11 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
     }
 
-    fun hideEmotesMenu() = chatFragment.hideEmotesMenu()
+    fun emoteMenuIsVisible() = chatFragment.emoteMenuIsVisible()
+
+    fun toggleEmoteMenu(enable: Boolean) = chatFragment.toggleEmoteMenu(enable)
+
+    fun toggleBackPressedCallback(enable: Boolean) = chatFragment.toggleBackPressedCallback(enable)
 
     override fun onMinimize() {
         super.onMinimize()
@@ -213,6 +289,11 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     fun startAudioOnly() {
         viewModel.startAudioOnly()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

@@ -9,7 +9,7 @@ import javax.net.ssl.SSLSocketFactory
 private const val TAG = "LiveChatThread"
 
 class LiveChatThread(
-    private val useSSl: Boolean,
+    private val useSSL: Boolean,
     private val loggedIn: Boolean,
     private val channelName: String,
     private val listener: OnMessageReceivedListener) : Thread() {
@@ -62,9 +62,9 @@ class LiveChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
+        Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketIn = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            socketIn = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
                 readerIn = BufferedReader(InputStreamReader(getInputStream()))
                 writerIn = BufferedWriter(OutputStreamWriter(getOutputStream()))
             }

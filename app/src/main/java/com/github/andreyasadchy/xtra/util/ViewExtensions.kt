@@ -18,11 +18,11 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.signature.ObjectKey
-import com.github.andreyasadchy.xtra.GlideApp
 
 fun View.visible() {
     visibility = View.VISIBLE
@@ -42,7 +42,7 @@ fun View.toggleVisibility() = if (isVisible) gone() else visible()
 fun ImageView.loadImage(fragment: Fragment, url: String?, changes: Boolean = false, circle: Boolean = false, diskCacheStrategy: DiskCacheStrategy = DiskCacheStrategy.RESOURCE) {
     if (context.isActivityResumed) { //not enough on some devices?
         try {
-            val request = GlideApp.with(fragment)
+            val request = Glide.with(fragment)
                     .load(url)
                     .diskCacheStrategy(diskCacheStrategy)
                     .transition(DrawableTransitionOptions.withCrossFade())
@@ -66,7 +66,7 @@ fun ImageView.loadImage(fragment: Fragment, url: String?, changes: Boolean = fal
 fun ImageView.loadBitmap(url: String) {
     if (context.isActivityResumed) {
         try {
-            GlideApp.with(context)
+            Glide.with(context)
                     .asBitmap()
                     .load(url)
                     .transition(BitmapTransitionOptions.withCrossFade())

@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedVideosQuery
@@ -11,7 +12,7 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
-import kotlinx.coroutines.CoroutineScope
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class FollowedVideosDataSource(
     private val gqlClientId: String?,
@@ -20,15 +21,14 @@ class FollowedVideosDataSource(
     private val gqlQuerySort: VideoSort?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Video>(coroutineScope) {
+    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Video>) {
-        loadInitial(params, callback) {
-            try {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
+        return try {
+            val response = try {
                 when (apiPref.elementAt(0)?.second) {
                     C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
                     C.GQL -> if (!gqlToken.isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
@@ -45,17 +45,24 @@ class FollowedVideosDataSource(
                     listOf()
                 }
             }
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
-    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
-            gqlToken?.let { addHttpHeader("Authorization", it) }
+            gqlToken?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build().query(UserFollowedVideosQuery(
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
-            first = Optional.Present(50 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),
+            first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
         )).execute().data?.user?.followedVideos
         val get = get1?.edges
@@ -93,36 +100,17 @@ class FollowedVideosDataSource(
         return list
     }
 
-    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, 50 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+    private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
+        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
-        loadRange(params, callback) {
-            if (!offset.isNullOrBlank()) {
-                when (api) {
-                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
-                    C.GQL -> if (nextPage) gqlLoad(rangeParams = params) else listOf()
-                    else -> listOf()
-                }
-            } else listOf()
+    override fun getRefreshKey(state: PagingState<Int, Video>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory(
-        private val gqlClientId: String?,
-        private val gqlToken: String?,
-        private val gqlQueryType: BroadcastType?,
-        private val gqlQuerySort: VideoSort?,
-        private val gqlApi: GraphQLRepository,
-        private val apolloClient: ApolloClient,
-        private val apiPref: ArrayList<Pair<Long?, String?>?>,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, FollowedVideosDataSource>() {
-
-        override fun create(): DataSource<Int, Video> =
-                FollowedVideosDataSource(gqlClientId, gqlToken, gqlQueryType, gqlQuerySort, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

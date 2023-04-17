@@ -1,136 +1,90 @@
 package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.viewModelScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
+import androidx.lifecycle.*
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.datasource.GameStreamsDataSource
+import com.github.andreyasadchy.xtra.repository.datasource.StreamsDataSource
 import com.github.andreyasadchy.xtra.type.StreamSort
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
-import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
-import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import java.io.File
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 @HiltViewModel
 class StreamsViewModel @Inject constructor(
-    private val repository: ApiRepository,
-    private val localFollowsGame: LocalFollowGameRepository) : PagedListViewModel<Stream>(), FollowViewModel {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val apolloClient: ApolloClient,
+    savedStateHandle: SavedStateHandle) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Stream>> = Transformations.map(filter) {
-        if (it.gameId == null && it.gameName == null) {
-            repository.loadTopStreams(it.helixClientId, it.helixToken, it.gqlClientId, it.tags, it.apiPref, it.thumbnailsEnabled, viewModelScope)
-        } else {
-            repository.loadGameStreams(it.gameId, it.gameName, it.helixClientId, it.helixToken, it.gqlClientId,
-                when (it.sort) {
-                    StreamSortEnum.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
-                    StreamSortEnum.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
-                    else -> null },
-                it.sort, it.tags, it.gameApiPref, it.thumbnailsEnabled, viewModelScope)
-        }
-    }
-    val sort: StreamSortEnum?
-        get() = filter.value?.sort
+    private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
+    private val filter = MutableStateFlow(Filter())
 
-    fun loadStreams(gameId: String? = null, gameName: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, tags: List<String>? = null, apiPref: ArrayList<Pair<Long?, String?>?>, gameApiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean = true) {
-        Filter(
-            gameId = gameId,
-            gameName = gameName,
-            helixClientId = helixClientId,
-            helixToken = helixToken,
-            gqlClientId = gqlClientId,
-            tags = tags,
-            apiPref = apiPref,
-            gameApiPref = gameApiPref,
-            thumbnailsEnabled = thumbnailsEnabled
-        ).let {
-            if (filter.value != it) {
-                filter.value = it
+    val sort: StreamSortEnum
+        get() = filter.value.sort
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = filter.flatMapLatest { filter ->
+        Pager(
+            if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+                PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+            } else {
+                PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
             }
-        }
-    }
+        ) {
+            if (args.gameId == null && args.gameName == null) {
+                StreamsDataSource(
+                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(context).helixToken,
+                    helixApi = helix,
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    tags = args.tags?.toList(),
+                    gqlApi = graphQLRepository,
+                    apolloClient = apolloClient,
+                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults)
+                )
+            } else {
+                GameStreamsDataSource(
+                    gameId = args.gameId,
+                    gameName = args.gameName,
+                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(context).helixToken,
+                    helixApi = helix,
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlQuerySort = when (filter.sort) {
+                        StreamSortEnum.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
+                        StreamSortEnum.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
+                        else -> null },
+                    gqlSort = filter.sort,
+                    tags = args.tags?.toList(),
+                    gqlApi = graphQLRepository,
+                    apolloClient = apolloClient,
+                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults)
+                )
+            }
+        }.flow
+    }.cachedIn(viewModelScope)
 
     fun filter(sort: StreamSortEnum) {
-        filter.value = filter.value?.copy(sort = sort)
+        filter.value = filter.value.copy(sort = sort)
     }
 
-    private data class Filter(
-        val gameId: String?,
-        val gameName: String?,
-        val helixClientId: String?,
-        val helixToken: String?,
-        val gqlClientId: String?,
-        val sort: StreamSortEnum? = StreamSortEnum.VIEWERS_HIGH,
-        val tags: List<String>?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>,
-        val gameApiPref: ArrayList<Pair<Long?, String?>?>,
-        val thumbnailsEnabled: Boolean)
-
-    override val userId: String?
-        get() { return filter.value?.gameId }
-    override val userLogin: String?
-        get() = null
-    override val userName: String?
-        get() { return filter.value?.gameName }
-    override val channelLogo: String?
-        get() = null
-    override val game: Boolean
-        get() = true
-    override lateinit var follow: FollowLiveData
-
-    override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
-        if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsGame = localFollowsGame, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
-        }
-    }
-
-    fun updateLocalGame(context: Context) {
-        GlobalScope.launch {
-            try {
-                if (filter.value?.gameId != null) {
-                    val get = repository.loadGameBoxArt(filter.value?.gameId!!, filter.value?.helixClientId, filter.value?.helixToken, filter.value?.gqlClientId)
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(TwitchApiHelper.getTemplateUrl(get, "game"))
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "box_art", filter.value?.gameId!!, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
-
-                    }
-                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${filter.value?.gameId}.png").absolutePath
-                    localFollowsGame.getFollowByGameId(filter.value?.gameId!!)?.let { localFollowsGame.updateFollow(it.apply {
-                        gameName = filter.value?.gameName
-                        boxArt = downloadedLogo }) }
-                }
-            } catch (e: Exception) {
-
-            }
-        }
-    }
+    data class Filter(
+        val sort: StreamSortEnum = StreamSortEnum.VIEWERS_HIGH
+    )
 }

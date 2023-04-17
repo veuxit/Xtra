@@ -561,4 +561,5 @@
     <string name="show_playlist_tags">Show playlist tags</string>
     <string name="show_media_playlist_tags">Show media playlist tags</string>
     <string name="show_multivariant_playlist_tags">Show multivariant playlist tags</string>
+    <string name="use_gamepager">Use tabs layout for game page</string>
 </resources>

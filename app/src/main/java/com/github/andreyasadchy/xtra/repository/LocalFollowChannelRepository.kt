@@ -19,7 +19,9 @@ class LocalFollowChannelRepository @Inject constructor(
     private val videosDao: VideosDao,
     private val bookmarksDao: BookmarksDao) {
 
-    fun loadFollows() = localFollowsChannelDao.getAll()
+    suspend fun loadFollows() = withContext(Dispatchers.IO) {
+        localFollowsChannelDao.getAll()
+    }
 
     suspend fun getFollowByUserId(id: String) = withContext(Dispatchers.IO) {
         localFollowsChannelDao.getByUserId(id)

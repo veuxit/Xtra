@@ -1,45 +1,37 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import kotlinx.coroutines.CoroutineScope
 
-class TagsDataSourceGQL private constructor(
+class TagsDataSourceGQL(
     private val clientId: String?,
     private val getGameTags: Boolean,
-    private val query: String?,
-    private val api: GraphQLRepository,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Tag>(coroutineScope) {
+    private val query: String,
+    private val api: GraphQLRepository) : PagingSource<Int, Tag>() {
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Tag>) {
-        loadInitial(params, callback) {
-            if (getGameTags) {
-                val get = api.loadGameTags(clientId, query)
-                get.data.ifEmpty { listOf() }
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Tag> {
+        return try {
+            val response = if (query.isBlank()) listOf() else if (getGameTags) {
+                api.loadGameTags(clientId, query, 100).data
             } else {
-                if (!query.isNullOrBlank()) {
-                    val get = api.loadFreeformTags(clientId, query)
-                    get.data.ifEmpty { listOf() }
-                } else listOf()
+                api.loadFreeformTags(clientId, query, 100).data
             }
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Tag>) {
-        loadRange(params, callback) {
-            listOf()
+    override fun getRefreshKey(state: PagingState<Int, Tag>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory(
-        private val clientId: String?,
-        private val getGameTags: Boolean,
-        private val query: String?,
-        private val api: GraphQLRepository,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Tag, TagsDataSourceGQL>() {
-
-        override fun create(): DataSource<Int, Tag> =
-                TagsDataSourceGQL(clientId, getGameTags, query, api, coroutineScope).also(sourceLiveData::postValue)
     }
 }

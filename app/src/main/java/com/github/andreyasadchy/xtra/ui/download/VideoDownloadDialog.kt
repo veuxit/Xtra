@@ -18,13 +18,13 @@ import androidx.core.widget.NestedScrollView
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.dialog_video_download.*
 
 @AndroidEntryPoint
 class VideoDownloadDialog : BaseDownloadDialog() {
@@ -42,10 +42,14 @@ class VideoDownloadDialog : BaseDownloadDialog() {
         }
     }
 
+    private var _binding: DialogVideoDownloadBinding? = null
+    private val binding get() = _binding!!
     private val viewModel: VideoDownloadViewModel by viewModels()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View?  =
-            inflater.inflate(R.layout.dialog_video_download, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = DialogVideoDownloadBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -74,89 +78,91 @@ class VideoDownloadDialog : BaseDownloadDialog() {
     }
 
     private fun init(videoInfo: VideoDownloadInfo) {
-        val context = requireContext()
-        init(context)
-        with(videoInfo) {
-            spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
-            with(DateUtils.formatElapsedTime(totalDuration / 1000L)) {
-                duration.text = context.getString(R.string.duration, this)
-                timeTo.hint = this.let { if (it.length != 5) it else "00:$it" }
-            }
-            timeFrom.hint = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
-            timeFrom.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
-            addTextChangeListener(timeFrom)
-            addTextChangeListener(timeTo)
-            cancel.setOnClickListener { dismiss() }
+        with(binding) {
+            val context = requireContext()
+            init(context, storageSelectionContainer)
+            with(videoInfo) {
+                spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
+                with(DateUtils.formatElapsedTime(totalDuration / 1000L)) {
+                    duration.text = context.getString(R.string.duration, this)
+                    timeTo.hint = this.let { if (it.length != 5) it else "00:$it" }
+                }
+                timeFrom.hint = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
+                timeFrom.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
+                addTextChangeListener(timeFrom)
+                addTextChangeListener(timeTo)
+                cancel.setOnClickListener { dismiss() }
 
-            fun download() {
-                val from = parseTime(timeFrom) ?: return
-                val to = parseTime(timeTo) ?: return
-                when {
-                    to > totalDuration -> {
-                        timeTo.requestFocus()
-                        timeTo.error = getString(R.string.to_is_longer)
-                    }
-                    from < to -> {
-                        val fromIndex = if (from == 0L) {
-                            0
-                        } else {
-                            val min = from - targetDuration
-                            val tmpIndex = relativeStartTimes.binarySearch(comparison = { time ->
-                                when {
-                                    time > from -> 1
-                                    time < min -> -1
-                                    else -> 0
-                                }
-                            })
-                            /***
-                             * If the item is not found by the binarySearch method, it will return a
-                             * negative value and the app will crash. On that case, the function
-                             * returns the inverted insertion point (-insertion point - 1).
-                             * */
-                            if (tmpIndex < 0) -tmpIndex else tmpIndex
+                fun download() {
+                    val from = parseTime(timeFrom) ?: return
+                    val to = parseTime(timeTo) ?: return
+                    when {
+                        to > totalDuration -> {
+                            timeTo.requestFocus()
+                            timeTo.error = getString(R.string.to_is_longer)
+                        }
+                        from < to -> {
+                            val fromIndex = if (from == 0L) {
+                                0
+                            } else {
+                                val min = from - targetDuration
+                                val tmpIndex = relativeStartTimes.binarySearch(comparison = { time ->
+                                    when {
+                                        time > from -> 1
+                                        time < min -> -1
+                                        else -> 0
+                                    }
+                                })
+                                /***
+                                 * If the item is not found by the binarySearch method, it will return a
+                                 * negative value and the app will crash. On that case, the function
+                                 * returns the inverted insertion point (-insertion point - 1).
+                                 * */
+                                if (tmpIndex < 0) -tmpIndex else tmpIndex
 
-                        }
-                        val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
-                            relativeStartTimes.lastIndex
-                        } else {
-                            val max = to + targetDuration
-                            val tmpIndex= relativeStartTimes.binarySearch(comparison = { time ->
-                                when {
-                                    time > max -> 1
-                                    time < to -> -1
-                                    else -> 0
-                                }
-                            })
-                            //Apply the same check to the toIndex result
-                            if (tmpIndex < 0) -tmpIndex else tmpIndex
-                        }
-                        fun startDownload() {
-                            val quality = spinner.selectedItem.toString()
-                            val url = videoInfo.qualities.getValue(quality).substringBeforeLast('/') + "/"
-                            viewModel.download(url, downloadPath, quality, fromIndex, toIndex)
-                            dismiss()
-                        }
+                            }
+                            val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
+                                relativeStartTimes.lastIndex
+                            } else {
+                                val max = to + targetDuration
+                                val tmpIndex= relativeStartTimes.binarySearch(comparison = { time ->
+                                    when {
+                                        time > max -> 1
+                                        time < to -> -1
+                                        else -> 0
+                                    }
+                                })
+                                //Apply the same check to the toIndex result
+                                if (tmpIndex < 0) -tmpIndex else tmpIndex
+                            }
+                            fun startDownload() {
+                                val quality = spinner.selectedItem.toString()
+                                val url = videoInfo.qualities.getValue(quality).substringBeforeLast('/') + "/"
+                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex)
+                                dismiss()
+                            }
                             startDownload()
-                    }
-                    from >= to -> {
-                        timeFrom.requestFocus()
-                        timeFrom.error = getString(R.string.from_is_greater)
-                    }
-                    else -> {
-                        timeTo.requestFocus()
-                        timeTo.error = getString(R.string.to_is_lesser)
+                        }
+                        from >= to -> {
+                            timeFrom.requestFocus()
+                            timeFrom.error = getString(R.string.from_is_greater)
+                        }
+                        else -> {
+                            timeTo.requestFocus()
+                            timeTo.error = getString(R.string.to_is_lesser)
+                        }
                     }
                 }
-            }
-            timeTo.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    download()
-                    true
-                } else {
-                    false
+                timeTo.setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
+                        download()
+                        true
+                    } else {
+                        false
+                    }
                 }
+                download.setOnClickListener { download() }
             }
-            download.setOnClickListener { download() }
         }
     }
 
@@ -197,5 +203,10 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                 lengthBeforeEdit = length
             }
         })
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

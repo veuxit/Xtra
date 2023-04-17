@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.repository
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.map
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.api.TTVLolApi
@@ -12,7 +12,14 @@ import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.model.PlaybackAccessToken
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.chat.*
+import com.github.andreyasadchy.xtra.model.chat.BttvChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.BttvGlobalResponse
+import com.github.andreyasadchy.xtra.model.chat.FfzChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.FfzGlobalResponse
+import com.github.andreyasadchy.xtra.model.chat.RecentEmote
+import com.github.andreyasadchy.xtra.model.chat.RecentMessagesResponse
+import com.github.andreyasadchy.xtra.model.chat.StvChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.StvGlobalResponse
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -22,7 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
 import retrofit2.Response
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
@@ -139,20 +146,20 @@ class PlayerRepository @Inject constructor(
         misc.getGlobalStvEmotes()
     }
 
-    suspend fun loadGlobalBttvEmotes(): Response<BttvGlobalResponse> = withContext(Dispatchers.IO) {
-        misc.getGlobalBttvEmotes()
-    }
-
-    suspend fun loadGlobalFfzEmotes(): Response<FfzGlobalResponse> = withContext(Dispatchers.IO) {
-        misc.getGlobalFfzEmotes()
-    }
-
     suspend fun loadStvEmotes(channelId: String): Response<StvChannelResponse> = withContext(Dispatchers.IO) {
         misc.getStvEmotes(channelId)
     }
 
+    suspend fun loadGlobalBttvEmotes(): Response<BttvGlobalResponse> = withContext(Dispatchers.IO) {
+        misc.getGlobalBttvEmotes()
+    }
+
     suspend fun loadBttvEmotes(channelId: String): Response<BttvChannelResponse> = withContext(Dispatchers.IO) {
         misc.getBttvEmotes(channelId)
+    }
+
+    suspend fun loadGlobalFfzEmotes(): Response<FfzGlobalResponse> = withContext(Dispatchers.IO) {
+        misc.getGlobalFfzEmotes()
     }
 
     suspend fun loadFfzEmotes(channelId: String): Response<FfzChannelResponse> = withContext(Dispatchers.IO) {
@@ -173,7 +180,7 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    fun loadVideoPositions(): LiveData<Map<Long, Long>> = Transformations.map(videoPositions.getAll()) { list ->
+    fun loadVideoPositions(): LiveData<Map<Long, Long>> = videoPositions.getAll().map { list ->
         list.associate { it.id to it.position }
     }
 

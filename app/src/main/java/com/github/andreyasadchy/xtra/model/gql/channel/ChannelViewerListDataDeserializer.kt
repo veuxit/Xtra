@@ -15,7 +15,7 @@ class ChannelViewerListDataDeserializer : JsonDeserializer<ChannelViewerListData
         val moderators = mutableListOf<String>()
         val vips = mutableListOf<String>()
         val viewers = mutableListOf<String>()
-        val dataJson = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("channel")?.takeIf { it.isJsonObject }?.asJsonObject?.get("chatters")?.takeIf { it.isJsonObject }?.asJsonObject
+        val dataJson = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("user")?.takeIf { it.isJsonObject }?.asJsonObject?.get("channel")?.takeIf { it.isJsonObject }?.asJsonObject?.get("chatters")?.takeIf { it.isJsonObject }?.asJsonObject
         dataJson?.get("broadcasters")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
             item?.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 obj.get("login")?.takeIf { !it.isJsonNull }?.asString?.let { broadcasters.add(it) }

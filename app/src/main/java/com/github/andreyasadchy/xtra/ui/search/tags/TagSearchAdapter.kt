@@ -1,45 +1,93 @@
 package com.github.andreyasadchy.xtra.ui.search.tags
 
-import android.view.View
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import com.github.andreyasadchy.xtra.R
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.FragmentSearchChannelsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Tag
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
-import com.github.andreyasadchy.xtra.ui.games.GamesFragment
+import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamesFragmentDirections
+import com.github.andreyasadchy.xtra.ui.top.TopFragmentDirections
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
-import kotlinx.android.synthetic.main.fragment_search_channels_list_item.view.*
 
 class TagSearchAdapter(
+    private val fragment: Fragment,
+    private val args: TagSearchFragmentArgs) : PagingDataAdapter<Tag, TagSearchAdapter.PagingViewHolder>(
+    object : DiffUtil.ItemCallback<Tag>() {
+        override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
+            oldItem.id == newItem.id
+
+        override fun areContentsTheSame(oldItem: Tag, newItem: Tag): Boolean = true
+    }) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PagingViewHolder {
+        val binding = FragmentSearchChannelsListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return PagingViewHolder(binding, fragment, args)
+    }
+
+    override fun onBindViewHolder(holder: PagingViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    inner class PagingViewHolder(
+        private val binding: FragmentSearchChannelsListItemBinding,
         private val fragment: Fragment,
-        private val gamesListener: GamesFragment.OnTagGames,
-        private val streamsListener: GamesFragment.OnGameSelectedListener) : BasePagedListAdapter<Tag>(
-        object : DiffUtil.ItemCallback<Tag>() {
-            override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
-                    oldItem.id == newItem.id
-
-            override fun areContentsTheSame(oldItem: Tag, newItem: Tag): Boolean = true
-        }) {
-
-    override val layoutId: Int = R.layout.fragment_search_channels_list_item
-
-    override fun bind(item: Tag, view: View) {
-        with(view) {
-            if (item.name != null) {
-                userName.visible()
-                userName.text = item.name
-            } else {
-                userName.gone()
-            }
-            if (item.scope == "CATEGORY") {
-                if (item.id != null) {
-                    setOnClickListener { gamesListener.openTagGames(listOf(item.id)) }
-                }
-            } else {
-                if (item.name != null) {
-                    setOnClickListener { streamsListener.openGame(tags = listOf(item.name), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
+        private val args: TagSearchFragmentArgs): RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: Tag?) {
+            with(binding) {
+                if (item != null) {
+                    val context = fragment.requireContext()
+                    if (item.name != null) {
+                        userName.visible()
+                        userName.text = item.name
+                    } else {
+                        userName.gone()
+                    }
+                    if (item.scope == "CATEGORY") {
+                        if (item.id != null) {
+                            root.setOnClickListener {
+                                fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
+                                    tags = arrayOf(item.id)
+                                ))
+                            }
+                        }
+                    } else {
+                        if (item.name != null) {
+                            if (args.gameId != null && args.gameName != null) {
+                                root.setOnClickListener {
+                                    fragment.findNavController().navigate(
+                                        if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
+                                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                                gameId = args.gameId,
+                                                gameName = args.gameName,
+                                                tags = arrayOf(item.name),
+                                            )
+                                        } else {
+                                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                                gameId = args.gameId,
+                                                gameName = args.gameName,
+                                                tags = arrayOf(item.name),
+                                            )
+                                        }
+                                    )
+                                }
+                            } else {
+                                root.setOnClickListener {
+                                    fragment.findNavController().navigate(TopFragmentDirections.actionGlobalTopFragment(
+                                        tags = arrayOf(item.name)
+                                    ))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

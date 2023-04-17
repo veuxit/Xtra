@@ -1,41 +1,46 @@
 package com.github.andreyasadchy.xtra.ui.search.tags
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.ui.Tag
-import com.github.andreyasadchy.xtra.repository.ApiRepository
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import android.content.Context
+import androidx.lifecycle.*
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.datasource.TagsDataSourceGQL
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 @HiltViewModel
 class TagSearchViewModel @Inject constructor(
-        private val repository: ApiRepository) : PagedListViewModel<Tag>() {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    savedStateHandle: SavedStateHandle) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Tag>> = Transformations.map(filter) {
-        repository.loadTagsGQL(it.clientId, it.getGameTags, it.query, viewModelScope)
-    }
+    private val args = TagSearchFragmentArgs.fromSavedStateHandle(savedStateHandle)
+    val query = MutableStateFlow("")
 
-    fun loadTags(clientId: String?, getGameTags: Boolean) {
-        Filter(clientId, getGameTags).let {
-            if (filter.value != it) {
-                filter.value = it
-            }
-        }
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = query.flatMapLatest { query ->
+        Pager(
+            PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+        ) {
+            TagsDataSourceGQL(
+                clientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                getGameTags = args.getGameTags,
+                query = query,
+                api = graphQLRepository)
+        }.flow
+    }.cachedIn(viewModelScope)
 
     fun setQuery(query: String) {
-        if (filter.value?.query != query) {
-            filter.value = filter.value?.copy(query = query)
+        if (this.query.value != query) {
+            this.query.value = query
         }
     }
-
-    private data class Filter(
-        val clientId: String?,
-        val getGameTags: Boolean,
-        val query: String? = null)
 }

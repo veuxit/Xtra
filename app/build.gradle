@@ -1,10 +1,11 @@
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    id("kotlin-android-extensions")
-    id("kotlin-kapt")
-    id("dagger.hilt.android.plugin")
-    id("com.apollographql.apollo3").version("$apollo_ver")
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+    id 'kotlin-parcelize'
+    id 'com.google.dagger.hilt.android'
+    id 'androidx.navigation.safeargs.kotlin' version "$navigation"
+    id 'com.apollographql.apollo3' version "$apollo_ver"
 }
 
 android {
@@ -16,19 +17,16 @@ android {
             storePassword '123456'
         }
     }
+    namespace 'com.github.andreyasadchy.xtra'
     compileSdk 33
+
     defaultConfig {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
         targetSdk 33
         versionCode 121
-        versionName "2.16.2"
-        resConfigs 'ar', 'de', 'en', 'es', 'fr', 'in', 'ja', 'pt-rBR', 'ru', 'tr'
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
-        }
+        versionName "2.17.0"
+        resourceConfigurations += ["ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr"]
     }
 
     buildTypes {
@@ -45,39 +43,30 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        buildConfig true
+        viewBinding true
     }
     lint {
         disable 'ContentDescription'
     }
-    namespace 'com.github.andreyasadchy.xtra'
-}
-
-// Delete large build log files from ~/.gradle/daemon/X.X/daemon-XXX.out.log
-// Source: https://discuss.gradle.org/t/gradle-daemon-produces-a-lot-of-logs/9905
-def gradle = project.getGradle()
-new File("${gradle.getGradleUserHomeDir().getAbsolutePath()}/daemon/${gradle.getGradleVersion()}").listFiles().each {
-    if (it.getName().endsWith('.out.log')) {
-        // println("Deleting gradle log file: $it") // Optional debug output
-        it.delete()
-    }
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-
     //UI
-    implementation 'com.google.android.material:material:1.9.0-alpha02'
-    implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
+    implementation 'com.google.android.material:material:1.9.0-beta01'
+    implementation 'androidx.appcompat:appcompat:1.7.0-alpha02'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference-ktx:1.2.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'com.github.woxthebox:draglistview:1.7.2'
+    implementation 'com.github.woxthebox:draglistview:1.7.3'
 
     //Architecture components
     implementation "androidx.paging:paging-runtime-ktx:$paging"
@@ -88,18 +77,18 @@ dependencies {
     implementation "androidx.room:room-runtime:$room"
     implementation "androidx.room:room-ktx:$room"
     kapt "androidx.room:room-compiler:$room"
-    implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.fragment:fragment-ktx:1.5.5'
-    implementation 'androidx.webkit:webkit:1.6.0'
+    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.fragment:fragment-ktx:1.5.6'
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigation"
+    implementation "androidx.navigation:navigation-ui-ktx:$navigation"
+    implementation 'androidx.webkit:webkit:1.6.1'
 
     //Misc
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
     implementation "com.squareup.retrofit2:converter-gson:$retrofit"
-    implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.9'
+    implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11'
 
     implementation "com.apollographql.apollo3:apollo-runtime:$apollo_ver"
-
-    implementation 'com.ncapdevi:frag-nav:3.3.0'
 
     implementation "androidx.tonyodev.fetch2:xfetch2:$fetch"
     implementation "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:$fetch"
@@ -109,7 +98,7 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer"
     implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayer"
     implementation "com.google.android.exoplayer:extension-mediasession:$exoplayer"
-    implementation 'org.checkerframework:checker-qual:3.32.0'
+    implementation 'org.checkerframework:checker-qual:3.33.0'
 
     implementation "io.coil-kt:coil:$coil"
     implementation "io.coil-kt:coil-gif:$coil"
@@ -122,13 +111,30 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$dagger"
     kapt "com.google.dagger:hilt-compiler:$dagger"
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+}
+
+kapt {
+    arguments {
+        arg('room.schemaLocation', "$projectDir/schemas")
+    }
 }
 
 apollo {
     service("service") {
         packageName.set("com.github.andreyasadchy.xtra")
-        generateKotlinModels.set(true)
+        outputDirConnection {
+            connectToAndroidSourceSet("main")
+        }
+    }
+}
+
+// Delete large build log files from ~/.gradle/daemon/X.X/daemon-XXX.out.log
+// Source: https://discuss.gradle.org/t/gradle-daemon-produces-a-lot-of-logs/9905
+def gradle = project.getGradle()
+new File("${gradle.getGradleUserHomeDir().getAbsolutePath()}/daemon/${gradle.getGradleVersion()}").listFiles().each {
+    if (it.getName().endsWith('.out.log')) {
+        // println("Deleting gradle log file: $it") // Optional debug output
+        it.delete()
     }
 }

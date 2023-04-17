@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.videos
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.lifecycle.ViewModel
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -12,7 +13,6 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.prefs
@@ -23,7 +23,7 @@ import java.io.File
 abstract class BaseVideosViewModel(
     playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val repository: ApiRepository) : PagedListViewModel<Video>() {
+    private val repository: ApiRepository) : ViewModel() {
 
     val positions = playerRepository.loadVideoPositions()
     val bookmarks = bookmarksRepository.loadBookmarksLiveData()

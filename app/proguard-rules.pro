@@ -6,7 +6,7 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class title to the JavaScript interface
+# and specify the fully qualified class name to the JavaScript interface
 # class:
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
@@ -17,10 +17,24 @@
 #-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
-# hide the original source file title.
+# hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
 -dontwarn com.github.andreyasadchy.xtra.ui.**
 -keep class com.iheartradio.m3u8.** { *; }
+
+-dontwarn okhttp3.internal.Util
+-dontwarn okhttp3.internal.annotations.EverythingIsNonNull
+
+# https://github.com/square/retrofit/issues/3751
+# Keep generic signature of Call, Response (R8 full mode strips signatures from non-kept items).
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+
+# With R8 full mode generic signatures are stripped for classes that are not
+# kept. Suspend functions are wrapped in continuations where the type argument
+# is used.
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
 -keep class com.woxthebox.draglistview.** { *; }
 

@@ -4,35 +4,103 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
+import androidx.paging.LoadState
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.FragmentSearchTagsBinding
 import com.github.andreyasadchy.xtra.model.ui.Tag
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
+import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.showKeyboard
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class TagSearchFragment : PagedListFragment<Tag, TagSearchViewModel, BasePagedListAdapter<Tag>>(), Searchable {
+class TagSearchFragment : PagedListFragment() {
 
-    override val viewModel: TagSearchViewModel by viewModels()
-    override val adapter: BasePagedListAdapter<Tag> by lazy { TagSearchAdapter(this, requireActivity() as MainActivity, requireActivity() as MainActivity) }
+    private var _binding: FragmentSearchTagsBinding? = null
+    private val binding get() = _binding!!
+    private val args: TagSearchFragmentArgs by navArgs()
+    private val viewModel: TagSearchViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Tag, out RecyclerView.ViewHolder>
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentSearchTagsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
-        viewModel.loadTags(clientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), getGameTags = parentFragment?.arguments?.getBoolean(C.GET_GAME_TAGS) ?: false)
+        pagingAdapter = TagSearchAdapter(this, args)
+        setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
+        val activity = requireActivity() as MainActivity
+        with(binding) {
+            toolbar.apply {
+                navigationIcon = Utils.getNavigationIcon(activity)
+                setNavigationOnClickListener { activity.popFragment() }
+            }
+            search.showKeyboard()
+        }
     }
 
-    override fun search(query: String) {
+    override fun initialize() {
+        with(binding.recyclerViewLayout) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
+                }
+            }
+        }
+        with(binding) {
+            search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                private var job: Job? = null
+
+                override fun onQueryTextSubmit(query: String): Boolean {
+                    search(query)
+                    return false
+                }
+
+                override fun onQueryTextChange(newText: String): Boolean {
+                    job?.cancel()
+                    if (newText.isNotEmpty()) {
+                        job = lifecycleScope.launchWhenResumed {
+                            delay(750)
+                            search(newText)
+                        }
+                    } else {
+                        search(newText) //might be null on rotation, so as?
+                    }
+                    return false
+                }
+            })
+        }
+    }
+
+    private fun search(query: String) {
         viewModel.setQuery(query)
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

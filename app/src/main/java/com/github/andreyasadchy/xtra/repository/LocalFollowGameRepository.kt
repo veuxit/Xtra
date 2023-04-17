@@ -15,7 +15,9 @@ import javax.inject.Singleton
 class LocalFollowGameRepository @Inject constructor(
         private val localFollowsGameDao: LocalFollowsGameDao) {
 
-    fun loadFollows() = localFollowsGameDao.getAll()
+    suspend fun loadFollows() = withContext(Dispatchers.IO) {
+        localFollowsGameDao.getAll()
+    }
 
     suspend fun getFollowByGameId(id: String) = withContext(Dispatchers.IO) {
         localFollowsGameDao.getByGameId(id)

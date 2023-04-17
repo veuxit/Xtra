@@ -8,65 +8,47 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.addCallback
+import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
+import androidx.navigation.NavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.NavigationUI
+import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragment
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
-import com.github.andreyasadchy.xtra.ui.clips.BaseClipsFragment
-import com.github.andreyasadchy.xtra.ui.common.OnChannelSelectedListener
+import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
-import com.github.andreyasadchy.xtra.ui.common.pagers.MediaPagerFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.follow.FollowMediaFragment
-import com.github.andreyasadchy.xtra.ui.follow.FollowPagerFragment
-import com.github.andreyasadchy.xtra.ui.games.GameFragment
-import com.github.andreyasadchy.xtra.ui.games.GamesFragment
+import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragment
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
-import com.github.andreyasadchy.xtra.ui.saved.SavedMediaFragment
-import com.github.andreyasadchy.xtra.ui.saved.SavedPagerFragment
-import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
-import com.github.andreyasadchy.xtra.ui.search.SearchFragment
-import com.github.andreyasadchy.xtra.ui.search.tags.BaseTagSearchFragment
-import com.github.andreyasadchy.xtra.ui.streams.BaseStreamsFragment
-import com.github.andreyasadchy.xtra.ui.top.TopFragment
-import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.ncapdevi.fragnav.FragNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.fragment_media_pager.view.*
-
-
-const val INDEX_GAMES = FragNavController.TAB1
-const val INDEX_TOP = FragNavController.TAB2
-const val INDEX_FOLLOWED = FragNavController.TAB3
-const val INDEX_DOWNLOADS = FragNavController.TAB4
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, GamesFragment.OnTagGames, BaseStreamsFragment.OnStreamSelectedListener, OnChannelSelectedListener, BaseClipsFragment.OnClipSelectedListener, BaseVideosFragment.OnVideoSelectedListener, DownloadsFragment.OnVideoSelectedListener, SlidingLayout.Listener {
+class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     companion object {
         const val KEY_CODE = "code"
@@ -77,10 +59,11 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         const val INTENT_OPEN_PLAYER = 2
     }
 
+    private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
+    private lateinit var navController: NavController
     var playerFragment: BasePlayerFragment? = null
         private set
-    private val fragNavController = FragNavController(supportFragmentManager, R.id.fragmentContainer)
     private val networkReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             viewModel.setNetworkAvailable(isNetworkAvailable)
@@ -137,21 +120,11 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         }
         applyTheme()
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val notInitialized = savedInstanceState == null
         initNavigation()
-        if ((Account.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (Account.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
-            fragNavController.initialize(INDEX_FOLLOWED, savedInstanceState)
-            if (notInitialized) {
-                navBar.selectedItemId = R.id.fragment_follow
-            }
-        } else {
-            fragNavController.initialize(INDEX_TOP, savedInstanceState)
-            if (notInitialized) {
-                navBar.selectedItemId = R.id.fragment_top
-            }
-        }
         var flag = notInitialized && !isNetworkAvailable
         viewModel.isNetworkAvailable.observe(this) {
             it.getContentIfNotHandled()?.let { online ->
@@ -167,40 +140,6 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 }
             }
         }
-        onBackPressedDispatcher.addCallback(this) {
-            if (!viewModel.isPlayerMaximized) {
-                if (fragNavController.isRootFragment) {
-                    if ((Account.get(this@MainActivity) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (Account.get(this@MainActivity) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
-                        if (fragNavController.currentStackIndex != INDEX_FOLLOWED) {
-                            navBar.selectedItemId = R.id.fragment_follow
-                        } else {
-                            finish()
-                        }
-                    } else {
-                        if (fragNavController.currentStackIndex != INDEX_TOP) {
-                            navBar.selectedItemId = R.id.fragment_top
-                        } else {
-                            finish()
-                        }
-                    }
-                } else {
-                    val currentFrag = fragNavController.currentFrag
-                    if (currentFrag !is ChannelPagerFragment || (currentFrag.currentFragment.let { it !is ChatFragment || !it.hideEmotesMenu() })) {
-                        fragNavController.popFragment()
-                    }
-                }
-            } else {
-                playerFragment?.let {
-                    if (it is StreamPlayerFragment) {
-                        if (!it.hideEmotesMenu()) {
-                            it.minimize()
-                        }
-                    } else {
-                        it.minimize()
-                    }
-                }
-            }
-        }
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         restorePlayerFragment()
         handleIntent(intent)
@@ -209,11 +148,6 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
     override fun onResume() {
         super.onResume()
         restorePlayerFragment()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        fragNavController.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -253,10 +187,10 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         when (requestCode) {
             0 -> {
                 if (grantResults.isNotEmpty() && grantResults.indexOf(PackageManager.PERMISSION_DENIED) == -1) {
-                    val fragment = fragNavController.currentFrag
+                    val fragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
                     if (fragment is HasDownloadDialog) {
                         fragment.showDownloadDialog()
-                    } else if (fragment is MediaPagerFragment && fragment.currentFragment is HasDownloadDialog) {
+                    } else if (fragment is GamePagerFragment && fragment.currentFragment is HasDownloadDialog) {
                         (fragment.currentFragment as HasDownloadDialog).showDownloadDialog()
                     }
                 } else {
@@ -277,11 +211,6 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                         (it.childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
                         // player chat message dialog
                         (it.childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
-                        // channel chat message dialog
-                        val fragment = fragNavController.currentFrag as? ChannelPagerFragment?
-                        if (fragment != null) {
-                            ((fragment.childFragmentManager.findFragmentByTag("android:switcher:" + fragment.view?.viewPager?.id + ":" + fragment.view?.viewPager?.currentItem) as? ChatFragment?)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
-                        }
                         try {
                             val params = PictureInPictureParams.Builder()
                                 .setSourceRectHint(Rect(0, 0, it.playerWidth, it.playerHeight))
@@ -343,7 +272,17 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     val name = url.substringAfter("twitch.tv/directory/game/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!name.isNullOrBlank()) {
                         playerFragment?.minimize()
-                        openGame(id = null, name = Uri.decode(name))
+                        navController.navigate(
+                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                    gameName = Uri.decode(name)
+                                )
+                            } else {
+                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                    gameName = Uri.decode(name)
+                                )
+                            }
+                        )
                     }
                 }
                 else -> {
@@ -353,7 +292,12 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                         viewModel.user.observe(this) { user ->
                             if (user != null && (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank())) {
                                 playerFragment?.minimize()
-                                viewChannel(id = user.channelId, login = user.channelLogin, name = user.channelName, channelLogo = user.channelLogo)
+                                navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                    channelId = user.channelId,
+                                    channelLogin = user.channelLogin,
+                                    channelName = user.channelName,
+                                    channelLogo = user.channelLogo,
+                                ))
                             }
                         }
                     }
@@ -361,7 +305,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         } else {
             when (intent?.getIntExtra(KEY_CODE, -1)) {
-                INTENT_OPEN_DOWNLOADS_TAB -> navBar.selectedItemId = R.id.fragment_downloads
+                INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
                 INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(intent.getParcelableExtra(KEY_VIDEO)!!)
                 INTENT_OPEN_PLAYER -> { //TODO if was closed need to reopen
                     playerFragment?.maximize() ?: AudioPlayerService.connection?.let { XtraApp.INSTANCE.unbindService(it) }
@@ -372,33 +316,21 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
 
 //Navigation listeners
 
-    override fun openTagGames(tags: List<String>?) {
-        fragNavController.pushFragment(GamesFragment.newInstance(tags))
-    }
-
-    override fun openGame(id: String?, name: String?, tags: List<String>?, updateLocal: Boolean) {
-        fragNavController.pushFragment(GameFragment.newInstance(id, name, tags, updateLocal))
-    }
-
-    override fun startStream(stream: Stream) {
+    fun startStream(stream: Stream) {
 //        playerFragment?.play(stream)
         startPlayer(StreamPlayerFragment.newInstance(stream))
     }
 
-    override fun startVideo(video: Video, offset: Double?) {
+    fun startVideo(video: Video, offset: Double?) {
         startPlayer(VideoPlayerFragment.newInstance(video, offset))
     }
 
-    override fun startClip(clip: Clip) {
+    fun startClip(clip: Clip) {
         startPlayer(ClipPlayerFragment.newInstance(clip))
     }
 
-    override fun startOfflineVideo(video: OfflineVideo) {
+    fun startOfflineVideo(video: OfflineVideo) {
         startPlayer(OfflinePlayerFragment.newInstance(video))
-    }
-
-    override fun viewChannel(id: String?, login: String?, name: String?, channelLogo: String?, updateLocal: Boolean, streamId: String?) {
-        fragNavController.pushFragment(ChannelPagerFragment.newInstance(id, login, name, channelLogo, updateLocal, streamId))
     }
 
 //SlidingLayout.Listener
@@ -446,80 +378,44 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         }
     }
 
-    private fun hideNavigationBar() {
-        navBarContainer.gone()
-    }
-
-    private fun showNavigationBar() {
-        navBarContainer.visible()
-    }
-
     fun popFragment() {
-        fragNavController.popFragment()
-    }
-
-    fun openSearch() {
-        fragNavController.pushFragment(SearchFragment())
-    }
-
-    fun openTagSearch(getGameTags: Boolean = false) {
-        fragNavController.pushFragment(BaseTagSearchFragment.newInstance(getGameTags))
+        navController.navigateUp()
     }
 
     private fun initNavigation() {
-        fragNavController.apply {
-            rootFragments = listOf(
-                GamesFragment(),
-                TopFragment(),
+        navController = (supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment).navController
+        navController.setGraph(navController.navInflater.inflate(R.navigation.nav_graph).also {
+            if ((Account.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1) < 2)) || (Account.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1) == 0))) {
                 if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
-                    FollowPagerFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !Account.get(this@MainActivity).gqlToken.isNullOrBlank())
+                    it.setStartDestination(R.id.followPagerFragment)
                 } else {
-                    FollowMediaFragment.newInstance(prefs.getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt(), !Account.get(this@MainActivity).gqlToken.isNullOrBlank())
-                },
-                if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
-                    SavedPagerFragment.newInstance(prefs.getString(C.UI_SAVED_DEFAULT_PAGE, "0")?.toInt())
-                } else {
-                    SavedMediaFragment.newInstance(prefs.getString(C.UI_SAVED_DEFAULT_PAGE, "0")?.toInt())
-                }
-            )
-            fragmentHideStrategy = FragNavController.DETACH_ON_NAVIGATE_HIDE_ON_SWITCH
-            transactionListener = object : FragNavController.TransactionListener {
-                override fun onFragmentTransaction(fragment: Fragment?, transactionType: FragNavController.TransactionType) {
-                }
-
-                override fun onTabTransaction(fragment: Fragment?, index: Int) {
+                    it.setStartDestination(R.id.followMediaFragment)
                 }
             }
-        }
-        navBar.apply {
-            setOnNavigationItemSelectedListener {
-                val index = when (it.itemId) {
-                    R.id.fragment_games -> INDEX_GAMES
-                    R.id.fragment_top -> INDEX_TOP
-                    R.id.fragment_follow -> INDEX_FOLLOWED
-                    R.id.fragment_downloads -> INDEX_DOWNLOADS
-                    else -> throw IllegalArgumentException()
-                }
-                fragNavController.switchTab(index)
-                true
+        }, null)
+        binding.navBar.apply {
+            menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
+            menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
+            if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
+                menu.add(Menu.NONE, R.id.followPagerFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
+            } else {
+                menu.add(Menu.NONE, R.id.followMediaFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
             }
-
-            setOnNavigationItemReselectedListener {
-                val currentFragment = fragNavController.currentFrag
-                when (it.itemId) {
-                    R.id.fragment_games -> {
-                        if (currentFragment is GamesFragment && currentFragment.arguments?.getStringArray(C.TAGS).isNullOrEmpty()) {
-                            currentFragment.scrollToTop()
-                        } else {
-                            fragNavController.clearStack()
-                        }
-                    }
-                    else -> if (fragNavController.isRootFragment) {
-                        if (currentFragment is Scrollable) {
-                            currentFragment.scrollToTop()
-                        }
-                    } else {
-                        fragNavController.clearStack()
+            if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
+                menu.add(Menu.NONE, R.id.savedPagerFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
+            } else {
+                menu.add(Menu.NONE, R.id.savedMediaFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
+            }
+            setupWithNavController(navController)
+            setOnItemSelectedListener {
+                NavigationUI.onNavDestinationSelected(it, navController)
+                return@setOnItemSelectedListener true
+            }
+            setOnItemReselectedListener {
+                if (!navController.popBackStack(it.itemId, false)) {
+                    val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
+                    if (currentFragment is Scrollable) {
+                        currentFragment.scrollToTop()
                     }
                 }
             }

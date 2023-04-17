@@ -561,4 +561,5 @@
     <string name="show_playlist_tags">プレイリストのタグ表示</string>
     <string name="show_media_playlist_tags">メディアプレイリストのタグ表示</string>
     <string name="show_multivariant_playlist_tags">多変数プレイリストのタグ表示</string>
+    <string name="use_gamepager">Use tabs layout for game page</string>
 </resources>

@@ -9,6 +9,7 @@
         layout="@layout/sort_bar" />
 
     <include
+        android:id="@+id/recyclerViewLayout"
         layout="@layout/common_recycler_view_layout"/>
 
 </LinearLayout>
