@@ -656,7 +656,7 @@ class ChatViewModel @Inject constructor(
                 pubSub?.disconnect()
                 usedRaidId = null
                 onRaidClose()
-                _chatMessages.postValue(null)
+                _chatMessages.postValue(mutableListOf())
                 _command.postValue(Command(type = "disconnect_command"))
             }
         }
@@ -1133,7 +1133,7 @@ class ChatViewModel @Inject constructor(
         abstract fun stop()
 
         override fun onMessage(message: ChatMessage) {
-            _chatMessages.value!!.add(message)
+            _chatMessages.value?.add(message)
             _newMessage.postValue(message)
         }
     }
