@@ -93,6 +93,7 @@ type Emote {
   id: ID
   owner: User
   setID: ID
+  token: String
 }
 
 type EmoteSet {
