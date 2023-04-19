@@ -76,7 +76,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
                     entries.forEach { emote ->
                         emote.value?.split(",")?.forEach { indexes ->
                             val index = indexes.split("-")
-                            emotesList.add(TwitchEmote(name = emote.key, begin = index[0].toInt(), end = index[1].toInt()))
+                            emotesList.add(TwitchEmote(id = emote.key, begin = index[0].toInt(), end = index[1].toInt()))
                         }
                     }
                 }

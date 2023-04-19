@@ -473,9 +473,10 @@ class ApiRepository @Inject constructor(
             val emotes = mutableListOf<TwitchEmote>()
             getApolloClient(gqlClientId, gqlToken).query(UserEmotesQuery()).execute().data?.user?.emoteSets?.forEach { set ->
                 set.emotes?.forEach { emote ->
-                    if (emote?.id != null) {
+                    if (emote?.token != null) {
                         emotes.add(TwitchEmote(
-                            name = emote.id,
+                            id = emote.id,
+                            name = emote.token.removePrefix("\\").replace("?\\", ""),
                             setId = emote.setID,
                             ownerId = emote.owner?.id
                         ))
