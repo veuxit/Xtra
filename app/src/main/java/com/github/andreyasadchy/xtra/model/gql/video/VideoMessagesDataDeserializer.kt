@@ -27,7 +27,7 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
                             fragment.get("emote")?.takeIf { it.isJsonObject }?.asJsonObject?.let { emote ->
                                 emote.get("emoteID")?.takeIf { !it.isJsonNull }?.asString?.let { id ->
                                     emotes.add(TwitchEmote(
-                                        name = id,
+                                        id = id,
                                         begin = message.codePointCount(0, message.length),
                                         end = message.codePointCount(0, message.length) + text.lastIndex
                                     ))

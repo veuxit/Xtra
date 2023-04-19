@@ -26,9 +26,16 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.chat.*
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
+import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.Image
+import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
+import com.github.andreyasadchy.xtra.model.chat.PubSubPointReward
+import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
+import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import java.util.*
+import java.util.Random
 import kotlin.collections.set
 
 class ChatAdapter(
@@ -217,7 +224,7 @@ class ChatAdapter(
                     } else {
                         it.end + realBegin - it.begin
                     }
-                    TwitchEmote(name = it.name, begin = realBegin, end = realEnd)
+                    TwitchEmote(id = it.id, begin = realBegin, end = realEnd)
                 }
                 imageIndex += userNameWithPostfixLength
                 for (e in copy) {

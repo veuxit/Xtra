@@ -16,9 +16,10 @@ class UserEmotesQueryDeserializer : JsonDeserializer<UserEmotesQueryResponse> {
         dataJson?.forEach { set ->
             set?.asJsonObject?.getAsJsonArray("emotes")?.forEach { emote ->
                 emote?.asJsonObject?.let { obj ->
-                    obj.get("id")?.takeIf { !it.isJsonNull }?.asString?.let { name ->
+                    obj.get("token")?.takeIf { !it.isJsonNull }?.asString?.let { name ->
                         data.add(TwitchEmote(
-                            name = name,
+                            id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
+                            name = name.removePrefix("\\").replace("?\\", ""),
                             setId = obj.get("setID")?.takeIf { !it.isJsonNull }?.asString,
                             ownerId = obj.get("owner")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString
                         ))
