@@ -562,4 +562,5 @@
     <string name="show_media_playlist_tags">Mostrar etiquetas de listas de reproducción multimedia</string>
     <string name="show_multivariant_playlist_tags">Mostrar etiquetas de listas de reproducción multivariantes</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
+    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>

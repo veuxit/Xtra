@@ -562,4 +562,5 @@
     <string name="show_media_playlist_tags">Medya oynatma listesi etiketlerini göster</string>
     <string name="show_multivariant_playlist_tags">Farklı oynatma listesi etiketlerini göster</string>
     <string name="use_gamepager">Oyun sayfası için sekmeler düzenini kullan</string>
+    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>

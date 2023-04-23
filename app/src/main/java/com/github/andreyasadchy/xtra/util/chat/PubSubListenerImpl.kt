@@ -81,7 +81,7 @@ class PubSubListenerImpl(
             targetId = raid?.optString("target_id"),
             targetLogin = raid?.optString("target_login"),
             targetName = raid?.optString("target_display_name"),
-            targetProfileImage = raid?.optString("target_profile_image"),
+            targetProfileImage = raid?.optString("target_profile_image")?.replace("profile_image-%s", "profile_image-300x300"),
             viewerCount = raid?.optInt("viewer_count"),
             openStream = openStream
         ))
