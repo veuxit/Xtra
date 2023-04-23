@@ -101,9 +101,10 @@ class LoginActivity : AppCompatActivity() {
             "user:read:follows", // streams/followed, channels/followed
         )
         val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
-        val gqlRedirect = prefs().getString(C.GQL_REDIRECT, "https://www.twitch.tv/")
+        val gqlRedirect = prefs().getString(C.GQL_REDIRECT, "https://www.twitch.tv/passport-callback")
         val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId}&redirect_uri=${gqlRedirect}&scope="
-        val gqlAuthUrl2 = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId2}&redirect_uri=${gqlRedirect}&scope="
+        val gqlRedirect2 = prefs().getString(C.GQL_REDIRECT2, "https://www.twitch.tv/")
+        val gqlAuthUrl2 = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId2}&redirect_uri=${gqlRedirect2}&scope="
         with(binding) {
             webViewContainer.visible()
             havingTrouble.setOnClickListener {
