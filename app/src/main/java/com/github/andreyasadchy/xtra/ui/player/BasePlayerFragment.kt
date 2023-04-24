@@ -445,7 +445,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
             requireView().findViewById<ImageButton>(R.id.playerAspectRatio)?.let {
-                if (it.isVisible) {
+                if (it.hasOnClickListeners()) {
                     it.visible()
                 }
             }
