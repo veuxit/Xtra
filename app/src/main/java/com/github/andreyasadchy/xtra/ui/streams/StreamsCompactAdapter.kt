@@ -9,7 +9,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.github.andreyasadchy.xtra.databinding.FragmentStreamsListItemBinding
+import com.github.andreyasadchy.xtra.databinding.FragmentStreamsListItemCompactBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
@@ -37,7 +37,7 @@ class StreamsCompactAdapter(
     }) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PagingViewHolder {
-        val binding = FragmentStreamsListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding = FragmentStreamsListItemCompactBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return PagingViewHolder(binding, fragment, args)
     }
 
@@ -46,7 +46,7 @@ class StreamsCompactAdapter(
     }
 
     inner class PagingViewHolder(
-        private val binding: FragmentStreamsListItemBinding,
+        private val binding: FragmentStreamsListItemCompactBinding,
         private val fragment: Fragment,
         private val args: GamePagerFragmentArgs?): RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Stream?) {
