@@ -101,7 +101,10 @@ class FollowedStreamsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -139,30 +142,28 @@ class FollowedStreamsDataSource(
         }.build().query(UserFollowedStreamsQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
-        )).execute().data?.user?.followedLiveUsers
-        val get = get1?.edges
+        )).execute().data!!.user!!.followedLiveUsers!!
+        val get = get1.edges!!
         val list = mutableListOf<Stream>()
-        if (get != null) {
-            for (i in get) {
-                list.add(Stream(
-                    id = i?.node?.stream?.id,
-                    channelId = i?.node?.id,
-                    channelLogin = i?.node?.login,
-                    channelName = i?.node?.displayName,
-                    gameId = i?.node?.stream?.game?.id,
-                    gameName = i?.node?.stream?.game?.displayName,
-                    type = i?.node?.stream?.type,
-                    title = i?.node?.stream?.broadcaster?.broadcastSettings?.title,
-                    viewerCount = i?.node?.stream?.viewersCount,
-                    startedAt = i?.node?.stream?.createdAt?.toString(),
-                    thumbnailUrl = i?.node?.stream?.previewImageURL,
-                    profileImageUrl = i?.node?.profileImageURL,
-                    tags = i?.node?.stream?.freeformTags?.mapNotNull { it.name }
-                ))
-            }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
+        for (i in get) {
+            list.add(Stream(
+                id = i?.node?.stream?.id,
+                channelId = i?.node?.id,
+                channelLogin = i?.node?.login,
+                channelName = i?.node?.displayName,
+                gameId = i?.node?.stream?.game?.id,
+                gameName = i?.node?.stream?.game?.displayName,
+                type = i?.node?.stream?.type,
+                title = i?.node?.stream?.broadcaster?.broadcastSettings?.title,
+                viewerCount = i?.node?.stream?.viewersCount,
+                startedAt = i?.node?.stream?.createdAt?.toString(),
+                thumbnailUrl = i?.node?.stream?.previewImageURL,
+                profileImageUrl = i?.node?.profileImageURL,
+                tags = i?.node?.stream?.freeformTags?.mapNotNull { it.name }
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 

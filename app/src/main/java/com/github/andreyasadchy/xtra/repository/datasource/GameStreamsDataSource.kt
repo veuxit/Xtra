@@ -64,7 +64,10 @@ class GameStreamsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -106,28 +109,26 @@ class GameStreamsDataSource(
             tags = Optional.Present(tags),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.game?.streams
-        val get = get1?.edges
+        )).execute().data!!.game!!.streams!!
+        val get = get1.edges!!
         val list = mutableListOf<Stream>()
-        if (get != null) {
-            for (i in get) {
-                list.add(Stream(
-                    id = i?.node?.id,
-                    channelId = i?.node?.broadcaster?.id,
-                    channelLogin = i?.node?.broadcaster?.login,
-                    channelName = i?.node?.broadcaster?.displayName,
-                    type = i?.node?.type,
-                    title = i?.node?.broadcaster?.broadcastSettings?.title,
-                    viewerCount = i?.node?.viewersCount,
-                    startedAt = i?.node?.createdAt?.toString(),
-                    thumbnailUrl = i?.node?.previewImageURL,
-                    profileImageUrl = i?.node?.broadcaster?.profileImageURL,
-                    tags = i?.node?.freeformTags?.mapNotNull { it.name }
-                ))
-            }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
+        for (i in get) {
+            list.add(Stream(
+                id = i?.node?.id,
+                channelId = i?.node?.broadcaster?.id,
+                channelLogin = i?.node?.broadcaster?.login,
+                channelName = i?.node?.broadcaster?.displayName,
+                type = i?.node?.type,
+                title = i?.node?.broadcaster?.broadcastSettings?.title,
+                viewerCount = i?.node?.viewersCount,
+                startedAt = i?.node?.createdAt?.toString(),
+                thumbnailUrl = i?.node?.previewImageURL,
+                profileImageUrl = i?.node?.broadcaster?.profileImageURL,
+                tags = i?.node?.freeformTags?.mapNotNull { it.name }
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 
