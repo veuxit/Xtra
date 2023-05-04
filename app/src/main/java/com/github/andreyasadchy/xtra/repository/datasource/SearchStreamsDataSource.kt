@@ -46,7 +46,10 @@ class SearchStreamsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)

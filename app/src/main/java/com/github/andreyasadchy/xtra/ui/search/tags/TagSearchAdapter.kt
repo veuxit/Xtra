@@ -23,7 +23,7 @@ class TagSearchAdapter(
     private val args: TagSearchFragmentArgs) : PagingDataAdapter<Tag, TagSearchAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Tag>() {
         override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
-            oldItem.id == newItem.id
+            oldItem.name == newItem.name
 
         override fun areContentsTheSame(oldItem: Tag, newItem: Tag): Boolean = true
     }) {
