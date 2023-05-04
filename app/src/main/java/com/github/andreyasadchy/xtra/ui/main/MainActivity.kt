@@ -3,7 +3,6 @@ package com.github.andreyasadchy.xtra.ui.main
 import android.app.PictureInPictureParams
 import android.content.*
 import android.content.pm.PackageManager
-import android.graphics.Rect
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
@@ -12,7 +11,6 @@ import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
-import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentTransaction
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -42,7 +40,6 @@ import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -191,30 +188,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        playerFragment?.let {
-            if (it.enterPictureInPicture()) {
-                it.setPauseHandled()
-                if (prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-                        // player dialog
-                        (it.childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
-                        // player chat message dialog
-                        (it.childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
-                        try {
-                            val params = PictureInPictureParams.Builder()
-                                .setSourceRectHint(Rect(0, 0, it.playerWidth, it.playerHeight))
-//                            .setAspectRatio(Rational(it.playerWidth, it.playerHeight))
-                                .build()
-                            enterPictureInPictureMode(params)
-                        } catch (e: IllegalStateException) {
-                            //device doesn't support PIP
-                        }
-                    }
-                } else {
-                    if (prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "1" && it.isPlaying()) {
-                        (it as? StreamPlayerFragment)?.startAudioOnly() ?: (it as? VideoPlayerFragment)?.startAudioOnly() ?: (it as? OfflinePlayerFragment)?.startAudioOnly()
-                    }
-                }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0" && playerFragment?.enterPictureInPicture() == true) {
+            try {
+                enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+            } catch (e: IllegalStateException) {
+                //device doesn't support PIP
             }
         }
     }
@@ -344,6 +323,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         supportFragmentManager.beginTransaction()
                 .replace(R.id.playerContainer, fragment).commit()
         viewModel.onPlayerStarted()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+            setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
+        }
     }
 
     fun closePlayer() {
@@ -353,17 +335,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 .commit()
         playerFragment = null
         viewModel.onPlayerClosed()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
+        }
     }
 
     private fun restorePlayerFragment() {
-        if (viewModel.isPlayerOpened) {
-            if (playerFragment == null) {
-                playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
-            } else {
-                if (playerFragment?.slidingLayout?.secondView?.isVisible == false && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
-                    playerFragment?.maximize()
-                }
-            }
+        if (viewModel.isPlayerOpened && playerFragment == null) {
+            playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
         }
     }
 
