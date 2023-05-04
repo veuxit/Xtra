@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player
 
+import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.SharedPreferences
@@ -15,9 +16,12 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.trackPipAnimationHintView
 import androidx.core.content.edit
 import androidx.core.view.*
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
@@ -32,6 +36,7 @@ import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,11 +69,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     protected lateinit var prefs: SharedPreferences
 
-    val playerWidth: Int
-        get() = playerView.width
-    val playerHeight: Int
-        get() = playerView.height
-
     private var chatWidthLandscape = 0
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -95,6 +95,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         slidingLayout.addListener(this)
         slidingLayout.maximizedSecondViewVisibility = if (prefs.getBoolean(C.KEY_CHAT_OPENED, true)) View.VISIBLE else View.GONE //TODO
         playerView = view.findViewById(R.id.playerView)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                requireActivity().trackPipAnimationHintView(playerView)
+            }
+        }
         chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
         aspectRatioFrameLayout = view.findViewById(R.id.aspectRatioFrameLayout)
         aspectRatioFrameLayout.setAspectRatio(16f / 9f)
@@ -199,11 +204,17 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (it == PlayerMode.NORMAL) {
                 playerView.controllerHideOnTouch = true
                 playerView.controllerShowTimeoutMs = controllerShowTimeoutMs
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+                    activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
+                }
             } else {
                 playerView.controllerHideOnTouch = false
                 playerView.controllerShowTimeoutMs = -1
                 playerView.showController()
                 view.keepScreenOn = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
+                }
             }
         }
         if (this !is ClipPlayerFragment) {
@@ -248,6 +259,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (isInPictureInPictureMode) {
             playerView.useController = false
             chatLayout.gone()
+            if (!slidingLayout.isMaximized) {
+                slidingLayout.maximize()
+            }
+            // player dialog
+            (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
+            // player chat message dialog
+            (childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
         } else {
             playerView.useController = true
         }
@@ -369,7 +387,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun enterPictureInPicture(): Boolean {
-        return slidingLayout.isMaximized && shouldEnterPictureInPicture
+        return shouldEnterPictureInPicture
     }
 
     private fun initLayout() {
@@ -529,14 +547,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 (requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
             } catch (e: SecurityException) {}
         }
-    }
-
-    fun setPauseHandled() {
-        viewModel.pauseHandled = true
-    }
-
-    fun isPlaying(): Boolean {
-        return viewModel.player?.isPlaying == true
     }
 
     fun setSubtitles(available: Boolean? = null, enabled: Boolean? = null) {
