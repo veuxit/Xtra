@@ -32,7 +32,6 @@ class OfflinePlayerViewModel @Inject constructor(
 
     override fun onResume() {
         isResumed = true
-        pauseHandled = false
         if (playerMode.value == PlayerMode.NORMAL) {
             initializePlayer()
             play()
@@ -49,7 +48,7 @@ class OfflinePlayerViewModel @Inject constructor(
         isResumed = false
         if (playerMode.value == PlayerMode.NORMAL) {
             player?.currentPosition?.let { playbackPosition = it }
-            if (!pauseHandled && player?.isPlaying == true && prefs.getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
+            if (player?.isPlaying == true && prefs.getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
                 startAudioOnly(true)
             } else {
                 releasePlayer()

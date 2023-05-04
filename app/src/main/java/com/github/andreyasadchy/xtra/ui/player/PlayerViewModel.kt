@@ -60,7 +60,6 @@ abstract class PlayerViewModel(context: Application) : AndroidViewModel(context)
     protected var binder: AudioPlayerService.AudioBinder? = null
 
     protected var isResumed = true
-    var pauseHandled = false
     private var playing = true
 
     lateinit var mediaSession: MediaSessionCompat
