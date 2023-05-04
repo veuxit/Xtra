@@ -72,7 +72,10 @@ class ChannelVideosDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -102,39 +105,37 @@ class ChannelVideosDataSource(
             types = Optional.Present(gqlQueryType?.let { listOf(it) }),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.user
-        val get = get1?.videos?.edges
+        )).execute().data!!.user!!
+        val get = get1.videos!!.edges!!
         val list = mutableListOf<Video>()
-        if (get != null) {
-            for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i?.node?.contentTags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
-                list.add(Video(
-                    id = i?.node?.id,
-                    channelId = channelId,
-                    channelLogin = get1.login,
-                    channelName = get1.displayName,
-                    gameId = i?.node?.game?.id,
-                    gameName = i?.node?.game?.displayName,
-                    type = i?.node?.broadcastType?.toString(),
-                    title = i?.node?.title,
-                    viewCount = i?.node?.viewCount,
-                    uploadDate = i?.node?.createdAt?.toString(),
-                    duration = i?.node?.lengthSeconds?.toString(),
-                    thumbnailUrl = i?.node?.previewThumbnailURL,
-                    profileImageUrl = get1.profileImageURL,
-                    tags = tags,
-                    animatedPreviewURL =  i?.node?.animatedPreviewURL
+        for (i in get) {
+            val tags = mutableListOf<Tag>()
+            i?.node?.contentTags?.forEach { tag ->
+                tags.add(Tag(
+                    id = tag.id,
+                    name = tag.localizedName
                 ))
             }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.videos.pageInfo?.hasNextPage ?: true
+            list.add(Video(
+                id = i?.node?.id,
+                channelId = channelId,
+                channelLogin = get1.login,
+                channelName = get1.displayName,
+                gameId = i?.node?.game?.id,
+                gameName = i?.node?.game?.displayName,
+                type = i?.node?.broadcastType?.toString(),
+                title = i?.node?.title,
+                viewCount = i?.node?.viewCount,
+                uploadDate = i?.node?.createdAt?.toString(),
+                duration = i?.node?.lengthSeconds?.toString(),
+                thumbnailUrl = i?.node?.previewThumbnailURL,
+                profileImageUrl = get1.profileImageURL,
+                tags = tags,
+                animatedPreviewURL =  i?.node?.animatedPreviewURL
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.videos.pageInfo?.hasNextPage ?: true
         return list
     }
 

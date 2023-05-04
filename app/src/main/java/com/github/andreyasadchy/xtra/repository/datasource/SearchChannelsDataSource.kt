@@ -58,7 +58,10 @@ class SearchChannelsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -82,25 +85,23 @@ class SearchChannelsDataSource(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.searchUsers
-        val get = get1?.edges
+        )).execute().data!!.searchUsers!!
+        val get = get1.edges!!
         val list = mutableListOf<User>()
-        if (get != null) {
-            for (edge in get) {
-                edge.node?.let { i ->
-                    list.add(User(
-                        channelId = i.id,
-                        channelLogin = i.login,
-                        channelName = i.displayName,
-                        profileImageUrl = i.profileImageURL,
-                        followersCount = i.followers?.totalCount,
-                        type = i.stream?.type
-                    ))
-                }
+        for (edge in get) {
+            edge.node?.let { i ->
+                list.add(User(
+                    channelId = i.id,
+                    channelLogin = i.login,
+                    channelName = i.displayName,
+                    profileImageUrl = i.profileImageURL,
+                    followersCount = i.followers?.totalCount,
+                    type = i.stream?.type
+                ))
             }
-            offset = get1.edges.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
         }
+        offset = get1.edges.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 

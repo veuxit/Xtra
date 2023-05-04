@@ -80,27 +80,25 @@ class FollowedGamesDataSource(
             gqlToken?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build().query(UserFollowedGamesQuery(
             first = Optional.Present(100)
-        )).execute().data?.user?.followedGames
-        val get = get1?.nodes
+        )).execute().data!!.user!!.followedGames!!
+        val get = get1.nodes!!
         val list = mutableListOf<Game>()
-        if (get != null) {
-            for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i?.tags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
-                list.add(Game(
-                    gameId = i?.id,
-                    gameName = i?.displayName,
-                    boxArtUrl = i?.boxArtURL,
-                    viewersCount = i?.viewersCount,
-                    broadcastersCount = i?.broadcastersCount,
-                    tags = tags
+        for (i in get) {
+            val tags = mutableListOf<Tag>()
+            i?.tags?.forEach { tag ->
+                tags.add(Tag(
+                    id = tag.id,
+                    name = tag.localizedName
                 ))
             }
+            list.add(Game(
+                gameId = i?.id,
+                gameName = i?.displayName,
+                boxArtUrl = i?.boxArtURL,
+                viewersCount = i?.viewersCount,
+                broadcastersCount = i?.broadcastersCount,
+                tags = tags
+            ))
         }
         return list
     }

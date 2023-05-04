@@ -64,7 +64,10 @@ class ChannelClipsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -112,32 +115,30 @@ class ChannelClipsDataSource(
             sort = Optional.Present(gqlQueryPeriod),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.user
-        val get = get1?.clips?.edges
+        )).execute().data!!.user!!
+        val get = get1.clips!!.edges!!
         val list = mutableListOf<Clip>()
-        if (get != null) {
-            for (i in get) {
-                list.add(Clip(
-                    id = i?.node?.slug,
-                    channelId = channelId,
-                    channelLogin = get1.login,
-                    channelName = get1.displayName,
-                    videoId = i?.node?.video?.id,
-                    vodOffset = i?.node?.videoOffsetSeconds,
-                    gameId = i?.node?.game?.id,
-                    gameName = i?.node?.game?.displayName,
-                    title = i?.node?.title,
-                    viewCount = i?.node?.viewCount,
-                    uploadDate = i?.node?.createdAt?.toString(),
-                    duration = i?.node?.durationSeconds?.toDouble(),
-                    thumbnailUrl = i?.node?.thumbnailURL,
-                    profileImageUrl = get1.profileImageURL,
-                    videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
-                ))
-            }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.clips.pageInfo?.hasNextPage ?: true
+        for (i in get) {
+            list.add(Clip(
+                id = i?.node?.slug,
+                channelId = channelId,
+                channelLogin = get1.login,
+                channelName = get1.displayName,
+                videoId = i?.node?.video?.id,
+                vodOffset = i?.node?.videoOffsetSeconds,
+                gameId = i?.node?.game?.id,
+                gameName = i?.node?.game?.displayName,
+                title = i?.node?.title,
+                viewCount = i?.node?.viewCount,
+                uploadDate = i?.node?.createdAt?.toString(),
+                duration = i?.node?.durationSeconds?.toDouble(),
+                thumbnailUrl = i?.node?.thumbnailURL,
+                profileImageUrl = get1.profileImageURL,
+                videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.clips.pageInfo?.hasNextPage ?: true
         return list
     }
 

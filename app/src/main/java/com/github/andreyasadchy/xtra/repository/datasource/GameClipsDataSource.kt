@@ -66,7 +66,10 @@ class GameClipsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -111,30 +114,28 @@ class GameClipsDataSource(
             sort = Optional.Present(gqlQueryPeriod),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.game?.clips
-        val get = get1?.edges
+        )).execute().data!!.game!!.clips!!
+        val get = get1.edges!!
         val list = mutableListOf<Clip>()
-        if (get != null) {
-            for (i in get) {
-                list.add(Clip(
-                    id = i?.node?.slug,
-                    channelId = i?.node?.broadcaster?.id,
-                    channelLogin = i?.node?.broadcaster?.login,
-                    channelName = i?.node?.broadcaster?.displayName,
-                    videoId = i?.node?.video?.id,
-                    vodOffset = i?.node?.videoOffsetSeconds,
-                    title = i?.node?.title,
-                    viewCount = i?.node?.viewCount,
-                    uploadDate = i?.node?.createdAt?.toString(),
-                    duration = i?.node?.durationSeconds?.toDouble(),
-                    thumbnailUrl = i?.node?.thumbnailURL,
-                    profileImageUrl = i?.node?.broadcaster?.profileImageURL,
-                    videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
-                ))
-            }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
+        for (i in get) {
+            list.add(Clip(
+                id = i?.node?.slug,
+                channelId = i?.node?.broadcaster?.id,
+                channelLogin = i?.node?.broadcaster?.login,
+                channelName = i?.node?.broadcaster?.displayName,
+                videoId = i?.node?.video?.id,
+                vodOffset = i?.node?.videoOffsetSeconds,
+                title = i?.node?.title,
+                viewCount = i?.node?.viewCount,
+                uploadDate = i?.node?.createdAt?.toString(),
+                duration = i?.node?.durationSeconds?.toDouble(),
+                thumbnailUrl = i?.node?.thumbnailURL,
+                profileImageUrl = i?.node?.broadcaster?.profileImageURL,
+                videoAnimatedPreviewURL = i?.node?.video?.animatedPreviewURL
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 

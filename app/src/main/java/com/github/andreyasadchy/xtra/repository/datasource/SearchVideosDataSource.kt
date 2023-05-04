@@ -43,7 +43,10 @@ class SearchVideosDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -55,39 +58,37 @@ class SearchVideosDataSource(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.searchFor?.videos
-        val get = get1?.items
+        )).execute().data!!.searchFor!!.videos!!
+        val get = get1.items!!
         val list = mutableListOf<Video>()
-        if (get != null) {
-            for (i in get) {
-                val tags = mutableListOf<Tag>()
-                i.contentTags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
-                list.add(Video(
-                    id = i.id,
-                    channelId = i.owner?.id,
-                    channelLogin = i.owner?.login,
-                    channelName = i.owner?.displayName,
-                    type = i.broadcastType?.toString(),
-                    title = i.title,
-                    viewCount = i.viewCount,
-                    uploadDate = i.createdAt?.toString(),
-                    duration = i.lengthSeconds?.toString(),
-                    thumbnailUrl = i.previewThumbnailURL,
-                    gameId = i.game?.id,
-                    gameName = i.game?.displayName,
-                    profileImageUrl = i.owner?.profileImageURL,
-                    tags = tags,
-                    animatedPreviewURL =  i.animatedPreviewURL
+        for (i in get) {
+            val tags = mutableListOf<Tag>()
+            i.contentTags?.forEach { tag ->
+                tags.add(Tag(
+                    id = tag.id,
+                    name = tag.localizedName
                 ))
             }
-            offset = get1.cursor
-            nextPage = get1.pageInfo?.hasNextPage ?: true
+            list.add(Video(
+                id = i.id,
+                channelId = i.owner?.id,
+                channelLogin = i.owner?.login,
+                channelName = i.owner?.displayName,
+                type = i.broadcastType?.toString(),
+                title = i.title,
+                viewCount = i.viewCount,
+                uploadDate = i.createdAt?.toString(),
+                duration = i.lengthSeconds?.toString(),
+                thumbnailUrl = i.previewThumbnailURL,
+                gameId = i.game?.id,
+                gameName = i.game?.displayName,
+                profileImageUrl = i.owner?.profileImageURL,
+                tags = tags,
+                animatedPreviewURL =  i.animatedPreviewURL
+            ))
         }
+        offset = get1.cursor
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 

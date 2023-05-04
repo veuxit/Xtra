@@ -148,7 +148,10 @@ class FollowedChannelsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -174,23 +177,21 @@ class FollowedChannelsDataSource(
         }.build().query(UserFollowedUsersQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
-        )).execute().data?.user?.follows
-        val get = get1?.edges
+        )).execute().data!!.user!!.follows!!
+        val get = get1.edges!!
         val list = mutableListOf<User>()
-        if (get != null) {
-            for (i in get) {
-                list.add(User(
-                    channelId = i?.node?.id,
-                    channelLogin = i?.node?.login,
-                    channelName = i?.node?.displayName,
-                    followedAt = i?.followedAt?.toString(),
-                    lastBroadcast = i?.node?.lastBroadcast?.startedAt?.toString(),
-                    profileImageUrl = i?.node?.profileImageURL,
-                ))
-            }
-            offset = get.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
+        for (i in get) {
+            list.add(User(
+                channelId = i?.node?.id,
+                channelLogin = i?.node?.login,
+                channelName = i?.node?.displayName,
+                followedAt = i?.followedAt?.toString(),
+                lastBroadcast = i?.node?.lastBroadcast?.startedAt?.toString(),
+                profileImageUrl = i?.node?.profileImageURL,
+            ))
         }
+        offset = get.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 

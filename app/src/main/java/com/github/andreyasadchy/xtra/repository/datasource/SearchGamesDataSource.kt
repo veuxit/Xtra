@@ -59,7 +59,10 @@ class SearchGamesDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) (params.key ?: 1) + 1 else null
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                    nextPage = false
+                    (params.key ?: 1) + 1
+                } else null
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
@@ -83,32 +86,30 @@ class SearchGamesDataSource(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data?.searchCategories
-        val get = get1?.edges
+        )).execute().data!!.searchCategories!!
+        val get = get1.edges!!
         val list = mutableListOf<Game>()
-        if (get != null) {
-            for (edge in get) {
-                edge.node?.let { i ->
-                    val tags = mutableListOf<Tag>()
-                    i.tags?.forEach { tag ->
-                        tags.add(Tag(
-                            id = tag.id,
-                            name = tag.localizedName
-                        ))
-                    }
-                    list.add(Game(
-                        gameId = i.id,
-                        gameName = i.displayName,
-                        boxArtUrl = i.boxArtURL,
-                        viewersCount = i.viewersCount ?: 0, // returns null if 0
-                        broadcastersCount = i.broadcastersCount ?: 0, // returns null if 0
-                        tags = tags
+        for (edge in get) {
+            edge.node?.let { i ->
+                val tags = mutableListOf<Tag>()
+                i.tags?.forEach { tag ->
+                    tags.add(Tag(
+                        id = tag.id,
+                        name = tag.localizedName
                     ))
                 }
+                list.add(Game(
+                    gameId = i.id,
+                    gameName = i.displayName,
+                    boxArtUrl = i.boxArtURL,
+                    viewersCount = i.viewersCount ?: 0, // returns null if 0
+                    broadcastersCount = i.broadcastersCount ?: 0, // returns null if 0
+                    tags = tags
+                ))
             }
-            offset = get1.edges.lastOrNull()?.cursor?.toString()
-            nextPage = get1.pageInfo?.hasNextPage ?: true
         }
+        offset = get1.edges.lastOrNull()?.cursor?.toString()
+        nextPage = get1.pageInfo?.hasNextPage ?: true
         return list
     }
 
