@@ -116,7 +116,7 @@ class VideoPlayerViewModel @Inject constructor(
                 } else {
                     usingPlaylist = true
                     playerRepository.loadVideoPlaylistUrl(
-                        gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                        gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                         gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) Account.get(context).gqlToken else null,
                         videoId = video.id,
                         playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
@@ -296,7 +296,7 @@ class VideoPlayerViewModel @Inject constructor(
 
                     }
                 }
-                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")) }?.first()
+                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")) }?.first()
                 val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
                 val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
                 bookmarksRepository.saveBookmark(Bookmark(
