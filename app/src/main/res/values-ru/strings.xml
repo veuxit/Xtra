@@ -526,8 +526,6 @@
     <string name="download_limit">Предел одновременных загрузок</string>
     <string name="show_conscrypt_error_toast">Показать сообщение об ошибке Conscrypt</string>
     <string name="followed_only">Только отслеживаемые</string>
-    <string name="api_gql2">ИД клиента GQL 2</string>
-    <string name="api_gql_token2">Токен GQL 2</string>
     <string name="debug_api_commands">Использовать команды API чата</string>
     <string name="skip_video_access_token">Пропустить токен доступа видео</string>
     <string name="skip_clip_access_token">Пропустить токен доступа клипа</string>
@@ -562,5 +560,4 @@
     <string name="show_media_playlist_tags">Показать метки плейлиста медиа</string>
     <string name="show_multivariant_playlist_tags">Показать многовариантные метки плейлиста</string>
     <string name="use_gamepager">Вкладки на странице игр</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>

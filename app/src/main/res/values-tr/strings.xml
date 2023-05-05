@@ -526,8 +526,6 @@
     <string name="download_limit">Eşzamanlı indirme sınırı</string>
     <string name="show_conscrypt_error_toast">Conscrypt hata mesajını göster</string>
     <string name="followed_only">Sadece takip edilen</string>
-    <string name="api_gql2">GQL istemci kimliği 2</string>
-    <string name="api_gql_token2">GQL token 2</string>
     <string name="debug_api_commands">API sohbet komutlarını kullan</string>
     <string name="skip_video_access_token">Video erişim tokenini atla</string>
     <string name="skip_clip_access_token">Klip erişim tokenini atla</string>
@@ -562,5 +560,4 @@
     <string name="show_media_playlist_tags">Medya oynatma listesi etiketlerini göster</string>
     <string name="show_multivariant_playlist_tags">Farklı oynatma listesi etiketlerini göster</string>
     <string name="use_gamepager">Oyun sayfası için sekmeler düzenini kullan</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>

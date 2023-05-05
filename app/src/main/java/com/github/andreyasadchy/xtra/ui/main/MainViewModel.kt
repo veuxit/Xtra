@@ -109,7 +109,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun validate(helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, activity: Activity) {
+    fun validate(helixClientId: String?, gqlClientId: String?, activity: Activity) {
         val account = Account.get(activity)
         if (account is NotValidated) {
             viewModelScope.launch {
@@ -118,7 +118,7 @@ class MainViewModel @Inject constructor(
                         val response = authRepository.validate(TwitchApiHelper.addTokenPrefixHelix(account.helixToken))
                         if (!response?.clientId.isNullOrBlank() && response?.clientId == helixClientId) {
                             if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken, account.gqlToken2))
+                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken))
                             }
                         } else {
                             throw IllegalStateException("401")
@@ -128,23 +128,13 @@ class MainViewModel @Inject constructor(
                         val response = authRepository.validate(TwitchApiHelper.addTokenPrefixGQL(account.gqlToken))
                         if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlClientId) {
                             if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken, account.gqlToken2))
+                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken))
                             }
                         } else {
                             throw IllegalStateException("401")
                         }
                     }
-                    if (!account.gqlToken2.isNullOrBlank() && account.gqlToken2 != account.gqlToken) {
-                        val response = authRepository.validate(TwitchApiHelper.addTokenPrefixGQL(account.gqlToken2))
-                        if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlClientId2) {
-                            if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken, account.gqlToken2))
-                            }
-                        } else {
-                            throw IllegalStateException("401")
-                        }
-                    }
-                    if (!account.helixToken.isNullOrBlank() || !account.gqlToken.isNullOrBlank() || !account.gqlToken2.isNullOrBlank()) {
+                    if (!account.helixToken.isNullOrBlank() || !account.gqlToken.isNullOrBlank()) {
                         Account.validated()
                     }
                 } catch (e: Exception) {
@@ -157,5 +147,13 @@ class MainViewModel @Inject constructor(
             }
         }
         TwitchApiHelper.checkedValidation = true
+    }
+
+    fun revoke(clientId: String, token: String) {
+        viewModelScope.launch {
+            try {
+                authRepository.revoke(clientId, token)
+            } catch (e: Exception) {}
+        }
     }
 }

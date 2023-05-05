@@ -27,26 +27,10 @@
         app:iconSpaceReserved="false" />
 
     <EditTextPreference
-        android:defaultValue="kimne78kx3ncx6brgo4mv6wki5h1ko"
-        android:key="gql_client_id"
-        android:maxLines="1"
-        android:title="@string/api_gql"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
-
-    <EditTextPreference
-        android:defaultValue="https://www.twitch.tv/passport-callback"
-        android:key="gql_redirect"
-        android:maxLines="1"
-        android:title="@string/api_gql_redirect"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
-
-    <EditTextPreference
         android:defaultValue="kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
         android:key="gql_client_id2"
         android:maxLines="1"
-        android:title="@string/api_gql2"
+        android:title="@string/api_gql"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />
 
@@ -54,7 +38,7 @@
         android:defaultValue="https://www.twitch.tv/"
         android:key="gql_redirect2"
         android:maxLines="1"
-        android:title="@string/api_gql_redirect2"
+        android:title="@string/api_gql_redirect"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />
 
@@ -75,13 +59,8 @@
         app:iconSpaceReserved="false" />
 
     <EditTextPreference
-        android:key="gql_token"
-        android:title="@string/api_gql_token"
-        app:iconSpaceReserved="false" />
-
-    <EditTextPreference
         android:key="gql_token2"
-        android:title="@string/api_gql_token2"
+        android:title="@string/api_gql_token"
         app:iconSpaceReserved="false" />
 
     <SwitchPreferenceCompat
