@@ -526,8 +526,6 @@
     <string name="download_limit">ダウンロードの同時接続制限</string>
     <string name="show_conscrypt_error_toast">Conscryptエラーのトーストを表示する</string>
     <string name="followed_only">フォローのみ</string>
-    <string name="api_gql2">GQLクライアント id 2</string>
-    <string name="api_gql_token2">GQLトークン 2</string>
     <string name="debug_api_commands">APIのチャットコマンドを使用する</string>
     <string name="skip_video_access_token">ビデオアクセストークンをスキップする</string>
     <string name="skip_clip_access_token">クリップアクセストークンをスキップする</string>
@@ -562,5 +560,4 @@
     <string name="show_media_playlist_tags">メディアプレイリストのタグ表示</string>
     <string name="show_multivariant_playlist_tags">多変数プレイリストのタグ表示</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>

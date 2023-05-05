@@ -526,8 +526,6 @@
     <string name="download_limit">Límite de descarga paralela</string>
     <string name="show_conscrypt_error_toast">Mostrar el brindis de error de Conscrypt</string>
     <string name="followed_only">Sólo seguido</string>
-    <string name="api_gql2">Identificación de cliente GQL 2</string>
-    <string name="api_gql_token2">Token GQL 2</string>
     <string name="debug_api_commands">Utilizar los comandos de chat de la api</string>
     <string name="skip_video_access_token">Saltar token de acceso a vídeo</string>
     <string name="skip_clip_access_token">Saltar token de acceso del clip</string>
@@ -562,5 +560,4 @@
     <string name="show_media_playlist_tags">Mostrar etiquetas de listas de reproducción multimedia</string>
     <string name="show_multivariant_playlist_tags">Mostrar etiquetas de listas de reproducción multivariantes</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
 </resources>
