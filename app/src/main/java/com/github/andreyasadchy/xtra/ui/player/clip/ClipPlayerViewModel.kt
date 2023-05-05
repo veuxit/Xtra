@@ -81,7 +81,7 @@ class ClipPlayerViewModel @Inject constructor(
                         TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
                     } else {
                         graphQLRepository.loadClipUrls(
-                            clientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                            clientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                             slug = clip.id
                         ) ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) {
                             TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
@@ -126,7 +126,7 @@ class ClipPlayerViewModel @Inject constructor(
                     val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
                     val account = Account.get(context)
                     val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                     val isFollowing = if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
                         if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
                             (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
@@ -149,7 +149,7 @@ class ClipPlayerViewModel @Inject constructor(
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
@@ -192,7 +192,7 @@ class ClipPlayerViewModel @Inject constructor(
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {

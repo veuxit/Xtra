@@ -70,7 +70,7 @@ class StreamPlayerViewModel @Inject constructor(
                                 channelLogin = stream.channelLogin,
                                 helixClientId = prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                                 helixToken = account.helixToken,
-                                gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+                                gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                             ).let {
                                 _stream.value?.apply {
                                     if (!it?.id.isNullOrBlank()) {
@@ -166,7 +166,7 @@ class StreamPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = stream.channelLogin?.let { playerRepository.loadStreamPlaylistUrl(
-                    gqlClientId = prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                     gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false)) Account.get(getApplication<Application>()).gqlToken else null,
                     channelLogin = it,
                     useProxy = useProxy,

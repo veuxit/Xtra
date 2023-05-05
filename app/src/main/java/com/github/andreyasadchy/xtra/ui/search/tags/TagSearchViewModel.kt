@@ -31,7 +31,7 @@ class TagSearchViewModel @Inject constructor(
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
             TagsDataSourceGQL(
-                clientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                clientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                 getGameTags = args.getGameTags,
                 query = query,
                 api = graphQLRepository)

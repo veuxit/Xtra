@@ -134,7 +134,7 @@ class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepo
             viewerList.value = null
             lifecycleScope.launch {
                 try {
-                    val get = repository.loadChannelViewerList(requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), requireArguments().getString(LOGIN))
+                    val get = repository.loadChannelViewerList(requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), requireArguments().getString(LOGIN))
                     viewerList.postValue(get)
                 } catch (e: Exception) {
 

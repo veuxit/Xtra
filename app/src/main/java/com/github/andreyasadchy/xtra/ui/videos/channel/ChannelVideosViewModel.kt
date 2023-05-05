@@ -77,7 +77,7 @@ class ChannelVideosViewModel @Inject constructor(
                     helixBroadcastTypes = broadcastType,
                     helixSort = sort,
                     helixApi = helix,
-                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                     gqlQueryType = when (broadcastType) {
                         BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
                         BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT

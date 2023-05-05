@@ -128,7 +128,7 @@ class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResult
             userResult = Pair(checkedId, result)
             when (resultCode) {
                 UserResultDialog.RESULT_POSITIVE -> {
-                    viewModel.loadUserResult(requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), checkedId, result)
+                    viewModel.loadUserResult(requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), checkedId, result)
                     viewModel.userResult.observe(viewLifecycleOwner) {
                         if (it != null) {
                             if (!it.first.isNullOrBlank()) {
