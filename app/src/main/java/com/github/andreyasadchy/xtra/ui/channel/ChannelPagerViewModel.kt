@@ -107,14 +107,9 @@ class ChannelPagerViewModel @Inject constructor(
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
             val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-            val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
-                        repository.followUser(gqlClientId2, account.gqlToken2, userId)
-                    } else {
-                        repository.followUser(gqlClientId, account.gqlToken, userId)
-                    }
+                    val errorMessage = repository.followUser(gqlClientId, account.gqlToken, userId)
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (userId != null) {
@@ -150,14 +145,9 @@ class ChannelPagerViewModel @Inject constructor(
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
             val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-            val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
-                        repository.unfollowUser(gqlClientId2, account.gqlToken2, userId)
-                    } else {
-                        repository.unfollowUser(gqlClientId, account.gqlToken, userId)
-                    }
+                    val errorMessage = repository.unfollowUser(gqlClientId, account.gqlToken, userId)
                     follow.postValue(Pair(false, errorMessage))
                 } else {
                     if (userId != null) {

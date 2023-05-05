@@ -61,14 +61,9 @@ class GamePagerViewModel @Inject constructor(
             val account = Account.get(context)
             val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
             val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-            val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
-                        repository.followGame(gqlClientId2, account.gqlToken2, gameId)
-                    } else {
-                        repository.followGame(gqlClientId, account.gqlToken, gameId)
-                    }
+                    val errorMessage = repository.followGame(gqlClientId, account.gqlToken, gameId)
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (gameId != null) {
@@ -104,14 +99,9 @@ class GamePagerViewModel @Inject constructor(
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
             val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-            val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
-                        repository.unfollowGame(gqlClientId2, account.gqlToken2, gameId)
-                    } else {
-                        repository.unfollowGame(gqlClientId, account.gqlToken, gameId)
-                    }
+                    val errorMessage = repository.unfollowGame(gqlClientId, account.gqlToken, gameId)
                     follow.postValue(Pair(false, errorMessage))
                 } else {
                     if (gameId != null) {

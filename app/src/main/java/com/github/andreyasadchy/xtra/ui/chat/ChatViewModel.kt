@@ -120,7 +120,7 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, useApiCommands: Boolean) {
+    fun startLive(useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, useApiCommands: Boolean) {
         if (chat == null && channelLogin != null) {
             this.messageLimit = messageLimit
             this.streamId = streamId
@@ -133,7 +133,6 @@ class ChatViewModel @Inject constructor(
                 isLoggedIn = isLoggedIn,
                 helixClientId = helixClientId,
                 gqlClientId = gqlClientId,
-                gqlClientId2 = gqlClientId2,
                 channelId = channelId,
                 channelLogin = channelLogin,
                 channelName = channelName,
@@ -435,7 +434,6 @@ class ChatViewModel @Inject constructor(
         private val isLoggedIn: Boolean,
         private val helixClientId: String?,
         private val gqlClientId: String?,
-        private val gqlClientId2: String?,
         private val channelId: String?,
         private val channelLogin: String,
         channelName: String?,
@@ -613,9 +611,9 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onClaimAvailable() {
-            if (!gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
+            if (!gqlClientId.isNullOrBlank() && !account.gqlToken.isNullOrBlank()) {
                 viewModelScope.launch {
-                    repository.loadClaimPoints(gqlClientId2, account.gqlToken2, channelId, channelLogin)
+                    repository.loadClaimPoints(gqlClientId, account.gqlToken, channelId, channelLogin)
                 }
             }
         }
@@ -633,9 +631,9 @@ class ChatViewModel @Inject constructor(
             raid.postValue(message)
             if (raidNewId) {
                 usedRaidId = message.raidId
-                if (collectPoints && !gqlClientId2.isNullOrBlank() && !account.gqlToken2.isNullOrBlank()) {
+                if (collectPoints && !gqlClientId.isNullOrBlank() && !account.gqlToken.isNullOrBlank()) {
                     viewModelScope.launch {
-                        repository.loadJoinRaid(gqlClientId2, account.gqlToken2, message.raidId)
+                        repository.loadJoinRaid(gqlClientId, account.gqlToken, message.raidId)
                     }
                 }
             }
@@ -684,8 +682,8 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 message = splits[1],
                                 color = splits[0].substringAfter("/announce", "").ifBlank { null }
@@ -701,8 +699,8 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1],
                                 reason = if (splits.size >= 3) splits[2] else null
@@ -718,8 +716,8 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -746,8 +744,8 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 color = splits[1]
                             )
                         } else {
@@ -852,8 +850,8 @@ class ChatViewModel @Inject constructor(
                             helixClientId = helixClientId,
                             helixToken = account.helixToken,
                             channelId = channelId,
-                            gqlClientId = gqlClientId2,
-                            gqlToken = account.gqlToken2,
+                            gqlClientId = gqlClientId,
+                            gqlToken = account.gqlToken,
                             channelLogin = channelLogin,
                             description = if (splits.size >= 2) splits[1] else null
                         )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -866,8 +864,8 @@ class ChatViewModel @Inject constructor(
                             repository.addModerator(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -881,8 +879,8 @@ class ChatViewModel @Inject constructor(
                             repository.removeModerator(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -907,8 +905,8 @@ class ChatViewModel @Inject constructor(
                             repository.startRaid(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -920,8 +918,8 @@ class ChatViewModel @Inject constructor(
                         repository.cancelRaid(
                             helixClientId = helixClientId,
                             helixToken = account.helixToken,
-                            gqlClientId = gqlClientId2,
-                            gqlToken = account.gqlToken2,
+                            gqlClientId = gqlClientId,
+                            gqlToken = account.gqlToken,
                             channelId = channelId
                         )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
@@ -988,11 +986,11 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1],
-                                duration = if (splits.size >= 3) splits[2] else null ?: if (!account.gqlToken2.isNullOrBlank()) "10m" else "600",
+                                duration = if (splits.size >= 3) splits[2] else null ?: if (!account.gqlToken.isNullOrBlank()) "10m" else "600",
                                 reason = if (splits.size >= 4) splits[3] else null,
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
@@ -1006,8 +1004,8 @@ class ChatViewModel @Inject constructor(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
                                 userId = account.id,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -1047,8 +1045,8 @@ class ChatViewModel @Inject constructor(
                             repository.addVip(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -1062,8 +1060,8 @@ class ChatViewModel @Inject constructor(
                             repository.removeVip(
                                 helixClientId = helixClientId,
                                 helixToken = account.helixToken,
-                                gqlClientId = gqlClientId2,
-                                gqlToken = account.gqlToken2,
+                                gqlClientId = gqlClientId,
+                                gqlToken = account.gqlToken,
                                 channelId = channelId,
                                 targetLogin = splits[1]
                             )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }

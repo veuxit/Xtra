@@ -95,9 +95,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         slidingLayout.addListener(this)
         slidingLayout.maximizedSecondViewVisibility = if (prefs.getBoolean(C.KEY_CHAT_OPENED, true)) View.VISIBLE else View.GONE //TODO
         playerView = view.findViewById(R.id.playerView)
-        viewLifecycleOwner.lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                requireActivity().trackPipAnimationHintView(playerView)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    requireActivity().trackPipAnimationHintView(playerView)
+                }
             }
         }
         chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
