@@ -37,7 +37,7 @@ class GamePagerViewModel @Inject constructor(
                 try {
                     val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
                     val account = Account.get(context)
-                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                     val isFollowing = if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
                         gameName?.let {
                             repository.loadGameFollowing(gqlClientId, account.gqlToken, gameName)
@@ -60,7 +60,7 @@ class GamePagerViewModel @Inject constructor(
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
             val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
@@ -103,7 +103,7 @@ class GamePagerViewModel @Inject constructor(
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             val gqlClientId2 = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
             try {
                 if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
@@ -135,7 +135,7 @@ class GamePagerViewModel @Inject constructor(
                             gameId = gameId,
                             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                             helixToken = Account.get(context).helixToken,
-                            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko")
+                            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
                         )
                         try {
                             Glide.with(context)

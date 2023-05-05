@@ -63,7 +63,7 @@ class FollowedVideosViewModel @Inject constructor(
         ) {
             with(filter) {
                 FollowedVideosDataSource(
-                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
+                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
                     gqlToken = Account.get(context).gqlToken,
                     gqlQueryType = when (broadcastType) {
                         BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
