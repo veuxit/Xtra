@@ -24,8 +24,8 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
         targetSdk 33
-        versionCode 181
-        versionName "2.17.7"
+        versionCode 182
+        versionName "2.17.8"
         resourceConfigurations += ["ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr"]
     }
 
@@ -60,7 +60,7 @@ android {
 
 dependencies {
     //UI
-    implementation 'com.google.android.material:material:1.9.0-rc01'
+    implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha02'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference-ktx:1.2.0'
@@ -111,7 +111,7 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$dagger"
     kapt "com.google.dagger:hilt-compiler:$dagger"
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
 }
 
 kapt {

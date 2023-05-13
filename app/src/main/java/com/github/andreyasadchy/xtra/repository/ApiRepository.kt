@@ -470,10 +470,12 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
+            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
+        } catch (e: Exception) {
             val emotes = mutableListOf<TwitchEmote>()
             getApolloClient(gqlClientId, gqlToken).query(UserEmotesQuery()).execute().data?.user?.emoteSets?.forEach { set ->
                 set.emotes?.forEach { emote ->
-                    if (emote?.token != null) {
+                    if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
                         emotes.add(TwitchEmote(
                             id = emote.id,
                             name = emote.token.removePrefix("\\").replace("?\\", ""),
@@ -484,8 +486,6 @@ class ApiRepository @Inject constructor(
                 }
             }
             emotes
-        } catch (e: Exception) {
-            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
         }
     }
 

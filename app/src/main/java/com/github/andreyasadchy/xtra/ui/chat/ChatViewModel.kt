@@ -68,6 +68,7 @@ class ChatViewModel @Inject constructor(
     val otherEmotes: LiveData<List<Emote>>
         get() = _otherEmotes
 
+    private var loadedUserEmotes = false
     val globalStvEmotes = MutableLiveData<List<Emote>>()
     val channelStvEmotes = MutableLiveData<List<Emote>>()
     val globalBttvEmotes = MutableLiveData<List<Emote>>()
@@ -531,29 +532,42 @@ class ChatViewModel @Inject constructor(
                     addEmotes(saved)
                     userEmotes.postValue(saved.sortedByDescending { it.ownerId == channelId })
                 } else {
-                    viewModelScope.launch {
-                        try {
-                            when {
-                                !gqlClientId.isNullOrBlank() && !account.gqlToken.isNullOrBlank() -> repository.loadUserEmotes(gqlClientId, account.gqlToken, channelId)
-                                !savedEmoteSets.isNullOrEmpty() && !helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() -> {
-                                    val emotes = mutableListOf<TwitchEmote>()
-                                    savedEmoteSets?.chunked(25)?.forEach { list ->
-                                        repository.loadEmotesFromSet(helixClientId, account.helixToken, list, animateGifs).let { emotes.addAll(it) }
+                    if (!gqlClientId.isNullOrBlank() && !account.gqlToken.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            try {
+                                repository.loadUserEmotes(gqlClientId, account.gqlToken, channelId).let { emotes ->
+                                    if (emotes.isNotEmpty()) {
+                                        val sorted = emotes.sortedByDescending { it.setId }
+                                        addEmotes(sorted)
+                                        userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId })
+                                        loadedUserEmotes = true
                                     }
-                                    emotes
                                 }
-                                else -> null
-                            }?.let { emotes ->
-                                if (emotes.isNotEmpty()) {
-                                    val sorted = emotes.sortedByDescending { it.setId }
-                                    savedUserEmotes = sorted
-                                    addEmotes(sorted)
-                                    userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId })
-                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to load user emotes", e)
                             }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to load user emotes", e)
                         }
+                    }
+                }
+            }
+        }
+
+        private fun loadEmoteSets() {
+            if (!savedEmoteSets.isNullOrEmpty() && !helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank()) {
+                viewModelScope.launch {
+                    try {
+                        val emotes = mutableListOf<TwitchEmote>()
+                        savedEmoteSets?.chunked(25)?.forEach { list ->
+                            repository.loadEmotesFromSet(helixClientId, account.helixToken, list, animateGifs).let { emotes.addAll(it) }
+                        }
+                        if (emotes.isNotEmpty()) {
+                            val sorted = emotes.sortedByDescending { it.setId }
+                            savedUserEmotes = sorted
+                            addEmotes(sorted)
+                            userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId })
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to load emote sets", e)
                     }
                 }
             }
@@ -562,8 +576,8 @@ class ChatViewModel @Inject constructor(
         override fun onUserState(emoteSets: List<String>?) {
             if (savedEmoteSets != emoteSets) {
                 savedEmoteSets = emoteSets
-                if (savedUserEmotes == null) {
-                    loadUserEmotes()
+                if (!loadedUserEmotes) {
+                    loadEmoteSets()
                 }
             }
         }

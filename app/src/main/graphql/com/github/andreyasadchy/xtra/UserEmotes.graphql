@@ -8,6 +8,7 @@ query UserEmotes {
                 }
                 setID
                 token
+                type
             }
         }
     }

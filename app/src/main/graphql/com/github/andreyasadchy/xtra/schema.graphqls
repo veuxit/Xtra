@@ -94,6 +94,7 @@ type Emote {
   owner: User
   setID: ID
   token: String
+  type: EmoteType
 }
 
 type EmoteSet {
@@ -377,6 +378,23 @@ enum ClipsSort {
   VIEWS_ASC
   VIEWS_DESC
   TRENDING
+}
+
+enum EmoteType {
+  CHANNEL_POINTS
+  BITS_BADGE_TIERS
+  SUBSCRIPTIONS
+  PRIME
+  TURBO
+  TWO_FACTOR
+  SMILIES
+  GLOBALS
+  LIMITED_TIME
+  HYPE_TRAIN
+  MEGA_COMMERCE
+  ARCHIVE
+  FOLLOWER
+  UNKNOWN
 }
 
 enum FollowedGamesType {
