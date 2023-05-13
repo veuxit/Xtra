@@ -345,14 +345,14 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
+            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
+        } catch (e: Exception) {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserEmotes(
                 clientId = gqlClientId,
                 token = gqlToken,
                 query = context.resources.openRawResource(R.raw.useremotes).bufferedReader().use { it.readText() },
                 variables = JsonObject()).data
-        } catch (e: Exception) {
-            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
         }
     }
 
