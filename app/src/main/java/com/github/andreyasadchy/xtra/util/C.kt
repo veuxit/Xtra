@@ -77,6 +77,8 @@ object C {
     const val PLAYER_VIEWERICON = "player_viewericon"
     const val PLAYER_CHANNEL = "player_channel"
     const val PLAYER_VOLUMEBUTTON = "player_volumebutton"
+    const val PLAYER_AUDIOCOMPRESSOR = "player_audiocompressor"
+    const val PLAYER_AUDIOCOMPRESSORBUTTON = "player_audiocompressorbutton"
     const val PLAYER_GAMESBUTTON = "player_gamesbutton"
     const val PLAYER_VIEWERLIST = "player_viewerlist"
     const val PLAYER_MENU = "player_menu"

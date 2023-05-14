@@ -18,6 +18,7 @@
     <item name="playerRestart" type="id" />
     <item name="playerSeekLive" type="id" />
     <item name="playerVolume" type="id" />
+    <item name="playerAudioCompressor" type="id" />
     <item name="playerMode" type="id" />
     <item name="playerSubtitleToggle" type="id" />
     <item name="playerChatBarToggle" type="id" />

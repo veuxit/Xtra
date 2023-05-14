@@ -37,6 +37,7 @@
     </LinearLayout>
 
     <LinearLayout style="@style/PlayerBotLeftPanel">
+
         <ImageButton
             style="@style/PlayerRestart"
             tools:visibility="visible" />
@@ -45,6 +46,9 @@
             tools:visibility="visible" />
         <ImageButton
             style="@style/PlayerVolume"
+            tools:visibility="visible" />
+        <ImageButton
+            style="@style/PlayerAudioCompressor"
             tools:visibility="visible" />
         <ImageButton
             style="@style/PlayerMode"

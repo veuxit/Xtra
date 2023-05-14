@@ -167,6 +167,7 @@
     <string name="speed1">Normal</string>
     <string name="saved_value">Kaydedilen değer</string>
     <string name="player_volumebutton">Ses düğmesini göster</string>
+    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Geçmiş yayın</string>
     <string name="video_type_highlight">Vurgu</string>
     <string name="video_type_upload">Yükleme</string>
