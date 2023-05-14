@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.player
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
@@ -82,6 +83,8 @@ class PlaybackService : MediaSessionService() {
     private val audioUrlIndex: Int
         get() = urls.size - 1
 
+    private var dynamicsProcessing: DynamicsProcessing? = null
+
     override fun onCreate() {
         super.onCreate()
         val prefs = prefs()
@@ -95,6 +98,7 @@ class PlaybackService : MediaSessionService() {
             setSeekBackIncrementMs(prefs.getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000)
             setSeekForwardIncrementMs(prefs.getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000)
         }.build().apply {
+            reinitializeDynamicsProcessing(audioSessionId)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     if (!tracks.isEmpty && usingPlaylist && (qualityIndex != -1 && qualityIndex != audioIndex)) {
@@ -142,6 +146,10 @@ class PlaybackService : MediaSessionService() {
                         }
                     }
                 }
+
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    reinitializeDynamicsProcessing(audioSessionId)
+                }
             })
         }
         mediaSession = MediaSession.Builder(this, player)
@@ -165,6 +173,7 @@ class PlaybackService : MediaSessionService() {
                         .add(SessionCommand(MOVE_BACKGROUND, Bundle.EMPTY))
                         .add(SessionCommand(MOVE_FOREGROUND, Bundle.EMPTY))
                         .add(SessionCommand(CLEAR, Bundle.EMPTY))
+                        .add(SessionCommand(TOGGLE_DYNAMICS_PROCESSING, Bundle.EMPTY))
                         .add(SessionCommand(GET_URLS, Bundle.EMPTY))
                         .add(SessionCommand(GET_LAST_TAG, Bundle.EMPTY))
                         .add(SessionCommand(GET_QUALITIES, Bundle.EMPTY))
@@ -386,6 +395,12 @@ class PlaybackService : MediaSessionService() {
                         CLEAR -> {
                             clear()
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                        TOGGLE_DYNAMICS_PROCESSING -> {
+                            toggleDynamicsProcessing()
+                            Futures.immediateFuture(SessionResult(
+                                dynamicsProcessing?.let { SessionResult.RESULT_SUCCESS } ?: SessionResult.RESULT_ERROR_NOT_SUPPORTED,
+                                bundleOf(RESULT to (dynamicsProcessing?.enabled ?: false))))
                         }
                         GET_URLS -> Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(
                             URLS_KEYS to urls.keys.toTypedArray(),
@@ -652,6 +667,40 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
+    fun toggleDynamicsProcessing() {
+        val player = mediaSession?.player
+        if (dynamicsProcessing == null && player is ExoPlayer) {
+            reinitializeDynamicsProcessing(player.audioSessionId, true)
+        }
+        dynamicsProcessing?.apply {
+            enabled = !prefs().getBoolean(C.PLAYER_AUDIOCOMPRESSOR, false)
+        }
+    }
+
+    private fun reinitializeDynamicsProcessing(audioSessionId: Int, force: Boolean = false) {
+        dynamicsProcessing?.release()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                (prefs().getBoolean(C.PLAYER_AUDIOCOMPRESSOR, false) || force)) {
+            dynamicsProcessing = DynamicsProcessing(0, audioSessionId, null)
+                .apply {
+                    for (channelIdx in 0 until channelCount) {
+                        for (bandIdx in 0 until getMbcByChannelIndex(channelIdx).bandCount) {
+                            setMbcBandByChannelIndex(channelIdx, bandIdx,
+                                getMbcBandByChannelIndex(channelIdx, bandIdx).apply {
+                                    attackTime = 0f
+                                    releaseTime = 0.25f
+                                    ratio = 2f
+                                    threshold = -50f
+                                    kneeWidth = 40f
+                                    preGain = 0f
+                                    postGain = 10f
+                                })
+                        }
+                    }
+                }
+        }
+    }
+
     companion object {
         const val START_STREAM = "startStream"
         const val START_VIDEO = "startVideo"
@@ -664,6 +713,7 @@ class PlaybackService : MediaSessionService() {
         const val MOVE_BACKGROUND = "moveBackground"
         const val MOVE_FOREGROUND = "moveForeground"
         const val CLEAR = "clear"
+        const val TOGGLE_DYNAMICS_PROCESSING = "toggleDynamicsProcessing"
 
         const val GET_URLS = "getUrls"
         const val GET_LAST_TAG = "getLastTag"
