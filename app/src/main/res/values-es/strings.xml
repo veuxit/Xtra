@@ -167,6 +167,7 @@
     <string name="speed1">Normal</string>
     <string name="saved_value">Valor guardado</string>
     <string name="player_volumebutton">Mostrar botón de volumen</string>
+    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Transmisión anterior</string>
     <string name="video_type_highlight">Destacado</string>
     <string name="video_type_upload">Subida</string>

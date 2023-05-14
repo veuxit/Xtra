@@ -167,6 +167,7 @@
     <string name="speed1">Обычная</string>
     <string name="saved_value">Сохранённое значение</string>
     <string name="player_volumebutton">Кнопка громкости</string>
+    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Прошедшая трансляция</string>
     <string name="video_type_highlight">Яркий момент</string>
     <string name="video_type_upload">Отправлено</string>

@@ -245,6 +245,12 @@
         <item name="android:visibility">gone</item>
     </style>
 
+    <style name="PlayerAudioCompressor" parent="PlayerSmallImage">
+        <item name="android:id">@id/playerAudioCompressor</item>
+        <item name="android:src">@drawable/baseline_audio_compressor_off_24dp</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
     <style name="PlayerMode" parent="PlayerSmallImage">
         <item name="android:id">@id/playerMode</item>
         <item name="android:src">@drawable/baseline_audiotrack_black_24</item>
