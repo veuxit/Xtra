@@ -540,7 +540,7 @@
     <string name="stream_proxy_url_desc">\"$channel\" se sustituirá por el canal de inicio de sesión</string>
     <string name="streamProxyEntries1">URL personalizada</string>
     <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">Spoof X-Forwarded-For</string>
+    <string name="streamProxyEntries3">Falsear X-Forwarded-For</string>
     <string name="proxy_error">Error de Proxy</string>
     <string name="show_subtitles_button">Mostrar botón de subtítulos</string>
     <string name="show_subtitles">Mostrar subtítulos</string>
@@ -558,7 +558,7 @@
     <string name="show_playlist_tags">Mostrar etiquetas de listas de reproducción</string>
     <string name="show_media_playlist_tags">Mostrar etiquetas de listas de reproducción multimedia</string>
     <string name="show_multivariant_playlist_tags">Mostrar etiquetas de listas de reproducción multivariantes</string>
-    <string name="use_gamepager">Use tabs layout for game page</string>
-    <string name="disable_background_video">Disable video rendering in the background</string>
-    <string name="use_background_audio_track">Switch to audio only track in the background</string>
+    <string name="use_gamepager">Utilizar el diseño de pestañas para la página de Juegos</string>
+    <string name="disable_background_video">Desactivar la renderización de vídeo en segundo plano</string>
+    <string name="use_background_audio_track">Cambiar a sólo audio en segundo plano</string>
 </resources>
