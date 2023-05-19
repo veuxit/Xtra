@@ -11,6 +11,7 @@ import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentTransaction
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -18,7 +19,6 @@ import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
@@ -32,7 +32,6 @@ import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragment
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
@@ -288,9 +287,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             when (intent?.getIntExtra(KEY_CODE, -1)) {
                 INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
                 INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(intent.getParcelableExtra(KEY_VIDEO)!!)
-                INTENT_OPEN_PLAYER -> { //TODO if was closed need to reopen
-                    playerFragment?.maximize() ?: AudioPlayerService.connection?.let { XtraApp.INSTANCE.unbindService(it) }
-                }
+                INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
             }
         }
     }
@@ -354,8 +351,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     private fun restorePlayerFragment() {
-        if (viewModel.isPlayerOpened && playerFragment == null) {
-            playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
+        if (viewModel.isPlayerOpened) {
+            if (playerFragment == null) {
+                playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
+            } else {
+                if (playerFragment?.slidingLayout?.secondView?.isVisible == false && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+                    playerFragment?.maximize()
+                }
+            }
         }
     }
 

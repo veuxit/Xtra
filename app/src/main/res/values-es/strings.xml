@@ -461,7 +461,6 @@
     <string name="buffer_settings">Configuración del búfer</string>
     <string name="player_buttons">Botones del reproductor</string>
     <string name="keep_chat_open">Mantener el chat conectado en segundo plano</string>
-    <string name="lock_screen_audio">Mantener la reproducción de audio cuando la pantalla está apagada</string>
     <string name="save_sort_channel">Recordar las opciones de este canal</string>
     <string name="save_sort_game">Recordar las opciones de este juego</string>
     <string name="show_chat">Mostrar el chat</string>
@@ -560,4 +559,6 @@
     <string name="show_media_playlist_tags">Mostrar etiquetas de listas de reproducción multimedia</string>
     <string name="show_multivariant_playlist_tags">Mostrar etiquetas de listas de reproducción multivariantes</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
+    <string name="disable_background_video">Disable video rendering in the background</string>
+    <string name="use_background_audio_track">Switch to audio only track in the background</string>
 </resources>

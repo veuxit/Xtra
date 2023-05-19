@@ -92,7 +92,7 @@
     <TextView
         style="@style/PlayerPosition"
         tools:text="12:16" />
-    <com.google.android.exoplayer2.ui.DefaultTimeBar
+    <androidx.media3.ui.DefaultTimeBar
         android:id="@id/exo_progress"
         style="@style/PlayerProgress"/>
     <TextView

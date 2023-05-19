@@ -24,13 +24,12 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
 
     companion object {
 
-        private const val QUALITY = "quality"
         private const val SPEED = "speed"
         private const val VOD_GAMES = "vod_games"
 
-        fun newInstance(quality: String?, speed: String?, vodGames: Boolean): PlayerSettingsDialog {
+        fun newInstance(speedText: String?, vodGames: Boolean): PlayerSettingsDialog {
             return PlayerSettingsDialog().apply {
-                arguments = bundleOf(QUALITY to quality, SPEED to speed, VOD_GAMES to vodGames)
+                arguments = bundleOf(SPEED to speedText, VOD_GAMES to vodGames)
             }
         }
     }
@@ -58,7 +57,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
             if (requireContext().prefs().getBoolean(C.PLAYER_MENU_QUALITY, false)) {
                 menuQuality.visible()
                 menuQuality.setOnClickListener { dismiss() }
-                setQuality(arguments.getString(QUALITY))
+                (parentFragment as? BasePlayerFragment)?.setQualityText()
             }
             if (parentFragment is StreamPlayerFragment) {
                 if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VIEWER_LIST, true)) {

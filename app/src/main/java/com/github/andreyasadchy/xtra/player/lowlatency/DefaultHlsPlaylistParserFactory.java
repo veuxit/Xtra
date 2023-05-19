@@ -16,14 +16,15 @@
 package com.github.andreyasadchy.xtra.player.lowlatency;
 
 import androidx.annotation.Nullable;
-
-import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMultivariantPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylistParserFactory;
-import com.google.android.exoplayer2.upstream.ParsingLoadable;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory;
+import androidx.media3.exoplayer.upstream.ParsingLoadable;
 
 /** Default implementation for {@link HlsPlaylistParserFactory}. */
+@UnstableApi
 public final class DefaultHlsPlaylistParserFactory implements HlsPlaylistParserFactory {
 
   @Override

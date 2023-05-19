@@ -349,8 +349,14 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="true"
-        android:key="player_lock_screen_audio"
-        android:title="@string/lock_screen_audio"
+        android:key="player_disable_background_video"
+        android:title="@string/disable_background_video"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="player_use_background_audio_track"
+        android:title="@string/use_background_audio_track"
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat

@@ -46,8 +46,8 @@ object FragmentUtils {
             .show()
     }
 
-    fun showPlayerSettingsDialog(fragmentManager: FragmentManager, quality: String?, speed: String? = null, vodGames: Boolean = false) {
-        PlayerSettingsDialog.newInstance(quality, speed, vodGames).show(fragmentManager, "closeOnPip")
+    fun showPlayerSettingsDialog(fragmentManager: FragmentManager, speedText: String? = null, vodGames: Boolean = false) {
+        PlayerSettingsDialog.newInstance(speedText, vodGames).show(fragmentManager, "closeOnPip")
     }
 
     fun showPlayerVolumeDialog(fragmentManager: FragmentManager, volume: Float?) {

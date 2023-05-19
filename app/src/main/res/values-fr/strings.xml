@@ -461,7 +461,6 @@
     <string name="buffer_settings">Paramètres du tampon</string>
     <string name="player_buttons">Boutons du lecteur</string>
     <string name="keep_chat_open">Gardez le chat connecté en arrière-plan</string>
-    <string name="lock_screen_audio">Continuer la lecture audio lorsque l\'écran est éteint</string>
     <string name="save_sort_channel">Mémoriser les choix pour ce canal</string>
     <string name="save_sort_game">Mémoriser les choix pour ce jeu</string>
     <string name="show_chat">Afficher le chat</string>
@@ -560,4 +559,6 @@
     <string name="show_media_playlist_tags">Afficher les balises des média</string>
     <string name="show_multivariant_playlist_tags">Afficher les balises multivariantes de la liste de lecture</string>
     <string name="use_gamepager">Utiliser une disposition par onglet sur la page des jeux</string>
+    <string name="disable_background_video">Disable video rendering in the background</string>
+    <string name="use_background_audio_track">Switch to audio only track in the background</string>
 </resources>

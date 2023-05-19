@@ -16,13 +16,13 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
 import androidx.customview.widget.ViewDragHelper
+import androidx.media3.ui.DefaultTimeBar
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.ui.isClick
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
 import com.github.andreyasadchy.xtra.util.prefs
-import com.google.android.exoplayer2.ui.DefaultTimeBar
 
 private const val BOTTOM_MARGIN = 75f //before scaling
 private const val ANIMATION_DURATION = 250L
@@ -265,7 +265,7 @@ class SlidingLayout : LinearLayout {
                 scaleX = minScaleX
                 scaleY = minScaleY
             }
-            timeBar = dragView.findViewById(com.google.android.exoplayer2.ui.R.id.exo_progress)
+            timeBar = dragView.findViewById(androidx.media3.ui.R.id.exo_progress)
         }
         secondView?.post {
             if (!isMaximized) {

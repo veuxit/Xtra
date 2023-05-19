@@ -1,71 +1,38 @@
 package com.github.andreyasadchy.xtra.ui.player
 
-import android.app.Application
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.ui.common.OnQualityChangeListener
-import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
-import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerViewModel
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
+import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
+import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.prefs
-import com.github.andreyasadchy.xtra.util.shortToast
-import com.google.android.exoplayer2.DefaultLoadControl
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.Tracks
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Timer
 import kotlin.concurrent.schedule
 
 
-abstract class PlayerViewModel(context: Application) : AndroidViewModel(context), Player.Listener, OnQualityChangeListener {
+abstract class PlayerViewModel(
+    val repository: ApiRepository,
+    private val localFollowsChannel: LocalFollowChannelRepository) : ViewModel() {
 
-    protected val tag: String = javaClass.simpleName
-    protected val prefs = context.prefs()
-
-    var player: ExoPlayer? = null
-    protected var mediaSourceFactory: MediaSource.Factory? = null
-    protected lateinit var mediaItem: MediaItem //TODO maybe redo these viewmodels to custom players
-
-    private val _playerUpdated = MutableLiveData<Boolean>()
-    val playerUpdated: LiveData<Boolean>
-        get() = _playerUpdated
-    protected val _playerMode = MutableLiveData<PlayerMode>().apply { value = PlayerMode.NORMAL }
-    val playerMode: LiveData<PlayerMode>
-        get() = _playerMode
-    open var qualities: List<String>? = null
-        protected set
-    var qualityIndex = 0
-        protected set
-    var previousQuality = 0
-    protected var playbackPosition: Long = 0
-
-    protected var binder: AudioPlayerService.AudioBinder? = null
-
-    protected var isResumed = true
-    private var playing = true
-
-    private val _isPlaying = MutableLiveData<Boolean>()
-    val isPlaying: LiveData<Boolean>
-        get() = _isPlaying
-    private val _subtitlesAvailable = MutableLiveData<Boolean>()
-    val subtitlesAvailable: LiveData<Boolean>
-        get() = _subtitlesAvailable
+    var started = false
+    var background = false
+    var playerMode = PlayerMode.NORMAL
+    val loaded = MutableLiveData<Boolean>()
+    val follow = MutableLiveData<Pair<Boolean, String?>>()
 
     private var timer: Timer? = null
     private val _sleepTimer = MutableLiveData<Boolean>()
@@ -85,213 +52,97 @@ abstract class PlayerViewModel(context: Application) : AndroidViewModel(context)
             timer = Timer().apply {
                 timerEndTime = System.currentTimeMillis() + duration
                 schedule(duration) {
-                    stopBackgroundAudio()
                     _sleepTimer.postValue(true)
                 }
             }
         }
     }
 
-    open fun onResume() {
-        initializePlayer()
-        play()
-    }
-
-    open fun onPause() {
-        releasePlayer()
-    }
-
-    open fun restartPlayer() {
-        player?.currentPosition?.let { playbackPosition = it }
-        player?.stop()
-        initializePlayer()
-        play()
-        player?.seekTo(playbackPosition)
-    }
-
-    fun initializePlayer() {
-        if (player == null) {
-            val context = getApplication<Application>()
-            player = ExoPlayer.Builder(context).apply {
-                setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(
-                    prefs.getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
-                    prefs.getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
-                    prefs.getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
-                    prefs.getString(C.PLAYER_BUFFER_REBUFFER, "5000")?.toIntOrNull() ?: 5000
-                ).build())
-                setSeekBackIncrementMs(prefs.getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000)
-                setSeekForwardIncrementMs(prefs.getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000)
-            }.build().apply {
-                addListener(this@PlayerViewModel)
-                volume = prefs.getInt(C.PLAYER_VOLUME, 100) / 100f
-                if (this@PlayerViewModel !is StreamPlayerViewModel) {
-                    setPlaybackSpeed(prefs.getFloat(C.PLAYER_SPEED, 1f))
-                }
-                playWhenReady = playing
-            }
-            _playerUpdated.postValue(true)
-        }
-    }
-
-    protected fun play() {
-        if (this::mediaItem.isInitialized) {
-            player?.let { player ->
-                mediaSourceFactory?.createMediaSource(mediaItem)?.let { player.setMediaSource(it) } ?: player.setMediaItem(mediaItem)
-                player.prepare()
-            }
-        }
-    }
-
-    protected fun releasePlayer() {
-        if (playerMode.value != PlayerMode.DISABLED) {
-            player?.let { playing = it.isPlaying }
-        }
-        player?.release()
-        player = null
-        _playerUpdated.postValue(true)
-    }
-
-    protected fun startBackgroundAudio(playlistUrl: String, channelName: String?, title: String?, imageUrl: String?, usePlayPause: Boolean, type: Int, videoId: Number?, showNotification: Boolean) {
-        val position = player?.currentPosition
-        releasePlayer()
-        val context = XtraApp.INSTANCE //TODO
-        val intent = Intent(context, AudioPlayerService::class.java).apply {
-            putExtra(AudioPlayerService.KEY_PLAYLIST_URL, playlistUrl)
-            putExtra(AudioPlayerService.KEY_CHANNEL_NAME, channelName)
-            putExtra(AudioPlayerService.KEY_TITLE, title)
-            putExtra(AudioPlayerService.KEY_IMAGE_URL, imageUrl)
-            putExtra(AudioPlayerService.KEY_USE_PLAY_PAUSE, usePlayPause)
-            putExtra(AudioPlayerService.KEY_CURRENT_POSITION, position)
-            putExtra(AudioPlayerService.KEY_TYPE, type)
-            putExtra(AudioPlayerService.KEY_VIDEO_ID, videoId)
-            putExtra(AudioPlayerService.KEY_PLAYING, playing)
-        }
-        val connection = object : ServiceConnection {
-
-            override fun onServiceDisconnected(name: ComponentName) {
-            }
-
-            override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                binder = service as AudioPlayerService.AudioBinder
-                player = service.player
-                _playerUpdated.postValue(true)
-                _playerMode.value = PlayerMode.AUDIO_ONLY
-                if (showNotification) {
-                    showAudioNotification()
-                }
-            }
-        }
-        AudioPlayerService.connection = connection
-        context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-    }
-
-    protected fun stopBackgroundAudio() {
-        AudioPlayerService.connection?.let {
-//            val context = getApplication<Application>()
-            XtraApp.INSTANCE.unbindService(it) //TODO
-        }
-    }
-
-    protected fun showAudioNotification() {
-        binder?.showNotification()
-    }
-
-    protected fun hideAudioNotification() {
-        if (AudioPlayerService.connection != null) {
-            binder?.hideNotification()
-        } else {
-            qualityIndex = previousQuality
-            releasePlayer()
-            initializePlayer()
-            play()
-            player?.seekTo(AudioPlayerService.position)
-        }
-    }
-
-    protected fun setQualityIndex() {
-        val defaultQuality = prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved")
-        val savedQuality = prefs.getString(C.PLAYER_QUALITY, "720p60")
-        val index = qualities?.let { qualities ->
-            when (defaultQuality) {
-                "Source" -> {
-                    if (this is StreamPlayerViewModel || this is VideoPlayerViewModel) {
-                        if (qualities.size >= 2) 1 else null
-                    } else null
-                }
-                "saved" -> {
-                    if (savedQuality != "Auto") {
-                        qualities.indexOf(savedQuality).let { if (it != -1) it else null }
-                    } else null
-                }
-                else -> {
-                    defaultQuality?.split("p")?.let { default ->
-                        default[0].filter(Char::isDigit).toIntOrNull()?.let { defaultRes ->
-                            val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
-                            qualities.indexOf(qualities.find { qualityString ->
-                                qualityString.split("p").let { quality ->
-                                    quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                                        val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
-                                        (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes
-                                    } ?: false
-                                }
-                            }).let { if (it != -1) it else null }
-                        }
-                    }
-                }
-            }
-        }
-        qualityIndex = index ?: 0
-    }
-
-    //Player.Listener
-
-    override fun onIsPlayingChanged(isPlaying: Boolean) {
-        _isPlaying.postValue(isPlaying)
-    }
-
-    override fun onTracksChanged(tracks: Tracks) {
-        _subtitlesAvailable.postValue(tracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT } != null)
-    }
-
-    override fun onPlayerError(error: PlaybackException) {
-        val playerError = player?.playerError
-        Log.e(tag, "Player error", playerError)
-        val context = getApplication<Application>()
-        context.shortToast(R.string.player_error)
-        viewModelScope.launch {
-            delay(1500L)
-            try {
-                restartPlayer()
-            } catch (e: Exception) {
-//                            Crashlytics.log(Log.ERROR, tag, "onPlayerError: Retry error. ${e.message}")
-//                            Crashlytics.logException(e)
-            }
-        }
-    }
-
     override fun onCleared() {
-        releasePlayer()
         timer?.cancel()
     }
 
-    fun subtitlesEnabled(): Boolean {
-        return player?.currentTracks?.groups?.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.isSelected == true
+    fun isFollowingChannel(context: Context, channelId: String?, channelLogin: String?) {
+        if (!follow.isInitialized) {
+            viewModelScope.launch {
+                try {
+                    val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+                    val account = Account.get(context)
+                    val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
+                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+                    val isFollowing = if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
+                        if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
+                            (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
+                            repository.loadUserFollowing(helixClientId, account.helixToken, channelId, account.id, gqlClientId, account.gqlToken, channelLogin)
+                        } else false
+                    } else {
+                        channelId?.let {
+                            localFollowsChannel.getFollowByUserId(it)
+                        } != null
+                    }
+                    follow.postValue(Pair(isFollowing, null))
+                } catch (e: Exception) {
+
+                }
+            }
+        }
     }
 
-    fun toggleSubtitles(enabled: Boolean) {
-        player?.let { player ->
-            if (enabled) {
-                player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.let {
-                    player.trackSelectionParameters = player.trackSelectionParameters
-                        .buildUpon()
-                        .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, 0))
-                        .build()
+    fun saveFollowChannel(context: Context, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
+        GlobalScope.launch {
+            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val account = Account.get(context)
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+            try {
+                if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
+                    val errorMessage = repository.followUser(gqlClientId, account.gqlToken, userId)
+                    follow.postValue(Pair(true, errorMessage))
+                } else {
+                    if (userId != null) {
+                        try {
+                            Glide.with(context)
+                                .asBitmap()
+                                .load(channelLogo)
+                                .into(object: CustomTarget<Bitmap>() {
+                                    override fun onLoadCleared(placeholder: Drawable?) {
+
+                                    }
+
+                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                        DownloadUtils.savePng(context, "profile_pics", userId, resource)
+                                    }
+                                })
+                        } catch (e: Exception) {
+
+                        }
+                        val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${userId}.png").absolutePath
+                        localFollowsChannel.saveFollow(LocalFollowChannel(userId, userLogin, userName, downloadedLogo))
+                        follow.postValue(Pair(true, null))
+                    }
                 }
-            } else {
-                player.trackSelectionParameters = player.trackSelectionParameters
-                    .buildUpon()
-                    .clearOverridesOfType(com.google.android.exoplayer2.C.TRACK_TYPE_TEXT)
-                    .build()
+            } catch (e: Exception) {
+
+            }
+        }
+    }
+
+    fun deleteFollowChannel(context: Context, userId: String?) {
+        GlobalScope.launch {
+            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val account = Account.get(context)
+            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+            try {
+                if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
+                    val errorMessage = repository.unfollowUser(gqlClientId, account.gqlToken, userId)
+                    follow.postValue(Pair(false, errorMessage))
+                } else {
+                    if (userId != null) {
+                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(context, it) }
+                        follow.postValue(Pair(false, null))
+                    }
+                }
+            } catch (e: Exception) {
+
             }
         }
     }
