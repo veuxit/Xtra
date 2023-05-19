@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.player
 
 import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
@@ -9,7 +10,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
-import android.support.v4.media.session.MediaSessionCompat
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -18,10 +19,21 @@ import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.trackPipAnimationHintView
 import androidx.core.content.edit
+import androidx.core.os.bundleOf
 import androidx.core.view.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import androidx.media3.session.SessionToken
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
@@ -31,12 +43,13 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.view.CustomPlayerView
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
-import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -44,12 +57,9 @@ import kotlinx.coroutines.launch
 @Suppress("PLUGIN_WARNING")
 abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener {
 
-    companion object {
-        val SPEEDS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-        val SPEED_LABELS = listOf(R.string.speed0_25, R.string.speed0_5, R.string.speed0_75, R.string.speed1, R.string.speed1_25, R.string.speed1_5, R.string.speed1_75, R.string.speed2)
-        private const val REQUEST_CODE_QUALITY = 0
-        private const val REQUEST_CODE_SPEED = 1
-    }
+    private lateinit var controllerFuture: ListenableFuture<MediaController>
+    protected val player: MediaController?
+        get() = if (controllerFuture.isDone) controllerFuture.get() else null
 
     lateinit var slidingLayout: SlidingLayout
     private lateinit var playerView: CustomPlayerView
@@ -62,7 +72,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         private set
     private var isKeyboardShown = false
 
-    protected abstract val shouldEnterPictureInPicture: Boolean
     open val controllerAutoShow: Boolean = true
     open val controllerShowTimeoutMs: Int = 3000
     private var resizeMode = 0
@@ -85,10 +94,99 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
     }
 
+    override fun onStart() {
+        super.onStart()
+        controllerFuture = MediaController.Builder(requireActivity(), SessionToken(requireActivity(), ComponentName(requireActivity(), PlaybackService::class.java))).buildAsync()
+        controllerFuture.addListener({
+            val player = controllerFuture.get()
+            requireView().findViewById<CustomPlayerView>(R.id.playerView)?.player = player
+            player.addListener(object : Player.Listener {
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (view != null) {
+                        if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
+                            requireView().keepScreenOn = isPlaying
+                        }
+                    }
+                }
+
+                override fun onTracksChanged(tracks: Tracks) {
+                    if (view != null) {
+                        val available = tracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT } != null
+                        setSubtitles(available = available)
+                        if (!tracks.isEmpty && viewModel.loaded.value != true) {
+                            viewModel.loaded.value = true
+                        }
+                    }
+                }
+
+                override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                    if (view != null) {
+                        (viewModel as? StreamPlayerViewModel)?.let { viewModel ->
+                            player.sendCustomCommand(SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY), Bundle.EMPTY).let { result ->
+                                result.addListener({
+                                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                        val tag = result.get().extras.getString(PlaybackService.RESULT)
+                                        val oldValue = viewModel.playingAds
+                                        viewModel.playingAds = tag == "ads=true"
+                                        if (!oldValue && viewModel.playingAds) {
+                                            requireContext().toast(R.string.waiting_ads)
+                                        }
+                                    }
+                                }, MoreExecutors.directExecutor())
+                            }
+                        }
+                    }
+                }
+
+                override fun onEvents(player: Player, events: Player.Events) {
+                    if (view != null) {
+                        if (this@BasePlayerFragment is StreamPlayerFragment && !prefs.getBoolean(C.PLAYER_PAUSE, false) &&
+                            events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
+                            requireView().findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
+                                if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
+                                    gone()
+                                } else {
+                                    visible()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    if (view != null) {
+                        onError(error)
+                    }
+                }
+            })
+            if (viewModel.background) {
+                viewModel.background = false
+                player.sendCustomCommand(SessionCommand(PlaybackService.MOVE_FOREGROUND, Bundle.EMPTY), Bundle.EMPTY).let { result ->
+                    result.addListener({
+                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
+                            } else {
+                                @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                            }?.let {
+                                changePlayerMode(it)
+                            }
+                        }
+                    }, MoreExecutors.directExecutor())
+                }
+            }
+            if (!viewModel.started) {
+                player.sendCustomCommand(SessionCommand(PlaybackService.CLEAR, Bundle.EMPTY), Bundle.EMPTY)
+                if ((isInitialized || !enableNetworkCheck)) {
+                    startPlayer()
+                }
+            }
+        }, MoreExecutors.directExecutor())
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.mediaSession = MediaSessionCompat(requireContext(), requireContext().packageName)
-        viewModel.mediaSessionConnector = MediaSessionConnector(viewModel.mediaSession)
         val activity = requireActivity() as MainActivity
         slidingLayout = view as SlidingLayout
         slidingLayout.addListener(activity)
@@ -160,6 +258,32 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 setOnClickListener { showVolumeDialog() }
             }
         }
+        if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
+            view.findViewById<ImageButton>(R.id.playerSettings)?.apply {
+                visible()
+                setOnClickListener { showQualityDialog() }
+            }
+        }
+        if (prefs.getBoolean(C.PLAYER_MODE, false)) {
+            view.findViewById<ImageButton>(R.id.playerMode)?.apply {
+                visible()
+                setOnClickListener {
+                    player?.sendCustomCommand(SessionCommand(PlaybackService.SWITCH_AUDIO_MODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                        result.addListener({
+                            if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
+                                } else {
+                                    @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                                }?.let {
+                                    changePlayerMode(it)
+                                }
+                            }
+                        }, MoreExecutors.directExecutor())
+                    }
+                }
+            }
+        }
         if (this is StreamPlayerFragment) {
             if (!Account.get(activity).login.isNullOrBlank() && (!Account.get(activity).gqlToken.isNullOrBlank() || !Account.get(activity).helixToken.isNullOrBlank())) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
@@ -199,26 +323,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
         }
-        viewModel.playerUpdated.observe(viewLifecycleOwner) {
-            playerView.player = viewModel.player
-        }
-        viewModel.playerMode.observe(viewLifecycleOwner) {
-            if (it == PlayerMode.NORMAL) {
-                playerView.controllerHideOnTouch = true
-                playerView.controllerShowTimeoutMs = controllerShowTimeoutMs
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
-                    activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
-                }
-            } else {
-                playerView.controllerHideOnTouch = false
-                playerView.controllerShowTimeoutMs = -1
-                playerView.showController()
-                view.keepScreenOn = true
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
-                }
-            }
-        }
         if (this !is ClipPlayerFragment) {
             viewModel.sleepTimer.observe(viewLifecycleOwner) {
                 onMinimize()
@@ -236,14 +340,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
         if (prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
             view.keepScreenOn = true
-        } else {
-            viewModel.isPlaying.observe(viewLifecycleOwner) {
-                view.keepScreenOn = it
-            }
         }
-        viewModel.subtitlesAvailable.observe(viewLifecycleOwner) {
-            setSubtitles(available = it)
-        }
+        changePlayerMode(viewModel.playerMode)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -259,17 +357,23 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         if (isInPictureInPictureMode) {
-            playerView.useController = false
-            chatLayout.gone()
             if (!slidingLayout.isMaximized) {
                 slidingLayout.maximize()
             }
+            playerView.useController = false
+            chatLayout.gone()
             // player dialog
             (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
             // player chat message dialog
             (childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
         } else {
             playerView.useController = true
+        }
+    }
+
+    override fun initialize() {
+        if (player != null && !viewModel.started) {
+            startPlayer()
         }
     }
 
@@ -303,7 +407,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
-    override fun onClose() {}
+    override fun onClose() {
+        player?.pause()
+        player?.stop()
+        releaseController()
+    }
 
     override fun onSleepTimerChanged(durationMs: Long, hours: Int, minutes: Int, lockScreen: Boolean) {
         val context = requireContext()
@@ -325,16 +433,24 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {
         when (requestCode) {
             REQUEST_CODE_QUALITY -> {
-                if ((viewModel as? HlsPlayerViewModel)?.usingPlaylist == false && index == 0) {
-                    // TODO
-                } else {
-                    viewModel.changeQuality(index)
-                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(viewModel.qualities?.getOrNull(index))
+                player?.sendCustomCommand(SessionCommand(PlaybackService.CHANGE_QUALITY, bundleOf(PlaybackService.INDEX to index)), Bundle.EMPTY)?.let { result ->
+                    result.addListener({
+                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
+                            } else {
+                                @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                            }?.let {
+                                changePlayerMode(it)
+                                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
+                            }
+                        }
+                    }, MoreExecutors.directExecutor())
                 }
             }
             REQUEST_CODE_SPEED -> {
                 SPEEDS.getOrNull(index)?.let {
-                    viewModel.player?.setPlaybackSpeed(it)
+                    player?.setPlaybackSpeed(it)
                     prefs.edit { putFloat(C.PLAYER_SPEED, it) }
                 }
                 SPEED_LABELS.getOrNull(index)?.let {
@@ -345,7 +461,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     override fun changeVolume(volume: Float) {
-        viewModel.player?.volume = volume
+        player?.volume = volume
     }
 
     //    abstract fun play(obj: Parcelable) //TODO instead maybe add livedata in mainactivity and observe it
@@ -365,19 +481,27 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun showQualityDialog() {
-        viewModel.qualities?.let {
-            FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, it, viewModel.qualityIndex, REQUEST_CODE_QUALITY)
+        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val qualities = result.get().extras.getStringArray(PlaybackService.RESULT)?.toList()
+                    val qualityIndex = result.get().extras.getInt(PlaybackService.INDEX)
+                    if (!qualities.isNullOrEmpty()) {
+                        FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, qualities, qualityIndex, REQUEST_CODE_QUALITY)
+                    }
+                }
+            }, MoreExecutors.directExecutor())
         }
     }
 
     fun showSpeedDialog() {
-        viewModel.player?.playbackParameters?.speed?.let {
+        player?.playbackParameters?.speed?.let {
             FragmentUtils.showRadioButtonDialogFragment(requireContext(), childFragmentManager, SPEED_LABELS, SPEEDS.indexOf(it), REQUEST_CODE_SPEED)
         }
     }
 
     fun showVolumeDialog() {
-        FragmentUtils.showPlayerVolumeDialog(childFragmentManager, viewModel.player?.volume)
+        FragmentUtils.showPlayerVolumeDialog(childFragmentManager, player?.volume)
     }
 
     fun minimize() {
@@ -389,7 +513,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun enterPictureInPicture(): Boolean {
-        return shouldEnterPictureInPicture
+        return viewModel.playerMode == PlayerMode.NORMAL
     }
 
     private fun initLayout() {
@@ -449,7 +573,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
                 val recyclerView = requireView().findViewById<RecyclerView>(R.id.recyclerView)
                 val btnDown = requireView().findViewById<Button>(R.id.btnDown)
-                if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView.adapter?.itemCount != null) {
+                if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView?.adapter?.itemCount != null) {
                     recyclerView.scrollToPosition(recyclerView.adapter?.itemCount!! - 1) // scroll down
                 }
             } else {
@@ -525,7 +649,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         slidingLayout.maximizedSecondViewVisibility = View.VISIBLE
         val recyclerView = requireView().findViewById<RecyclerView>(R.id.recyclerView)
         val btnDown = requireView().findViewById<Button>(R.id.btnDown)
-        if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView.adapter?.itemCount != null) {
+        if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView?.adapter?.itemCount != null) {
             recyclerView.scrollToPosition(recyclerView.adapter?.itemCount!! - 1) // scroll down
         }
     }
@@ -551,11 +675,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
-    fun setSubtitles(available: Boolean? = null, enabled: Boolean? = null) {
+    fun setSubtitles(available: Boolean = null ?: subtitlesAvailable(), enabled: Boolean = null ?: subtitlesEnabled()) {
         requireView().findViewById<ImageButton>(R.id.playerSubtitleToggle)?.apply {
-            if (available ?: (viewModel.subtitlesAvailable.value == true) && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
+            if (available && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
                 visible()
-                if (enabled ?: viewModel.subtitlesEnabled()) {
+                if (enabled) {
                     setImageResource(R.drawable.exo_ic_subtitle_on)
                     setOnClickListener { toggleSubtitles(false) }
                 } else {
@@ -566,22 +690,113 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 gone()
             }
         }
-        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSubtitles(
-            available = available ?: (viewModel.subtitlesAvailable.value == true),
-            enabled = enabled ?: viewModel.subtitlesEnabled()
-        )
+        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSubtitles(available, enabled)
+    }
+
+    private fun subtitlesAvailable(): Boolean {
+        return player?.currentTracks?.groups?.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT } != null
+    }
+
+    private fun subtitlesEnabled(): Boolean {
+        return player?.currentTracks?.groups?.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }?.isSelected == true
     }
 
     fun toggleSubtitles(enabled: Boolean) {
         setSubtitles(enabled = enabled)
-        viewModel.toggleSubtitles(enabled)
+        player?.let { player ->
+            if (enabled) {
+                player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }?.let {
+                    player.trackSelectionParameters = player.trackSelectionParameters
+                        .buildUpon()
+                        .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, 0))
+                        .build()
+                }
+            } else {
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_TEXT)
+                    .build()
+            }
+        }
     }
 
-    override fun onMovedToForeground() {
-        viewModel.onResume()
-    }
+    override fun onMovedToForeground() {}
 
     override fun onMovedToBackground() {
-        viewModel.onPause()
+        viewModel.background = true
+        player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
+                    } else {
+                        @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                    }?.let {
+                        changePlayerMode(it)
+                        releaseController()
+                    }
+                }
+            }, MoreExecutors.directExecutor())
+        }
+    }
+
+    open fun startPlayer() {
+        viewModel.started = true
+    }
+
+    open fun onError(error: PlaybackException) {
+        val playerError = player?.playerError
+        Log.e(tag, "Player error", playerError)
+        requireContext().shortToast(R.string.player_error)
+        viewLifecycleOwner.lifecycleScope.launch {
+            delay(1500L)
+            try {
+                player?.prepare()
+            } catch (e: Exception) {
+
+            }
+        }
+    }
+
+    fun setQualityText() {
+        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_QUALITY_TEXT, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val qualityText = result.get().extras.getString(PlaybackService.RESULT)
+                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(qualityText)
+                }
+            }, MoreExecutors.directExecutor())
+        }
+    }
+
+    private fun changePlayerMode(mode: PlayerMode) {
+        viewModel.playerMode = mode
+        if (mode == PlayerMode.NORMAL) {
+            playerView.controllerHideOnTouch = true
+            playerView.controllerShowTimeoutMs = controllerShowTimeoutMs
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+                requireActivity().setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
+            }
+        } else {
+            playerView.controllerHideOnTouch = false
+            playerView.controllerShowTimeoutMs = -1
+            playerView.showController()
+            requireView().keepScreenOn = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                requireActivity().setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
+            }
+        }
+    }
+
+    private fun releaseController() {
+        requireView().findViewById<CustomPlayerView>(R.id.playerView)?.player = null
+        MediaController.releaseFuture(controllerFuture)
+    }
+
+    companion object {
+        val SPEEDS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
+        val SPEED_LABELS = listOf(R.string.speed0_25, R.string.speed0_5, R.string.speed0_75, R.string.speed1, R.string.speed1_25, R.string.speed1_5, R.string.speed1_75, R.string.speed2)
+        private const val REQUEST_CODE_QUALITY = 0
+        private const val REQUEST_CODE_SPEED = 1
     }
 }

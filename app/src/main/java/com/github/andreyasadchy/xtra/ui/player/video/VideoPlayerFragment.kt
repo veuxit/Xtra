@@ -1,6 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.player.video
 
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,10 +11,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.media3.common.PlaybackException
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerVideoBinding
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
@@ -21,8 +27,8 @@ import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.ui.player.PlayerGamesDialog
-import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
@@ -30,7 +36,9 @@ import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -45,9 +53,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     private val binding get() = _binding!!
     override val viewModel: VideoPlayerViewModel by viewModels()
     private lateinit var video: Video
-
-    override val shouldEnterPictureInPicture: Boolean
-        get() = viewModel.playerMode.value == PlayerMode.NORMAL
 
     override val controllerShowTimeoutMs: Int = 5000
 
@@ -73,7 +78,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 settings?.enable()
                 download?.enable()
                 mode?.enable()
-                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(viewModel.qualities?.getOrNull(viewModel.qualityIndex))
+                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
             } else {
                 settings?.disable()
                 download?.disable()
@@ -85,20 +90,13 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it != null)
             }
         }
-        if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
-            settings?.apply {
-                visible()
-                setOnClickListener { showQualityDialog() }
-            }
-        }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
                 visible()
                 setOnClickListener {
                     FragmentUtils.showPlayerSettingsDialog(
                         fragmentManager = childFragmentManager,
-                        quality = if (viewModel.loaded.value == true) viewModel.qualities?.getOrNull(viewModel.qualityIndex) else null,
-                        speed = SPEED_LABELS.getOrNull(SPEEDS.indexOf(viewModel.player?.playbackParameters?.speed))?.let { requireContext().getString(it) },
+                        speedText = SPEED_LABELS.getOrNull(SPEEDS.indexOf(player?.playbackParameters?.speed))?.let { requireContext().getString(it) },
                         vodGames = !viewModel.gamesList.value.isNullOrEmpty()
                     )
                 }
@@ -120,18 +118,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                         }
                     }
                     (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
-                }
-            }
-        }
-        if (prefs.getBoolean(C.PLAYER_MODE, false)) {
-            mode?.apply {
-                visible()
-                setOnClickListener {
-                    if (viewModel.playerMode.value != PlayerMode.AUDIO_ONLY) {
-                        viewModel.qualities?.lastIndex?.let { viewModel.changeQuality(it) }
-                    } else {
-                        viewModel.changeQuality(viewModel.previousQuality)
-                    }
                 }
             }
         }
@@ -183,14 +169,13 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 }
             }
         }
-        viewModel.initializePlayer()
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(video.channelId, video.channelLogin, video.id, 0.0)).commit()
         }
     }
 
     override fun initialize() {
-        viewModel.setVideo(video, requireArguments().getDouble(KEY_OFFSET))
+        super.initialize()
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
@@ -202,44 +187,126 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         }
     }
 
+    override fun startPlayer() {
+        super.startPlayer()
+        playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getDouble(KEY_OFFSET).toLong())
+    }
+
+    private fun playVideo(skipAccessToken: Boolean, playbackPosition: Long?) {
+        if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
+            player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(
+                PlaybackService.ITEM to video,
+                PlaybackService.USING_PLAYLIST to false,
+                PlaybackService.PLAYBACK_POSITION to playbackPosition
+            )), Bundle.EMPTY)
+        } else {
+            viewModel.load(
+                gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
+                gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) Account.get(requireContext()).gqlToken else null,
+                videoId = video.id,
+                playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
+            )
+            viewModel.result.observe(viewLifecycleOwner) { url ->
+                player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(
+                    PlaybackService.ITEM to video,
+                    PlaybackService.URI to url.toString(),
+                    PlaybackService.USING_PLAYLIST to true,
+                    PlaybackService.PLAYBACK_POSITION to playbackPosition
+                )), Bundle.EMPTY)
+            }
+        }
+    }
+
+    override fun onError(error: PlaybackException) {
+        Log.e(tag, "Player error", error)
+        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
+                    if (responseCode != 0) {
+                        val skipAccessToken = prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                        when {
+                            skipAccessToken == 1 && viewModel.shouldRetry -> {
+                                viewModel.shouldRetry = false
+                                playVideo(false, player?.currentPosition)
+                            }
+                            skipAccessToken == 2 && viewModel.shouldRetry -> {
+                                viewModel.shouldRetry = false
+                                playVideo(true, player?.currentPosition)
+                            }
+                            else -> {
+                                if (responseCode == 403) {
+                                    requireContext().toast(R.string.video_subscribers_only)
+                                }
+                            }
+                        }
+                    } else {
+                        super.onError(error)
+                    }
+                }
+            }, MoreExecutors.directExecutor())
+        }
+    }
+
     fun showVodGames() {
         viewModel.gamesList.value?.let { FragmentUtils.showPlayerGamesDialog(childFragmentManager, it) }
     }
 
     fun checkBookmark() {
-        viewModel.checkBookmark()
+        video.id?.let { viewModel.checkBookmark(it) }
     }
 
     fun saveBookmark() {
-        viewModel.saveBookmark()
+        viewModel.saveBookmark(requireContext(), video)
     }
 
     override fun seek(position: Long) {
-        viewModel.player?.seekTo(position)
+        player?.seekTo(position)
     }
 
     override fun showDownloadDialog() {
-        viewModel.videoInfo?.let { VideoDownloadDialog.newInstance(it).show(childFragmentManager, null) }
+        if (viewModel.loaded.value == true) {
+            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_VIDEO_DOWNLOAD_INFO, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                result.addListener({
+                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            result.get().extras.getParcelable(PlaybackService.RESULT, VideoDownloadInfo::class.java)
+                        } else {
+                            @Suppress("DEPRECATION") result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
+                        }?.let {
+                            VideoDownloadDialog.newInstance(it.copy(video = video)).show(childFragmentManager, null)
+                        }
+                    }
+                }, MoreExecutors.directExecutor())
+            }
+        }
     }
 
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.resumePlayer()
+            player?.prepare()
         }
     }
 
     override fun onNetworkLost() {
         if (isResumed) {
-            viewModel.stopPlayer()
+            player?.stop()
         }
     }
 
     override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { (viewModel.player?.currentPosition ?: 0) / 1000.0 }
+        return runBlocking(Dispatchers.Main) { (player?.currentPosition ?: 0) / 1000.0 }
     }
 
-    fun startAudioOnly() {
-        viewModel.startAudioOnly()
+    override fun onClose() {
+        if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            video.id?.toLongOrNull()?.let { id ->
+                player?.currentPosition?.let { position ->
+                    viewModel.savePosition(id, position)
+                }
+            }
+        }
+        super.onClose()
     }
 
     override fun onDestroyView() {

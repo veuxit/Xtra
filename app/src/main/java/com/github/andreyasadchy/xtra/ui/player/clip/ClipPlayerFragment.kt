@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerClipBinding
@@ -22,12 +24,16 @@ import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -42,9 +48,6 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     private val binding get() = _binding!!
     override val viewModel: ClipPlayerViewModel by viewModels()
     private lateinit var clip: Clip
-
-    override val shouldEnterPictureInPicture: Boolean
-        get() = true
 
     override val controllerShowTimeoutMs: Int = 2500
 
@@ -64,15 +67,17 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         super.onViewCreated(view, savedInstanceState)
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
         val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
+        val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
         viewModel.loaded.observe(viewLifecycleOwner) {
-            settings?.enable()
-            download?.enable()
-            (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(viewModel.qualities?.getOrNull(viewModel.qualityIndex))
-        }
-        if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
-            settings?.apply {
-                visible()
-                setOnClickListener { showQualityDialog() }
+            if (it) {
+                settings?.enable()
+                download?.enable()
+                mode?.enable()
+                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
+            } else {
+                settings?.disable()
+                download?.disable()
+                mode?.disable()
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
@@ -81,8 +86,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 setOnClickListener {
                     FragmentUtils.showPlayerSettingsDialog(
                         fragmentManager = childFragmentManager,
-                        quality = if (viewModel.loaded.value == true) viewModel.qualities?.getOrNull(viewModel.qualityIndex) else null,
-                        speed = SPEED_LABELS.getOrNull(SPEEDS.indexOf(viewModel.player?.playbackParameters?.speed))?.let { requireContext().getString(it) }
+                        speedText = SPEED_LABELS.getOrNull(SPEEDS.indexOf(player?.playbackParameters?.speed))?.let { requireContext().getString(it) }
                     )
                 }
             }
@@ -104,7 +108,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                     profileImageUrl = clip.profileImageUrl,
                     animatedPreviewURL = clip.videoAnimatedPreviewURL
                 ), (if (clip.vodOffset != null) {
-                    ((clip.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (viewModel.player?.currentPosition ?: 0)
+                    ((clip.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
                 } else {
                     0.0
                 }))
@@ -158,14 +162,13 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 }
             }
         }
-        viewModel.initializePlayer()
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(clip.channelId, clip.channelLogin, clip.videoId, clip.vodOffset?.toDouble())).commit()
         }
     }
 
     override fun initialize() {
-        viewModel.setClip(clip)
+        super.initialize()
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
@@ -174,24 +177,62 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         }
     }
 
+    override fun startPlayer() {
+        super.startPlayer()
+        clip.let { clip ->
+            val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+            if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
+                viewModel.load(prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), clip.id)
+                viewModel.result.observe(viewLifecycleOwner) { map ->
+                    val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl) } else mapOf()
+                    player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
+                        PlaybackService.ITEM to clip,
+                        PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
+                        PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                    )), Bundle.EMPTY)
+                }
+            } else {
+                val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
+                player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
+                    PlaybackService.ITEM to clip,
+                    PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
+                    PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                )), Bundle.EMPTY)
+            }
+        }
+    }
+
     override fun showDownloadDialog() {
-        ClipDownloadDialog.newInstance(clip, viewModel.qualityMap).show(childFragmentManager, null)
+        if (viewModel.loaded.value == true) {
+            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                result.addListener({
+                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                        result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
+                            result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
+                                val urls = keys.zip(values).toMap(mutableMapOf())
+                                ClipDownloadDialog.newInstance(clip, urls).show(childFragmentManager, null)
+                            }
+                        }
+                    }
+                }, MoreExecutors.directExecutor())
+            }
+        }
     }
 
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.onResume()
+            player?.prepare()
         }
     }
 
     override fun onNetworkLost() {
         if (isResumed) {
-            viewModel.onPause()
+            player?.stop()
         }
     }
 
     override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { (viewModel.player?.currentPosition ?: 0) / 1000.0 }
+        return runBlocking(Dispatchers.Main) { (player?.currentPosition ?: 0) / 1000.0 }
     }
 
     override fun onDestroyView() {

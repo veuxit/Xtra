@@ -19,7 +19,7 @@ abstract class BaseNetworkFragment : Fragment() {
     protected open var enableNetworkCheck = true
     private var lastIsOnlineState = false
     private var shouldRestore = false
-    private var isInitialized = false
+    protected var isInitialized = false
     private var created = false
 
     abstract fun initialize()
