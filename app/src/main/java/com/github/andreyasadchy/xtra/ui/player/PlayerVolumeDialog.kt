@@ -73,16 +73,12 @@ class PlayerVolumeDialog : ExpandingBottomSheetDialogFragment() {
             if (volume == 0) {
                 volumeMute.setImageResource(R.drawable.baseline_volume_off_black_24)
                 volumeMute.setOnClickListener {
-                    listener.changeVolume(100f)
-                    setVolume(100)
                     volumeBar.progress = 100
                     requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, 100) }
                 }
             } else {
                 volumeMute.setImageResource(R.drawable.baseline_volume_up_black_24)
                 volumeMute.setOnClickListener {
-                    listener.changeVolume(0f)
-                    setVolume(0)
                     volumeBar.progress = 0
                     requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, 0) }
                 }
