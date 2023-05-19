@@ -15,8 +15,8 @@
  */
 package com.github.andreyasadchy.xtra.player.lowlatency;
 
-import static com.google.android.exoplayer2.util.Assertions.checkNotNull;
-import static com.google.android.exoplayer2.util.Util.castNonNull;
+import static androidx.media3.common.util.Assertions.checkNotNull;
+import static androidx.media3.common.util.Util.castNonNull;
 import static java.lang.Math.max;
 
 import android.net.Uri;
@@ -24,31 +24,32 @@ import android.os.Handler;
 import android.os.SystemClock;
 
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
+import androidx.media3.common.ParserException;
+import androidx.media3.common.util.Assertions;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.common.util.Util;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.HttpDataSource;
+import androidx.media3.exoplayer.hls.HlsDataSourceFactory;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Part;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.RenditionReport;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Segment;
+import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist.Variant;
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory;
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistTracker;
+import androidx.media3.exoplayer.source.LoadEventInfo;
+import androidx.media3.exoplayer.source.MediaLoadData;
+import androidx.media3.exoplayer.source.MediaSourceEventListener.EventDispatcher;
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy;
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy.LoadErrorInfo;
+import androidx.media3.exoplayer.upstream.Loader;
+import androidx.media3.exoplayer.upstream.Loader.LoadErrorAction;
+import androidx.media3.exoplayer.upstream.ParsingLoadable;
 
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ParserException;
-import com.google.android.exoplayer2.source.LoadEventInfo;
-import com.google.android.exoplayer2.source.MediaLoadData;
-import com.google.android.exoplayer2.source.MediaSourceEventListener.EventDispatcher;
-import com.google.android.exoplayer2.source.hls.HlsDataSourceFactory;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.Part;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.RenditionReport;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.Segment;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMultivariantPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsMultivariantPlaylist.Variant;
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylist;
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylistParserFactory;
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylistTracker;
-import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.HttpDataSource;
-import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy;
-import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy.LoadErrorInfo;
-import com.google.android.exoplayer2.upstream.Loader;
-import com.google.android.exoplayer2.upstream.Loader.LoadErrorAction;
-import com.google.android.exoplayer2.upstream.ParsingLoadable;
-import com.google.android.exoplayer2.util.Assertions;
-import com.google.android.exoplayer2.util.Util;
 import com.google.common.collect.Iterables;
 
 import java.io.IOException;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /** Default implementation for {@link HlsPlaylistTracker}. */
+@UnstableApi
 public final class DefaultHlsPlaylistTracker
     implements HlsPlaylistTracker, Loader.Callback<ParsingLoadable<HlsPlaylist>> {
 

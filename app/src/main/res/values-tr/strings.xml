@@ -461,7 +461,6 @@
     <string name="buffer_settings">Arabellek ayarları</string>
     <string name="player_buttons">Oynatıcı düğmeleri</string>
     <string name="keep_chat_open">Sohbeti arka planda bağlı tut</string>
-    <string name="lock_screen_audio">Ekran kapalıyken ses çalmaya devam et</string>
     <string name="save_sort_game">Bu oyun için seçenekleri hatırla</string>
     <string name="save_sort_channel">Bu kanal için seçenekleri hatırla</string>
     <string name="show_chat">Sohbeti göster</string>
@@ -560,4 +559,6 @@
     <string name="show_media_playlist_tags">Medya oynatma listesi etiketlerini göster</string>
     <string name="show_multivariant_playlist_tags">Farklı oynatma listesi etiketlerini göster</string>
     <string name="use_gamepager">Oyun sayfası için sekmeler düzenini kullan</string>
+    <string name="disable_background_video">Disable video rendering in the background</string>
+    <string name="use_background_audio_track">Switch to audio only track in the background</string>
 </resources>

@@ -9,13 +9,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.media3.session.SessionCommand
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerOfflineBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.PlayerMode
+import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.visible
@@ -31,9 +32,6 @@ class OfflinePlayerFragment : BasePlayerFragment() {
     private val binding get() = _binding!!
     override val viewModel: OfflinePlayerViewModel by viewModels()
     private lateinit var video: OfflineVideo
-
-    override val shouldEnterPictureInPicture: Boolean
-        get() = viewModel.playerMode.value == PlayerMode.NORMAL
 
     override val controllerShowTimeoutMs: Int = 5000
 
@@ -52,33 +50,14 @@ class OfflinePlayerFragment : BasePlayerFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
-            requireView().findViewById<ImageButton>(R.id.playerSettings)?.apply {
-                visible()
-                setOnClickListener { showQualityDialog() }
-            }
-        }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
                 visible()
                 setOnClickListener {
                     FragmentUtils.showPlayerSettingsDialog(
                         fragmentManager = childFragmentManager,
-                        quality = viewModel.qualities?.getOrNull(viewModel.qualityIndex),
-                        speed = SPEED_LABELS.getOrNull(SPEEDS.indexOf(viewModel.player?.playbackParameters?.speed))?.let { requireContext().getString(it) }
+                        speedText = SPEED_LABELS.getOrNull(SPEEDS.indexOf(player?.playbackParameters?.speed))?.let { requireContext().getString(it) }
                     )
-                }
-            }
-        }
-        if (prefs.getBoolean(C.PLAYER_MODE, false)) {
-            requireView().findViewById<ImageButton>(R.id.playerMode)?.apply {
-                visible()
-                setOnClickListener {
-                    if (viewModel.playerMode.value != PlayerMode.AUDIO_ONLY) {
-                        viewModel.qualities?.lastIndex?.let { viewModel.changeQuality(it) }
-                    } else {
-                        viewModel.changeQuality(viewModel.previousQuality)
-                    }
                 }
             }
         }
@@ -97,19 +76,24 @@ class OfflinePlayerFragment : BasePlayerFragment() {
                 }
             }
         }
-        viewModel.initializePlayer()
     }
 
-    override fun initialize() {
-        viewModel.setVideo(video)
+    override fun startPlayer() {
+        super.startPlayer()
+        player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(PlaybackService.ITEM to video)), Bundle.EMPTY)
     }
 
     override fun onNetworkRestored() {
         //do nothing
     }
 
-    fun startAudioOnly() {
-        viewModel.startAudioOnly()
+    override fun onClose() {
+        if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            player?.currentPosition?.let { position ->
+                viewModel.savePosition(video.id, position)
+            }
+        }
+        super.onClose()
     }
 
     override fun onDestroyView() {

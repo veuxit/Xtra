@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.PlaybackException
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerStreamBinding
@@ -25,6 +30,7 @@ import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
@@ -33,10 +39,14 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
-import com.google.android.exoplayer2.source.hls.HlsManifest
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class StreamPlayerFragment : BasePlayerFragment() {
@@ -46,9 +56,6 @@ class StreamPlayerFragment : BasePlayerFragment() {
     override val viewModel: StreamPlayerViewModel by viewModels()
     lateinit var chatFragment: ChatFragment
     private lateinit var stream: Stream
-
-    override val shouldEnterPictureInPicture: Boolean
-        get() = viewModel.playerMode.value == PlayerMode.NORMAL
 
     override val controllerAutoShow: Boolean = false
 
@@ -72,7 +79,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
             if (it) {
                 settings?.enable()
                 mode?.enable()
-                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(viewModel.qualities?.getOrNull(viewModel.qualityIndex))
+                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
             } else {
                 settings?.disable()
                 mode?.disable()
@@ -84,19 +91,12 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 updateViewerCount(it?.viewerCount)
             }
         }
-        if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
-            settings?.apply {
-                visible()
-                setOnClickListener { showQualityDialog() }
-            }
-        }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
                 visible()
                 setOnClickListener {
                     FragmentUtils.showPlayerSettingsDialog(
                         fragmentManager = childFragmentManager,
-                        quality = if (viewModel.loaded.value == true) viewModel.qualities?.getOrNull(viewModel.qualityIndex) else null
                     )
                 }
             }
@@ -110,35 +110,12 @@ class StreamPlayerFragment : BasePlayerFragment() {
         if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
             requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
                 visible()
-                setOnClickListener { viewModel.player?.seekToDefaultPosition() }
-            }
-        }
-        if (prefs.getBoolean(C.PLAYER_MODE, false)) {
-            mode?.apply {
-                visible()
-                setOnClickListener {
-                    if (viewModel.playerMode.value != PlayerMode.AUDIO_ONLY) {
-                        viewModel.qualities?.lastIndex?.minus(1)?.let { viewModel.changeQuality(it) }
-                    } else {
-                        viewModel.changeQuality(viewModel.previousQuality)
-                    }
-                }
+                setOnClickListener { player?.seekToDefaultPosition() }
             }
         }
         if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
             requireView().findViewById<LinearLayout>(R.id.viewersLayout)?.apply {
                 setOnClickListener { openViewerList() }
-            }
-        }
-        if (!prefs.getBoolean(C.PLAYER_PAUSE, false)) {
-            viewModel.showPauseButton.observe(viewLifecycleOwner) {
-                binding.playerView.findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
-                    if (it) {
-                        gone()
-                    } else {
-                        visible()
-                    }
-                }
             }
         }
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
@@ -189,7 +166,6 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 }
             }
         }
-        viewModel.initializePlayer()
         chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
             if (it != null) {
                 it as ChatFragment
@@ -202,12 +178,114 @@ class StreamPlayerFragment : BasePlayerFragment() {
     }
 
     override fun initialize() {
-        viewModel.startStream(stream)
+        super.initialize()
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
             viewModel.isFollowingChannel(requireContext(), stream.channelId, stream.channelLogin)
+        }
+    }
+
+    override fun startPlayer() {
+        super.startPlayer()
+        viewModel.useProxy = prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() ?: 1
+        if (viewModel._stream.value == null) {
+            viewModel._stream.value = stream
+            loadStream(stream)
+            viewModel.loadStream(requireContext(), stream)
+        }
+    }
+
+    private fun loadStream(stream: Stream) {
+        player?.prepare()
+        try {
+            stream.channelLogin?.let { viewModel.load(
+                gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
+                gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false)) Account.get(requireContext()).gqlToken else null,
+                channelLogin = it,
+                proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "https://api.ttv.lol/playlist/\$channel.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true"),
+                randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site")
+            ) }
+            viewModel.result.observe(viewLifecycleOwner) { result ->
+                if (result != null) {
+                    when (viewModel.useProxy) {
+                        0 -> {
+                            if (result.second != 0) {
+                                requireContext().toast(R.string.proxy_error)
+                                viewModel.useProxy = 2
+                            }
+                        }
+                        1 -> {
+                            if (result.second != 1) {
+                                requireContext().toast(R.string.adblock_not_working)
+                                viewModel.useProxy = 2
+                            }
+                        }
+                    }
+                    player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
+                        PlaybackService.ITEM to stream,
+                        PlaybackService.URI to result.first.toString(),
+                        PlaybackService.HEADERS to if (result.second == 1) {
+                            (hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
+                        } else if (viewModel.useProxy == 3) {
+                            (hashMapOf("X-Forwarded-For" to "::1"))
+                        } else null
+                    )), Bundle.EMPTY)
+                    player?.prepare()
+                }
+            }
+        } catch (e: Exception) {
+            requireContext().toast(R.string.error_stream)
+        }
+    }
+
+    override fun onError(error: PlaybackException) {
+        Log.e(tag, "Player error", error)
+        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
+                    if (requireContext().isNetworkAvailable) {
+                        when {
+                            responseCode == 404 -> {
+                                requireContext().toast(R.string.stream_ended)
+                            }
+                            viewModel.useProxy == 0 && responseCode >= 400 -> {
+                                requireContext().toast(R.string.proxy_error)
+                                viewModel.useProxy = 2
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    delay(1500L)
+                                    try {
+                                        restartPlayer()
+                                    } catch (e: Exception) {}
+                                }
+                            }
+                            viewModel.useProxy == 1 && responseCode >= 400 -> {
+                                requireContext().toast(R.string.adblock_not_working)
+                                viewModel.useProxy = 2
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    delay(1500L)
+                                    try {
+                                        restartPlayer()
+                                    } catch (e: Exception) {}
+                                }
+                            }
+                            else -> {
+                                requireContext().shortToast(R.string.player_error)
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    delay(1500L)
+                                    try {
+                                        restartPlayer()
+                                    } catch (e: Exception) {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }, MoreExecutors.directExecutor())
         }
     }
 
@@ -226,7 +304,9 @@ class StreamPlayerFragment : BasePlayerFragment() {
     }
 
     fun restartPlayer() {
-        viewModel.restartPlayer()
+        if (viewModel.playerMode != PlayerMode.DISABLED) {
+            loadStream(stream)
+        }
     }
 
     fun openViewerList() {
@@ -234,29 +314,31 @@ class StreamPlayerFragment : BasePlayerFragment() {
     }
 
     fun showPlaylistTags(mediaPlaylist: Boolean) {
-        val tags = if (mediaPlaylist) {
-            (viewModel.player?.currentManifest as? HlsManifest)?.mediaPlaylist?.tags?.dropLastWhile { it == "ads=true" }?.joinToString("\n")
-        } else {
-            (viewModel.player?.currentManifest as? HlsManifest)?.multivariantPlaylist?.tags?.joinToString("\n")
-        }
-        if (!tags.isNullOrBlank()) {
-            AlertDialog.Builder(requireContext()).apply {
-                setView(NestedScrollView(context).apply {
-                    addView(HorizontalScrollView(context).apply {
-                        addView(TextView(context).apply {
-                            text = tags
-                            textSize = 12F
-                            setTextIsSelectable(true)
-                        })
-                    })
-                })
-                setNegativeButton(R.string.copy_clip) { dialog, _ ->
-                    val clipboard = ContextCompat.getSystemService(requireContext(), ClipboardManager::class.java)
-                    clipboard?.setPrimaryClip(ClipData.newPlainText("label", tags))
-                    dialog.dismiss()
+        player?.sendCustomCommand(SessionCommand(if (mediaPlaylist) PlaybackService.GET_MEDIA_PLAYLIST else PlaybackService.GET_MULTIVARIANT_PLAYLIST, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val tags = result.get().extras.getString(PlaybackService.RESULT)
+                    if (!tags.isNullOrBlank()) {
+                        AlertDialog.Builder(requireContext()).apply {
+                            setView(NestedScrollView(context).apply {
+                                addView(HorizontalScrollView(context).apply {
+                                    addView(TextView(context).apply {
+                                        text = tags
+                                        textSize = 12F
+                                        setTextIsSelectable(true)
+                                    })
+                                })
+                            })
+                            setNegativeButton(R.string.copy_clip) { dialog, _ ->
+                                val clipboard = ContextCompat.getSystemService(requireContext(), ClipboardManager::class.java)
+                                clipboard?.setPrimaryClip(ClipData.newPlainText("label", tags))
+                                dialog.dismiss()
+                            }
+                            setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
+                        }.show()
+                    }
                 }
-                setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
-            }.show()
+            }, MoreExecutors.directExecutor())
         }
     }
 
@@ -283,12 +365,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.resumePlayer()
+            restartPlayer()
         }
-    }
-
-    fun startAudioOnly() {
-        viewModel.startAudioOnly()
     }
 
     override fun onDestroyView() {

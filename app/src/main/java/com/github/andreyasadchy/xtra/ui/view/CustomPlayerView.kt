@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
+import androidx.media3.ui.PlayerView
 import com.github.andreyasadchy.xtra.ui.isClick
-import com.google.android.exoplayer2.ui.StyledPlayerView
 
-class CustomPlayerView : StyledPlayerView {
+class CustomPlayerView : PlayerView {
 
     private val clickCallback = Runnable {
         performClick()

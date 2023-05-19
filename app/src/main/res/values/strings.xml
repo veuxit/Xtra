@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name" translatable="false">Xtra</string>
     <string name="notification_downloads_channel_id" translatable="false">xtra_downloads_channel</string>
-    <string name="notification_playback_channel_id" translatable="false">xtra_playback_channel</string>
     <string name="speed0.25" translatable="false">0.25x</string>
     <string name="speed0.5" translatable="false">0.5x</string>
     <string name="speed0.75" translatable="false">0.75x</string>
@@ -481,7 +480,6 @@
     <string name="buffer_settings">Buffer settings</string>
     <string name="player_buttons">Player buttons</string>
     <string name="keep_chat_open">Keep chat connected in the background</string>
-    <string name="lock_screen_audio">Keep audio playing when screen is off</string>
     <string name="save_sort_channel">Remember choices for this channel</string>
     <string name="save_sort_game">Remember choices for this game</string>
     <string name="show_chat">Show chat</string>
@@ -580,4 +578,6 @@
     <string name="show_media_playlist_tags">Show media playlist tags</string>
     <string name="show_multivariant_playlist_tags">Show multivariant playlist tags</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
+    <string name="disable_background_video">Disable video rendering in the background</string>
+    <string name="use_background_audio_track">Switch to audio only track in the background</string>
 </resources>
