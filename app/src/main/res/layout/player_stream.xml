@@ -37,7 +37,6 @@
     </LinearLayout>
 
     <LinearLayout style="@style/PlayerBotLeftPanel">
-
         <ImageButton
             style="@style/PlayerRestart"
             tools:visibility="visible" />

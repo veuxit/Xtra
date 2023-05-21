@@ -167,7 +167,6 @@
     <string name="speed1">Normal</string>
     <string name="saved_value">Valor guardado</string>
     <string name="player_volumebutton">Mostrar botón de volumen</string>
-    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Transmisión anterior</string>
     <string name="video_type_highlight">Destacado</string>
     <string name="video_type_upload">Subida</string>
@@ -562,4 +561,5 @@
     <string name="use_gamepager">Utilizar el diseño de pestañas para la página de Juegos</string>
     <string name="disable_background_video">Desactivar la renderización de vídeo en segundo plano</string>
     <string name="use_background_audio_track">Cambiar a sólo audio en segundo plano</string>
+    <string name="show_audio_compressor_button">Show audio compressor button</string>
 </resources>

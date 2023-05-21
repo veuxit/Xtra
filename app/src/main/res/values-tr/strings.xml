@@ -167,7 +167,6 @@
     <string name="speed1">Normal</string>
     <string name="saved_value">Kaydedilen değer</string>
     <string name="player_volumebutton">Ses düğmesini göster</string>
-    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Geçmiş yayın</string>
     <string name="video_type_highlight">Vurgu</string>
     <string name="video_type_upload">Yükleme</string>
@@ -562,4 +561,5 @@
     <string name="use_gamepager">Oyun sayfası için sekmeler düzenini kullan</string>
     <string name="disable_background_video">Disable video rendering in the background</string>
     <string name="use_background_audio_track">Switch to audio only track in the background</string>
+    <string name="show_audio_compressor_button">Show audio compressor button</string>
 </resources>
