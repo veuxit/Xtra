@@ -211,7 +211,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT < Build.VERSION_CODES.S && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0" && playerFragment?.enterPictureInPicture() == true) {
             try {
                 enterPictureInPictureMode(PictureInPictureParams.Builder().build())
@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         supportFragmentManager.beginTransaction()
                 .replace(R.id.playerContainer, fragment).commit()
         viewModel.onPlayerStarted()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
             setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
         }
     }
@@ -356,7 +356,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 .commit()
         playerFragment = null
         viewModel.onPlayerClosed()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
         }
     }
