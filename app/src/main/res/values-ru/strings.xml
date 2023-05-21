@@ -167,7 +167,6 @@
     <string name="speed1">Обычная</string>
     <string name="saved_value">Сохранённое значение</string>
     <string name="player_volumebutton">Кнопка громкости</string>
-    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Прошедшая трансляция</string>
     <string name="video_type_highlight">Яркий момент</string>
     <string name="video_type_upload">Отправлено</string>
@@ -562,4 +561,5 @@
     <string name="use_gamepager">Вкладки на странице игр</string>
     <string name="disable_background_video">Disable video rendering in the background</string>
     <string name="use_background_audio_track">Switch to audio only track in the background</string>
+    <string name="show_audio_compressor_button">Show audio compressor button</string>
 </resources>

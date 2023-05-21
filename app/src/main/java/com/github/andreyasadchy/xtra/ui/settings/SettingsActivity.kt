@@ -297,6 +297,10 @@ class SettingsActivity : AppCompatActivity() {
     class PlayerButtonSettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.player_button_preferences, rootKey)
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                findPreference<SwitchPreferenceCompat>(C.PLAYER_AUDIO_COMPRESSOR_BUTTON)?.isVisible = false
+            }
         }
     }
 

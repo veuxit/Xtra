@@ -165,7 +165,6 @@
     <string name="speed1">Normal</string>
     <string name="saved_value">Simpan nilai</string>
     <string name="player_volumebutton">Tampilkan tombol volume</string>
-    <string name="player_audiocompressorbutton">Show audio compressor button (Android >= 9)</string>
     <string name="video_type_archive">Siaran terakhir</string>
     <string name="video_type_highlight">Sorotan</string>
     <string name="video_type_upload">Unggahan</string>
@@ -562,4 +561,5 @@
     <string name="use_gamepager">Use tabs layout for game page</string>
     <string name="disable_background_video">Disable video rendering in the background</string>
     <string name="use_background_audio_track">Switch to audio only track in the background</string>
+    <string name="show_audio_compressor_button">Show audio compressor button</string>
 </resources>
