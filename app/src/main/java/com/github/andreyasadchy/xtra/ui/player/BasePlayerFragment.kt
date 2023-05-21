@@ -284,6 +284,22 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR_BUTTON, false)) {
+            view.findViewById<ImageButton>(R.id.playerAudioCompressor)?.apply {
+                visible()
+                setImageResource(if (prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR, false)) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
+                setOnClickListener {
+                    player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_DYNAMICS_PROCESSING, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                        result.addListener({
+                            if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                val state = result.get().extras.getBoolean(PlaybackService.RESULT)
+                                setImageResource(if (state) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
+                            }
+                        }, MoreExecutors.directExecutor())
+                    }
+                }
+            }
+        }
         if (this is StreamPlayerFragment) {
             if (!Account.get(activity).login.isNullOrBlank() && (!Account.get(activity).gqlToken.isNullOrBlank() || !Account.get(activity).helixToken.isNullOrBlank())) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {

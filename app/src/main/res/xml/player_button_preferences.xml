@@ -87,6 +87,12 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="player_audio_compressor_button"
+        android:title="@string/show_audio_compressor_button"
+        android:icon="@drawable/baseline_audio_compressor_on_24dp" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:key="player_mode"
         android:title="@string/show_player_mode"
         android:icon="@drawable/baseline_audiotrack_black_24" />
