@@ -87,8 +87,8 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
-        android:key="player_audiocompressorbutton"
-        android:title="@string/player_audiocompressorbutton"
+        android:key="player_audio_compressor_button"
+        android:title="@string/show_audio_compressor_button"
         android:icon="@drawable/baseline_audio_compressor_on_24dp" />
 
     <SwitchPreferenceCompat
