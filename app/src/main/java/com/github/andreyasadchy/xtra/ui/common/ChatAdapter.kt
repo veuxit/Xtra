@@ -34,6 +34,7 @@ import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
 import com.github.andreyasadchy.xtra.model.chat.PubSubPointReward
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
+import com.github.andreyasadchy.xtra.ui.view.chat.CenteredImageSpan
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.Random
 import kotlin.collections.set
@@ -394,7 +395,7 @@ class ChatAdapter(
                         (resource as Animatable).start()
                     }
                     try {
-                        builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
+                        builder.setSpan(CenteredImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
                     } catch (e: IndexOutOfBoundsException) {
                     }
                     holder.bind(originalMessage, builder, userId, channelId, fullMsg)
