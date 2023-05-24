@@ -3,21 +3,24 @@ package com.github.andreyasadchy.xtra.util.chat
 import android.util.Log
 import java.io.*
 import java.net.Socket
-import java.util.*
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import javax.net.ssl.SSLSocketFactory
 
-private const val TAG = "LiveChatThread"
+private const val TAG = "ChatWriteIRC"
 
-class LiveChatThread(
+class ChatWriteIRC(
     private val useSSL: Boolean,
-    private val loggedIn: Boolean,
+    private val userLogin: String?,
+    private val userToken: String?,
     private val channelName: String,
     private val listener: OnMessageReceivedListener) : Thread() {
-    private var socketIn: Socket? = null
-    private lateinit var readerIn: BufferedReader
-    private lateinit var writerIn: BufferedWriter
+    private var socketOut: Socket? = null
+    private lateinit var readerOut: BufferedReader
+    private lateinit var writerOut: BufferedWriter
     private val hashChannelName: String = "#$channelName"
-    var isActive = true
+    private val messageSenderExecutor: Executor = Executors.newSingleThreadExecutor()
+    private var isActive = true
 
     override fun run() {
 
@@ -30,28 +33,22 @@ class LiveChatThread(
             try {
                 connect()
                 while (true) {
-                    val messageIn = readerIn.readLine()!!
-                    messageIn.run {
+                    val messageOut = readerOut.readLine()!!
+                    messageOut.run {
                         when {
-                            contains("PRIVMSG") -> listener.onMessage(this, false)
-                            contains("USERNOTICE") -> listener.onMessage(this, true)
-                            contains("CLEARMSG") -> listener.onClearMessage(this)
-                            contains("CLEARCHAT") -> listener.onClearChat(this)
-                            contains("NOTICE") -> {
-                                if (!loggedIn) {
-                                    listener.onNotice(this)
-                                }
-                            }
-                            contains("ROOMSTATE") -> listener.onRoomState(this)
-                            startsWith("PING") -> handlePing(writerIn)
+                            contains("PRIVMSG") -> {}
+                            contains("USERNOTICE") -> {}
+                            contains("CLEARMSG") -> {}
+                            contains("CLEARCHAT") -> {}
+                            contains("NOTICE") -> listener.onNotice(this)
+                            contains("ROOMSTATE") -> {}
+                            contains("USERSTATE") -> listener.onUserState(this)
+                            startsWith("PING") -> handlePing(writerOut)
                         }
                     }
                 }
             } catch (e: IOException) {
                 Log.d(TAG, "Disconnecting from $hashChannelName")
-                if (e.message != "Socket closed" && e.message != "socket is closed" && e.message != "Connection reset" && e.message != "recvfrom failed: ECONNRESET (Connection reset by peer)") {
-                    listener.onCommand(message = channelName, duration = e.toString(), type = "disconnect", fullMsg = e.stackTraceToString())
-                }
                 close()
                 sleep(1000L)
             } catch (e: Exception) {
@@ -64,16 +61,16 @@ class LiveChatThread(
     private fun connect() {
         Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketIn = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
-                readerIn = BufferedReader(InputStreamReader(getInputStream()))
-                writerIn = BufferedWriter(OutputStreamWriter(getOutputStream()))
+            socketOut = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+                readerOut = BufferedReader(InputStreamReader(getInputStream()))
+                writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
+                write("PASS oauth:$userToken", writerOut)
+                write("NICK $userLogin", writerOut)
             }
-            write("NICK justinfan${Random().nextInt(((9999 - 1000) + 1)) + 1000}", writerIn) //random number between 1000 and 9999
-            write("CAP REQ :twitch.tv/tags twitch.tv/commands", writerIn)
-            write("JOIN $hashChannelName", writerIn)
-            writerIn.flush()
+            write("CAP REQ :twitch.tv/tags twitch.tv/commands", writerOut)
+            write("JOIN $hashChannelName", writerOut)
+            writerOut.flush()
             Log.d(TAG, "Successfully connected to - $hashChannelName")
-            listener.onCommand(message = channelName, duration = null, type = "join", fullMsg = null)
         } catch (e: IOException) {
             Log.e(TAG, "Error connecting to Twitch IRC", e)
             throw e
@@ -93,9 +90,9 @@ class LiveChatThread(
 
     private fun close() {
         try {
-            socketIn?.close()
+            socketOut?.close()
         } catch (e: IOException) {
-            Log.e(TAG, "Error while closing socketIn", e)
+            Log.e(TAG, "Error while closing socketOut", e)
             listener.onCommand(message = e.toString(), duration = null, type = "socket_error", fullMsg = e.stackTraceToString())
         }
     }
@@ -103,6 +100,19 @@ class LiveChatThread(
     @Throws(IOException::class)
     private fun write(message: String, vararg writers: BufferedWriter?) {
         writers.forEach { it?.write(message + System.getProperty("line.separator")) }
+    }
+
+    fun send(message: CharSequence) {
+        messageSenderExecutor.execute {
+            try {
+                write("PRIVMSG $hashChannelName :$message", writerOut)
+                writerOut.flush()
+                Log.d(TAG, "Sent message to $hashChannelName: $message")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending message", e)
+                listener.onCommand(message = e.toString(), duration = null, type = "send_msg_error", fullMsg = e.stackTraceToString())
+            }
+        }
     }
 
     interface OnMessageReceivedListener {

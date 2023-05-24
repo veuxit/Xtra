@@ -562,4 +562,5 @@
     <string name="disable_background_video">Video Rendering im Hintergrund deaktivieren</string>
     <string name="use_background_audio_track">Im Hintergrund zu Nur Ton wechseln</string>
     <string name="show_audio_compressor_button">Ton-Kompressor Button anzeigen</string>
+    <string name="use_websocket">Connect using WebSocket</string>
 </resources>

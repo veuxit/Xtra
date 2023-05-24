@@ -562,4 +562,5 @@
     <string name="disable_background_video">Desactivar la renderización de vídeo en segundo plano</string>
     <string name="use_background_audio_track">Cambiar a sólo audio en segundo plano</string>
     <string name="show_audio_compressor_button">Show audio compressor button</string>
+    <string name="use_websocket">Connect using WebSocket</string>
 </resources>
