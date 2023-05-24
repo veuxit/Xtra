@@ -5,17 +5,11 @@ import android.graphics.Paint
 import android.graphics.Paint.FontMetricsInt
 import android.graphics.drawable.Drawable
 import android.text.style.ImageSpan
-import java.lang.ref.WeakReference
 
 
-class CenteredImageSpan(drawable: Drawable) : ImageSpan(
-    drawable
-) {
-    private var mDrawableRef: WeakReference<Drawable?>? = null
-    override fun getSize(
-        paint: Paint, text: CharSequence?, start: Int, end: Int,
-        fontMetricsInt: FontMetricsInt?
-    ): Int {
+class CenteredImageSpan(drawable: Drawable) : ImageSpan(drawable) {
+
+    override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fontMetricsInt: FontMetricsInt?): Int {
         val drawable = drawable
         val rect = drawable.bounds
         if (fontMetricsInt != null) {
@@ -30,10 +24,8 @@ class CenteredImageSpan(drawable: Drawable) : ImageSpan(
         }
         return rect.right
     }
-    override fun draw(
-        canvas: Canvas, text: CharSequence?, start: Int, end: Int,
-        x: Float, top: Int, y: Int, bottom: Int, paint: Paint
-    ) {
+
+    override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
         val drawable = drawable
         canvas.save()
         val fmPaint = paint.fontMetricsInt
@@ -44,17 +36,4 @@ class CenteredImageSpan(drawable: Drawable) : ImageSpan(
         drawable.draw(canvas)
         canvas.restore()
     }
-
-    // Redefined locally because it is a private member from DynamicDrawableSpan
-    private val cachedDrawable: Drawable?
-        get() {
-            val wr = mDrawableRef
-            var d: Drawable? = null
-            if (wr != null) d = wr.get()
-            if (d == null) {
-                d = drawable
-                mDrawableRef = WeakReference(d)
-            }
-            return d
-        }
 }
