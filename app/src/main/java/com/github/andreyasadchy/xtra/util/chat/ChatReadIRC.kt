@@ -11,9 +11,9 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-private const val TAG = "LiveChatThread"
+private const val TAG = "ChatReadIRC"
 
-class LiveChatThread(
+class ChatReadIRC(
     private val useSSL: Boolean,
     private val loggedIn: Boolean,
     private val channelName: String,

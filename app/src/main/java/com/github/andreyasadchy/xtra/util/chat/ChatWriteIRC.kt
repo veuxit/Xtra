@@ -12,9 +12,9 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-private const val TAG = "LoggedInChatThread"
+private const val TAG = "ChatWriteIRC"
 
-class LoggedInChatThread(
+class ChatWriteIRC(
     private val useSSL: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
@@ -119,7 +119,7 @@ class LoggedInChatThread(
                 write("PRIVMSG $hashChannelName :$message", writerOut)
                 writerOut.flush()
                 Log.d(TAG, "Sent message to $hashChannelName: $message")
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 Log.e(TAG, "Error sending message", e)
                 listener.onCommand(message = e.toString(), duration = null, type = "send_msg_error", fullMsg = e.stackTraceToString())
             }

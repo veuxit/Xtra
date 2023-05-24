@@ -5,13 +5,13 @@ import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import kotlin.collections.set
 
-class MessageListenerImpl(
+class ChatListenerImpl(
     private val callbackMessage: OnChatMessageReceivedListener,
-    private val callback: LiveChatListener,
+    private val callback: ChatCallback,
     private val showUserNotice: Boolean,
     private val showClearMsg: Boolean,
     private val showClearChat: Boolean,
-    private val usePubSub: Boolean) : LiveChatThread.OnMessageReceivedListener, LoggedInChatThread.OnMessageReceivedListener {
+    private val usePubSub: Boolean) : ChatReadIRC.OnMessageReceivedListener, ChatWriteIRC.OnMessageReceivedListener, ChatReadWebSocket.OnMessageReceivedListener, ChatWriteWebSocket.OnMessageReceivedListener {
     
     override fun onMessage(message: String, userNotice: Boolean) {
         if (!userNotice || (userNotice && showUserNotice)) {

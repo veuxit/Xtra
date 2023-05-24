@@ -281,6 +281,12 @@
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="chat_use_websocket"
+        android:title="@string/use_websocket"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="chat_use_ssl"
         android:title="@string/chat_ssl"

@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.util.chat
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
-interface PubSubListener {
+interface PubSubCallback {
     fun onPlaybackMessage(live: Boolean?, viewers: Int?)
     fun onRewardMessage(message: ChatMessage)
     fun onPointsEarned(message: PointsEarned)

@@ -138,6 +138,7 @@ object C {
     const val CHAT_ENABLE_BTTV = "chat_enable_bttv"
     const val CHAT_ENABLE_FFZ = "chat_enable_ffz"
     const val CHAT_DISABLE = "chat_disable"
+    const val CHAT_USE_WEBSOCKET = "chat_use_websocket"
     const val CHAT_USE_SSL = "chat_use_ssl"
     const val CHAT_PUBSUB_ENABLED = "chat_pubsub_enabled"
     const val CHAT_POINTS_COLLECT = "chat_points_collect"
