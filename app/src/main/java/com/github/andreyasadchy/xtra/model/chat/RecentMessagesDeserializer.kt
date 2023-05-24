@@ -5,7 +5,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.MessageListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.ChatListenerImpl
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
@@ -60,7 +60,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
                 val userMessage: String
                 val isAction: Boolean
                 messageInfo.substring(if (messageInfo.substring(msgIndex + 1).startsWith(":")) msgIndex + 2 else msgIndex + 1).let { //from <message>
-                    if (!it.startsWith(MessageListenerImpl.ACTION)) {
+                    if (!it.startsWith(ChatListenerImpl.ACTION)) {
                         userMessage = it
                         isAction = false
                     } else {

@@ -109,6 +109,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val account = Account.get(requireContext())
         val isLoggedIn = !account.login.isNullOrBlank() && (!account.gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank())
         val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
+        val useChatWebSocket = requireContext().prefs().getBoolean(C.CHAT_USE_WEBSOCKET, false)
         val useSSL = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
         val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
         val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
@@ -132,7 +133,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val isLive = args.getBoolean(KEY_IS_LIVE)
         if (!disableChat) {
             if (isLive) {
-                viewModel.startLive(useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlClientId, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, useApiCommands)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlClientId, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, useApiCommands)
             } else {
                 args.getString(KEY_VIDEO_ID).let {
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {

@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 class PubSubListenerImpl(
     private val callbackMessage: OnChatMessageReceivedListener,
-    private val callback: PubSubListener) : PubSubWebSocket.OnMessageReceivedListener {
+    private val callback: PubSubCallback) : PubSubWebSocket.OnMessageReceivedListener {
 
     override fun onPlaybackMessage(text: String) {
         val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null

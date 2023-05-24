@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.util.chat
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 
-interface LiveChatListener {
+interface ChatCallback {
     fun onRewardMessage(message: ChatMessage)
     fun onCommand(list: Command)
     fun onRoomState(list: RoomState)
