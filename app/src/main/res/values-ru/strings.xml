@@ -392,7 +392,7 @@
     <string name="default_follow_tab">Стандартная вкладка отслеживания</string>
     <string name="sleep_timer_lock">Блокировать экран</string>
     <string name="sleep_timer_lock_permissions">Блокировать экран (нужны права админа)</string>
-    <string name="admin_settings">Вкл./откл. права администратора устройства в приложении</string>
+    <string name="admin_settings">Вкл/откл права администратора устройства в приложении</string>
     <string name="disable_chat">Отключить чат</string>
     <string name="disconnected">Отсоединено</string>
     <string name="other">Прочее</string>
@@ -537,7 +537,7 @@
     <string name="keep_screen_on_when_paused">Сохранять экран во время паузы видео</string>
     <string name="stream_proxy">Прокси трансляции</string>
     <string name="stream_proxy_url">Собственный адрес прокси</string>
-    <string name="stream_proxy_url_desc">\"$channel\" будет заменено логином канала</string>
+    <string name="stream_proxy_url_desc">\"$channel\" заменится логином канала</string>
     <string name="streamProxyEntries1">Собственный адрес</string>
     <string name="streamProxyEntries2">TTV.LOL</string>
     <string name="streamProxyEntries3">Подделывать X-Forwarded-For</string>
@@ -559,8 +559,8 @@
     <string name="show_media_playlist_tags">Показать метки плейлиста медиа</string>
     <string name="show_multivariant_playlist_tags">Показать многовариантные метки плейлиста</string>
     <string name="use_gamepager">Вкладки на странице игр</string>
-    <string name="disable_background_video">Disable video rendering in the background</string>
-    <string name="use_background_audio_track">Switch to audio only track in the background</string>
-    <string name="show_audio_compressor_button">Show audio compressor button</string>
-    <string name="use_websocket">Connect using WebSocket</string>
+    <string name="disable_background_video">Не рисовать видео в фоновом режиме</string>
+    <string name="use_background_audio_track">Играть только аудиодорожку в фоновом режиме</string>
+    <string name="show_audio_compressor_button">Показать кнопку компрессора звука</string>
+    <string name="use_websocket">Соединять через WebSocket</string>
 </resources>
