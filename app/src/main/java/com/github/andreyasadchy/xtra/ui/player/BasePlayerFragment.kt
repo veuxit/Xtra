@@ -351,6 +351,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (this !is ClipPlayerFragment) {
             viewModel.sleepTimer.observe(viewLifecycleOwner) {
                 onMinimize()
+                onClose()
                 activity.closePlayer()
                 if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
                     lockScreen()
