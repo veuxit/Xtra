@@ -24,8 +24,8 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
         targetSdk 33
-        versionCode 191
-        versionName "2.18.8"
+        versionCode 192
+        versionName "2.19.0"
         resourceConfigurations += ["ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr"]
     }
 
@@ -89,6 +89,8 @@ dependencies {
     implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11'
 
     implementation "com.apollographql.apollo3:apollo-runtime:$apollo_ver"
+
+    implementation 'com.github.acsbendi:Android-Request-Inspector-WebView:1.0.3'
 
     implementation "androidx.tonyodev.fetch2:xfetch2:$fetch"
     implementation "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:$fetch"

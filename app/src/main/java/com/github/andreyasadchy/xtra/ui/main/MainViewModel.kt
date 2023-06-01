@@ -148,12 +148,4 @@ class MainViewModel @Inject constructor(
         }
         TwitchApiHelper.checkedValidation = true
     }
-
-    fun revoke(clientId: String, token: String) {
-        viewModelScope.launch {
-            try {
-                authRepository.revoke(clientId, token)
-            } catch (e: Exception) {}
-        }
-    }
 }
