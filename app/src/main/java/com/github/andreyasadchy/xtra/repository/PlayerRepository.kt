@@ -111,13 +111,17 @@ class PlayerRepository @Inject constructor(
         ).videoToken
     }
 
-    private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null): MutableMap<String, String> {
-        return gqlHeaders.toMutableMap().apply {
-            if (randomDeviceId != false) {
-                val randomId = UUID.randomUUID().toString().replace("-", "").substring(0, 32) //X-Device-Id or Device-ID removes "commercial break in progress" (length 16 or 32)
-                put("X-Device-Id", randomId)
-            } else {
-                xDeviceId?.let { put("X-Device-Id", it) }
+    private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null): Map<String, String> {
+        return if (XtraApp.INSTANCE.applicationContext.prefs().getBoolean(C.DEBUG_WEBVIEW_INTEGRITY, false)) {
+            gqlHeaders
+        } else {
+            gqlHeaders.toMutableMap().apply {
+                if (randomDeviceId != false) {
+                    val randomId = UUID.randomUUID().toString().replace("-", "").substring(0, 32) //X-Device-Id or Device-ID removes "commercial break in progress" (length 16 or 32)
+                    put("X-Device-Id", randomId)
+                } else {
+                    xDeviceId?.let { put("X-Device-Id", it) }
+                }
             }
         }
     }
