@@ -34,10 +34,10 @@ class StreamPlayerViewModel @Inject constructor(
     var useProxy: Int? = null
     var playingAds = false
 
-    fun load(gqlHeaders: Map<String, String>, gqlToken: String?, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?) {
+    fun load(gqlHeaders: Map<String, String>, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?) {
         viewModelScope.launch {
             try {
-                playerRepository.loadStreamPlaylistUrl(gqlHeaders, gqlToken, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
+                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
             } catch (e: Exception) {
                 null
             }.let { result.postValue(it) }
@@ -46,7 +46,8 @@ class StreamPlayerViewModel @Inject constructor(
 
     fun loadStream(context: Context, stream: Stream) {
         val account = Account.get(context)
-        if (context.prefs().getBoolean(C.CHAT_DISABLE, false) || !context.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (context.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !account.gqlToken.isNullOrBlank())) {
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+        if (context.prefs().getBoolean(C.CHAT_DISABLE, false) || !context.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (context.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank())) {
             viewModelScope.launch {
                 while (isActive) {
                     try {
@@ -55,7 +56,7 @@ class StreamPlayerViewModel @Inject constructor(
                             channelLogin = stream.channelLogin,
                             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                             helixToken = account.helixToken,
-                            gqlHeaders = TwitchApiHelper.getGQLHeaders(context)
+                            gqlHeaders = gqlHeaders
                         ).let {
                             _stream.value?.apply {
                                 if (!it?.id.isNullOrBlank()) {
