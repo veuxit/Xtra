@@ -503,16 +503,16 @@ class ChatViewModel @Inject constructor(
             if (useChatWebSocket) {
                 chatReadWebSocket = TwitchApiHelper.startChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
                 if (isLoggedIn) {
-                    chatWriteWebSocket = TwitchApiHelper.startChatWriteWebSocket(account.login, gqlHeaders[C.HEADER_TOKEN]?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, okHttpClient, viewModelScope, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
+                    chatWriteWebSocket = TwitchApiHelper.startChatWriteWebSocket(account.login, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, okHttpClient, viewModelScope, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
                 }
             } else {
                 chatReadIRC = TwitchApiHelper.startChatReadIRC(useSSL, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
                 if (isLoggedIn) {
-                    chatWriteIRC = TwitchApiHelper.startChatWriteIRC(useSSL, account.login, gqlHeaders[C.HEADER_TOKEN]?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
+                    chatWriteIRC = TwitchApiHelper.startChatWriteIRC(useSSL, account.login, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
                 }
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
-                pubSub = TwitchApiHelper.startPubSub(channelId, account.id, gqlHeaders[C.HEADER_TOKEN], collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this)
+                pubSub = TwitchApiHelper.startPubSub(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this)
             }
         }
 
