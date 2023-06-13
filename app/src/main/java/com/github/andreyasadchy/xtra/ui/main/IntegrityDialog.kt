@@ -10,8 +10,10 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.setFragmentResult
 import com.acsbendi.requestinspectorwebview.RequestInspectorWebViewClient
 import com.acsbendi.requestinspectorwebview.WebViewRequest
 import com.github.andreyasadchy.xtra.databinding.DialogIntegrityBinding
@@ -60,6 +62,7 @@ class IntegrityDialog : DialogFragment() {
                                 }
                             ).toString())
                         }
+                        setFragmentResult("integrity", bundleOf("refresh" to true))
                         dismiss()
                     }
                     return super.shouldInterceptRequest(view, webViewRequest)

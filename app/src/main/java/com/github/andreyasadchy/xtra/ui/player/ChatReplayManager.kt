@@ -23,6 +23,7 @@ class ChatReplayManager @Inject constructor(
     private val currentPosition: () -> Double,
     private val messageListener: OnChatMessageReceivedListener,
     private val clearMessages: () -> Unit,
+    private val getIntegrityToken: () -> Unit,
     private val coroutineScope: CoroutineScope) {
 
     private val timer: Timer
@@ -86,6 +87,9 @@ class ChatReplayManager @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    getIntegrityToken()
+                }
                 isLoading = false
             }
         }
@@ -100,7 +104,9 @@ class ChatReplayManager @Inject constructor(
                     list.addAll(log.data)
                     cursor = if (log.hasNextPage != false) log.cursor else null
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check") {
+                        getIntegrityToken()
+                    }
                 } finally {
                     isLoading = false
                 }

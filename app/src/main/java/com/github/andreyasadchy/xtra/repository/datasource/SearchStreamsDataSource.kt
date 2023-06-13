@@ -18,6 +18,7 @@ class SearchStreamsDataSource(
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
@@ -32,6 +33,7 @@ class SearchStreamsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -39,6 +41,7 @@ class SearchStreamsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -83,11 +86,13 @@ class SearchStreamsDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
-        val get1 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchStreamsQuery(
+        val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchStreamsQuery(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data!!.searchStreams!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.searchStreams!!
         val get = get1.edges!!
         val list = mutableListOf<Stream>()
         for (edge in get) {

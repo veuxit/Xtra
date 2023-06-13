@@ -20,6 +20,7 @@ class StreamsDataSource(
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
@@ -35,6 +36,7 @@ class StreamsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -43,6 +45,7 @@ class StreamsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -51,6 +54,7 @@ class StreamsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -92,11 +96,13 @@ class StreamsDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
-        val get1 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(TopStreamsQuery(
+        val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(TopStreamsQuery(
             tags = Optional.Present(tags),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data!!.streams!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.streams!!
         val get = get1.edges!!
         val list = mutableListOf<Stream>()
         for (i in get) {

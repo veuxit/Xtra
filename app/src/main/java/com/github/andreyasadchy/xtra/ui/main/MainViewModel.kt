@@ -20,6 +20,7 @@ import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.Event
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
@@ -34,6 +35,10 @@ class MainViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val authRepository: AuthRepository,
     private val offlineRepository: OfflineRepository) : ViewModel() {
+
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     private val _isNetworkAvailable = MutableLiveData<Event<Boolean>>()
     val isNetworkAvailable: LiveData<Event<Boolean>>
@@ -83,30 +88,42 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>) {
+    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _video.value = null
         viewModelScope.launch {
             try {
-                repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders)?.let { _video.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _video.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 
-    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>) {
+    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _clip.value = null
         viewModelScope.launch {
             try {
-                repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders)?.let { _clip.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _clip.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 
-    fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>) {
+    fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _user.value = null
         viewModelScope.launch {
             try {
-                repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders)?.let { _user.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)?.let { _user.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 

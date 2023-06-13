@@ -39,6 +39,9 @@ class StreamPlayerViewModel @Inject constructor(
             try {
                 playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
             } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
                 null
             }.let { result.postValue(it) }
         }
@@ -54,6 +57,9 @@ class StreamPlayerViewModel @Inject constructor(
                         updateStream(context, stream)
                         delay(300000L)
                     } catch (e: Exception) {
+                        if (e.message == "failed integrity check") {
+                            _integrity.postValue(true)
+                        }
                         delay(60000L)
                     }
                 }
@@ -63,7 +69,9 @@ class StreamPlayerViewModel @Inject constructor(
                 try {
                     updateStream(context, stream)
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                 }
             }
         }
@@ -77,7 +85,8 @@ class StreamPlayerViewModel @Inject constructor(
             channelLogin = stream.channelLogin,
             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = account.helixToken,
-            gqlHeaders = gqlHeaders
+            gqlHeaders = gqlHeaders,
+            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         ).let {
             _stream.value?.apply {
                 if (!it?.id.isNullOrBlank()) {

@@ -42,6 +42,7 @@ class GameSearchViewModel @Inject constructor(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
                 gqlApi = graphQLRepository,
                 apolloClient = apolloClient,
+                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
                 apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_GAMES, ""), TwitchApiHelper.searchGamesApiDefaults))
         }.flow
     }.cachedIn(viewModelScope)

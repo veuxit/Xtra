@@ -447,32 +447,33 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             })
         }
         tiers.addAll(graphQL.getChannelCheerEmotes(headers, channel).data)
-        val background = (response.config.backgrounds.find { it.asString == "dark" } ?: response.config.backgrounds.last()).asString
-        val scale = response.config.scales
-        val type = (if (animateGifs) {
-            response.config.types.find { it.asJsonObject.get("animation").asString == "animated" } ?: response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
+        val background = (response.config.backgrounds.find { it == "dark" } ?: response.config.backgrounds.lastOrNull())
+        val format = if (animateGifs) {
+            response.config.types.entries.find { it.key == "animated" } ?: response.config.types.entries.find { it.key == "static" }
         } else {
-            response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
-        } ?: response.config.types.first()).asJsonObject
+            response.config.types.entries.find { it.key == "static" }
+        } ?: response.config.types.entries.lastOrNull()
         tiers.forEach { tier ->
-            val item = response.config.colors.find { it.asJsonObject.get("bits").asInt == tier.tierBits }?.asJsonObject
-            if (item != null) {
-                val url = tier.template
-                    .replaceFirst("PREFIX", tier.prefix)
-                    .replaceFirst("BACKGROUND", background)
-                    .replaceFirst("ANIMATION", type.get("animation").asString)
-                    .replaceFirst("TIER", item.get("bits").asString)
-                    .replaceFirst("EXTENSION", type.get("extension").asString)
+            response.config.colors.entries.find { it.key == tier.tierBits }?.let { colorMap ->
+                val url = tier.template.apply {
+                    replaceFirst("PREFIX", tier.prefix)
+                    replaceFirst("TIER", colorMap.key.toString())
+                    background?.let { replaceFirst("BACKGROUND", it) }
+                    format?.let {
+                        replaceFirst("ANIMATION", it.key)
+                        replaceFirst("EXTENSION", it.value)
+                    }
+                }
                 data.add(CheerEmote(
                     name = tier.prefix,
-                    url1x = (scale.find { it.asString.startsWith("1") })?.asString?.let { url.replaceFirst("SCALE", it) } ?: scale.last()?.asString,
-                    url2x = (scale.find { it.asString.startsWith("2") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    url3x = (scale.find { it.asString.startsWith("3") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    url4x = (scale.find { it.asString.startsWith("4") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    type = if (type.get("animation").asString == "animated") "gif" else null,
-                    isAnimated = type.get("animation").asString == "animated",
-                    minBits = item.get("bits").asInt,
-                    color = item.get("color").asString
+                    url1x = url.apply { (response.config.scales.find { it.startsWith("1") } ?: response.config.scales.lastOrNull())?.let { replaceFirst("SCALE", it) } },
+                    url2x = response.config.scales.find { it.startsWith("2") }?.let { url.replaceFirst("SCALE", it) },
+                    url3x = response.config.scales.find { it.startsWith("3") }?.let { url.replaceFirst("SCALE", it) },
+                    url4x = response.config.scales.find { it.startsWith("4") }?.let { url.replaceFirst("SCALE", it) },
+                    type = if (format?.key == "animated") "gif" else null,
+                    isAnimated = format?.key == "animated",
+                    minBits = colorMap.key,
+                    color = colorMap.value
                 ))
             }
         }
@@ -769,7 +770,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getChannelPointsContext(headers, json)
     }
 
-    suspend fun loadClaimPoints(headers: Map<String, String>, channelId: String?, claimId: String?) {
+    suspend fun loadClaimPoints(headers: Map<String, String>, channelId: String?, claimId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -788,7 +789,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getClaimPoints(headers, json)
     }
 
-    suspend fun loadJoinRaid(headers: Map<String, String>, raidId: String?) {
+    suspend fun loadJoinRaid(headers: Map<String, String>, raidId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {

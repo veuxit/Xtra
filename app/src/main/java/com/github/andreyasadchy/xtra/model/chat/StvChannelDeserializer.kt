@@ -11,33 +11,35 @@ class StvChannelDeserializer : JsonDeserializer<StvChannelResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): StvChannelResponse {
         val emotes = mutableListOf<StvEmote>()
-        val dataJson = json.asJsonObject.getAsJsonObject("emote_set").get("emotes").takeIf { it?.isJsonArray == true }?.asJsonArray
-        dataJson?.forEach { emote ->
-            emote.asJsonObject.let { obj ->
-                obj.get("name").asString.let { name ->
-                    val data = obj.getAsJsonObject("data")
-                    val urls = mutableListOf<String>()
-                    val host = data.getAsJsonObject("host")
-                    val template = host.get("url").asString
-                    host.getAsJsonArray("files").forEach { file ->
-                        file.asJsonObject.let { obj ->
-                            obj.get("name").asString.let { name ->
-                                if (!name.contains("avif", true)) {
-                                    urls.add("https:${template}/${name}")
+        json.takeIf { it.isJsonObject }?.asJsonObject?.get("emote_set")?.takeIf { it.isJsonObject }?.asJsonObject?.get("emotes")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { emote ->
+            emote.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
+                obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
+                    obj.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.let { data ->
+                        data.get("host")?.takeIf { it.isJsonObject }?.asJsonObject?.let { host ->
+                            host.get("url")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { template ->
+                                val urls = mutableListOf<String>()
+                                host.get("files")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { file ->
+                                    file.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
+                                        obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
+                                            if (!name.contains("avif", true)) {
+                                                urls.add("https:${template}/${name}")
+                                            }
+                                        }
+                                    }
                                 }
+                                emotes.add(StvEmote(
+                                    name = name,
+                                    url1x = urls.getOrNull(0) ?: "https:${template}/1x.webp",
+                                    url2x = urls.getOrNull(1) ?: if (urls.isEmpty()) "https:${template}/2x.webp" else null,
+                                    url3x = urls.getOrNull(2) ?: if (urls.isEmpty()) "https:${template}/3x.webp" else null,
+                                    url4x = urls.getOrNull(3) ?: if (urls.isEmpty()) "https:${template}/4x.webp" else null,
+                                    type = urls.getOrNull(0)?.substringAfterLast(".") ?: "webp",
+                                    isAnimated = data.get("animated")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean,
+                                    isZeroWidth = obj.get("flags")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isNumber }?.asInt == 1
+                                ))
                             }
                         }
                     }
-                    emotes.add(StvEmote(
-                        name = name,
-                        url1x = if (urls.size >= 1) urls[0] else "https:${template}/1x.webp",
-                        url2x = if (urls.size >= 2) urls[1] else if (urls.isEmpty()) "https:${template}/2x.webp" else null,
-                        url3x = if (urls.size >= 3) urls[2] else if (urls.isEmpty()) "https:${template}/3x.webp" else null,
-                        url4x = if (urls.size >= 4) urls[3] else if (urls.isEmpty()) "https:${template}/4x.webp" else null,
-                        type = if (urls.size >= 1) urls[0].substringAfterLast(".") else "webp",
-                        isAnimated = data.get("animated")?.takeIf { !it.isJsonNull }?.asBoolean,
-                        isZeroWidth = obj.get("flags")?.takeIf { !it.isJsonNull }?.asInt == 1
-                    ))
                 }
             }
         }

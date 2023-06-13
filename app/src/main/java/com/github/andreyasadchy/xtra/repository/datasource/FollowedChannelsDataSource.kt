@@ -40,6 +40,7 @@ class FollowedChannelsDataSource(
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>,
     private val sort: FollowSortEnum,
     private val order: FollowOrderEnum) : PagingSource<Int, User>() {
@@ -65,6 +66,7 @@ class FollowedChannelsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
                             when (apiPref.elementAt(1)?.second) {
                                 C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
@@ -73,6 +75,7 @@ class FollowedChannelsDataSource(
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 when (apiPref.elementAt(2)?.second) {
                                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
@@ -81,6 +84,7 @@ class FollowedChannelsDataSource(
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {
+                                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                                 listOf()
                             }
                         }
@@ -106,7 +110,11 @@ class FollowedChannelsDataSource(
                     }
                     if (allIds.isNotEmpty()) {
                         for (ids in allIds.chunked(100)) {
-                            val get = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute().data?.users
+                            val get1 = apolloClient.newBuilder().apply {
+                                gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
+                            }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute()
+                            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                            val get = get1.data?.users
                             if (get != null) {
                                 for (user in get) {
                                     val item = list.find { it.channelId == user?.id }
@@ -142,6 +150,7 @@ class FollowedChannelsDataSource(
                     }
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 listOf()
             }
             LoadResult.Page(
@@ -170,12 +179,14 @@ class FollowedChannelsDataSource(
     }
 
     private suspend fun gqlQueryLoad(): List<User> {
-        val get1 = apolloClient.newBuilder().apply {
+        val get2 = apolloClient.newBuilder().apply {
             gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
         }.build().query(UserFollowedUsersQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
-        )).execute().data!!.user!!.follows!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.user!!.follows!!
         val get = get1.edges!!
         val list = mutableListOf<User>()
         for (i in get) {
@@ -217,7 +228,11 @@ class FollowedChannelsDataSource(
         }
         if (allIds.isNotEmpty()) {
             for (ids in allIds.chunked(100)) {
-                val get = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute().data?.users
+                val get1 = apolloClient.newBuilder().apply {
+                    gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
+                }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute()
+                get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                val get = get1.data?.users
                 if (get != null) {
                     for (user in get) {
                         val item = list.find { it.channelId == user?.id }

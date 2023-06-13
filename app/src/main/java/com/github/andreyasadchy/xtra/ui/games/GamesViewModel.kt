@@ -39,6 +39,7 @@ class GamesViewModel @Inject constructor(
             tags = args.tags?.toList(),
             gqlApi = graphQLRepository,
             apolloClient = apolloClient,
+            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
             apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAMES, ""), TwitchApiHelper.gamesApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

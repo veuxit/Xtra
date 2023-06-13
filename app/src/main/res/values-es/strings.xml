@@ -572,4 +572,5 @@
     <string name="show_category">Show category</string>
     <string name="get_all_headers">Get all headers</string>
     <string name="gql_headers">GQL headers</string>
+    <string name="use_integrity">Use integrity token</string>
 </resources>

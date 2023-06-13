@@ -139,10 +139,10 @@ interface GraphQLApi {
     suspend fun getChannelPointsContext(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): ChannelPointsContextDataResponse
 
     @POST(".")
-    suspend fun getClaimPoints(@HeaderMap headers: Map<String, String>, @Body json: JsonObject)
+    suspend fun getClaimPoints(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): Response<JsonElement>
 
     @POST(".")
-    suspend fun getJoinRaid(@HeaderMap headers: Map<String, String>, @Body json: JsonObject)
+    suspend fun getJoinRaid(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): Response<JsonElement>
 
     @POST(".")
     suspend fun getUserEmotes(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): UserEmotesDataResponse

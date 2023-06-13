@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.toast
 import com.iheartradio.m3u8.Encoding
@@ -32,6 +33,10 @@ class VideoDownloadViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository
 ) : AndroidViewModel(application) {
+
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     private val _videoInfo = MutableLiveData<VideoDownloadInfo?>()
     val videoInfo: LiveData<VideoDownloadInfo?>
@@ -80,6 +85,9 @@ class VideoDownloadViewModel @Inject constructor(
                     }
                     _videoInfo.postValue(VideoDownloadInfo(video, map, relativeTimes, durations, totalDuration, mediaPlaylist.targetDuration * 1000L, 0))
                 } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                     if (e is IllegalAccessException) {
                         launch(Dispatchers.Main) {
                             val context = getApplication<Application>()

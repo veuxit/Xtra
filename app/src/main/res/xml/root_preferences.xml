@@ -497,6 +497,12 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="enable_integrity"
+        android:title="@string/use_integrity"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
         android:key="use_webview_integrity"
         android:title="@string/get_webview_integrity"
         app:iconSpaceReserved="false"/>

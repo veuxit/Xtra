@@ -208,7 +208,7 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
             if (apiSetting == 1) {
-                if (prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+                if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                     readHeaders()
                     loadUrl("https://www.twitch.tv/login")
                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)
@@ -261,7 +261,7 @@ class LoginActivity : AppCompatActivity() {
 
     private fun loginIfValidUrl(url: String, helixAuthUrl: String, helixClientId: String?, gqlRedirect: String?, gqlClientId: String?, apiSetting: Int): Boolean {
         with(binding) {
-            return if (((apiSetting == 0 && tokens.count() == 1) || apiSetting == 1) && url == gqlRedirect && !prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+            return if (((apiSetting == 0 && tokens.count() == 1) || apiSetting == 1) && url == gqlRedirect && !prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                 lifecycleScope.launch {
                     try {
                         val response = repository.getToken("client_id=${gqlClientId}&device_code=${deviceCode}&grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code".toRequestBody())
@@ -311,7 +311,7 @@ class LoginActivity : AppCompatActivity() {
                                         Account.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken))
                                         if (!gqlToken.isNullOrBlank()) {
                                             prefs().edit {
-                                                if (prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+                                                if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                                     putLong(C.INTEGRITY_EXPIRATION, 0)
                                                     putString(C.GQL_HEADERS, JSONObject(mapOf(
                                                         C.HEADER_CLIENT_ID to gqlClientId,
@@ -340,7 +340,7 @@ class LoginActivity : AppCompatActivity() {
                                     webViewContainer.visible()
                                     progressBar.gone()
                                     if ((prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0) == 1) {
-                                        if (prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+                                        if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                             readHeaders()
                                             webView.loadUrl("https://www.twitch.tv/login")
                                         } else getGqlAuthUrl(gqlClientId, gqlRedirect)
@@ -348,7 +348,7 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             }
                             if (apiSetting == 0 && tokens.count() == 1) {
-                                if (prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+                                if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                     readHeaders()
                                     webView.loadUrl("https://www.twitch.tv/login")
                                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)

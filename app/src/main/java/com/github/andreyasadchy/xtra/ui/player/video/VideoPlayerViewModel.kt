@@ -47,6 +47,9 @@ class VideoPlayerViewModel @Inject constructor(
             try {
                 playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType)
             } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
                 null
             }.let { result.postValue(it) }
         }
@@ -63,6 +66,9 @@ class VideoPlayerViewModel @Inject constructor(
                     val get = repository.loadVideoGames(gqlHeaders, videoId)
                     gamesList.postValue(get)
                 } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                 }
             }
         }
@@ -115,7 +121,11 @@ class VideoPlayerViewModel @Inject constructor(
 
                     }
                 }
-                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.first()
+                val userTypes = try {
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.firstOrNull()
+                } catch (e: Exception) {
+                    null
+                }
                 val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
                 val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
                 bookmarksRepository.saveBookmark(Bookmark(

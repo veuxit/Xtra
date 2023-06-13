@@ -10,6 +10,7 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
@@ -23,6 +24,10 @@ class ClipDownloadViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val offlineRepository: OfflineRepository
 ) : AndroidViewModel(application) {
+
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     private val _qualities = MutableLiveData<Map<String, String>>()
     val qualities: LiveData<Map<String, String>>
@@ -48,7 +53,9 @@ class ClipDownloadViewModel @Inject constructor(
                         }
                         _qualities.postValue(urls)
                     } catch (e: Exception) {
-
+                        if (e.message == "failed integrity check") {
+                            _integrity.postValue(true)
+                        }
                     }
                 }
             } else {
