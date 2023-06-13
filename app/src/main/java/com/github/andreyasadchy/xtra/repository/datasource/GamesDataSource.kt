@@ -17,9 +17,10 @@ class GamesDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Game>() {
     private var api: String? = null
     private var offset: String? = null
@@ -35,6 +36,7 @@ class GamesDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -43,6 +45,7 @@ class GamesDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank() && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -51,6 +54,7 @@ class GamesDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -82,7 +86,7 @@ class GamesDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Game> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryTopGames(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.topgames).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 val tagsArray = JsonArray()
@@ -99,7 +103,7 @@ class GamesDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Game> {
-        val get = gqlApi.loadTopGames(gqlClientId, tags, params.loadSize, offset)
+        val get = gqlApi.loadTopGames(gqlHeaders, tags, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data

@@ -18,7 +18,9 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.Event
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
@@ -33,6 +35,10 @@ class MainViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val authRepository: AuthRepository,
     private val offlineRepository: OfflineRepository) : ViewModel() {
+
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     private val _isNetworkAvailable = MutableLiveData<Event<Boolean>>()
     val isNetworkAvailable: LiveData<Event<Boolean>>
@@ -82,34 +88,46 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _video.value = null
         viewModelScope.launch {
             try {
-                repository.loadVideo(videoId, helixClientId, helixToken, gqlClientId)?.let { _video.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _video.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 
-    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _clip.value = null
         viewModelScope.launch {
             try {
-                repository.loadClip(clipId, helixClientId, helixToken, gqlClientId)?.let { _clip.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _clip.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 
-    fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null) {
+    fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         _user.value = null
         viewModelScope.launch {
             try {
-                repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlClientId = gqlClientId)?.let { _user.postValue(it) }
-            } catch (e: Exception) {}
+                repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)?.let { _user.postValue(it) }
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
+            }
         }
     }
 
-    fun validate(helixClientId: String?, gqlClientId: String?, activity: Activity) {
+    fun validate(helixClientId: String?, gqlHeaders: Map<String, String>, activity: Activity) {
         val account = Account.get(activity)
         if (account is NotValidated) {
             viewModelScope.launch {
@@ -118,23 +136,24 @@ class MainViewModel @Inject constructor(
                         val response = authRepository.validate(TwitchApiHelper.addTokenPrefixHelix(account.helixToken))
                         if (!response?.clientId.isNullOrBlank() && response?.clientId == helixClientId) {
                             if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken))
+                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken))
                             }
                         } else {
                             throw IllegalStateException("401")
                         }
                     }
-                    if (!account.gqlToken.isNullOrBlank()) {
-                        val response = authRepository.validate(TwitchApiHelper.addTokenPrefixGQL(account.gqlToken))
-                        if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlClientId) {
+                    val gqlToken = gqlHeaders[C.HEADER_TOKEN]
+                    if (!gqlToken.isNullOrBlank()) {
+                        val response = authRepository.validate(gqlToken)
+                        if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
                             if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken, account.gqlToken))
+                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken))
                             }
                         } else {
                             throw IllegalStateException("401")
                         }
                     }
-                    if (!account.helixToken.isNullOrBlank() || !account.gqlToken.isNullOrBlank()) {
+                    if (!account.helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
                         Account.validated()
                     }
                 } catch (e: Exception) {
@@ -147,13 +166,5 @@ class MainViewModel @Inject constructor(
             }
         }
         TwitchApiHelper.checkedValidation = true
-    }
-
-    fun revoke(clientId: String, token: String) {
-        viewModelScope.launch {
-            try {
-                authRepository.revoke(clientId, token)
-            } catch (e: Exception) {}
-        }
     }
 }

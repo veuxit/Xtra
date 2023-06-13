@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.channel
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -20,6 +21,8 @@ import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
@@ -35,6 +38,10 @@ class ChannelPagerViewModel @Inject constructor(
     private val bookmarksRepository: BookmarksRepository,
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
+
     private val args = ChannelPagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val follow = MutableLiveData<Pair<Boolean, String?>>()
     private var updatedLocalUser = false
@@ -46,12 +53,16 @@ class ChannelPagerViewModel @Inject constructor(
     val user: MutableLiveData<User?>
         get() = _user
 
-    fun loadStream(helixClientId: String?, helixToken: String?, gqlClientId: String?) {
+    fun loadStream(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (!_stream.isInitialized) {
             viewModelScope.launch {
                 try {
-                    repository.loadUserChannelPage(args.channelId, args.channelLogin, helixClientId, helixToken, gqlClientId)?.let { _stream.postValue(it) }
-                } catch (e: Exception) {}
+                    repository.loadUserChannelPage(args.channelId, args.channelLogin, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _stream.postValue(it) }
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
+                }
             }
         }
     }
@@ -66,9 +77,9 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun retry(helixClientId: String?, helixToken: String?, gqlClientId: String?) {
+    fun retry(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (_stream.value == null) {
-            loadStream(helixClientId, helixToken, gqlClientId)
+            loadStream(helixClientId, helixToken, gqlHeaders, checkIntegrity)
         } else {
             if (_stream.value?.user == null && _user.value == null) {
                 loadUser(helixClientId, helixToken)
@@ -83,11 +94,11 @@ class ChannelPagerViewModel @Inject constructor(
                     val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
                     val account = Account.get(context)
                     val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-                    val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-                    val isFollowing = if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
+                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+                    val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
                             (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
-                            repository.loadUserFollowing(helixClientId, account.helixToken, channelId, account.id, gqlClientId, account.gqlToken, channelLogin)
+                            repository.loadUserFollowing(helixClientId, account.helixToken, channelId, account.id, gqlHeaders, channelLogin)
                         } else false
                     } else {
                         channelId?.let {
@@ -96,7 +107,9 @@ class ChannelPagerViewModel @Inject constructor(
                     }
                     follow.postValue(Pair(isFollowing, null))
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                 }
             }
         }
@@ -105,11 +118,10 @@ class ChannelPagerViewModel @Inject constructor(
     fun saveFollowChannel(context: Context, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val account = Account.get(context)
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             try {
-                if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = repository.followUser(gqlClientId, account.gqlToken, userId)
+                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                    val errorMessage = repository.followUser(gqlHeaders, userId)
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (userId != null) {
@@ -135,7 +147,9 @@ class ChannelPagerViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }
@@ -143,11 +157,10 @@ class ChannelPagerViewModel @Inject constructor(
     fun deleteFollowChannel(context: Context, userId: String?) {
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val account = Account.get(context)
-            val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             try {
-                if (setting == 0 && !account.gqlToken.isNullOrBlank()) {
-                    val errorMessage = repository.unfollowUser(gqlClientId, account.gqlToken, userId)
+                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                    val errorMessage = repository.unfollowUser(gqlHeaders, userId)
                     follow.postValue(Pair(false, errorMessage))
                 } else {
                     if (userId != null) {
@@ -156,7 +169,9 @@ class ChannelPagerViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }

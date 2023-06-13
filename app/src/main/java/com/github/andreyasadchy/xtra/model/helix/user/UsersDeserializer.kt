@@ -12,17 +12,16 @@ class UsersDeserializer : JsonDeserializer<UsersResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): UsersResponse {
         val data = mutableListOf<User>()
-        val dataJson = json.asJsonObject?.getAsJsonArray("data")
-        dataJson?.forEach { item ->
-            item?.asJsonObject?.let { obj ->
+        json.asJsonObject.get("data").asJsonArray.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 data.add(User(
-                    channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    channelLogin = obj.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                    channelName = obj.get("display_name")?.takeIf { !it.isJsonNull }?.asString,
-                    type = obj.get("type")?.takeIf { !it.isJsonNull }?.asString,
-                    broadcasterType = obj.get("broadcaster_type")?.takeIf { !it.isJsonNull }?.asString,
-                    profileImageUrl = obj.get("profile_image_url")?.takeIf { !it.isJsonNull }?.asString,
-                    createdAt = obj.get("created_at")?.takeIf { !it.isJsonNull }?.asString,
+                    channelId = obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    channelLogin = obj.get("login")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    channelName = obj.get("display_name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    type = obj.get("type")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    broadcasterType = obj.get("broadcaster_type")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    profileImageUrl = obj.get("profile_image_url")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    createdAt = obj.get("created_at")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                 ))
             }
         }

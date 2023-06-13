@@ -18,6 +18,7 @@ import com.github.andreyasadchy.xtra.util.chat.PubSubListenerImpl
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import kotlinx.coroutines.CoroutineScope
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import java.lang.Integer.parseInt
 import java.lang.Long.parseLong
 import java.text.ParseException
@@ -289,6 +290,40 @@ object TwitchApiHelper {
         val truncated = count / (divider / 10)
         val hasDecimal = truncated / 10.0 != (truncated / 10).toDouble()
         return if (hasDecimal) "${truncated / 10.0}$suffix" else "${truncated / 10}$suffix"
+    }
+
+    fun getGQLHeaders(context: Context, includeToken: Boolean = false): Map<String, String> {
+        return mutableMapOf<String, String>().apply {
+            if (context.prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
+                context.prefs().getString(C.GQL_HEADERS, null)?.let {
+                    try {
+                        val json = JSONObject(it)
+                        json.keys().forEach { key ->
+                            put(key.lowercase(), json.optString(key))
+                        }
+                    } catch (e: Exception) {
+
+                    }
+                }
+            } else {
+                context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")?.let {
+                    if (it.isNotBlank()) {
+                        put(C.HEADER_CLIENT_ID, it)
+                    }
+                }
+                if (includeToken) {
+                    context.prefs().getString(C.GQL_TOKEN2, null)?.let {
+                        if (it.isNotBlank()) {
+                            put(C.HEADER_TOKEN, addTokenPrefixGQL(it))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun isIntegrityTokenExpired(context: Context): Boolean {
+        return System.currentTimeMillis() >= context.prefs().getLong(C.INTEGRITY_EXPIRATION, 0)
     }
 
     val gamesApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))

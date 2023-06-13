@@ -64,7 +64,6 @@ import com.github.andreyasadchy.xtra.model.query.UsersLastBroadcastQueryResponse
 import com.github.andreyasadchy.xtra.model.query.UsersStreamQueryResponse
 import com.github.andreyasadchy.xtra.model.query.UsersTypeQueryResponse
 import com.github.andreyasadchy.xtra.model.query.VideoQueryResponse
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -80,239 +79,239 @@ private const val TAG = "GraphQLRepository"
 @Singleton
 class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
-    suspend fun loadQueryBadges(clientId: String?, query: String?, variables: JsonObject): BadgesQueryResponse {
+    suspend fun loadQueryBadges(headers: Map<String, String>, query: String?, variables: JsonObject): BadgesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryBadges(clientId, json)
+        return graphQL.getQueryBadges(headers, json)
     }
 
-    suspend fun loadQueryGameBoxArt(clientId: String?, query: String?, variables: JsonObject): GameBoxArtQueryResponse {
+    suspend fun loadQueryGameBoxArt(headers: Map<String, String>, query: String?, variables: JsonObject): GameBoxArtQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryGameBoxArt(clientId, json)
+        return graphQL.getQueryGameBoxArt(headers, json)
     }
 
-    suspend fun loadQueryGameClips(clientId: String?, query: String?, variables: JsonObject): GameClipsQueryResponse {
+    suspend fun loadQueryGameClips(headers: Map<String, String>, query: String?, variables: JsonObject): GameClipsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryGameClips(clientId, json)
+        return graphQL.getQueryGameClips(headers, json)
     }
 
-    suspend fun loadQueryGameStreams(clientId: String?, query: String?, variables: JsonObject): GameStreamsQueryResponse {
+    suspend fun loadQueryGameStreams(headers: Map<String, String>, query: String?, variables: JsonObject): GameStreamsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryGameStreams(clientId, json)
+        return graphQL.getQueryGameStreams(headers, json)
     }
 
-    suspend fun loadQueryGameVideos(clientId: String?, query: String?, variables: JsonObject): GameVideosQueryResponse {
+    suspend fun loadQueryGameVideos(headers: Map<String, String>, query: String?, variables: JsonObject): GameVideosQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryGameVideos(clientId, json)
+        return graphQL.getQueryGameVideos(headers, json)
     }
 
-    suspend fun loadQuerySearchChannels(clientId: String?, query: String?, variables: JsonObject): SearchChannelsQueryResponse {
+    suspend fun loadQuerySearchChannels(headers: Map<String, String>, query: String?, variables: JsonObject): SearchChannelsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQuerySearchChannels(clientId, json)
+        return graphQL.getQuerySearchChannels(headers, json)
     }
 
-    suspend fun loadQuerySearchGames(clientId: String?, query: String?, variables: JsonObject): SearchGamesQueryResponse {
+    suspend fun loadQuerySearchGames(headers: Map<String, String>, query: String?, variables: JsonObject): SearchGamesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQuerySearchGames(clientId, json)
+        return graphQL.getQuerySearchGames(headers, json)
     }
 
-    suspend fun loadQuerySearchStreams(clientId: String?, query: String?, variables: JsonObject): SearchStreamsQueryResponse {
+    suspend fun loadQuerySearchStreams(headers: Map<String, String>, query: String?, variables: JsonObject): SearchStreamsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQuerySearchStreams(clientId, json)
+        return graphQL.getQuerySearchStreams(headers, json)
     }
 
-    suspend fun loadQuerySearchVideos(clientId: String?, query: String?, variables: JsonObject): SearchVideosQueryResponse {
+    suspend fun loadQuerySearchVideos(headers: Map<String, String>, query: String?, variables: JsonObject): SearchVideosQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQuerySearchVideos(clientId, json)
+        return graphQL.getQuerySearchVideos(headers, json)
     }
 
-    suspend fun loadQueryTopGames(clientId: String?, query: String?, variables: JsonObject): TopGamesQueryResponse {
+    suspend fun loadQueryTopGames(headers: Map<String, String>, query: String?, variables: JsonObject): TopGamesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryTopGames(clientId, json)
+        return graphQL.getQueryTopGames(headers, json)
     }
 
-    suspend fun loadQueryTopStreams(clientId: String?, query: String?, variables: JsonObject): TopStreamsQueryResponse {
+    suspend fun loadQueryTopStreams(headers: Map<String, String>, query: String?, variables: JsonObject): TopStreamsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryTopStreams(clientId, json)
+        return graphQL.getQueryTopStreams(headers, json)
     }
 
-    suspend fun loadQueryUser(clientId: String?, query: String?, variables: JsonObject): UserQueryResponse {
+    suspend fun loadQueryUser(headers: Map<String, String>, query: String?, variables: JsonObject): UserQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUser(clientId, json)
+        return graphQL.getQueryUser(headers, json)
     }
 
-    suspend fun loadQueryUserBadges(clientId: String?, query: String?, variables: JsonObject): UserBadgesQueryResponse {
+    suspend fun loadQueryUserBadges(headers: Map<String, String>, query: String?, variables: JsonObject): UserBadgesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserBadges(clientId, json)
+        return graphQL.getQueryUserBadges(headers, json)
     }
 
-    suspend fun loadQueryUserChannelPage(clientId: String?, query: String?, variables: JsonObject): UserChannelPageQueryResponse {
+    suspend fun loadQueryUserChannelPage(headers: Map<String, String>, query: String?, variables: JsonObject): UserChannelPageQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserChannelPage(clientId, json)
+        return graphQL.getQueryUserChannelPage(headers, json)
     }
 
-    suspend fun loadQueryUserCheerEmotes(clientId: String?, query: String?, variables: JsonObject): UserCheerEmotesQueryResponse {
+    suspend fun loadQueryUserCheerEmotes(headers: Map<String, String>, query: String?, variables: JsonObject): UserCheerEmotesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getUserCheerEmotes(clientId, json)
+        return graphQL.getUserCheerEmotes(headers, json)
     }
 
-    suspend fun loadQueryUserClips(clientId: String?, query: String?, variables: JsonObject): UserClipsQueryResponse {
+    suspend fun loadQueryUserClips(headers: Map<String, String>, query: String?, variables: JsonObject): UserClipsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserClips(clientId, json)
+        return graphQL.getQueryUserClips(headers, json)
     }
 
-    suspend fun loadQueryUserEmotes(clientId: String?, token: String?, query: String?, variables: JsonObject): UserEmotesQueryResponse {
+    suspend fun loadQueryUserEmotes(headers: Map<String, String>, query: String?, variables: JsonObject): UserEmotesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserEmotes(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getQueryUserEmotes(headers, json)
     }
 
-    suspend fun loadQueryUserFollowedGames(clientId: String?, token: String?, query: String?, variables: JsonObject): UserFollowedGamesQueryResponse {
+    suspend fun loadQueryUserFollowedGames(headers: Map<String, String>, query: String?, variables: JsonObject): UserFollowedGamesQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserFollowedGames(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getQueryUserFollowedGames(headers, json)
     }
 
-    suspend fun loadQueryUserFollowedStreams(clientId: String?, token: String?, query: String?, variables: JsonObject): UserFollowedStreamsQueryResponse {
+    suspend fun loadQueryUserFollowedStreams(headers: Map<String, String>, query: String?, variables: JsonObject): UserFollowedStreamsQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserFollowedStreams(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getQueryUserFollowedStreams(headers, json)
     }
 
-    suspend fun loadQueryUserFollowedUsers(clientId: String?, token: String?, query: String?, variables: JsonObject): UserFollowedUsersQueryResponse {
+    suspend fun loadQueryUserFollowedUsers(headers: Map<String, String>, query: String?, variables: JsonObject): UserFollowedUsersQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserFollowedUsers(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getQueryUserFollowedUsers(headers, json)
     }
 
-    suspend fun loadQueryUserFollowedVideos(clientId: String?, token: String?, query: String?, variables: JsonObject): UserFollowedVideosQueryResponse {
+    suspend fun loadQueryUserFollowedVideos(headers: Map<String, String>, query: String?, variables: JsonObject): UserFollowedVideosQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserFollowedVideos(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getQueryUserFollowedVideos(headers, json)
     }
 
-    suspend fun loadQueryUserMessageClicked(clientId: String?, query: String?, variables: JsonObject): UserMessageClickedQueryResponse {
+    suspend fun loadQueryUserMessageClicked(headers: Map<String, String>, query: String?, variables: JsonObject): UserMessageClickedQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserMessageClicked(clientId, json)
+        return graphQL.getQueryUserMessageClicked(headers, json)
     }
 
-    suspend fun loadQueryUserVideos(clientId: String?, query: String?, variables: JsonObject): UserVideosQueryResponse {
+    suspend fun loadQueryUserVideos(headers: Map<String, String>, query: String?, variables: JsonObject): UserVideosQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserVideos(clientId, json)
+        return graphQL.getQueryUserVideos(headers, json)
     }
 
-    suspend fun loadQueryUsersLastBroadcast(clientId: String?, query: String?, variables: JsonObject): UsersLastBroadcastQueryResponse {
+    suspend fun loadQueryUsersLastBroadcast(headers: Map<String, String>, query: String?, variables: JsonObject): UsersLastBroadcastQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUsersLastBroadcast(clientId, json)
+        return graphQL.getQueryUsersLastBroadcast(headers, json)
     }
 
-    suspend fun loadQueryUsersStream(clientId: String?, query: String?, variables: JsonObject): UsersStreamQueryResponse {
+    suspend fun loadQueryUsersStream(headers: Map<String, String>, query: String?, variables: JsonObject): UsersStreamQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUsersStream(clientId, json)
+        return graphQL.getQueryUsersStream(headers, json)
     }
 
-    suspend fun loadQueryUsersType(clientId: String?, query: String?, variables: JsonObject): UsersTypeQueryResponse {
+    suspend fun loadQueryUsersType(headers: Map<String, String>, query: String?, variables: JsonObject): UsersTypeQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUsersType(clientId, json)
+        return graphQL.getQueryUsersType(headers, json)
     }
 
-    suspend fun loadQueryVideo(clientId: String?, query: String?, variables: JsonObject): VideoQueryResponse {
+    suspend fun loadQueryVideo(headers: Map<String, String>, query: String?, variables: JsonObject): VideoQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryVideo(clientId, json)
+        return graphQL.getQueryVideo(headers, json)
     }
 
-    suspend fun loadQueryUserResultID(clientId: String?, query: String?, variables: JsonObject): UserResultIDQueryResponse {
+    suspend fun loadQueryUserResultID(headers: Map<String, String>, query: String?, variables: JsonObject): UserResultIDQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserResultID(clientId, json)
+        return graphQL.getQueryUserResultID(headers, json)
     }
 
-    suspend fun loadQueryUserResultLogin(clientId: String?, query: String?, variables: JsonObject): UserResultLoginQueryResponse {
+    suspend fun loadQueryUserResultLogin(headers: Map<String, String>, query: String?, variables: JsonObject): UserResultLoginQueryResponse {
         val json = JsonObject().apply {
             add("variables", variables)
             addProperty("query", query)
         }
-        return graphQL.getQueryUserResultLogin(clientId, json)
+        return graphQL.getQueryUserResultLogin(headers, json)
     }
 
-    suspend fun loadPlaybackAccessToken(clientId: String?, headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
+    suspend fun loadPlaybackAccessToken(headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -329,10 +328,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("playerType", playerType)
             })
         }
-        return graphQL.getPlaybackAccessToken(clientId, headers, json)
+        return graphQL.getPlaybackAccessToken(headers, json)
     }
 
-    suspend fun loadClipUrls(clientId: String?, slug: String?): Map<String, String>? = withContext(Dispatchers.IO) {
+    suspend fun loadClipUrls(headers: Map<String, String>, slug: String?): Map<String, String>? = withContext(Dispatchers.IO) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -345,7 +344,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("slug", slug)
             })
         }
-        val response = graphQL.getClipUrls(clientId, json)
+        val response = graphQL.getClipUrls(headers, json)
         response.body()?.data?.withIndex()?.associateBy({
             if (!it.value.quality.isNullOrBlank()) {
                 if ((it.value.frameRate ?: 0) < 60) {
@@ -359,7 +358,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         }, { it.value.url })
     }
 
-    suspend fun loadClipData(clientId: String?, slug: String?): ClipDataResponse {
+    suspend fun loadClipData(headers: Map<String, String>, slug: String?): ClipDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -372,10 +371,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("clipSlug", slug)
             })
         }
-        return graphQL.getClipData(clientId, json)
+        return graphQL.getClipData(headers, json)
     }
 
-    suspend fun loadClipVideo(clientId: String?, slug: String?): ClipVideoResponse {
+    suspend fun loadClipVideo(headers: Map<String, String>, slug: String?): ClipVideoResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -388,10 +387,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("clipSlug", slug)
             })
         }
-        return graphQL.getClipVideo(clientId, json)
+        return graphQL.getClipVideo(headers, json)
     }
 
-    suspend fun loadTopGames(clientId: String?, tags: List<String>?, limit: Int?, cursor: String?): GameDataResponse {
+    suspend fun loadTopGames(headers: Map<String, String>, tags: List<String>?, limit: Int?, cursor: String?): GameDataResponse {
         val array = JsonArray()
         if (tags != null) {
             for (i in tags) {
@@ -415,10 +414,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getTopGames(clientId, json)
+        return graphQL.getTopGames(headers, json)
     }
 
-    suspend fun loadTopStreams(clientId: String?, tags: List<String>?, limit: Int?, cursor: String?): StreamsDataResponse {
+    suspend fun loadTopStreams(headers: Map<String, String>, tags: List<String>?, limit: Int?, cursor: String?): StreamsDataResponse {
         val array = JsonArray()
         if (tags != null) {
             for (i in tags) {
@@ -444,10 +443,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getTopStreams(clientId, json)
+        return graphQL.getTopStreams(headers, json)
     }
 
-    suspend fun loadGameStreams(clientId: String?, gameName: String?, sort: String?, tags: List<String>?, limit: Int?, cursor: String?): GameStreamsDataResponse {
+    suspend fun loadGameStreams(headers: Map<String, String>, gameName: String?, sort: String?, tags: List<String>?, limit: Int?, cursor: String?): GameStreamsDataResponse {
         val array = JsonArray()
         if (tags != null) {
             for (i in tags) {
@@ -473,10 +472,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getGameStreams(clientId, json)
+        return graphQL.getGameStreams(headers, json)
     }
 
-    suspend fun loadGameVideos(clientId: String?, gameName: String?, type: String?, sort: String?, limit: Int?, cursor: String?): GameVideosDataResponse {
+    suspend fun loadGameVideos(headers: Map<String, String>, gameName: String?, type: String?, sort: String?, limit: Int?, cursor: String?): GameVideosDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -495,10 +494,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("videoSort", sort)
             })
         }
-        return graphQL.getGameVideos(clientId, json)
+        return graphQL.getGameVideos(headers, json)
     }
 
-    suspend fun loadGameClips(clientId: String?, gameName: String?, sort: String?, limit: Int?, cursor: String?): GameClipsDataResponse {
+    suspend fun loadGameClips(headers: Map<String, String>, gameName: String?, sort: String?, limit: Int?, cursor: String?): GameClipsDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -516,10 +515,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("limit", limit)
             })
         }
-        return graphQL.getGameClips(clientId, json)
+        return graphQL.getGameClips(headers, json)
     }
 
-    suspend fun loadChannelVideos(clientId: String?, channelLogin: String?, type: String?, sort: String?, limit: Int?, cursor: String?): ChannelVideosDataResponse {
+    suspend fun loadChannelVideos(headers: Map<String, String>, channelLogin: String?, type: String?, sort: String?, limit: Int?, cursor: String?): ChannelVideosDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -536,10 +535,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("videoSort", sort)
             })
         }
-        return graphQL.getChannelVideos(clientId, json)
+        return graphQL.getChannelVideos(headers, json)
     }
 
-    suspend fun loadChannelClips(clientId: String?, channelLogin: String?, sort: String?, limit: Int?, cursor: String?): ChannelClipsDataResponse {
+    suspend fun loadChannelClips(headers: Map<String, String>, channelLogin: String?, sort: String?, limit: Int?, cursor: String?): ChannelClipsDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -557,10 +556,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("limit", limit)
             })
         }
-        return graphQL.getChannelClips(clientId, json)
+        return graphQL.getChannelClips(headers, json)
     }
 
-    suspend fun loadSearchChannels(clientId: String?, query: String?, cursor: String?): SearchChannelDataResponse {
+    suspend fun loadSearchChannels(headers: Map<String, String>, query: String?, cursor: String?): SearchChannelDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -581,10 +580,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("query", query)
             })
         }
-        return graphQL.getSearchChannels(clientId, json)
+        return graphQL.getSearchChannels(headers, json)
     }
 
-    suspend fun loadSearchGames(clientId: String?, query: String?, cursor: String?): SearchGameDataResponse {
+    suspend fun loadSearchGames(headers: Map<String, String>, query: String?, cursor: String?): SearchGameDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -605,10 +604,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("query", query)
             })
         }
-        return graphQL.getSearchGames(clientId, json)
+        return graphQL.getSearchGames(headers, json)
     }
 
-    suspend fun loadSearchVideos(clientId: String?, query: String?, cursor: String?): SearchVideosDataResponse {
+    suspend fun loadSearchVideos(headers: Map<String, String>, query: String?, cursor: String?): SearchVideosDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -629,10 +628,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("query", query)
             })
         }
-        return graphQL.getSearchVideos(clientId, json)
+        return graphQL.getSearchVideos(headers, json)
     }
 
-    suspend fun loadFreeformTags(clientId: String?, query: String?, limit: Int?): FreeformTagDataResponse {
+    suspend fun loadFreeformTags(headers: Map<String, String>, query: String?, limit: Int?): FreeformTagDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -646,10 +645,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("userQuery", query ?: "")
             })
         }
-        return graphQL.getFreeformTags(clientId, json)
+        return graphQL.getFreeformTags(headers, json)
     }
 
-    suspend fun loadGameTags(clientId: String?, query: String?, limit: Int?): TagGameDataResponse {
+    suspend fun loadGameTags(headers: Map<String, String>, query: String?, limit: Int?): TagGameDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -663,10 +662,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("userQuery", query ?: "")
             })
         }
-        return graphQL.getGameTags(clientId, json)
+        return graphQL.getGameTags(headers, json)
     }
 
-    suspend fun loadChatBadges(clientId: String?, channelLogin: String?): ChatBadgesDataResponse {
+    suspend fun loadChatBadges(headers: Map<String, String>, channelLogin: String?): ChatBadgesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -679,10 +678,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("channelLogin", channelLogin)
             })
         }
-        return graphQL.getChatBadges(clientId, json)
+        return graphQL.getChatBadges(headers, json)
     }
 
-    suspend fun loadCheerEmotes(clientId: String?, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> {
+    suspend fun loadCheerEmotes(headers: Map<String, String>, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> {
         val data = mutableListOf<CheerEmote>()
         val tiers = mutableListOf<GlobalCheerEmotesDataResponse.CheerTier>()
         val global = JsonObject().apply {
@@ -694,7 +693,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             })
             addProperty("operationName", "BitsConfigContext_Global")
         }
-        val response = graphQL.getGlobalCheerEmotes(clientId, global)
+        val response = graphQL.getGlobalCheerEmotes(headers, global)
         tiers.addAll(response.tiers)
         val channel = JsonObject().apply {
             add("extensions", JsonObject().apply {
@@ -708,40 +707,41 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("login", channelLogin)
             })
         }
-        tiers.addAll(graphQL.getChannelCheerEmotes(clientId, channel).data)
-        val background = (response.config.backgrounds.find { it.asString == "dark" } ?: response.config.backgrounds.last()).asString
-        val scale = response.config.scales
-        val type = (if (animateGifs) {
-            response.config.types.find { it.asJsonObject.get("animation").asString == "animated" } ?: response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
+        tiers.addAll(graphQL.getChannelCheerEmotes(headers, channel).data)
+        val background = (response.config.backgrounds.find { it == "dark" } ?: response.config.backgrounds.lastOrNull())
+        val format = if (animateGifs) {
+            response.config.types.entries.find { it.key == "animated" } ?: response.config.types.entries.find { it.key == "static" }
         } else {
-            response.config.types.find { it.asJsonObject.get("animation").asString == "static" }
-        } ?: response.config.types.first()).asJsonObject
+            response.config.types.entries.find { it.key == "static" }
+        } ?: response.config.types.entries.lastOrNull()
         tiers.forEach { tier ->
-            val item = response.config.colors.find { it.asJsonObject.get("bits").asInt == tier.tierBits }?.asJsonObject
-            if (item != null) {
-                val url = tier.template
-                    .replaceFirst("PREFIX", tier.prefix)
-                    .replaceFirst("BACKGROUND", background)
-                    .replaceFirst("ANIMATION", type.get("animation").asString)
-                    .replaceFirst("TIER", item.get("bits").asString)
-                    .replaceFirst("EXTENSION", type.get("extension").asString)
+            response.config.colors.entries.find { it.key == tier.tierBits }?.let { colorMap ->
+                val url = tier.template.apply {
+                    replaceFirst("PREFIX", tier.prefix)
+                    replaceFirst("TIER", colorMap.key.toString())
+                    background?.let { replaceFirst("BACKGROUND", it) }
+                    format?.let {
+                        replaceFirst("ANIMATION", it.key)
+                        replaceFirst("EXTENSION", it.value)
+                    }
+                }
                 data.add(CheerEmote(
                     name = tier.prefix,
-                    url1x = (scale.find { it.asString.startsWith("1") })?.asString?.let { url.replaceFirst("SCALE", it) } ?: scale.last()?.asString,
-                    url2x = (scale.find { it.asString.startsWith("2") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    url3x = (scale.find { it.asString.startsWith("3") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    url4x = (scale.find { it.asString.startsWith("4") })?.asString?.let { url.replaceFirst("SCALE", it) },
-                    type = if (type.get("animation").asString == "animated") "gif" else null,
-                    isAnimated = type.get("animation").asString == "animated",
-                    minBits = item.get("bits").asInt,
-                    color = item.get("color").asString
+                    url1x = url.apply { (response.config.scales.find { it.startsWith("1") } ?: response.config.scales.lastOrNull())?.let { replaceFirst("SCALE", it) } },
+                    url2x = response.config.scales.find { it.startsWith("2") }?.let { url.replaceFirst("SCALE", it) },
+                    url3x = response.config.scales.find { it.startsWith("3") }?.let { url.replaceFirst("SCALE", it) },
+                    url4x = response.config.scales.find { it.startsWith("4") }?.let { url.replaceFirst("SCALE", it) },
+                    type = if (format?.key == "animated") "gif" else null,
+                    isAnimated = format?.key == "animated",
+                    minBits = colorMap.key,
+                    color = colorMap.value
                 ))
             }
         }
         return data
     }
 
-    suspend fun loadVideoMessages(clientId: String?, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse {
+    suspend fun loadVideoMessages(headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -756,10 +756,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("videoID", videoId)
             })
         }
-        return graphQL.getVideoMessages(clientId, json)
+        return graphQL.getVideoMessages(headers, json)
     }
 
-    suspend fun loadVideoGames(clientId: String?, videoId: String?): VideoGamesDataResponse {
+    suspend fun loadVideoGames(headers: Map<String, String>, videoId: String?): VideoGamesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -772,10 +772,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("videoID", videoId)
             })
         }
-        return graphQL.getVideoGames(clientId, json)
+        return graphQL.getVideoGames(headers, json)
     }
 
-    suspend fun loadChannelViewerList(clientId: String?, channelLogin: String?): ChannelViewerListDataResponse {
+    suspend fun loadChannelViewerList(headers: Map<String, String>, channelLogin: String?): ChannelViewerListDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -788,10 +788,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("login", channelLogin)
             })
         }
-        return graphQL.getChannelViewerList(clientId, json)
+        return graphQL.getChannelViewerList(headers, json)
     }
 
-    suspend fun loadViewerCount(clientId: String?, channelLogin: String?): ViewersDataResponse {
+    suspend fun loadViewerCount(headers: Map<String, String>, channelLogin: String?): ViewersDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -804,10 +804,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("channelLogin", channelLogin)
             })
         }
-        return graphQL.getViewerCount(clientId, json)
+        return graphQL.getViewerCount(headers, json)
     }
 
-    suspend fun loadEmoteCard(clientId: String?, emoteId: String?): EmoteCardResponse {
+    suspend fun loadEmoteCard(headers: Map<String, String>, emoteId: String?): EmoteCardResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -822,10 +822,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("artistEnabled", true)
             })
         }
-        return graphQL.getEmoteCard(clientId, json)
+        return graphQL.getEmoteCard(headers, json)
     }
 
-    suspend fun loadChannelPanel(clientId: String?, channelId: String?): Response<ResponseBody> {
+    suspend fun loadChannelPanel(headers: Map<String, String>, channelId: String?): Response<ResponseBody> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -838,10 +838,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("id", channelId)
             })
         }
-        return graphQL.getChannelPanel(clientId, json)
+        return graphQL.getChannelPanel(headers, json)
     }
 
-    suspend fun loadFollowedStreams(clientId: String?, token: String?, limit: Int?, cursor: String?): FollowedStreamsDataResponse {
+    suspend fun loadFollowedStreams(headers: Map<String, String>, limit: Int?, cursor: String?): FollowedStreamsDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -855,10 +855,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("limit", limit)
             })
         }
-        return graphQL.getFollowedStreams(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowedStreams(headers, json)
     }
 
-    suspend fun loadFollowedVideos(clientId: String?, token: String?, limit: Int?, cursor: String?): FollowedVideosDataResponse {
+    suspend fun loadFollowedVideos(headers: Map<String, String>, limit: Int?, cursor: String?): FollowedVideosDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -872,10 +872,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("limit", limit)
             })
         }
-        return graphQL.getFollowedVideos(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowedVideos(headers, json)
     }
 
-    suspend fun loadFollowedChannels(clientId: String?, token: String?, limit: Int?, cursor: String?): FollowedChannelsDataResponse {
+    suspend fun loadFollowedChannels(headers: Map<String, String>, limit: Int?, cursor: String?): FollowedChannelsDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -890,10 +890,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("order", "DESC")
             })
         }
-        return graphQL.getFollowedChannels(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowedChannels(headers, json)
     }
 
-    suspend fun loadFollowedGames(clientId: String?, token: String?, limit: Int?): FollowedGamesDataResponse {
+    suspend fun loadFollowedGames(headers: Map<String, String>, limit: Int?): FollowedGamesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -907,10 +907,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("type", "ALL")
             })
         }
-        return graphQL.getFollowedGames(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowedGames(headers, json)
     }
 
-    suspend fun loadFollowUser(clientId: String?, token: String?, userId: String?): FollowDataResponse {
+    suspend fun loadFollowUser(headers: Map<String, String>, userId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -926,10 +926,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getFollowUser(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowUser(headers, json)
     }
 
-    suspend fun loadUnfollowUser(clientId: String?, token: String?, userId: String?): FollowDataResponse {
+    suspend fun loadUnfollowUser(headers: Map<String, String>, userId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -944,10 +944,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getUnfollowUser(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getUnfollowUser(headers, json)
     }
 
-    suspend fun loadFollowGame(clientId: String?, token: String?, gameId: String?): FollowDataResponse {
+    suspend fun loadFollowGame(headers: Map<String, String>, gameId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -962,10 +962,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getFollowGame(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowGame(headers, json)
     }
 
-    suspend fun loadUnfollowGame(clientId: String?, token: String?, gameId: String?): FollowDataResponse {
+    suspend fun loadUnfollowGame(headers: Map<String, String>, gameId: String?): FollowDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -980,10 +980,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getUnfollowGame(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getUnfollowGame(headers, json)
     }
 
-    suspend fun loadFollowingUser(clientId: String?, token: String?, userLogin: String?): FollowingUserDataResponse {
+    suspend fun loadFollowingUser(headers: Map<String, String>, userLogin: String?): FollowingUserDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -996,10 +996,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("channelLogin", userLogin)
             })
         }
-        return graphQL.getFollowingUser(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowingUser(headers, json)
     }
 
-    suspend fun loadFollowingGame(clientId: String?, token: String?, gameName: String?): FollowingGameDataResponse {
+    suspend fun loadFollowingGame(headers: Map<String, String>, gameName: String?): FollowingGameDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1012,10 +1012,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("name", gameName)
             })
         }
-        return graphQL.getFollowingGame(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getFollowingGame(headers, json)
     }
 
-    suspend fun loadChannelPointsContext(clientId: String?, token: String?, channelLogin: String?): ChannelPointsContextDataResponse {
+    suspend fun loadChannelPointsContext(headers: Map<String, String>, channelLogin: String?): ChannelPointsContextDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1028,10 +1028,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("channelLogin", channelLogin)
             })
         }
-        return graphQL.getChannelPointsContext(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getChannelPointsContext(headers, json)
     }
 
-    suspend fun loadClaimPoints(clientId: String?, token: String?, channelId: String?, claimId: String?) {
+    suspend fun loadClaimPoints(headers: Map<String, String>, channelId: String?, claimId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1047,10 +1047,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getClaimPoints(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getClaimPoints(headers, json)
     }
 
-    suspend fun loadJoinRaid(clientId: String?, token: String?, raidId: String?) {
+    suspend fun loadJoinRaid(headers: Map<String, String>, raidId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1065,10 +1065,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.getJoinRaid(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getJoinRaid(headers, json)
     }
 
-    suspend fun loadUserEmotes(clientId: String?, token: String?, channelId: String?): UserEmotesDataResponse {
+    suspend fun loadUserEmotes(headers: Map<String, String>, channelId: String?): UserEmotesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1082,10 +1082,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("withOwner", true)
             })
         }
-        return graphQL.getUserEmotes(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.getUserEmotes(headers, json)
     }
 
-    suspend fun sendAnnouncement(clientId: String?, token: String?, channelId: String?, message: String?, color: String?): Response<JsonElement> {
+    suspend fun sendAnnouncement(headers: Map<String, String>, channelId: String?, message: String?, color: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1102,10 +1102,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.sendAnnouncement(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.sendAnnouncement(headers, json)
     }
 
-    suspend fun banUser(clientId: String?, token: String?, channelId: String?, targetLogin: String?, duration: String?, reason: String?): Response<JsonElement> {
+    suspend fun banUser(headers: Map<String, String>, channelId: String?, targetLogin: String?, duration: String?, reason: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1123,10 +1123,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.banUser(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.banUser(headers, json)
     }
 
-    suspend fun unbanUser(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+    suspend fun unbanUser(headers: Map<String, String>, channelId: String?, targetLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1142,10 +1142,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.unbanUser(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.unbanUser(headers, json)
     }
 
-    suspend fun updateChatColor(clientId: String?, token: String?, color: String?): Response<JsonElement> {
+    suspend fun updateChatColor(headers: Map<String, String>, color: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1160,10 +1160,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.updateChatColor(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.updateChatColor(headers, json)
     }
 
-    suspend fun createStreamMarker(clientId: String?, token: String?, channelLogin: String?): Response<JsonElement> {
+    suspend fun createStreamMarker(headers: Map<String, String>, channelLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1176,10 +1176,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("channelLogin", channelLogin)
             })
         }
-        return graphQL.createStreamMarker(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.createStreamMarker(headers, json)
     }
 
-    suspend fun getModerators(clientId: String?, channelLogin: String?): Response<ModeratorsDataResponse> {
+    suspend fun getModerators(headers: Map<String, String>, channelLogin: String?): Response<ModeratorsDataResponse> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1192,10 +1192,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("login", channelLogin)
             })
         }
-        return graphQL.getModerators(clientId, json)
+        return graphQL.getModerators(headers, json)
     }
 
-    suspend fun addModerator(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+    suspend fun addModerator(headers: Map<String, String>, channelId: String?, targetLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1211,10 +1211,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.addModerator(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.addModerator(headers, json)
     }
 
-    suspend fun removeModerator(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+    suspend fun removeModerator(headers: Map<String, String>, channelId: String?, targetLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1230,10 +1230,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.removeModerator(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.removeModerator(headers, json)
     }
 
-    suspend fun startRaid(clientId: String?, token: String?, channelId: String?, targetId: String?): Response<JsonElement> {
+    suspend fun startRaid(headers: Map<String, String>, channelId: String?, targetId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1249,10 +1249,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.startRaid(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.startRaid(headers, json)
     }
 
-    suspend fun cancelRaid(clientId: String?, token: String?, channelId: String?): Response<JsonElement> {
+    suspend fun cancelRaid(headers: Map<String, String>, channelId: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1267,10 +1267,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.cancelRaid(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.cancelRaid(headers, json)
     }
 
-    suspend fun getVips(clientId: String?, channelLogin: String?): Response<VipsDataResponse> {
+    suspend fun getVips(headers: Map<String, String>, channelLogin: String?): Response<VipsDataResponse> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1283,10 +1283,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("login", channelLogin)
             })
         }
-        return graphQL.getVips(clientId, json)
+        return graphQL.getVips(headers, json)
     }
 
-    suspend fun addVip(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+    suspend fun addVip(headers: Map<String, String>, channelId: String?, targetLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1302,10 +1302,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.addVip(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.addVip(headers, json)
     }
 
-    suspend fun removeVip(clientId: String?, token: String?, channelId: String?, targetLogin: String?): Response<JsonElement> {
+    suspend fun removeVip(headers: Map<String, String>, channelId: String?, targetLogin: String?): Response<JsonElement> {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
@@ -1321,6 +1321,6 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 })
             })
         }
-        return graphQL.removeVip(clientId, token?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, json)
+        return graphQL.removeVip(headers, json)
     }
 }

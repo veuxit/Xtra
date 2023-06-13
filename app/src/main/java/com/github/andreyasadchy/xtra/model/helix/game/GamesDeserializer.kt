@@ -12,14 +12,13 @@ class GamesDeserializer : JsonDeserializer<GamesResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): GamesResponse {
         val data = mutableListOf<Game>()
-        val dataJson = json.asJsonObject?.getAsJsonArray("data")
-        val cursor = json.asJsonObject?.get("pagination")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
-        dataJson?.forEach { item ->
-            item?.asJsonObject?.let { obj ->
+        val cursor = json.takeIf { it.isJsonObject }?.asJsonObject?.get("pagination")?.takeIf { it.isJsonObject }?.asJsonObject?.get("cursor")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+        json.asJsonObject.get("data").asJsonArray.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 data.add(Game(
-                    gameId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    gameName = obj.get("name")?.takeIf { !it.isJsonNull }?.asString,
-                    boxArtUrl = obj.get("box_art_url")?.takeIf { !it.isJsonNull }?.asString,
+                    gameId = obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    gameName = obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    boxArtUrl = obj.get("box_art_url")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                 ))
             }
         }

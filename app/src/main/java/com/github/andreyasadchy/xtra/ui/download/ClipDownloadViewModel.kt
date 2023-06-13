@@ -10,6 +10,7 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
@@ -24,13 +25,17 @@ class ClipDownloadViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository
 ) : AndroidViewModel(application) {
 
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
+
     private val _qualities = MutableLiveData<Map<String, String>>()
     val qualities: LiveData<Map<String, String>>
         get() = _qualities
 
     private lateinit var clip: Clip
 
-    fun init(clientId: String?, clip: Clip, qualities: Map<String, String>?, skipAccessToken: Int) {
+    fun init(gqlHeaders: Map<String, String>, clip: Clip, qualities: Map<String, String>?, skipAccessToken: Int) {
         if (!this::clip.isInitialized) {
             this.clip = clip
             if (qualities.isNullOrEmpty()) {
@@ -40,7 +45,7 @@ class ClipDownloadViewModel @Inject constructor(
                             TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
                         } else {
                             graphQLRepository.loadClipUrls(
-                                clientId = clientId,
+                                headers = gqlHeaders,
                                 slug = clip.id
                             ) ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) {
                                 TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
@@ -48,7 +53,9 @@ class ClipDownloadViewModel @Inject constructor(
                         }
                         _qualities.postValue(urls)
                     } catch (e: Exception) {
-
+                        if (e.message == "failed integrity check") {
+                            _integrity.postValue(true)
+                        }
                     }
                 }
             } else {

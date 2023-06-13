@@ -15,6 +15,7 @@ import com.github.andreyasadchy.xtra.databinding.FragmentViewerListBinding
 import com.github.andreyasadchy.xtra.model.ui.ChannelViewerList
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
@@ -134,10 +135,12 @@ class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepo
             viewerList.value = null
             lifecycleScope.launch {
                 try {
-                    val get = repository.loadChannelViewerList(requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), requireArguments().getString(LOGIN))
+                    val get = repository.loadChannelViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
                     viewerList.postValue(get)
                 } catch (e: Exception) {
-
+                    if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && e.message == "failed integrity check") {
+                        IntegrityDialog.show(childFragmentManager)
+                    }
                 } finally {
                     isLoading = false
                 }

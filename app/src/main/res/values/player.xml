@@ -51,6 +51,16 @@
         <item name="android:background">@android:color/transparent</item>
     </style>
 
+    <style name="PlayerTopLeftChannelSubPanel">
+        <item name="android:id">@id/topLeftChannelSubPanel</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:layout_marginRight">5dp</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
     <style name="PlayerBotRightPanel">
         <item name="android:id">@id/botRightPanel</item>
         <item name="android:layout_width">wrap_content</item>
@@ -153,19 +163,45 @@
     <style name="PlayerChannel" parent="PlayerText">
         <item name="android:id">@id/playerChannel</item>
         <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">30dp</item>
-        <item name="android:layout_marginStart">5dp</item>
-        <item name="android:layout_marginLeft">5dp</item>
-        <item name="android:layout_marginTop">5dp</item>
-        <item name="android:layout_marginEnd">5dp</item>
-        <item name="android:layout_marginRight">5dp</item>
-        <item name="android:gravity">center</item>
+        <item name="android:layout_height">27dp</item>
+        <item name="android:gravity">center_vertical|left</item>
         <item name="android:maxLines">1</item>
         <item name="autoSizeMaxTextSize">20sp</item>
-        <item name="autoSizeMinTextSize">1sp</item>
+        <item name="autoSizeMinTextSize">10sp</item>
         <item name="autoSizeStepGranularity">1sp</item>
         <item name="autoSizeTextType">uniform</item>
+        <item name="android:ellipsize">end</item>
         <item name="android:textSize">20sp</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="PlayerTitle" parent="PlayerText">
+        <item name="android:id">@id/playerTitle</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:gravity">center_vertical|left</item>
+        <item name="android:maxLines">1</item>
+        <item name="autoSizeMaxTextSize">15sp</item>
+        <item name="autoSizeMinTextSize">7sp</item>
+        <item name="autoSizeStepGranularity">1sp</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="PlayerCategory" parent="PlayerText">
+        <item name="android:id">@id/playerCategory</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">15dp</item>
+        <item name="android:gravity">center_vertical|left</item>
+        <item name="android:maxLines">1</item>
+        <item name="autoSizeMaxTextSize">12sp</item>
+        <item name="autoSizeMinTextSize">6sp</item>
+        <item name="autoSizeStepGranularity">1sp</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">12sp</item>
         <item name="android:visibility">gone</item>
     </style>
 

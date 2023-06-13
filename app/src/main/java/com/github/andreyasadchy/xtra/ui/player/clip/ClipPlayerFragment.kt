@@ -22,6 +22,8 @@ import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
+import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlaybackService
@@ -129,6 +131,34 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 }
             }
         }
+        if (!clip.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+            requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
+                visible()
+                text = clip.title
+            }
+        }
+        if (!clip.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+            requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
+                visible()
+                text = clip.gameName
+                setOnClickListener {
+                    findNavController().navigate(
+                        if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                gameId = clip.gameId,
+                                gameName = clip.gameName
+                            )
+                        } else {
+                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                gameId = clip.gameId,
+                                gameName = clip.gameName
+                            )
+                        }
+                    )
+                    slidingLayout.minimize()
+                }
+            }
+        }
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
@@ -182,7 +212,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         clip.let { clip ->
             val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
             if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
-                viewModel.load(prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), clip.id)
+                viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
                 viewModel.result.observe(viewLifecycleOwner) { map ->
                     val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl) } else mapOf()
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(

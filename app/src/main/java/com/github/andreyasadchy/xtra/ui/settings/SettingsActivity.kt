@@ -17,6 +17,7 @@ import androidx.preference.SwitchPreferenceCompat
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
 import com.github.andreyasadchy.xtra.ui.Utils
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.settings.api.DragListFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
@@ -189,6 +190,11 @@ class SettingsActivity : AppCompatActivity() {
 
             findPreference<Preference>("admin_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.DeviceAdminSettings")))
+                true
+            }
+
+            findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
+                IntegrityDialog.show(childFragmentManager)
                 true
             }
         }

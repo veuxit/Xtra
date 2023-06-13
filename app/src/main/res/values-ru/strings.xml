@@ -525,6 +525,8 @@
     <string name="download_limit">Предел одновременных загрузок</string>
     <string name="show_conscrypt_error_toast">Показать сообщение об ошибке Conscrypt</string>
     <string name="followed_only">Только отслеживаемые</string>
+    <string name="api_gql2">ИД клиента GQL 2</string>
+    <string name="api_gql_token2">Токен GQL 2</string>
     <string name="debug_api_commands">Использовать команды API чата</string>
     <string name="skip_video_access_token">Пропустить токен доступа видео</string>
     <string name="skip_clip_access_token">Пропустить токен доступа клипа</string>
@@ -559,8 +561,16 @@
     <string name="show_media_playlist_tags">Показать метки плейлиста медиа</string>
     <string name="show_multivariant_playlist_tags">Показать многовариантные метки плейлиста</string>
     <string name="use_gamepager">Вкладки на странице игр</string>
+    <string name="api_gql_redirect2">GQL redirect url 2</string>
     <string name="disable_background_video">Не рисовать видео в фоновом режиме</string>
     <string name="use_background_audio_track">Играть только аудиодорожку в фоновом режиме</string>
     <string name="show_audio_compressor_button">Показать кнопку компрессора звука</string>
     <string name="use_websocket">Соединять через WebSocket</string>
+    <string name="get_webview_integrity">Получить токен целостности с помощью WebView</string>
+    <string name="get_integrity_token">Получить новый токен целостности</string>
+    <string name="show_title">Показать название</string>
+    <string name="show_category">Показать категорию</string>
+    <string name="get_all_headers">Получить все заголовки</string>
+    <string name="gql_headers">GQL заголовки</string>
+    <string name="use_integrity">Use integrity token</string>
 </resources>

@@ -487,6 +487,17 @@
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="enable_integrity"
+        android:title="@string/use_integrity"
+        app:iconSpaceReserved="false"/>
+
+    <EditTextPreference
+        android:key="gql_headers"
+        android:title="@string/gql_headers"
+        app:iconSpaceReserved="false" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="debug_show_conscrypt_error_toast"
         android:title="@string/show_conscrypt_error_toast"

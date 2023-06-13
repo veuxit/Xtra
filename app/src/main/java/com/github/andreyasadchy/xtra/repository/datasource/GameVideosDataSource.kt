@@ -28,13 +28,14 @@ class GameVideosDataSource(
     private val helixLanguage: String?,
     private val helixSort: VideoSortEnum,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlQueryLanguages: List<String>?,
     private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
     private val gqlType: String?,
     private val gqlSort: String?,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
@@ -50,6 +51,7 @@ class GameVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -58,6 +60,7 @@ class GameVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -66,6 +69,7 @@ class GameVideosDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -117,7 +121,7 @@ class GameVideosDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryGameVideos(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.gamevideos).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", if (!gameId.isNullOrBlank()) gameId else null)
@@ -138,14 +142,20 @@ class GameVideosDataSource(
             })
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
-        return get.data
+        return get.data.onEach {
+            it.gameId = gameId
+            it.gameName = gameName
+        }
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val get = gqlApi.loadGameVideos(gqlClientId, gameName, gqlType, gqlSort, params.loadSize, offset)
+        val get = gqlApi.loadGameVideos(gqlHeaders, gameName, gqlType, gqlSort, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
-        return get.data
+        return get.data.onEach {
+            it.gameId = gameId
+            it.gameName = gameName
+        }
     }
 
     override fun getRefreshKey(state: PagingState<Int, Video>): Int? {

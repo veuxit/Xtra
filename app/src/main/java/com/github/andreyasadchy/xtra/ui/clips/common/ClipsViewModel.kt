@@ -86,10 +86,11 @@ class ClipsViewModel @Inject constructor(
                     started_at = started,
                     ended_at = ended,
                     helixApi = helix,
-                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
                     gqlApi = graphQLRepository,
+                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
                     apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             } else {
                 val langList = mutableListOf<Language>()
@@ -108,11 +109,12 @@ class ClipsViewModel @Inject constructor(
                     started_at = started,
                     ended_at = ended,
                     helixApi = helix,
-                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
                     gqlQueryLanguages = langList.ifEmpty { null },
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
                     gqlApi = graphQLRepository,
+                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
                     apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             }
         }.flow

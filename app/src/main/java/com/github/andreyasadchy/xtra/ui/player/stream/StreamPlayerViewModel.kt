@@ -11,6 +11,7 @@ import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -33,11 +34,14 @@ class StreamPlayerViewModel @Inject constructor(
     var useProxy: Int? = null
     var playingAds = false
 
-    fun load(gqlClientId: String?, gqlToken: String?, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?) {
+    fun load(gqlHeaders: Map<String, String>, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?) {
         viewModelScope.launch {
             try {
-                playerRepository.loadStreamPlaylistUrl(gqlClientId, gqlToken, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
+                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
             } catch (e: Exception) {
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
                 null
             }.let { result.postValue(it) }
         }
@@ -45,31 +49,55 @@ class StreamPlayerViewModel @Inject constructor(
 
     fun loadStream(context: Context, stream: Stream) {
         val account = Account.get(context)
-        if (context.prefs().getBoolean(C.CHAT_DISABLE, false) || !context.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (context.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !account.gqlToken.isNullOrBlank())) {
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+        if (context.prefs().getBoolean(C.CHAT_DISABLE, false) || !context.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (context.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank())) {
             viewModelScope.launch {
                 while (isActive) {
                     try {
-                        val s = repository.loadStream(
-                            channelId = stream.channelId,
-                            channelLogin = stream.channelLogin,
-                            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                            helixToken = account.helixToken,
-                            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
-                        ).let {
-                            _stream.value?.apply {
-                                if (!it?.id.isNullOrBlank()) {
-                                    id = it?.id
-                                }
-                                viewerCount = it?.viewerCount
-                            }
-                        }
-                        _stream.postValue(s)
+                        updateStream(context, stream)
                         delay(300000L)
                     } catch (e: Exception) {
+                        if (e.message == "failed integrity check") {
+                            _integrity.postValue(true)
+                        }
                         delay(60000L)
                     }
                 }
             }
+        } else if (stream.viewerCount == null) {
+            viewModelScope.launch {
+                try {
+                    updateStream(context, stream)
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
+                }
+            }
         }
+    }
+
+    private suspend fun updateStream(context: Context, stream: Stream) {
+        val account = Account.get(context)
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+        val s = repository.loadStream(
+            channelId = stream.channelId,
+            channelLogin = stream.channelLogin,
+            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixToken = account.helixToken,
+            gqlHeaders = gqlHeaders,
+            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+        ).let {
+            _stream.value?.apply {
+                if (!it?.id.isNullOrBlank()) {
+                    id = it?.id
+                }
+                gameId = it?.gameId
+                gameName = it?.gameName
+                title = it?.title
+                viewerCount = it?.viewerCount
+            }
+        }
+        _stream.postValue(s)
     }
 }

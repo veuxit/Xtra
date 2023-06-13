@@ -12,8 +12,9 @@ import com.google.gson.JsonObject
 
 class SearchVideosDataSource(
     private val query: String,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
@@ -28,6 +29,7 @@ class SearchVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
@@ -35,6 +37,7 @@ class SearchVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -54,7 +57,7 @@ class SearchVideosDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQuerySearchVideos(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.searchvideos).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("query", query)
@@ -67,7 +70,7 @@ class SearchVideosDataSource(
     }
 
     private suspend fun gqlLoad(): List<Video> {
-        val get = gqlApi.loadSearchVideos(gqlClientId, query, offset)
+        val get = gqlApi.loadSearchVideos(gqlHeaders, query, offset)
         offset = get.cursor
         return get.data
     }

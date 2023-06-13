@@ -13,19 +13,22 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): VideoMessagesDataResponse {
+        json.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+        }
         val data = mutableListOf<VideoChatMessage>()
-        val dataJson = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("video")?.getAsJsonObject("comments")?.getAsJsonArray("edges")
-        val cursor = dataJson?.lastOrNull()?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
-        val hasNextPage = json.asJsonObject?.getAsJsonObject("data")?.getAsJsonObject("video")?.getAsJsonObject("comments")?.get("pageInfo")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("hasNextPage")?.takeIf { !it.isJsonNull }?.asBoolean
+        val dataJson = json.asJsonObject.get("data").asJsonObject.get("video").asJsonObject.get("comments").asJsonObject.get("edges").asJsonArray
+        val cursor = dataJson?.lastOrNull()?.takeIf { it.isJsonObject }?.asJsonObject?.get("cursor")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+        val hasNextPage = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("video")?.takeIf { it.isJsonObject }?.asJsonObject?.get("comments")?.takeIf { it.isJsonObject }?.asJsonObject?.get("pageInfo")?.takeIf { it.isJsonObject }?.asJsonObject?.get("hasNextPage")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean
         dataJson?.forEach { item ->
-            item.asJsonObject.getAsJsonObject("node")?.let { obj ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.get("node")?.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 val message = StringBuilder()
                 val emotes = mutableListOf<TwitchEmote>()
                 obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("fragments")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { fragmentElement ->
-                    fragmentElement?.takeIf { it.isJsonObject }?.asJsonObject.let { fragment ->
-                        fragment?.get("text")?.takeIf { !it.isJsonNull }?.asString?.let { text ->
+                    fragmentElement.takeIf { it.isJsonObject }?.asJsonObject?.let { fragment ->
+                        fragment.get("text")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { text ->
                             fragment.get("emote")?.takeIf { it.isJsonObject }?.asJsonObject?.let { emote ->
-                                emote.get("emoteID")?.takeIf { !it.isJsonNull }?.asString?.let { id ->
+                                emote.get("emoteID")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { id ->
                                     emotes.add(TwitchEmote(
                                         id = id,
                                         begin = message.codePointCount(0, message.length),
@@ -39,9 +42,9 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
                 }
                 val badges = mutableListOf<Badge>()
                 obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("userBadges")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { badgeElement ->
-                    badgeElement?.takeIf { it.isJsonObject }?.asJsonObject.let { badge ->
-                        badge?.get("setID")?.takeIf { !it.isJsonNull }?.asString?.let { setId ->
-                            badge.get("version")?.takeIf { !it.isJsonNull }?.asString?.let { version ->
+                    badgeElement.takeIf { it.isJsonObject }?.asJsonObject?.let { badge ->
+                        badge.get("setID")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { setId ->
+                            badge.get("version")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { version ->
                                 badges.add(Badge(
                                     setId = setId,
                                     version = version,
@@ -51,13 +54,13 @@ class VideoMessagesDataDeserializer : JsonDeserializer<VideoMessagesDataResponse
                     }
                 }
                 data.add(VideoChatMessage(
-                    id = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    offsetSeconds = obj.get("contentOffsetSeconds")?.takeIf { !it.isJsonNull }?.asInt,
-                    userId = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    userLogin = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { !it.isJsonNull }?.asString,
-                    userName = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { !it.isJsonNull }?.asString,
+                    id = obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    offsetSeconds = obj.get("contentOffsetSeconds")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isNumber }?.asInt,
+                    userId = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    userLogin = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("login")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    userName = obj.get("commenter")?.takeIf { it.isJsonObject }?.asJsonObject?.get("displayName")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                     message = message.toString(),
-                    color = obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("userColor")?.takeIf { !it.isJsonNull }?.asString,
+                    color = obj.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.get("userColor")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                     emotes = emotes,
                     badges = badges,
                     fullMsg = item.toString()

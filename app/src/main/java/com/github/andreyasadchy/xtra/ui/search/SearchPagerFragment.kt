@@ -16,8 +16,10 @@ import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.AlertDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.showKeyboard
@@ -50,6 +52,11 @@ class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResult
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.integrity.observe(viewLifecycleOwner) {
+            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(childFragmentManager)
+            }
+        }
         val activity = requireActivity() as MainActivity
         with(binding.pagerLayout) {
             val adapter = SearchPagerAdapter(this@SearchPagerFragment)
@@ -128,7 +135,7 @@ class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResult
             userResult = Pair(checkedId, result)
             when (resultCode) {
                 UserResultDialog.RESULT_POSITIVE -> {
-                    viewModel.loadUserResult(requireContext().prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"), checkedId, result)
+                    viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
                     viewModel.userResult.observe(viewLifecycleOwner) {
                         if (it != null) {
                             if (!it.first.isNullOrBlank()) {

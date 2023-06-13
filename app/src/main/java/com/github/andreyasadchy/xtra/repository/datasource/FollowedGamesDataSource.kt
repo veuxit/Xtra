@@ -13,9 +13,9 @@ import com.google.gson.JsonObject
 
 class FollowedGamesDataSource(
     private val localFollowsGame: LocalFollowGameRepository,
-    private val gqlClientId: String?,
-    private val gqlToken: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Game>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
@@ -27,18 +27,20 @@ class FollowedGamesDataSource(
                 }
                 val remote = try {
                     when (apiPref.elementAt(0)?.second) {
-                        C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                        C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
+                        C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(1)?.second) {
-                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                            C.GQL -> if (!gqlToken.isNullOrBlank()) gqlLoad() else throw Exception()
+                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -74,8 +76,7 @@ class FollowedGamesDataSource(
     private suspend fun gqlQueryLoad(): List<Game> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserFollowedGames(
-            clientId = gqlClientId,
-            token = gqlToken,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.userfollowedgames).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("first", 100)
@@ -84,7 +85,7 @@ class FollowedGamesDataSource(
     }
 
     private suspend fun gqlLoad(): List<Game> {
-        val get = gqlApi.loadFollowedGames(gqlClientId, gqlToken, 100)
+        val get = gqlApi.loadFollowedGames(gqlHeaders, 100)
         return get.data
     }
 

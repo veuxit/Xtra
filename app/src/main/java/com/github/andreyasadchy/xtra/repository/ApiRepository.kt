@@ -17,6 +17,7 @@ import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.type.BadgeImageSize
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -33,11 +34,11 @@ class ApiRepository @Inject constructor(
     private val gql: GraphQLRepository,
     private val misc: MiscApi) {
 
-    suspend fun loadGameBoxArt(gameId: String, helixClientId: String?, helixToken: String?, gqlClientId: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun loadGameBoxArt(gameId: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>): String? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryGameBoxArt(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.gameboxart).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", gameId)
@@ -51,11 +52,11 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadStream(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
+    suspend fun loadStream(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUsersStream(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.usersstream).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     val idArray = JsonArray()
@@ -66,6 +67,7 @@ class ApiRepository @Inject constructor(
                     add("login", loginArray)
                 }).data.firstOrNull()
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             try {
                 helix.getStreams(
                     clientId = helixClientId,
@@ -74,21 +76,22 @@ class ApiRepository @Inject constructor(
                     logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
                 ).data.firstOrNull()
             } catch (e: Exception) {
-                gql.loadViewerCount(gqlClientId, channelLogin).data
+                gql.loadViewerCount(gqlHeaders, channelLogin).data
             }
         }
     }
 
-    suspend fun loadVideo(videoId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Video? = withContext(Dispatchers.IO) {
+    suspend fun loadVideo(videoId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean = false): Video? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryVideo(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.video).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", videoId)
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             helix.getVideos(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -105,17 +108,18 @@ class ApiRepository @Inject constructor(
         ).data
     }
 
-    suspend fun loadClip(clipId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Clip? = withContext(Dispatchers.IO) {
+    suspend fun loadClip(clipId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Clip? = withContext(Dispatchers.IO) {
         try {
             val user = try {
-                gql.loadClipData(gqlClientId, clipId).data
+                gql.loadClipData(gqlHeaders, clipId).data
             } catch (e: Exception) {
                 null
             }
-            val video = gql.loadClipVideo(gqlClientId, clipId).data
+            val video = gql.loadClipVideo(gqlHeaders, clipId).data
             Clip(id = clipId, channelId = user?.channelId, channelLogin = user?.channelLogin, channelName = user?.channelName,
                 profileImageUrl = user?.profileImageUrl, videoId = video?.videoId, duration = video?.duration, vodOffset = video?.vodOffset ?: user?.vodOffset)
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             helix.getClips(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -124,17 +128,18 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): Stream? = withContext(Dispatchers.IO) {
+    suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserChannelPage(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.userchannelpage).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
                     addProperty("login", if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null)
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             helix.getStreams(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -153,17 +158,18 @@ class ApiRepository @Inject constructor(
         ).data.firstOrNull()
     }
 
-    suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
+    suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUser(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.user).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
                     addProperty("login", if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null)
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             helix.getUsers(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -173,11 +179,11 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserMessageClicked(channelId: String? = null, channelLogin: String? = null, targetId: String?, helixClientId: String?, helixToken: String?, gqlClientId: String?): User? = withContext(Dispatchers.IO) {
+    suspend fun loadUserMessageClicked(channelId: String? = null, channelLogin: String? = null, targetId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserMessageClicked(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.usermessageclicked).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
@@ -185,6 +191,7 @@ class ApiRepository @Inject constructor(
                     addProperty("targetId", targetId)
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             helix.getUsers(
                 clientId = helixClientId,
                 token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -194,11 +201,11 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserTypes(ids: List<String>, helixClientId: String?, helixToken: String?, gqlClientId: String?): List<User>? = withContext(Dispatchers.IO) {
+    suspend fun loadUserTypes(ids: List<String>, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>): List<User>? = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUsersType(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.userstype).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     val idArray = JsonArray()
@@ -216,19 +223,21 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, emoteQuality: String): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryBadges(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.badges).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("quality", (when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}).toString())
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             try {
-                gql.loadChatBadges(gqlClientId, "").global
+                gql.loadChatBadges(gqlHeaders, "").global
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") throw e
                 helix.getGlobalBadges(
                     clientId = helixClientId,
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }
@@ -237,11 +246,11 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, emoteQuality: String): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserBadges(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.userbadges).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
@@ -249,9 +258,11 @@ class ApiRepository @Inject constructor(
                     addProperty("quality", (when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}).toString())
                 }).data
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             try {
-                gql.loadChatBadges(gqlClientId, channelLogin).channel
+                gql.loadChatBadges(gqlHeaders, channelLogin).channel
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") throw e
                 helix.getChannelBadges(
                     clientId = helixClientId,
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
@@ -261,79 +272,68 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, animateGifs: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<CheerEmote>()
             val context = XtraApp.INSTANCE.applicationContext
             val get = gql.loadQueryUserCheerEmotes(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.usercheeremotes).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
                     addProperty("login", if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null)
                 })
-            get.config.let { config ->
-                config.backgrounds.let {
-                    val background = (config.backgrounds.find { it.asString == "dark" } ?: config.backgrounds.last()).asString
-                    config.colors.let {
-                        val colors = config.colors
-                        config.scales.let {
-                            val scale = config.scales
-                            config.types.let {
-                                val type = if (animateGifs) {
-                                    config.types.find { it.animation == "animated" } ?: config.types.find { it.animation == "static" }
-                                } else {
-                                    config.types.find { it.animation == "static" }
-                                } ?: config.types.first()
-                                if (type.animation != null && type.extension != null) {
-                                    get.tiers.forEach { tier ->
-                                        val item = colors.find { it.bits == tier.tierBits }
-                                        if (item?.bits != null) {
-                                            val url = tier.template
-                                                .replaceFirst("PREFIX", tier.prefix.lowercase())
-                                                .replaceFirst("BACKGROUND", background)
-                                                .replaceFirst("ANIMATION", type.animation)
-                                                .replaceFirst("TIER", item.bits.toString())
-                                                .replaceFirst("EXTENSION", type.extension)
-                                            emotes.add(CheerEmote(
-                                                name = tier.prefix,
-                                                url1x = (scale.find { it.asString.startsWith("1") })?.let { url.replaceFirst("SCALE", it.asString) } ?: scale.last().asString,
-                                                url2x = (scale.find { it.asString.startsWith("2") })?.let { url.replaceFirst("SCALE", it.asString) },
-                                                url3x = (scale.find { it.asString.startsWith("3") })?.let { url.replaceFirst("SCALE", it.asString) },
-                                                url4x = (scale.find { it.asString.startsWith("4") })?.let { url.replaceFirst("SCALE", it.asString) },
-                                                type = if (type.animation == "animated") "gif" else null,
-                                                isAnimated = type.animation == "animated",
-                                                minBits = item.bits,
-                                                color = item.color
-                                            ))
-                                        }
-                                    }
-                                }
-                            }
+            val background = (get.config.backgrounds.find { it == "dark" } ?: get.config.backgrounds.lastOrNull())
+            val format = if (animateGifs) {
+                get.config.types.entries.find { it.key == "animated" } ?: get.config.types.entries.find { it.key == "static" }
+            } else {
+                get.config.types.entries.find { it.key == "static" }
+            } ?: get.config.types.entries.lastOrNull()
+            get.tiers.forEach { tier ->
+                get.config.colors.entries.find { it.key == tier.tierBits }?.let { colorMap ->
+                    val url = tier.template.apply {
+                        replaceFirst("PREFIX", tier.prefix)
+                        replaceFirst("TIER", colorMap.key.toString())
+                        background?.let { replaceFirst("BACKGROUND", it) }
+                        format?.let {
+                            replaceFirst("ANIMATION", it.key)
+                            replaceFirst("EXTENSION", it.value)
                         }
                     }
+                    emotes.add(CheerEmote(
+                        name = tier.prefix,
+                        url1x = url.apply { (get.config.scales.find { it.startsWith("1") } ?: get.config.scales.lastOrNull())?.let { replaceFirst("SCALE", it) } },
+                        url2x = get.config.scales.find { it.startsWith("2") }?.let { url.replaceFirst("SCALE", it) },
+                        url3x = get.config.scales.find { it.startsWith("3") }?.let { url.replaceFirst("SCALE", it) },
+                        url4x = get.config.scales.find { it.startsWith("4") }?.let { url.replaceFirst("SCALE", it) },
+                        type = if (format?.key == "animated") "gif" else null,
+                        isAnimated = format?.key == "animated",
+                        minBits = colorMap.key,
+                        color = colorMap.value
+                    ))
                 }
             }
             emotes
         } catch (e: Exception) {
+            if (checkIntegrity && e.message == "failed integrity check") throw e
             try {
-                gql.loadCheerEmotes(gqlClientId, channelLogin, animateGifs)
+                gql.loadCheerEmotes(gqlHeaders, channelLogin, animateGifs)
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") throw e
                 val data = mutableListOf<CheerEmote>()
                 helix.getCheerEmotes(
                     clientId = helixClientId,
                     token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                     userId = channelId
-                ).data.forEach { emote ->
-                    val urls = if (animateGifs) { emote.animated ?: emote.static } else { emote.static }
+                ).data.filter { it.theme == "dark" && if (animateGifs) it.format == "animated" else it.format != "animated" }.forEach { emote ->
                     data.add(CheerEmote(
                         name = emote.name,
-                        url1x = urls?.get("1")?.takeIf { !it.isJsonNull }?.asString,
-                        url2x = urls?.get("2")?.takeIf { !it.isJsonNull }?.asString,
-                        url3x = urls?.get("3")?.takeIf { !it.isJsonNull }?.asString,
-                        url4x = urls?.get("4")?.takeIf { !it.isJsonNull }?.asString,
-                        type = if (urls == emote.animated) "gif" else null,
-                        isAnimated = urls == emote.animated,
+                        url1x = emote.urls["1"],
+                        url2x = emote.urls["2"],
+                        url3x = emote.urls["3"],
+                        url4x = emote.urls["4"],
+                        type = if (emote.format == "animated") "gif" else null,
+                        isAnimated = emote.format == "animated",
                         minBits = emote.minBits,
                         color = emote.color
                     ))
@@ -343,14 +343,14 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadUserEmotes(gqlHeaders: Map<String, String>, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
-            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
+            gql.loadUserEmotes(gqlHeaders, channelId).data
         } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
             val context = XtraApp.INSTANCE.applicationContext
             gql.loadQueryUserEmotes(
-                clientId = gqlClientId,
-                token = gqlToken,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.useremotes).bufferedReader().use { it.readText() },
                 variables = JsonObject()).data
         }
@@ -364,21 +364,21 @@ class ApiRepository @Inject constructor(
             setIds = setIds
         ).data.forEach { emote ->
             val format = (if (animateGifs) {
-                emote.format.find { it.asString == "animated" } ?: emote.format.find { it.asString == "static" }
+                emote.formats.find { it == "animated" } ?: emote.formats.find { it == "static" }
             } else {
-                emote.format.find { it.asString == "static" }
-            } ?: emote.format.first()).asString
-            val theme = (emote.theme.find { it.asString == "dark" } ?: emote.theme.last()).asString
+                emote.formats.find { it == "static" }
+            } ?: emote.formats.first())
+            val theme = (emote.themes.find { it == "dark" } ?: emote.themes.last())
             val url = emote.template
                 .replaceFirst("{{id}}", emote.id)
                 .replaceFirst("{{format}}", format)
                 .replaceFirst("{{theme_mode}}", theme)
             data.add(TwitchEmote(
                 name = emote.name,
-                url1x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
-                url2x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
-                url3x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
-                url4x = url.replaceFirst("{{scale}}", (emote.scale.find { it.asString.startsWith("3") } ?: emote.scale.find { it.asString.startsWith("2") } ?: emote.scale.find { it.asString.startsWith("1") } ?: emote.scale.last()).asString),
+                url1x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
                 type = if (format == "animated") "gif" else null,
                 setId = emote.setId,
                 ownerId = emote.ownerId
@@ -387,9 +387,9 @@ class ApiRepository @Inject constructor(
         data
     }
 
-    suspend fun loadUserFollowing(helixClientId: String?, helixToken: String?, targetId: String?, userId: String?, gqlClientId: String?, gqlToken: String?, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
+    suspend fun loadUserFollowing(helixClientId: String?, helixToken: String?, targetId: String?, userId: String?, gqlHeaders: Map<String, String>, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (!gqlToken.isNullOrBlank()) gql.loadFollowingUser(gqlClientId, gqlToken, targetLogin).following else throw Exception()
+            if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gql.loadFollowingUser(gqlHeaders, targetLogin).following else throw Exception()
         } catch (e: Exception) {
             helix.getUserFollows(
                 clientId = helixClientId,
@@ -400,33 +400,37 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadGameFollowing(gqlClientId: String?, gqlToken: String?, gameName: String?): Boolean = withContext(Dispatchers.IO) {
-        gql.loadFollowingGame(gqlClientId, gqlToken, gameName).following
+    suspend fun loadGameFollowing(gqlHeaders: Map<String, String>, gameName: String?): Boolean = withContext(Dispatchers.IO) {
+        gql.loadFollowingGame(gqlHeaders, gameName).following
     }
 
-    suspend fun loadVideoMessages(gqlClientId: String?, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse = withContext(Dispatchers.IO) {
-        gql.loadVideoMessages(gqlClientId, videoId, offset, cursor)
+    suspend fun loadVideoMessages(gqlHeaders: Map<String, String>, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse = withContext(Dispatchers.IO) {
+        gql.loadVideoMessages(gqlHeaders, videoId, offset, cursor)
     }
 
-    suspend fun loadVideoGames(clientId: String?, videoId: String?): List<Game> = withContext(Dispatchers.IO) {
-        gql.loadVideoGames(clientId, videoId).data
+    suspend fun loadVideoGames(gqlHeaders: Map<String, String>, videoId: String?): List<Game> = withContext(Dispatchers.IO) {
+        gql.loadVideoGames(gqlHeaders, videoId).data
     }
 
-    suspend fun loadChannelViewerList(clientId: String?, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
-        gql.loadChannelViewerList(clientId, channelLogin).data
+    suspend fun loadChannelViewerList(gqlHeaders: Map<String, String>, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
+        gql.loadChannelViewerList(gqlHeaders, channelLogin).data
     }
 
-    suspend fun loadClaimPoints(gqlClientId: String?, gqlToken: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
-        try {
-            val claimId = gql.loadChannelPointsContext(gqlClientId, gqlToken, channelLogin).availableClaimId
-            gql.loadClaimPoints(gqlClientId, gqlToken, channelId, claimId)
-        } catch (e: Exception) {
-
+    suspend fun loadClaimPoints(gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
+        val claimId = gql.loadChannelPointsContext(gqlHeaders, channelLogin).availableClaimId
+        gql.loadClaimPoints(gqlHeaders, channelId, claimId).also { response ->
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+            }
         }
     }
 
-    suspend fun loadJoinRaid(gqlClientId: String?, gqlToken: String?, raidId: String?) = withContext(Dispatchers.IO) {
-        gql.loadJoinRaid(gqlClientId, gqlToken, raidId)
+    suspend fun loadJoinRaid(gqlHeaders: Map<String, String>, raidId: String?) = withContext(Dispatchers.IO) {
+        gql.loadJoinRaid(gqlHeaders, raidId).also { response ->
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+            }
+        }
     }
 
     suspend fun loadMinuteWatched(userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
@@ -460,25 +464,29 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun followUser(gqlClientId: String?, gqlToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowUser(gqlClientId, gqlToken, userId).error
+    suspend fun followUser(gqlHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
+        gql.loadFollowUser(gqlHeaders, userId).error
     }
 
-    suspend fun unfollowUser(gqlClientId: String?, gqlToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowUser(gqlClientId, gqlToken, userId).error
+    suspend fun unfollowUser(gqlHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
+        gql.loadUnfollowUser(gqlHeaders, userId).error
     }
 
-    suspend fun followGame(gqlClientId: String?, gqlToken: String?, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowGame(gqlClientId, gqlToken, gameId).error
+    suspend fun followGame(gqlHeaders: Map<String, String>, gameId: String?): String? = withContext(Dispatchers.IO) {
+        gql.loadFollowGame(gqlHeaders, gameId).error
     }
 
-    suspend fun unfollowGame(gqlClientId: String?, gqlToken: String?, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowGame(gqlClientId, gqlToken, gameId).error
+    suspend fun unfollowGame(gqlHeaders: Map<String, String>, gameId: String?): String? = withContext(Dispatchers.IO) {
+        gql.loadUnfollowGame(gqlHeaders, gameId).error
     }
 
-    suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.sendAnnouncement(gqlClientId, gqlToken, channelId, message, color)
+    suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.sendAnnouncement(gqlHeaders, channelId, message, color).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val json = JsonObject().apply {
                 addProperty("message", message)
@@ -493,9 +501,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun banUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.banUser(gqlClientId, gqlToken, channelId, targetLogin, duration, reason)
+    suspend fun banUser(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.banUser(gqlHeaders, channelId, targetLogin, duration, reason).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -518,9 +530,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun unbanUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.unbanUser(gqlClientId, gqlToken, channelId, targetLogin)
+    suspend fun unbanUser(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.unbanUser(gqlHeaders, channelId, targetLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -545,9 +561,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun updateChatColor(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, color: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.updateChatColor(gqlClientId, gqlToken, color)
+    suspend fun updateChatColor(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, color: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.updateChatColor(gqlHeaders, color).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             helix.updateChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, color)
         }
@@ -561,7 +581,7 @@ class ApiRepository @Inject constructor(
     suspend fun getChatColor(helixClientId: String?, helixToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
         val response = helix.getChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId)
         if (response.isSuccessful) {
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("color")?.takeIf { !it.isJsonNull }?.asString
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("color")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
         } else {
             response.errorBody()?.string()
         }
@@ -574,7 +594,7 @@ class ApiRepository @Inject constructor(
         }
         val response = helix.startCommercial(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
         if (response.isSuccessful) {
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { !it.isJsonNull }?.asString
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
         } else {
             response.errorBody()?.string()
         }
@@ -598,9 +618,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun createStreamMarker(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, gqlToken: String?, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.createStreamMarker(gqlClientId, gqlToken, channelLogin)
+    suspend fun createStreamMarker(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.createStreamMarker(gqlHeaders, channelLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val json = JsonObject().apply {
                 addProperty("user_id", channelId)
@@ -615,8 +639,8 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun getModerators(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, channelLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = gql.getModerators(gqlClientId, channelLogin)
+    suspend fun getModerators(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = gql.getModerators(gqlHeaders, channelLogin)
         //val response = helix.getModerators(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
             response.body()?.data?.map { it.channelLogin }.toString()
@@ -625,9 +649,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun addModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.addModerator(gqlClientId, gqlToken, channelId, targetLogin)
+    suspend fun addModerator(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.addModerator(gqlHeaders, channelId, targetLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -643,9 +671,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun removeModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.removeModerator(gqlClientId, gqlToken, channelId, targetLogin)
+    suspend fun removeModerator(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.removeModerator(gqlHeaders, channelId, targetLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -661,15 +693,20 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun startRaid(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
+    suspend fun startRaid(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, checkIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             val targetId = loadCheckUser(
                 channelLogin = targetLogin,
                 helixClientId = helixClientId,
                 helixToken = helixToken,
-                gqlClientId = gqlClientId
+                gqlHeaders = gqlHeaders,
+                checkIntegrity = checkIntegrity
             )?.channelId
-            gql.startRaid(gqlClientId, gqlToken, channelId, targetId)
+            gql.startRaid(gqlHeaders, channelId, targetId).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -685,9 +722,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun cancelRaid(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.cancelRaid(gqlClientId, gqlToken, channelId)
+    suspend fun cancelRaid(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.cancelRaid(gqlHeaders, channelId).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             helix.cancelRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId)
         }
@@ -698,8 +739,8 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun getVips(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, channelLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = gql.getVips(gqlClientId, channelLogin)
+    suspend fun getVips(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = gql.getVips(gqlHeaders, channelLogin)
         //val response = helix.getVips(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
             response.body()?.data?.map { it.channelLogin }.toString()
@@ -708,9 +749,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun addVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.addVip(gqlClientId, gqlToken, channelId, targetLogin)
+    suspend fun addVip(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.addVip(gqlHeaders, channelId, targetLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -726,9 +771,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun removeVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
-        val response = if (!gqlToken.isNullOrBlank()) {
-            gql.removeVip(gqlClientId, gqlToken, channelId, targetLogin)
+    suspend fun removeVip(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+        val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            gql.removeVip(gqlHeaders, channelId, targetLogin).also { response ->
+                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+                }
+            }
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -761,27 +810,23 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserResult(channelId: String? = null, channelLogin: String? = null, gqlClientId: String?): Pair<String?, String?>? = withContext(Dispatchers.IO) {
-        try {
-            if (!channelId.isNullOrBlank()) {
-                val context = XtraApp.INSTANCE.applicationContext
-                gql.loadQueryUserResultID(
-                    clientId = gqlClientId,
-                    query = context.resources.openRawResource(R.raw.userresultid).bufferedReader().use { it.readText() },
-                    variables = JsonObject().apply {
-                        addProperty("id", channelId)
-                    }).data
-            } else if (!channelLogin.isNullOrBlank()) {
-                val context = XtraApp.INSTANCE.applicationContext
-                gql.loadQueryUserResultLogin(
-                    clientId = gqlClientId,
-                    query = context.resources.openRawResource(R.raw.userresultlogin).bufferedReader().use { it.readText() },
-                    variables = JsonObject().apply {
-                        addProperty("login", channelLogin)
-                    }).data
-            } else null
-        } catch (e: Exception) {
-            null
-        }
+    suspend fun loadUserResult(channelId: String? = null, channelLogin: String? = null, gqlHeaders: Map<String, String>): Pair<String?, String?>? = withContext(Dispatchers.IO) {
+        if (!channelId.isNullOrBlank()) {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserResultID(
+                headers = gqlHeaders,
+                query = context.resources.openRawResource(R.raw.userresultid).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("id", channelId)
+                }).data
+        } else if (!channelLogin.isNullOrBlank()) {
+            val context = XtraApp.INSTANCE.applicationContext
+            gql.loadQueryUserResultLogin(
+                headers = gqlHeaders,
+                query = context.resources.openRawResource(R.raw.userresultlogin).bufferedReader().use { it.readText() },
+                variables = JsonObject().apply {
+                    addProperty("login", channelLogin)
+                }).data
+        } else null
     }
 }

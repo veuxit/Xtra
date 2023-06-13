@@ -20,9 +20,9 @@ class FollowedStreamsDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
-    private val gqlToken: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
@@ -45,6 +45,7 @@ class FollowedStreamsDataSource(
                         try {
                             gqlQueryLocal(localIds)
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 if (!helixToken.isNullOrBlank()) helixLocal(localIds) else throw Exception()
                             } catch (e: Exception) {
@@ -58,27 +59,30 @@ class FollowedStreamsDataSource(
                     val remote = try {
                         when (apiPref.elementAt(0)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                            C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
                             when (apiPref.elementAt(1)?.second) {
                                 C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 when (apiPref.elementAt(2)?.second) {
                                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {
+                                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                                 listOf()
                             }
                         }
@@ -95,6 +99,7 @@ class FollowedStreamsDataSource(
                     list
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 listOf()
             }
             LoadResult.Page(
@@ -137,8 +142,7 @@ class FollowedStreamsDataSource(
     private suspend fun gqlQueryLoad(): List<Stream> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserFollowedStreams(
-            clientId = gqlClientId,
-            token = gqlToken,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.userfollowedstreams).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", userId)
@@ -151,7 +155,7 @@ class FollowedStreamsDataSource(
     }
 
     private suspend fun gqlLoad(): List<Stream> {
-        val get = gqlApi.loadFollowedStreams(gqlClientId, gqlToken, 100, offset)
+        val get = gqlApi.loadFollowedStreams(gqlHeaders, 100, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
@@ -162,7 +166,7 @@ class FollowedStreamsDataSource(
         for (localIds in ids.chunked(100)) {
             val context = XtraApp.INSTANCE.applicationContext
             val get = gqlApi.loadQueryUsersStream(
-                clientId = gqlClientId,
+                headers = gqlHeaders,
                 query = context.resources.openRawResource(R.raw.usersstream).bufferedReader().use { it.readText() },
                 variables = JsonObject().apply {
                     val idArray = JsonArray()

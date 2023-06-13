@@ -25,7 +25,8 @@ import com.github.andreyasadchy.xtra.util.visible
 
 class StreamsCompactAdapter(
     private val fragment: Fragment,
-    private val args: GamePagerFragmentArgs? = null) : PagingDataAdapter<Stream, StreamsCompactAdapter.PagingViewHolder>(
+    private val args: GamePagerFragmentArgs? = null,
+    private val hideGame: Boolean = false) : PagingDataAdapter<Stream, StreamsCompactAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Stream>() {
         override fun areItemsTheSame(oldItem: Stream, newItem: Stream): Boolean =
             oldItem.id == newItem.id
@@ -38,7 +39,7 @@ class StreamsCompactAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PagingViewHolder {
         val binding = FragmentStreamsListItemCompactBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return PagingViewHolder(binding, fragment, args)
+        return PagingViewHolder(binding, fragment, args, hideGame)
     }
 
     override fun onBindViewHolder(holder: PagingViewHolder, position: Int) {
@@ -48,7 +49,8 @@ class StreamsCompactAdapter(
     inner class PagingViewHolder(
         private val binding: FragmentStreamsListItemCompactBinding,
         private val fragment: Fragment,
-        private val args: GamePagerFragmentArgs?): RecyclerView.ViewHolder(binding.root) {
+        private val args: GamePagerFragmentArgs?,
+        private val hideGame: Boolean): RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Stream?) {
             with(binding) {
                 if (item != null) {
@@ -94,11 +96,11 @@ class StreamsCompactAdapter(
                     }
                     if (item.title != null && item.title != "")  {
                         title.visible()
-                        title.text = item.title.trim()
+                        title.text = item.title?.trim()
                     } else {
                         title.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (!hideGame && item.gameName != null)  {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)

@@ -36,9 +36,9 @@ class FollowedChannelsDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
-    private val gqlToken: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>,
     private val sort: FollowSortEnum,
     private val order: FollowOrderEnum) : PagingSource<Int, User>() {
@@ -59,27 +59,30 @@ class FollowedChannelsDataSource(
                     val remote = try {
                         when (apiPref.elementAt(0)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                            C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
                             when (apiPref.elementAt(1)?.second) {
                                 C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 when (apiPref.elementAt(2)?.second) {
                                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlToken.isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
+                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {
+                                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                                 listOf()
                             }
                         }
@@ -107,7 +110,7 @@ class FollowedChannelsDataSource(
                         for (ids in allIds.chunked(100)) {
                             val context = XtraApp.INSTANCE.applicationContext
                             val get = gqlApi.loadQueryUsersLastBroadcast(
-                                clientId = gqlClientId,
+                                headers = gqlHeaders,
                                 query = context.resources.openRawResource(R.raw.userslastbroadcast).bufferedReader().use { it.readText() },
                                 variables = JsonObject().apply {
                                     val idArray = JsonArray()
@@ -149,6 +152,7 @@ class FollowedChannelsDataSource(
                     }
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 listOf()
             }
             LoadResult.Page(
@@ -179,8 +183,7 @@ class FollowedChannelsDataSource(
     private suspend fun gqlQueryLoad(): List<User> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserFollowedUsers(
-            clientId = gqlClientId,
-            token = gqlToken,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.userfollowedusers).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", userId)
@@ -193,7 +196,7 @@ class FollowedChannelsDataSource(
     }
 
     private suspend fun gqlLoad(): List<User> {
-        val get = gqlApi.loadFollowedChannels(gqlClientId, gqlToken, 100, offset)
+        val get = gqlApi.loadFollowedChannels(gqlHeaders, 100, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
@@ -218,7 +221,7 @@ class FollowedChannelsDataSource(
             for (ids in allIds.chunked(100)) {
                 val context = XtraApp.INSTANCE.applicationContext
                 val get = gqlApi.loadQueryUsersLastBroadcast(
-                    clientId = gqlClientId,
+                    headers = gqlHeaders,
                     query = context.resources.openRawResource(R.raw.userslastbroadcast).bufferedReader().use { it.readText() },
                     variables = JsonObject().apply {
                         val idArray = JsonArray()

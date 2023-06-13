@@ -14,11 +14,11 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 
 class FollowedVideosDataSource(
-    private val gqlClientId: String?,
-    private val gqlToken: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
@@ -28,18 +28,20 @@ class FollowedVideosDataSource(
         return try {
             val response = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (!gqlToken.isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.GQL_QUERY -> if (!gqlToken.isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (!gqlToken.isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                        C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -59,8 +61,7 @@ class FollowedVideosDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserFollowedVideos(
-            clientId = gqlClientId,
-            token = gqlToken,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.userfollowedvideos).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("sort", gqlQuerySort.toString())
@@ -78,7 +79,7 @@ class FollowedVideosDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val get = gqlApi.loadFollowedVideos(gqlClientId, gqlToken, params.loadSize, offset)
+        val get = gqlApi.loadFollowedVideos(gqlHeaders, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data

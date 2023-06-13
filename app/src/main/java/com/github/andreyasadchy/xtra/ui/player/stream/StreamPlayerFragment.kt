@@ -28,6 +28,8 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
+import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlaybackService
@@ -36,6 +38,7 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.chat.BroadcastSettings
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.gone
@@ -90,6 +93,11 @@ class StreamPlayerFragment : BasePlayerFragment() {
             if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.viewers)?.text.isNullOrBlank()) {
                 updateViewerCount(it?.viewerCount)
             }
+            if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                    requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
+                    requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()) {
+                updateTitle(BroadcastSettings(it?.title, it?.gameId, it?.gameName))
+            }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
@@ -133,6 +141,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 }
             }
         }
+        updateTitle(BroadcastSettings(stream.title, stream.gameId, stream.gameName))
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
@@ -201,8 +210,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
         player?.prepare()
         try {
             stream.channelLogin?.let { viewModel.load(
-                gqlClientId = prefs.getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
-                gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false)) Account.get(requireContext()).gqlToken else null,
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false)),
                 channelLogin = it,
                 proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "https://api.ttv.lol/playlist/\$channel.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true"),
                 randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
@@ -300,6 +308,45 @@ class StreamPlayerFragment : BasePlayerFragment() {
         } else {
             viewers?.text = null
             viewerIcon?.gone()
+        }
+    }
+
+    fun updateTitle(data: BroadcastSettings?) {
+        if (data != null) {
+            requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
+                if (!data.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+                    text = data.title.trim()
+                    visible()
+                } else {
+                    text = null
+                    gone()
+                }
+            }
+            requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
+                if (!data.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+                    text = data.gameName
+                    visible()
+                    setOnClickListener {
+                        findNavController().navigate(
+                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                    gameId = data.gameId,
+                                    gameName = data.gameName
+                                )
+                            } else {
+                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                    gameId = data.gameId,
+                                    gameName = data.gameName
+                                )
+                            }
+                        )
+                        slidingLayout.minimize()
+                    }
+                } else {
+                    text = null
+                    gone()
+                }
+            }
         }
     }
 

@@ -18,12 +18,15 @@ class ClipPlayerViewModel @Inject constructor(
 
     var result = MutableLiveData<Map<String, String>>()
 
-    fun load(gqlClientId: String?, id: String?) {
+    fun load(gqlHeaders: Map<String, String>, id: String?) {
         if (result.value == null) {
             viewModelScope.launch {
                 try {
-                    graphQLRepository.loadClipUrls(gqlClientId, id)
+                    graphQLRepository.loadClipUrls(gqlHeaders, id)
                 } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                     null
                 }.let { result.postValue(it) }
             }

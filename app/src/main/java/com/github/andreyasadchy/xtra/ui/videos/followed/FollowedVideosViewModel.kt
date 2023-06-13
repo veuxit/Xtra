@@ -10,7 +10,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
@@ -61,8 +60,7 @@ class FollowedVideosViewModel @Inject constructor(
         ) {
             with(filter) {
                 FollowedVideosDataSource(
-                    gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
-                    gqlToken = Account.get(context).gqlToken,
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
                     gqlQueryType = when (broadcastType) {
                         BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
                         BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
@@ -70,6 +68,7 @@ class FollowedVideosViewModel @Inject constructor(
                         else -> null },
                     gqlQuerySort = when (sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
                     gqlApi = graphQLRepository,
+                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
                     apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_VIDEOS, ""), TwitchApiHelper.followedVideosApiDefaults))
             }
         }.flow

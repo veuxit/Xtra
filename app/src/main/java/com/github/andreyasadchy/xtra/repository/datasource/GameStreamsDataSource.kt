@@ -21,11 +21,12 @@ class GameStreamsDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlQuerySort: StreamSort?,
     private val gqlSort: StreamSortEnum?,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
@@ -41,6 +42,7 @@ class GameStreamsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -49,6 +51,7 @@ class GameStreamsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -57,6 +60,7 @@ class GameStreamsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -104,7 +108,7 @@ class GameStreamsDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryGameStreams(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.gamestreams).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", if (!gameId.isNullOrBlank()) gameId else null)
@@ -120,14 +124,20 @@ class GameStreamsDataSource(
             })
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
-        return get.data
+        return get.data.onEach {
+            it.gameId = gameId
+            it.gameName = gameName
+        }
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlClientId, gameName, gqlSort?.value, tags, params.loadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlHeaders, gameName, gqlSort?.value, tags, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
-        return get.data
+        return get.data.onEach {
+            it.gameId = gameId
+            it.gameName = gameName
+        }
     }
 
     override fun getRefreshKey(state: PagingState<Int, Stream>): Int? {

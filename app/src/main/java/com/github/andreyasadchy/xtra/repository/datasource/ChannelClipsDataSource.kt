@@ -21,10 +21,11 @@ class ChannelClipsDataSource(
     private val started_at: String?,
     private val ended_at: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlQueryPeriod: ClipsPeriod?,
     private val gqlPeriod: String?,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Clip>() {
     private var api: String? = null
     private var offset: String? = null
@@ -40,6 +41,7 @@ class ChannelClipsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -48,6 +50,7 @@ class ChannelClipsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -56,6 +59,7 @@ class ChannelClipsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -110,7 +114,7 @@ class ChannelClipsDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Clip> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQueryUserClips(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.userclips).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("id", if (!channelId.isNullOrBlank()) channelId else null)
@@ -125,7 +129,7 @@ class ChannelClipsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Clip> {
-        val get = gqlApi.loadChannelClips(gqlClientId, channelLogin, gqlPeriod, params.loadSize, offset)
+        val get = gqlApi.loadChannelClips(gqlHeaders, channelLogin, gqlPeriod, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data

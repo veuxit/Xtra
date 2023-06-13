@@ -17,8 +17,9 @@ class SearchChannelsDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, User>() {
     private var api: String? = null
     private var offset: String? = null
@@ -34,6 +35,7 @@ class SearchChannelsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -42,6 +44,7 @@ class SearchChannelsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref?.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -50,6 +53,7 @@ class SearchChannelsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -82,7 +86,7 @@ class SearchChannelsDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<User> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQuerySearchChannels(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.searchchannels).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("query", query)
@@ -95,7 +99,7 @@ class SearchChannelsDataSource(
     }
 
     private suspend fun gqlLoad(): List<User> {
-        val get = gqlApi.loadSearchChannels(gqlClientId, query, offset)
+        val get = gqlApi.loadSearchChannels(gqlHeaders, query, offset)
         offset = get.cursor
         return get.data
     }

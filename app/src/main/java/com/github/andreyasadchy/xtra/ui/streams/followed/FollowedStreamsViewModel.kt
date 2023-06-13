@@ -38,9 +38,9 @@ class FollowedStreamsViewModel @Inject constructor(
             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = Account.get(context).helixToken,
             helixApi = helix,
-            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
-            gqlToken = Account.get(context).gqlToken,
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
             gqlApi = graphQLRepository,
+            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
             apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

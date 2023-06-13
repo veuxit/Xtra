@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.repository.datasource.FollowedGamesDataSource
@@ -28,9 +27,9 @@ class FollowedGamesViewModel @Inject constructor(
     ) {
         FollowedGamesDataSource(
             localFollowsGame = localFollowsGame,
-            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"),
-            gqlToken = Account.get(context).gqlToken,
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
             gqlApi = graphQLRepository,
+            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
             apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

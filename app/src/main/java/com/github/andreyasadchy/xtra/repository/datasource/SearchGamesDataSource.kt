@@ -17,8 +17,9 @@ class SearchGamesDataSource(
     private val helixClientId: String?,
     private val helixToken: String?,
     private val helixApi: HelixApi,
-    private val gqlClientId: String?,
+    private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Game>() {
     private var api: String? = null
     private var offset: String? = null
@@ -34,6 +35,7 @@ class SearchGamesDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -42,6 +44,7 @@ class SearchGamesDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref?.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -50,6 +53,7 @@ class SearchGamesDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -82,7 +86,7 @@ class SearchGamesDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Game> {
         val context = XtraApp.INSTANCE.applicationContext
         val get = gqlApi.loadQuerySearchGames(
-            clientId = gqlClientId,
+            headers = gqlHeaders,
             query = context.resources.openRawResource(R.raw.searchgames).bufferedReader().use { it.readText() },
             variables = JsonObject().apply {
                 addProperty("query", query)
@@ -95,7 +99,7 @@ class SearchGamesDataSource(
     }
 
     private suspend fun gqlLoad(): List<Game> {
-        val get = gqlApi.loadSearchGames(gqlClientId, query, offset)
+        val get = gqlApi.loadSearchGames(gqlHeaders, query, offset)
         offset = get.cursor
         return get.data
     }
