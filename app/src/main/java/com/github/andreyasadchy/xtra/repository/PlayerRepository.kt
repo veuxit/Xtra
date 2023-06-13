@@ -110,7 +110,7 @@ class PlayerRepository @Inject constructor(
     }
 
     private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null): Map<String, String> {
-        return if (XtraApp.INSTANCE.applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+        return if (XtraApp.INSTANCE.applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
             gqlHeaders
         } else {
             gqlHeaders.toMutableMap().apply {

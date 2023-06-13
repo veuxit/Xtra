@@ -11,20 +11,33 @@ class CheerEmotesDeserializer : JsonDeserializer<CheerEmotesResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): CheerEmotesResponse {
         val data = mutableListOf<CheerEmotesResponse.CheerTemplate>()
-        val dataJson = json.asJsonObject.getAsJsonArray("data")
-        dataJson.forEach { setElement ->
-            setElement.asJsonObject.let { set ->
-                val name = set.get("prefix").asString
-                set.getAsJsonArray("tiers")?.forEach { emote ->
-                    emote.asJsonObject?.let { obj ->
-                        val theme = obj.getAsJsonObject("images").getAsJsonObject("dark")
-                        data.add(CheerEmotesResponse.CheerTemplate(
-                            name = name,
-                            static = theme.get("static")?.takeIf { it.isJsonObject }?.asJsonObject,
-                            animated = theme.get("animated")?.takeIf { it.isJsonObject }?.asJsonObject,
-                            minBits = obj.get("min_bits").asInt,
-                            color = obj.get("color")?.takeIf { !it.isJsonNull }?.asString
-                        ))
+        json.asJsonObject.get("data").asJsonArray.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.let { set ->
+                set.get("prefix")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
+                    set.get("tiers")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { tierElement ->
+                        tierElement.takeIf { it.isJsonObject }?.asJsonObject?.let { tier ->
+                            tier.get("min_bits")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isNumber }?.asInt?.let { minBits ->
+                                val color = tier.get("color")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+                                tier.get("images")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { theme ->
+                                    theme.value.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { format ->
+                                        val urls = mutableMapOf<String, String>()
+                                        format.value.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { scale ->
+                                            scale.value.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { url ->
+                                                urls[scale.key] = url
+                                            }
+                                        }
+                                        data.add(CheerEmotesResponse.CheerTemplate(
+                                            name = name,
+                                            format = format.key,
+                                            theme = theme.key,
+                                            urls = urls,
+                                            minBits = minBits,
+                                            color = color
+                                        ))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

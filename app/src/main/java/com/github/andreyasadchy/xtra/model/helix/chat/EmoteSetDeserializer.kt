@@ -11,20 +11,36 @@ class EmoteSetDeserializer : JsonDeserializer<EmoteSetResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): EmoteSetResponse {
         val data = mutableListOf<EmoteSetResponse.EmoteTemplate>()
-        val dataJson = json.asJsonObject.getAsJsonArray("data")
-        if (dataJson != null && dataJson.size() > 0) {
-            dataJson.forEach { emote ->
-                val obj = emote.asJsonObject
-                data.add(EmoteSetResponse.EmoteTemplate(
-                    template = json.asJsonObject.get("template").asString,
-                    id = obj.get("id").asString,
-                    format = obj.getAsJsonArray("format"),
-                    theme = obj.getAsJsonArray("theme_mode"),
-                    scale = obj.getAsJsonArray("scale"),
-                    name = obj.get("name").asString,
-                    setId = obj.get("emote_set_id")?.takeIf { !it.isJsonNull }?.asString,
-                    ownerId = obj.get("owner_id")?.takeIf { !it.isJsonNull }?.asString
-                ))
+        json.takeIf { it.isJsonObject }?.asJsonObject?.get("template")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { template ->
+            json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+                item.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
+                    obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
+                        obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { id ->
+                            val formats = mutableListOf<String>()
+                            obj.get("format")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { element ->
+                                element.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { formats.add(it) }
+                            }
+                            val themes = mutableListOf<String>()
+                            obj.get("theme_mode")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { element ->
+                                element.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { themes.add(it) }
+                            }
+                            val scales = mutableListOf<String>()
+                            obj.get("scale")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { element ->
+                                element.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { scales.add(it) }
+                            }
+                            data.add(EmoteSetResponse.EmoteTemplate(
+                                template = template,
+                                id = id,
+                                formats = formats,
+                                themes = themes,
+                                scales = scales,
+                                name = name,
+                                setId = obj.get("emote_set_id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                                ownerId = obj.get("owner_id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+                            ))
+                        }
+                    }
+                }
             }
         }
         return EmoteSetResponse(data)

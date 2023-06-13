@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
@@ -46,6 +47,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.integrity.observe(viewLifecycleOwner) {
+            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(childFragmentManager)
+            }
+        }
         with(binding) {
             val args = requireArguments()
             val channelId = args.getString(KEY_CHANNEL_ID)
@@ -129,17 +135,18 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
         val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
+        val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
         val disableChat = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
         val isLive = args.getBoolean(KEY_IS_LIVE)
         if (!disableChat) {
             if (isLive) {
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, useApiCommands)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands)
             } else {
                 args.getString(KEY_VIDEO_ID).let {
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
                         val getCurrentPosition = (parentFragment as ChatReplayPlayerFragment)::getCurrentPosition
-                        viewModel.startReplay(account, helixClientId, gqlHeaders, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz)
+                        viewModel.startReplay(account, helixClientId, gqlHeaders, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
                     }
                 }
             }
@@ -208,7 +215,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
         val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
-        viewModel.reloadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz)
+        val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+        viewModel.reloadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
     }
 
     fun updateStreamId(id: String?) {

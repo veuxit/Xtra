@@ -28,6 +28,7 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
@@ -52,6 +53,11 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.integrity.observe(viewLifecycleOwner) {
+            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(childFragmentManager)
+            }
+        }
         with(binding) {
             val activity = requireActivity() as MainActivity
             val account = Account.get(activity)
@@ -179,7 +185,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
         get() = childFragmentManager.findFragmentByTag("f${binding.pagerLayout.viewPager.currentItem}")
 
     override fun initialize() {
-        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()))
+        viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
         viewModel.stream.observe(viewLifecycleOwner) { stream ->
             updateStreamLayout(stream)
             if (stream?.user != null) {
@@ -363,7 +369,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
     }
 
     override fun onNetworkRestored() {
-        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()))
+        viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
@@ -65,6 +66,11 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.integrity.observe(viewLifecycleOwner) {
+            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(childFragmentManager)
+            }
+        }
         with(binding) {
             val args = requireArguments()
             message.text = args.getCharSequence(KEY_FORMATTED)!!
@@ -83,7 +89,8 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                         targetId = if (userId != targetId) targetId else null,
                         helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                         helixToken = com.github.andreyasadchy.xtra.model.Account.get(requireContext()).helixToken,
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext())
+                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                        checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                     ).observe(viewLifecycleOwner) { user ->
                         if (user != null) {
                             savedUsers.add(Pair(user, targetId))

@@ -23,6 +23,7 @@ class FollowedStreamsDataSource(
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
@@ -45,6 +46,7 @@ class FollowedStreamsDataSource(
                         try {
                             gqlQueryLocal(localIds)
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 if (!helixToken.isNullOrBlank()) helixLocal(localIds) else throw Exception()
                             } catch (e: Exception) {
@@ -63,6 +65,7 @@ class FollowedStreamsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
                             when (apiPref.elementAt(1)?.second) {
                                 C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
@@ -71,6 +74,7 @@ class FollowedStreamsDataSource(
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
+                            if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
                                 when (apiPref.elementAt(2)?.second) {
                                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
@@ -79,6 +83,7 @@ class FollowedStreamsDataSource(
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {
+                                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                                 listOf()
                             }
                         }
@@ -95,6 +100,7 @@ class FollowedStreamsDataSource(
                     list
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 listOf()
             }
             LoadResult.Page(
@@ -135,12 +141,14 @@ class FollowedStreamsDataSource(
     }
 
     private suspend fun gqlQueryLoad(): List<Stream> {
-        val get1 = apolloClient.newBuilder().apply {
+        val get2 = apolloClient.newBuilder().apply {
             gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
         }.build().query(UserFollowedStreamsQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
-        )).execute().data!!.user!!.followedLiveUsers!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.user!!.followedLiveUsers!!
         val get = get1.edges!!
         val list = mutableListOf<Stream>()
         for (i in get) {
@@ -175,7 +183,11 @@ class FollowedStreamsDataSource(
     private suspend fun gqlQueryLocal(ids: List<String>): List<Stream> {
         val streams = mutableListOf<Stream>()
         for (localIds in ids.chunked(100)) {
-            val get = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(UsersStreamQuery(Optional.Present(localIds))).execute().data?.users
+            val get1 = apolloClient.newBuilder().apply {
+                gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
+            }.build().query(UsersStreamQuery(Optional.Present(localIds))).execute()
+            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            val get = get1.data?.users
             if (get != null) {
                 for (i in get) {
                     if (i?.stream?.viewersCount != null) {

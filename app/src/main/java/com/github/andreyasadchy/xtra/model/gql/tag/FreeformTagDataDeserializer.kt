@@ -11,12 +11,15 @@ class FreeformTagDataDeserializer : JsonDeserializer<FreeformTagDataResponse> {
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): FreeformTagDataResponse {
+        json.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+        }
         val data = mutableListOf<Tag>()
-        val dataJson = json.asJsonObject.getAsJsonObject("data").getAsJsonObject("searchFreeformTags").getAsJsonArray("edges")
-        dataJson.forEach { item ->
-            item.asJsonObject.getAsJsonObject("node").let { obj ->
+        val dataJson = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("searchFreeformTags")?.takeIf { it.isJsonObject }?.asJsonObject?.get("edges")?.takeIf { it.isJsonArray }?.asJsonArray
+        dataJson?.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.get("node")?.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 data.add(Tag(
-                    name = obj.get("tagName").takeIf { !it.isJsonNull }?.asString,
+                    name = obj.get("tagName")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                 ))
             }
         }

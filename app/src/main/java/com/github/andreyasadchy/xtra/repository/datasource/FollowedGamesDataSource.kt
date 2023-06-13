@@ -17,6 +17,7 @@ class FollowedGamesDataSource(
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Game>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
@@ -33,6 +34,7 @@ class FollowedGamesDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(1)?.second) {
                             C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
@@ -40,6 +42,7 @@ class FollowedGamesDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -73,11 +76,13 @@ class FollowedGamesDataSource(
     }
 
     private suspend fun gqlQueryLoad(): List<Game> {
-        val get1 = apolloClient.newBuilder().apply {
+        val get2 = apolloClient.newBuilder().apply {
             gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
         }.build().query(UserFollowedGamesQuery(
             first = Optional.Present(100)
-        )).execute().data!!.user!!.followedGames!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.user!!.followedGames!!
         val get = get1.nodes!!
         val list = mutableListOf<Game>()
         for (i in get) {

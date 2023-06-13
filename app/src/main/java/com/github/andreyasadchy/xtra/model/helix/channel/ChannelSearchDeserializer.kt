@@ -13,22 +13,21 @@ class ChannelSearchDeserializer : JsonDeserializer<ChannelSearchResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): ChannelSearchResponse {
         val data = mutableListOf<User>()
-        val dataJson = json.asJsonObject?.getAsJsonArray("data")
-        val cursor = json.asJsonObject?.get("pagination")?.takeIf { !it.isJsonNull }?.asJsonObject?.get("cursor")?.takeIf { !it.isJsonNull }?.asString
-        dataJson?.forEach { item ->
-            item?.asJsonObject?.let { obj ->
+        val cursor = json.takeIf { it.isJsonObject }?.asJsonObject?.get("pagination")?.takeIf { it.isJsonObject }?.asJsonObject?.get("cursor")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+        json.asJsonObject.get("data").asJsonArray.forEach { item ->
+            item.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 data.add(User(
-                    channelId = obj.get("id")?.takeIf { !it.isJsonNull }?.asString,
-                    channelLogin = obj.get("broadcaster_login")?.takeIf { !it.isJsonNull }?.asString,
-                    channelName = obj.get("display_name")?.takeIf { !it.isJsonNull }?.asString,
-                    profileImageUrl = obj.get("thumbnail_url")?.takeIf { !it.isJsonNull }?.asString,
-                    isLive = obj.get("is_live")?.takeIf { !it.isJsonNull }?.asBoolean,
+                    channelId = obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    channelLogin = obj.get("broadcaster_login")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    channelName = obj.get("display_name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    profileImageUrl = obj.get("thumbnail_url")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                    isLive = obj.get("is_live")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean,
                     stream = Stream(
-                        gameId = obj.get("game_id")?.takeIf { !it.isJsonNull }?.asString,
-                        gameName = obj.get("game_name")?.takeIf { !it.isJsonNull }?.asString,
-                        title = obj.get("title")?.takeIf { !it.isJsonNull }?.asString,
-                        startedAt = obj.get("started_at")?.takeIf { !it.isJsonNull }?.asString,
-                        tags = obj.get("tags")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { it?.takeIf { !it.isJsonNull }?.asString }
+                        gameId = obj.get("game_id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                        gameName = obj.get("game_name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                        title = obj.get("title")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                        startedAt = obj.get("started_at")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
+                        tags = obj.get("tags")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { tag -> tag.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString }
                     )
                 ))
             }

@@ -190,6 +190,7 @@ object C {
     const val DEBUG_SECONDVIEW = "debug_secondview"
     const val DEBUG_API_COMMANDS = "debug_api_commands"
     const val DEBUG_PLAYER_MENU_PLAYLIST_TAGS = "debug_player_menu_playlist_tags"
+    const val ENABLE_INTEGRITY = "enable_integrity"
     const val USE_WEBVIEW_INTEGRITY = "use_webview_integrity"
     const val GET_ALL_GQL_HEADERS = "get_all_gql_headers"
 }

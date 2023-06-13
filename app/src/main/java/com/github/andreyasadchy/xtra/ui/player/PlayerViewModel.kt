@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.coroutines.GlobalScope
@@ -34,6 +35,10 @@ abstract class PlayerViewModel(
     var playerMode = PlayerMode.NORMAL
     val loaded = MutableLiveData<Boolean>()
     val follow = MutableLiveData<Pair<Boolean, String?>>()
+
+    protected val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     private var timer: Timer? = null
     private val _sleepTimer = MutableLiveData<Boolean>()
@@ -83,7 +88,9 @@ abstract class PlayerViewModel(
                     }
                     follow.postValue(Pair(isFollowing, null))
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                 }
             }
         }
@@ -121,7 +128,9 @@ abstract class PlayerViewModel(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }
@@ -141,7 +150,9 @@ abstract class PlayerViewModel(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }

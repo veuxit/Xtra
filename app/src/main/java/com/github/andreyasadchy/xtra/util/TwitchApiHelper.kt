@@ -295,7 +295,7 @@ object TwitchApiHelper {
 
     fun getGQLHeaders(context: Context, includeToken: Boolean = false): Map<String, String> {
         return mutableMapOf<String, String>().apply {
-            if (context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false)) {
+            if (context.prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                 context.prefs().getString(C.GQL_HEADERS, null)?.let {
                     try {
                         val json = JSONObject(it)

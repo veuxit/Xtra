@@ -124,6 +124,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 putBoolean(C.FIRST_LAUNCH5, false)
             }
         }
+        viewModel.integrity.observe(this) {
+            if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(supportFragmentManager)
+            }
+        }
         applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -136,9 +141,6 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 if (online) {
                     if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
                         viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), TwitchApiHelper.getGQLHeaders(this, true), this)
-                    }
-                    if (prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, false) && TwitchApiHelper.isIntegrityTokenExpired(this)) {
-                        IntegrityDialog.show(supportFragmentManager)
                     }
                 }
                 if (flag) {
@@ -228,7 +230,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this))
+                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         viewModel.video.observe(this) { video ->
                             if (video != null && !video.id.isNullOrBlank()) {
                                 startVideo(video, offset)
@@ -239,7 +241,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 url.contains("/clip/") -> {
                     val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
@@ -250,7 +252,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 url.contains("clips.twitch.tv/") -> {
                     val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this))
+                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         viewModel.clip.observe(this) { clip ->
                             if (clip != null && !clip.id.isNullOrBlank()) {
                                 startClip(clip)
@@ -278,7 +280,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 else -> {
                     val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!login.isNullOrBlank()) {
-                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this))
+                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         viewModel.user.observe(this) { user ->
                             if (user != null && (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank())) {
                                 playerFragment?.minimize()

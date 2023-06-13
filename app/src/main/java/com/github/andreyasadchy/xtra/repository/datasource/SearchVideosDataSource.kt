@@ -16,6 +16,7 @@ class SearchVideosDataSource(
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
@@ -30,6 +31,7 @@ class SearchVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
@@ -37,6 +39,7 @@ class SearchVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -54,11 +57,13 @@ class SearchVideosDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val get1 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchVideosQuery(
+        val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchVideosQuery(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data!!.searchFor!!.videos!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.searchFor!!.videos!!
         val get = get1.items!!
         val list = mutableListOf<Video>()
         for (i in get) {

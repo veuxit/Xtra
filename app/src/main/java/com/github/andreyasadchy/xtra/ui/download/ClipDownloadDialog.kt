@@ -14,6 +14,7 @@ import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -44,6 +45,11 @@ class ClipDownloadDialog : BaseDownloadDialog() {
     @Suppress("UNCHECKED_CAST")
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        viewModel.integrity.observe(viewLifecycleOwner) {
+            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                IntegrityDialog.show(childFragmentManager)
+            }
+        }
         with(requireArguments()) {
             viewModel.init(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),

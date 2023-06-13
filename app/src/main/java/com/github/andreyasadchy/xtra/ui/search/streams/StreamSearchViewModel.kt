@@ -44,6 +44,7 @@ class StreamSearchViewModel @Inject constructor(
                 helixApi = helix,
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
                 apolloClient = apolloClient,
+                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
                 apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults))
         }.flow
     }.cachedIn(viewModelScope)

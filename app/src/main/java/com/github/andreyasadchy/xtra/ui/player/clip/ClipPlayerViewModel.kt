@@ -24,6 +24,9 @@ class ClipPlayerViewModel @Inject constructor(
                 try {
                     graphQLRepository.loadClipUrls(gqlHeaders, id)
                 } catch (e: Exception) {
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                     null
                 }.let { result.postValue(it) }
             }

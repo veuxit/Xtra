@@ -18,8 +18,8 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): RecentMessagesResponse {
         val messages = mutableListOf<LiveChatMessage>()
-        json.asJsonObject?.getAsJsonArray("messages")?.forEach {
-            it?.asString?.let { message ->
+        json.takeIf { it.isJsonObject }?.asJsonObject?.get("messages")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { element ->
+            element.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { message ->
                 val appContext = XtraApp.INSTANCE.applicationContext
                 when {
                     message.contains("PRIVMSG") -> onMessage(appContext, message, false)

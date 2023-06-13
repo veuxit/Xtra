@@ -20,6 +20,7 @@ class SearchChannelsDataSource(
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, User>() {
     private var api: String? = null
     private var offset: String? = null
@@ -35,6 +36,7 @@ class SearchChannelsDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -43,6 +45,7 @@ class SearchChannelsDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref?.elementAt(2)?.second) {
                             C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
@@ -51,6 +54,7 @@ class SearchChannelsDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
+                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -81,11 +85,13 @@ class SearchChannelsDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<User> {
-        val get1 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchChannelsQuery(
+        val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchChannelsQuery(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data!!.searchUsers!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.searchUsers!!
         val get = get1.edges!!
         val list = mutableListOf<User>()
         for (edge in get) {

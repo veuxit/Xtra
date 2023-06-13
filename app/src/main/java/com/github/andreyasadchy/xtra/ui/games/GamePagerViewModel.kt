@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.games
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,7 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
+import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,10 @@ import javax.inject.Inject
 class GamePagerViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val localFollowsGame: LocalFollowGameRepository) : ViewModel() {
+
+    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
+    val integrity: LiveData<Boolean>
+        get() = _integrity
 
     val follow = MutableLiveData<Pair<Boolean, String?>>()
     private var updatedLocalGame = false
@@ -48,7 +54,9 @@ class GamePagerViewModel @Inject constructor(
                     }
                     follow.postValue(Pair(isFollowing, null))
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check") {
+                        _integrity.postValue(true)
+                    }
                 }
             }
         }
@@ -88,7 +96,9 @@ class GamePagerViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }
@@ -108,7 +118,9 @@ class GamePagerViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check") {
+                    _integrity.postValue(true)
+                }
             }
         }
     }
@@ -117,37 +129,33 @@ class GamePagerViewModel @Inject constructor(
         if (!updatedLocalGame) {
             updatedLocalGame = true
             GlobalScope.launch {
-                try {
-                    if (gameId != null) {
+                if (gameId != null) {
+                    try {
                         val get = repository.loadGameBoxArt(
                             gameId = gameId,
                             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                             helixToken = Account.get(context).helixToken,
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(context)
                         )
-                        try {
-                            Glide.with(context)
-                                .asBitmap()
-                                .load(TwitchApiHelper.getTemplateUrl(get, "game"))
-                                .into(object: CustomTarget<Bitmap>() {
-                                    override fun onLoadCleared(placeholder: Drawable?) {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(TwitchApiHelper.getTemplateUrl(get, "game"))
+                            .into(object: CustomTarget<Bitmap>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
 
-                                    }
+                                }
 
-                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                        DownloadUtils.savePng(context, "box_art", gameId, resource)
-                                    }
-                                })
-                        } catch (e: Exception) {
+                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                                    DownloadUtils.savePng(context, "box_art", gameId, resource)
+                                }
+                            })
+                    } catch (e: Exception) {
 
-                        }
-                        val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${gameId}.png").absolutePath
-                        localFollowsGame.getFollowByGameId(gameId)?.let { localFollowsGame.updateFollow(it.apply {
-                            this.gameName = gameName
-                            boxArt = downloadedLogo }) }
                     }
-                } catch (e: Exception) {
-
+                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${gameId}.png").absolutePath
+                    localFollowsGame.getFollowByGameId(gameId)?.let { localFollowsGame.updateFollow(it.apply {
+                        this.gameName = gameName
+                        boxArt = downloadedLogo }) }
                 }
             }
         }

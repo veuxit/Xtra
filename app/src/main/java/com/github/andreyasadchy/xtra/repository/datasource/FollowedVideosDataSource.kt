@@ -19,6 +19,7 @@ class FollowedVideosDataSource(
     private val gqlQuerySort: VideoSort?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
+    private val checkIntegrity: Boolean,
     private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
@@ -33,6 +34,7 @@ class FollowedVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
@@ -40,6 +42,7 @@ class FollowedVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
+                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -57,14 +60,16 @@ class FollowedVideosDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val get1 = apolloClient.newBuilder().apply {
+        val get2 = apolloClient.newBuilder().apply {
             gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
         }.build().query(UserFollowedVideosQuery(
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
-        )).execute().data!!.user!!.followedVideos!!
+        )).execute()
+        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        val get1 = get2.data!!.user!!.followedVideos!!
         val get = get1.edges!!
         val list = mutableListOf<Video>()
         for (i in get) {
