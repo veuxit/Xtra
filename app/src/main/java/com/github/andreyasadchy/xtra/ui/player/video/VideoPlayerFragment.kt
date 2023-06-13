@@ -25,6 +25,8 @@ import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
+import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlaybackService
@@ -133,6 +135,34 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                         channelName = video.channelName,
                         channelLogo = video.channelLogo
                     ))
+                    slidingLayout.minimize()
+                }
+            }
+        }
+        if (!video.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+            requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
+                visible()
+                text = video.title
+            }
+        }
+        if (!video.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+            requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
+                visible()
+                text = video.gameName
+                setOnClickListener {
+                    findNavController().navigate(
+                        if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                gameId = video.gameId,
+                                gameName = video.gameName
+                            )
+                        } else {
+                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                gameId = video.gameId,
+                                gameName = video.gameName
+                            )
+                        }
+                    )
                     slidingLayout.minimize()
                 }
             }
