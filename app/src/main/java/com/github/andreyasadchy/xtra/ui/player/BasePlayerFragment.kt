@@ -241,14 +241,14 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (this !is ClipPlayerFragment) {
                 view.findViewById<ImageButton>(R.id.playerMode)?.disable()
             }
-        }
-        if (prefs.getBoolean(C.PLAYER_DOUBLETAP, true) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
-            playerView.setOnDoubleTapListener {
-                if (!isPortrait && slidingLayout.isMaximized && this !is OfflinePlayerFragment) {
-                    if (chatLayout.isVisible) {
-                        hideChat()
-                    } else {
-                        showChat()
+            if (prefs.getBoolean(C.PLAYER_DOUBLETAP, true) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
+                playerView.setOnDoubleTapListener {
+                    if (!isPortrait && slidingLayout.isMaximized) {
+                        if (chatLayout.isVisible) {
+                            hideChat()
+                        } else {
+                            showChat()
+                        }
                     }
                 }
             }
@@ -602,6 +602,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             } else {
                 chatLayout.gone()
+                slidingLayout.maximizedSecondViewVisibility = View.GONE
             }
             requireView().findViewById<ImageButton>(R.id.playerFullscreenToggle)?.let {
                 if (it.isVisible) {
@@ -771,16 +772,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     open fun onError(error: PlaybackException) {
-        val playerError = player?.playerError
-        Log.e(tag, "Player error", playerError)
+        Log.e(tag, "Player error", error)
         requireContext().shortToast(R.string.player_error)
         viewLifecycleOwner.lifecycleScope.launch {
             delay(1500L)
             try {
                 player?.prepare()
-            } catch (e: Exception) {
-
-            }
+            } catch (e: Exception) {}
         }
     }
 

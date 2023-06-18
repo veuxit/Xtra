@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.player.clip
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.media3.common.PlaybackException
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import androidx.navigation.fragment.findNavController
@@ -230,6 +232,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 )), Bundle.EMPTY)
             }
         }
+    }
+
+    override fun onError(error: PlaybackException) {
+        Log.e(tag, "Player error", error)
     }
 
     override fun showDownloadDialog() {
