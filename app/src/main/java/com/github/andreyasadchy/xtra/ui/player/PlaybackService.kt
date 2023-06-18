@@ -12,6 +12,7 @@ import androidx.core.os.bundleOf
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
@@ -20,7 +21,6 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsManifest
 import androidx.media3.exoplayer.hls.HlsMediaSource
@@ -63,6 +63,7 @@ class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var playerMode = PlayerMode.NORMAL
+    private var background = false
     private var dynamicsProcessing: DynamicsProcessing? = null
 
     override fun onCreate() {
@@ -223,6 +224,12 @@ class PlaybackService : MediaSessionService() {
                             }
                             setQualityIndex()
                         }
+                    }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    if (background) {
+                        prepare()
                     }
                 }
 
@@ -459,7 +466,7 @@ class PlaybackService : MediaSessionService() {
                                 session.player.stop()
                             } else {
                                 if (playerMode == PlayerMode.NORMAL) {
-                                    if (session.player.isPlaying) {
+                                    if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
                                         startAudioOnly()
                                     } else {
                                         savePosition()
@@ -468,9 +475,11 @@ class PlaybackService : MediaSessionService() {
                                     }
                                 }
                             }
+                            background = true
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(RESULT to playerMode)))
                         }
                         MOVE_FOREGROUND -> {
+                            background = false
                             if (playerMode == PlayerMode.NORMAL) {
                                 session.player.prepare()
                             } else if (playerMode == PlayerMode.AUDIO_ONLY) {
@@ -538,13 +547,8 @@ class PlaybackService : MediaSessionService() {
                             )))
                         }
                         GET_ERROR_CODE -> {
-                            val responseCode = (session.player as? ExoPlayer)?.playerError?.let { playerError ->
-                                if (playerError.type == ExoPlaybackException.TYPE_SOURCE) {
-                                    (playerError.sourceException as? HttpDataSource.InvalidResponseCodeException)?.responseCode
-                                } else null
-                            }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(
-                                RESULT to responseCode,
+                                RESULT to (session.player.playerError?.cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode,
                             )))
                         }
                         else -> super.onCustomCommand(session, controller, customCommand, args)

@@ -193,10 +193,10 @@ object TwitchApiHelper {
 
     fun parseIso8601Date(date: String): Long? {
         return try {
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).parse(date)?.time
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).parse(date)?.time?.takeIf { it > 0 }
         } catch (e: ParseException) {
             try {
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault()).parse(date)?.time
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault()).parse(date)?.time?.takeIf { it > 0 }
             } catch (e: ParseException) {
                 null
             }

@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -37,6 +38,7 @@ import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
@@ -44,6 +46,8 @@ import com.github.andreyasadchy.xtra.util.visible
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
@@ -253,25 +257,30 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
-                    if (responseCode != 0) {
+                    if (requireContext().isNetworkAvailable) {
                         val skipAccessToken = prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
                         when {
-                            skipAccessToken == 1 && viewModel.shouldRetry -> {
+                            skipAccessToken == 1 && viewModel.shouldRetry && responseCode != 0 -> {
                                 viewModel.shouldRetry = false
                                 playVideo(false, player?.currentPosition)
                             }
-                            skipAccessToken == 2 && viewModel.shouldRetry -> {
+                            skipAccessToken == 2 && viewModel.shouldRetry && responseCode != 0 -> {
                                 viewModel.shouldRetry = false
                                 playVideo(true, player?.currentPosition)
                             }
+                            responseCode == 403 -> {
+                                requireContext().toast(R.string.video_subscribers_only)
+                            }
                             else -> {
-                                if (responseCode == 403) {
-                                    requireContext().toast(R.string.video_subscribers_only)
+                                requireContext().shortToast(R.string.player_error)
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    delay(1500L)
+                                    try {
+                                        player?.prepare()
+                                    } catch (e: Exception) {}
                                 }
                             }
                         }
-                    } else {
-                        super.onError(error)
                     }
                 }
             }, MoreExecutors.directExecutor())
