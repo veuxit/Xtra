@@ -775,7 +775,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onMovedToBackground() {
         viewModel.background = true
-        player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, bundleOf(
+            PlaybackService.DURATION to viewModel.timerTimeLeft
+        )), Bundle.EMPTY)?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
