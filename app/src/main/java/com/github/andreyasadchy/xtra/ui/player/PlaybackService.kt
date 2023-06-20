@@ -5,6 +5,8 @@ import android.content.Intent
 import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.Parcelable
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -48,8 +50,10 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.LinkedList
+import java.util.Timer
 import java.util.regex.Pattern
 import javax.inject.Inject
+import kotlin.concurrent.schedule
 
 
 @AndroidEntryPoint
@@ -476,10 +480,27 @@ class PlaybackService : MediaSessionService() {
                                 }
                             }
                             background = true
+                            val duration = customCommand.customExtras.getLong(DURATION)
+                            if (duration > 0L) {
+                                sleepTimer = Timer().apply {
+                                    schedule(duration) {
+                                        Handler(Looper.getMainLooper()).post {
+                                            savePosition()
+                                            session.player.pause()
+                                            session.player.stop()
+                                            stopSelf()
+                                        }
+                                    }
+                                }
+                            }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(RESULT to playerMode)))
                         }
                         MOVE_FOREGROUND -> {
                             background = false
+                            sleepTimer?.let {
+                                it.cancel()
+                                sleepTimer = null
+                            }
                             if (playerMode == PlayerMode.NORMAL) {
                                 session.player.prepare()
                             } else if (playerMode == PlayerMode.AUDIO_ONLY) {
@@ -761,6 +782,10 @@ class PlaybackService : MediaSessionService() {
             }.build()
             player.removeMediaItem(0)
         }
+        sleepTimer?.let {
+            it.cancel()
+            sleepTimer = null
+        }
     }
 
     private fun savePosition() {
@@ -821,6 +846,8 @@ class PlaybackService : MediaSessionService() {
         private val audioUrlIndex: Int
             get() = urls.size - 1
 
+        private var sleepTimer: Timer? = null
+
         const val START_STREAM = "startStream"
         const val START_VIDEO = "startVideo"
         const val START_CLIP = "startClip"
@@ -852,6 +879,7 @@ class PlaybackService : MediaSessionService() {
         const val HEADERS = "headers"
         const val USING_PLAYLIST = "usingPlaylist"
         const val PLAYBACK_POSITION = "playbackPosition"
+        const val DURATION = "duration"
 
         const val REQUEST_CODE_RESUME = 2
     }
