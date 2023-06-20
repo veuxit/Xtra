@@ -464,13 +464,14 @@ class PlaybackService : MediaSessionService() {
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(RESULT to dynamicsProcessing?.enabled)))
                         }
                         MOVE_BACKGROUND -> {
+                            val pipMode = customCommand.customExtras.getBoolean(PIP_MODE)
                             if (prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "2") {
                                 savePosition()
                                 playbackPosition = session.player.currentPosition
                                 session.player.stop()
                             } else {
                                 if (playerMode == PlayerMode.NORMAL) {
-                                    if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
+                                    if (!pipMode && session.player.playbackState != Player.STATE_ENDED && session.player.playbackState != Player.STATE_IDLE && session.player.playWhenReady) {
                                         startAudioOnly()
                                     } else {
                                         savePosition()
@@ -879,6 +880,7 @@ class PlaybackService : MediaSessionService() {
         const val HEADERS = "headers"
         const val USING_PLAYLIST = "usingPlaylist"
         const val PLAYBACK_POSITION = "playbackPosition"
+        const val PIP_MODE = "pipMode"
         const val DURATION = "duration"
 
         const val REQUEST_CODE_RESUME = 2

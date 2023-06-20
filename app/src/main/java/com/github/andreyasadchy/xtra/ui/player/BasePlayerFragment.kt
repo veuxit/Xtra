@@ -381,6 +381,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         if (isInPictureInPictureMode) {
+            viewModel.pipMode = true
             if (!slidingLayout.isMaximized) {
                 slidingLayout.maximize()
             }
@@ -747,11 +748,17 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.pipMode = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode)
+    }
+
     override fun onMovedToForeground() {}
 
     override fun onMovedToBackground() {
         viewModel.background = true
         player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, bundleOf(
+            PlaybackService.PIP_MODE to viewModel.pipMode,
             PlaybackService.DURATION to viewModel.timerTimeLeft
         )), Bundle.EMPTY)?.let { result ->
             result.addListener({
