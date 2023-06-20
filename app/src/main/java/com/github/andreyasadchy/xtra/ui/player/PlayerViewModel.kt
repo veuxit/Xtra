@@ -32,6 +32,7 @@ abstract class PlayerViewModel(
 
     var started = false
     var background = false
+    var pipMode = false
     var playerMode = PlayerMode.NORMAL
     val loaded = MutableLiveData<Boolean>()
     val follow = MutableLiveData<Pair<Boolean, String?>>()
