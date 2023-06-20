@@ -566,11 +566,11 @@
     <string name="use_background_audio_track">Cambiar a sólo audio en segundo plano</string>
     <string name="show_audio_compressor_button">Mostrar botón de compresión de audio</string>
     <string name="use_websocket">Conexión mediante WebSocket</string>
-    <string name="get_webview_integrity">Get integrity token using WebView</string>
-    <string name="get_integrity_token">Get new integrity token</string>
-    <string name="show_title">Show title</string>
-    <string name="show_category">Show category</string>
-    <string name="get_all_headers">Get all headers</string>
-    <string name="gql_headers">GQL headers</string>
-    <string name="use_integrity">Use integrity token</string>
+    <string name="get_webview_integrity">Obtener token de integridad mediante WebView</string>
+    <string name="get_integrity_token">Obtener nuevo token de integridad</string>
+    <string name="show_title">Mostrar título</string>
+    <string name="show_category">Mostrar categoría</string>
+    <string name="get_all_headers">Obtener todas las cabeceras</string>
+    <string name="gql_headers">Cabeceras GQL</string>
+    <string name="use_integrity">Utilizar token de integridad</string>
 </resources>
