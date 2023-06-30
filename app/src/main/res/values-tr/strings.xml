@@ -573,4 +573,6 @@
     <string name="get_all_headers">Tüm üstbilgileri al</string>
     <string name="gql_headers">GQL üstbilgileri</string>
     <string name="use_integrity">Entegrasyon tokeni kullan</string>
+    <string name="use_audio_focus">Pause when other apps play audio</string>
+    <string name="handle_audio_becoming_noisy">Pause when headphones are disconnected</string>
 </resources>
