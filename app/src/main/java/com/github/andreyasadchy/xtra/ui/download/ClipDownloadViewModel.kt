@@ -74,7 +74,7 @@ class ClipDownloadViewModel @Inject constructor(
                     } else {
                         System.currentTimeMillis()
                     }
-            val startPosition = clip.duration.let { (it?.times(1000.0))?.toLong() }
+            val startPosition = clip.vodOffset?.toLong()?.times(1000)
 
             val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, filePath, clip.duration?.toLong()?.times(1000L), startPosition)
             val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
