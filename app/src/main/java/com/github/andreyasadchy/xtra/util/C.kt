@@ -122,6 +122,8 @@ object C {
     const val PLAYER_DISABLE_BACKGROUND_VIDEO = "player_disable_background_video"
     const val PLAYER_USE_BACKGROUND_AUDIO_TRACK = "player_use_background_audio_track"
     const val PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED = "player_keep_screen_on_when_paused"
+    const val PLAYER_AUDIO_FOCUS = "player_audio_focus"
+    const val PLAYER_HANDLE_AUDIO_BECOMING_NOISY = "player_handle_audio_becoming_noisy"
     const val PLAYER_KEEP_CHAT_OPEN = "player_keep_chat_open"
     const val PLAYER_HIDE_ADS = "player_hide_ads"
     const val PLAYER_PROXY = "player_proxy"

@@ -573,4 +573,6 @@
     <string name="get_all_headers">Obtener todas las cabeceras</string>
     <string name="gql_headers">Cabeceras GQL</string>
     <string name="use_integrity">Utilizar token de integridad</string>
+    <string name="use_audio_focus">Pause when other apps play audio</string>
+    <string name="handle_audio_becoming_noisy">Pause when headphones are disconnected</string>
 </resources>

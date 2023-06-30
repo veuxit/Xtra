@@ -11,6 +11,7 @@ import android.os.Parcelable
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -80,6 +81,8 @@ class PlaybackService : MediaSessionService() {
                 prefs.getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
                 prefs.getString(C.PLAYER_BUFFER_REBUFFER, "5000")?.toIntOrNull() ?: 5000
             ).build())
+            setAudioAttributes(AudioAttributes.DEFAULT, prefs.getBoolean(C.PLAYER_AUDIO_FOCUS, false))
+            setHandleAudioBecomingNoisy(prefs.getBoolean(C.PLAYER_HANDLE_AUDIO_BECOMING_NOISY, true))
             setSeekBackIncrementMs(prefs.getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000)
             setSeekForwardIncrementMs(prefs.getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000)
         }.build().apply {
