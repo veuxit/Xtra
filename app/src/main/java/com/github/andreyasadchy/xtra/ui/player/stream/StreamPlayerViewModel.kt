@@ -1,9 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.util.Util
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -13,10 +13,16 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
+import com.iheartradio.m3u8.Encoding
+import com.iheartradio.m3u8.Format
+import com.iheartradio.m3u8.ParsingMode
+import com.iheartradio.m3u8.PlaylistParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.ByteArrayInputStream
+import java.math.BigDecimal
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,15 +35,45 @@ class StreamPlayerViewModel @Inject constructor(
     val stream: MutableLiveData<Stream?>
         get() = _stream
 
-    var result = MutableLiveData<Pair<Uri, Int>>()
+    var result = MutableLiveData<Triple<String, Int, Boolean>>()
 
     var useProxy: Int? = null
     var playingAds = false
 
-    fun load(gqlHeaders: Map<String, String>, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?) {
+    suspend fun checkPlaylist(url: String): Boolean {
+        return try {
+            val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
+                PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+            }
+            if (playlist.tracks.lastOrNull()?.trackInfo?.title?.let { it.contains("Amazon") || it.contains("Adform") || it.contains("DCM") } == true) {
+                true
+            } else {
+                playlist.tracks.lastOrNull()?.programDateTime?.let { segmentStartTime ->
+                    val segmentStartTimeMs = Util.parseXsDateTime(segmentStartTime)
+                    playlist.unknownTags.find {
+                        it.startsWith("#EXT-X-DATERANGE") &&
+                                (Regex("ID=\"(.+?)\"").find(it)?.groupValues?.get(1)?.startsWith("stitched-ad-") == true ||
+                                        Regex("CLASS=\"(.+?)\"").find(it)?.groupValues?.get(1) == "twitch-stitched-ad" ||
+                                        Regex("X-TV-TWITCH-AD-.+?=\"(.+?)\"").find(it)?.groupValues?.get(1) != null) &&
+                                (Regex("END-DATE=\"(.+?)\"").find(it)?.groupValues?.get(1)?.let { endDate ->
+                                    segmentStartTimeMs < Util.parseXsDateTime(endDate)
+                                } ?: Regex("START-DATE=\"(.+?)\"").find(it)?.groupValues?.get(1)?.let { startDate ->
+                                    Regex("DURATION=(.+?)").find(it)?.groupValues?.get(1) ?: Regex("PLANNED-DURATION=(.+?)").find(it)?.groupValues?.get(1)?.let { duration ->
+                                        segmentStartTimeMs < (Util.parseXsDateTime(startDate) + BigDecimal(duration).multiply(BigDecimal(1000L)).toLong())
+                                    }
+                                }) == true
+                    } != null
+                } == true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun load(gqlHeaders: Map<String, String>, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?) {
         viewModelScope.launch {
             try {
-                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType)
+                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword)
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     _integrity.postValue(true)

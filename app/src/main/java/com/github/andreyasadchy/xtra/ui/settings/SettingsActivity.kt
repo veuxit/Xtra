@@ -200,6 +200,15 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<Preference>("proxy_settings")?.setOnPreferenceClickListener {
+                parentFragmentManager
+                    .beginTransaction()
+                    .replace(R.id.settings, ProxySettingsFragment())
+                    .addToBackStack(null)
+                    .commit()
+                true
+            }
+
             findPreference<Preference>("token_settings")?.setOnPreferenceClickListener {
                 parentFragmentManager
                     .beginTransaction()
@@ -319,6 +328,12 @@ class SettingsActivity : AppCompatActivity() {
     class BufferSettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.buffer_preferences, rootKey)
+        }
+    }
+
+    class ProxySettingsFragment : PreferenceFragmentCompat() {
+        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            setPreferencesFromResource(R.xml.proxy_preferences, rootKey)
         }
     }
 

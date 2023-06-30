@@ -458,6 +458,11 @@
         app:iconSpaceReserved="false" />
 
     <Preference
+        android:key="proxy_settings"
+        android:title="@string/proxy_settings"
+        app:iconSpaceReserved="false" />
+
+    <Preference
         android:key="token_settings"
         android:title="@string/token_settings"
         app:allowDividerAbove="true"

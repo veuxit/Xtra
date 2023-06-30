@@ -45,7 +45,6 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.view.CustomPlayerView
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
@@ -124,20 +123,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                     if (view != null) {
-                        (viewModel as? StreamPlayerViewModel)?.let { viewModel ->
-                            player.sendCustomCommand(SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY), Bundle.EMPTY).let { result ->
-                                result.addListener({
-                                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                        val tag = result.get().extras.getString(PlaybackService.RESULT)
-                                        val oldValue = viewModel.playingAds
-                                        viewModel.playingAds = tag == "ads=true"
-                                        if (!oldValue && viewModel.playingAds) {
-                                            requireContext().toast(R.string.waiting_ads)
-                                        }
-                                    }
-                                }, MoreExecutors.directExecutor())
-                            }
-                        }
+                        (this@BasePlayerFragment as? StreamPlayerFragment)?.checkAds()
                     }
                 }
 
