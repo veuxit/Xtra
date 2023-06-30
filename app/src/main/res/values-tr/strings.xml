@@ -575,4 +575,12 @@
     <string name="use_integrity">Entegrasyon tokeni kullan</string>
     <string name="use_audio_focus">Pause when other apps play audio</string>
     <string name="handle_audio_becoming_noisy">Pause when headphones are disconnected</string>
+    <string name="proxy_playback_access_token">Proxy playback access token</string>
+    <string name="proxy_multivariant_playlist">Proxy multivariant playlist</string>
+    <string name="proxy_media_playlist">Proxy media playlist if ads are detected</string>
+    <string name="proxy_host">Host</string>
+    <string name="proxy_port">Port</string>
+    <string name="proxy_user">Username</string>
+    <string name="proxy_password">Password</string>
+    <string name="proxy_settings">HTTP proxy settings</string>
 </resources>

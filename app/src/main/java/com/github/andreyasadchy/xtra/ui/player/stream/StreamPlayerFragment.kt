@@ -215,7 +215,13 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "https://api.ttv.lol/playlist/\$channel.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true"),
                 randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
                 xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
-                playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site")
+                playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
+                proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
+                proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true),
+                proxyHost = prefs.getString(C.PROXY_HOST, null),
+                proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull(),
+                proxyUser = prefs.getString(C.PROXY_USER, null),
+                proxyPassword = prefs.getString(C.PROXY_PASSWORD, null)
             ) }
             viewModel.result.observe(viewLifecycleOwner) { result ->
                 if (result != null) {
@@ -235,18 +241,61 @@ class StreamPlayerFragment : BasePlayerFragment() {
                     }
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
                         PlaybackService.ITEM to stream,
-                        PlaybackService.URI to result.first.toString(),
+                        PlaybackService.URI to result.first,
                         PlaybackService.HEADERS to if (result.second == 1) {
                             (hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
                         } else if (viewModel.useProxy == 3) {
                             (hashMapOf("X-Forwarded-For" to "::1"))
-                        } else null
+                        } else null,
+                        PlaybackService.PLAYLIST_AS_DATA to result.third
                     )), Bundle.EMPTY)
                     player?.prepare()
                 }
             }
         } catch (e: Exception) {
             requireContext().toast(R.string.error_stream)
+        }
+    }
+
+    fun checkAds() {
+        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            result.addListener({
+                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                    val tag = result.get().extras.getString(PlaybackService.RESULT)
+                    val usingProxy = result.get().extras.getBoolean(PlaybackService.USING_PROXY)
+                    val stopProxy = result.get().extras.getBoolean(PlaybackService.STOP_PROXY)
+                    val playlist = result.get().extras.getString(PlaybackService.ITEM)
+                    val oldValue = viewModel.playingAds
+                    viewModel.playingAds = tag == "ads=true"
+                    if (viewModel.playingAds) {
+                        if (usingProxy) {
+                            player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(
+                                PlaybackService.USING_PROXY to false,
+                                PlaybackService.STOP_PROXY to true
+                            )), Bundle.EMPTY)
+                        } else {
+                            if (!oldValue) {
+                                if (!stopProxy && !playlist.isNullOrBlank() && prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true) && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() && prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null) {
+                                    player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(PlaybackService.USING_PROXY to true)), Bundle.EMPTY)
+                                    viewLifecycleOwner.lifecycleScope.launch {
+                                        for (i in 0 until 10) {
+                                            delay(10000)
+                                            if (!viewModel.checkPlaylist(playlist)) {
+                                                break
+                                            }
+                                        }
+                                        player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(PlaybackService.USING_PROXY to false)), Bundle.EMPTY)
+                                    }
+                                } else {
+                                    if (prefs.getBoolean(C.PLAYER_HIDE_ADS, false)) {
+                                        requireContext().toast(R.string.waiting_ads)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }, MoreExecutors.directExecutor())
         }
     }
 

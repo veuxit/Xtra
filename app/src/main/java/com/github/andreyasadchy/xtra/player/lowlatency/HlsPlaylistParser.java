@@ -648,6 +648,9 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       throws IOException {
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(XtraApp.INSTANCE.getApplicationContext()); // settings
     boolean hideAds = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PLAYER_HIDE_ADS, false);
+    @Nullable String proxyHost = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_HOST, null);
+    @Nullable String proxyPort = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_PORT, null);
+    boolean usingProxy = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PROXY_MEDIA_PLAYLIST, true) && proxyHost != null && !proxyHost.isBlank() && proxyPort != null && !proxyPort.isBlank();
     List<DateRange> adRanges = new ArrayList<>(); // ad segments
     @HlsMediaPlaylist.PlaylistType int playlistType = HlsMediaPlaylist.PLAYLIST_TYPE_UNKNOWN;
     long startOffsetUs = C.TIME_UNSET;
@@ -865,7 +868,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
           playlistStartTimeUs = programDatetimeUs - segmentStartTimeUs;
         }
       } else if (line.startsWith("#EXT-X-DATERANGE")) { // ad segments
-        if (hideAds) {
+        if (hideAds || usingProxy) {
           String id = parseOptionalStringAttr(line, Pattern.compile("ID=\"(.+?)\""), variableDefinitions);
           String classAttr = parseOptionalStringAttr(line, Pattern.compile("CLASS=\"(.+?)\""), variableDefinitions);
           String ad = parseOptionalStringAttr(line, Pattern.compile("X-TV-TWITCH-AD-.+?=\"(.+?)\""), variableDefinitions);
@@ -1098,8 +1101,25 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       trailingParts.add(preloadPart);
     }
 
-    if (hideAds && !segments.isEmpty() && segments.get(segments.size() - 1).url == null) { // ad segments
-      tags.add("ads=true");
+    if (!segments.isEmpty()) { // ad segments
+      HlsMediaPlaylist.Segment segment = segments.get(segments.size() - 1);
+      if (hideAds && segment.url == null) {
+        tags.add("ads=true");
+      } else {
+        if (usingProxy) {
+          if (segment.title.contains("Amazon") || segment.title.contains("Adform") || segment.title.contains("DCM")) {
+            tags.add("ads=true");
+          } else {
+            for (DateRange range : adRanges) {
+              long current = playlistStartTimeUs + segment.relativeStartTimeUs;
+              if ((range.startDateUs <= current) && (current < range.endDateUs)) {
+                tags.add("ads=true");
+                break;
+              }
+            }
+          }
+        }
+      }
     }
 
     return new HlsMediaPlaylist(

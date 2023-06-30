@@ -21,8 +21,8 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsManifest
@@ -50,6 +50,14 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import okhttp3.Credentials
+import okhttp3.OkHttpClient
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.SocketAddress
+import java.net.URI
 import java.util.LinkedList
 import java.util.Timer
 import java.util.regex.Pattern
@@ -61,6 +69,9 @@ import kotlin.concurrent.schedule
 class PlaybackService : MediaSessionService() {
 
     @Inject
+    lateinit var okHttpClient: OkHttpClient
+
+    @Inject
     lateinit var playerRepository: PlayerRepository
 
     @Inject
@@ -70,6 +81,9 @@ class PlaybackService : MediaSessionService() {
     private var playerMode = PlayerMode.NORMAL
     private var background = false
     private var dynamicsProcessing: DynamicsProcessing? = null
+    private var playingAds = false
+    private var usingProxy = false
+    private var stopProxy = false
 
     override fun onCreate() {
         super.onCreate()
@@ -91,7 +105,7 @@ class PlaybackService : MediaSessionService() {
                     when (item) {
                         is Stream -> {
                             (item as Stream).let { item ->
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory().apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient).apply {
                                     headers?.let {
                                         setDefaultRequestProperties(it)
                                     }
@@ -125,7 +139,7 @@ class PlaybackService : MediaSessionService() {
                         }
                         is Video -> {
                             (item as Video).let { item ->
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory())).apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient))).apply {
                                     setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
                                     if (usingPlaylist && (prefs.getBoolean(C.PLAYER_SUBTITLES, false) || prefs.getBoolean(C.PLAYER_MENU_SUBTITLES, false))) {
                                         setAllowChunklessPreparation(false)
@@ -264,6 +278,7 @@ class PlaybackService : MediaSessionService() {
                         .add(SessionCommand(START_AUDIO_ONLY, Bundle.EMPTY))
                         .add(SessionCommand(SWITCH_AUDIO_MODE, Bundle.EMPTY))
                         .add(SessionCommand(TOGGLE_DYNAMICS_PROCESSING, Bundle.EMPTY))
+                        .add(SessionCommand(TOGGLE_PROXY, Bundle.EMPTY))
                         .add(SessionCommand(MOVE_BACKGROUND, Bundle.EMPTY))
                         .add(SessionCommand(MOVE_FOREGROUND, Bundle.EMPTY))
                         .add(SessionCommand(CLEAR, Bundle.EMPTY))
@@ -287,18 +302,22 @@ class PlaybackService : MediaSessionService() {
                             } else {
                                 @Suppress("DEPRECATION") customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
+                                playingAds = false
+                                usingProxy = false
+                                stopProxy = false
                                 usingPlaylist = true
                                 usingAutoQuality = true
                                 usingChatOnlyQuality = true
-                                val uri = customCommand.customExtras.getString(URI)?.toUri()
+                                val uri = customCommand.customExtras.getString(URI)
                                 val headers = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     customCommand.customExtras.getSerializable(HEADERS, HashMap::class.java) as? HashMap<String, String>
                                 } else {
                                     @Suppress("DEPRECATION") customCommand.customExtras.getSerializable(HEADERS) as? HashMap<String, String>
                                 }
+                                val playlistAsData = customCommand.customExtras.getBoolean(PLAYLIST_AS_DATA)
                                 Companion.item = item
                                 Companion.headers = headers
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory().apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient).apply {
                                     if (headers != null) {
                                         setDefaultRequestProperties(headers)
                                     }
@@ -310,7 +329,11 @@ class PlaybackService : MediaSessionService() {
                                         setAllowChunklessPreparation(false)
                                     }
                                 }.createMediaSource(MediaItem.Builder().apply {
-                                    setUri(uri)
+                                    if (playlistAsData) {
+                                        setUri("data:;base64,${uri}")
+                                    } else {
+                                        setUri(uri?.toUri())
+                                    }
                                     setMimeType(MimeTypes.APPLICATION_M3U8)
                                     setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
                                         prefs.getString(C.PLAYER_LIVE_MIN_SPEED, "")?.toFloatOrNull()?.let { setMinPlaybackSpeed(it) }
@@ -361,7 +384,7 @@ class PlaybackService : MediaSessionService() {
                                     usingAutoQuality = true
                                     Companion.usingPlaylist = usingPlaylist
                                     Companion.item = item
-                                    HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory())).apply {
+                                    HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient))).apply {
                                         setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
                                         if (usingPlaylist && (prefs.getBoolean(C.PLAYER_SUBTITLES, false) || prefs.getBoolean(C.PLAYER_MENU_SUBTITLES, false))) {
                                             setAllowChunklessPreparation(false)
@@ -466,6 +489,15 @@ class PlaybackService : MediaSessionService() {
                             toggleDynamicsProcessing()
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(RESULT to dynamicsProcessing?.enabled)))
                         }
+                        TOGGLE_PROXY -> {
+                            if (!stopProxy) {
+                                toggleProxy(customCommand.customExtras.getBoolean(USING_PROXY))
+                            }
+                            if (customCommand.customExtras.getBoolean(STOP_PROXY)) {
+                                stopProxy = true
+                            }
+                            Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
                         MOVE_BACKGROUND -> {
                             val pipMode = customCommand.customExtras.getBoolean(PIP_MODE)
                             if (prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "2") {
@@ -505,6 +537,9 @@ class PlaybackService : MediaSessionService() {
                                 it.cancel()
                                 sleepTimer = null
                             }
+                            if (usingProxy) {
+                                toggleProxy(false)
+                            }
                             if (playerMode == PlayerMode.NORMAL) {
                                 session.player.prepare()
                             } else if (playerMode == PlayerMode.AUDIO_ONLY) {
@@ -524,7 +559,10 @@ class PlaybackService : MediaSessionService() {
                         )))
                         GET_LAST_TAG -> {
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(
-                                RESULT to (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.tags?.lastOrNull()
+                                RESULT to (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.tags?.lastOrNull(),
+                                USING_PROXY to usingProxy,
+                                STOP_PROXY to stopProxy,
+                                ITEM to (urls.values.elementAtOrNull(qualityUrlIndex) ?: urls.values.firstOrNull())
                             )))
                         }
                         GET_QUALITIES -> {
@@ -614,6 +652,9 @@ class PlaybackService : MediaSessionService() {
                     playerMode = PlayerMode.DISABLED
                 }
                 qualityIndex == audioIndex -> {
+                    if (usingProxy) {
+                        toggleProxy(false)
+                    }
                     val urlIndex = if (!urls.entries.elementAtOrNull(audioUrlIndex)?.value.isNullOrBlank()) {
                         audioUrlIndex
                     } else {
@@ -645,6 +686,9 @@ class PlaybackService : MediaSessionService() {
 
     private fun startAudioOnly() {
         mediaSession?.player?.let { player ->
+            if (usingProxy) {
+                toggleProxy(false)
+            }
             val urlIndex = if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false) && !urls.entries.elementAtOrNull(audioUrlIndex)?.value.isNullOrBlank()) {
                 audioUrlIndex
             } else {
@@ -766,6 +810,49 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    private fun toggleProxy(enable: Boolean) {
+        usingProxy = enable
+        mediaSession?.player?.currentMediaItem?.let { item ->
+            val proxyHost = prefs().getString(C.PROXY_HOST, null)
+            val proxyPort = prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
+            val proxyUser = prefs().getString(C.PROXY_USER, null)
+            val proxyPassword = prefs().getString(C.PROXY_PASSWORD, null)
+            HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(
+                if (enable && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                    okHttpClient.newBuilder().apply {
+                        proxySelector(object : ProxySelector() {
+                            override fun select(u: URI): List<Proxy> {
+                                return if (Regex("video-weaver\\.\\w+\\.hls\\.ttvnw\\.net").matches(u.host)) {
+                                    listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)), Proxy.NO_PROXY)
+                                } else {
+                                    listOf(Proxy.NO_PROXY)
+                                }
+                            }
+
+                            override fun connectFailed(u: URI, sa: SocketAddress, e: IOException) {}
+                        })
+                        if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                            proxyAuthenticator { _, response ->
+                                response.request.newBuilder().header(
+                                    "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                                ).build()
+                            }
+                        }
+                    }.build()
+                } else okHttpClient
+            ).apply {
+                headers?.let { setDefaultRequestProperties(it) }
+            })).apply {
+                setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
+                setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
+                if (prefs().getBoolean(C.PLAYER_SUBTITLES, false) || prefs().getBoolean(C.PLAYER_MENU_SUBTITLES, false)) {
+                    setAllowChunklessPreparation(false)
+                }
+            }.createMediaSource(item).let { (mediaSession?.player as? ExoPlayer)?.setMediaSource(it) }
+        }
+    }
+
     private fun clear() {
         savePosition()
         item = null
@@ -861,6 +948,7 @@ class PlaybackService : MediaSessionService() {
         const val START_AUDIO_ONLY = "startAudioOnly"
         const val SWITCH_AUDIO_MODE = "switchAudioMode"
         const val TOGGLE_DYNAMICS_PROCESSING = "toggleDynamicsProcessing"
+        const val TOGGLE_PROXY = "toggleProxy"
         const val MOVE_BACKGROUND = "moveBackground"
         const val MOVE_FOREGROUND = "moveForeground"
         const val CLEAR = "clear"
@@ -882,9 +970,12 @@ class PlaybackService : MediaSessionService() {
         const val URLS_VALUES = "urlsValues"
         const val HEADERS = "headers"
         const val USING_PLAYLIST = "usingPlaylist"
+        const val PLAYLIST_AS_DATA = "playlistAsData"
         const val PLAYBACK_POSITION = "playbackPosition"
         const val PIP_MODE = "pipMode"
         const val DURATION = "duration"
+        const val USING_PROXY = "usingProxy"
+        const val STOP_PROXY = "stopProxy"
 
         const val REQUEST_CODE_RESUME = 2
     }

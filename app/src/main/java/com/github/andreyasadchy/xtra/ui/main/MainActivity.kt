@@ -77,6 +77,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.player_button_preferences, true)
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.player_menu_preferences, true)
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.buffer_preferences, true)
+            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.proxy_preferences, true)
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.token_preferences, true)
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.api_token_preferences, true)
             prefs.edit {
