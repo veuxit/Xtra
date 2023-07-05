@@ -573,14 +573,14 @@
     <string name="get_all_headers">Obtener todas las cabeceras</string>
     <string name="gql_headers">Cabeceras GQL</string>
     <string name="use_integrity">Utilizar token de integridad</string>
-    <string name="use_audio_focus">Pause when other apps play audio</string>
-    <string name="handle_audio_becoming_noisy">Pause when headphones are disconnected</string>
-    <string name="proxy_playback_access_token">Proxy playback access token</string>
-    <string name="proxy_multivariant_playlist">Proxy multivariant playlist</string>
-    <string name="proxy_media_playlist">Proxy media playlist if ads are detected</string>
+    <string name="use_audio_focus">Pausa cuando otras apps reproducen audio</string>
+    <string name="handle_audio_becoming_noisy">Pausa cuando se desconectan los auriculares</string>
+    <string name="proxy_playback_access_token">Token de acceso a reproducción proxy</string>
+    <string name="proxy_multivariant_playlist">Lista de reproducción multivariante proxy</string>
+    <string name="proxy_media_playlist">Lista de reproducción multimedia proxy si se detectan anuncios</string>
     <string name="proxy_host">Host</string>
-    <string name="proxy_port">Port</string>
-    <string name="proxy_user">Username</string>
-    <string name="proxy_password">Password</string>
-    <string name="proxy_settings">HTTP proxy settings</string>
+    <string name="proxy_port">Puerto</string>
+    <string name="proxy_user">Nombre de usuario</string>
+    <string name="proxy_password">Contraseña</string>
+    <string name="proxy_settings">Configuración del proxy HTTP</string>
 </resources>
