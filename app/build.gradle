@@ -25,7 +25,7 @@ android {
         minSdk 21
         targetSdk 33
         versionCode 121
-        versionName "2.21.0"
+        versionName "2.21.1"
         resourceConfigurations += ["ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr"]
     }
 
@@ -101,7 +101,7 @@ dependencies {
     implementation "androidx.media3:media3-datasource-okhttp:$media3"
     implementation "androidx.media3:media3-ui:$media3"
     implementation "androidx.media3:media3-session:$media3"
-    implementation 'org.checkerframework:checker-qual:3.35.0'
+    implementation 'org.checkerframework:checker-qual:3.36.0'
 
     implementation "io.coil-kt:coil:$coil"
     implementation "io.coil-kt:coil-gif:$coil"
@@ -114,7 +114,7 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$dagger"
     kapt "com.google.dagger:hilt-compiler:$dagger"
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.2'
 }
 
 kapt {
