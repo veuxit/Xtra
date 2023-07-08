@@ -77,6 +77,7 @@ class ChatListenerImpl(
                     isAction = isAction,
                     rewardId = rewardId,
                     isFirst = prefixes["first-msg"] == "1",
+                    bits = prefixes["bits"]?.toIntOrNull(),
                     msgId = prefixes["msg-id"],
                     systemMsg = systemMsg,
                     emotes = emotesList,

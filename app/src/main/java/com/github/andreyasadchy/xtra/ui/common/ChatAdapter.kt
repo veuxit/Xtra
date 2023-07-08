@@ -271,7 +271,9 @@ class ChatAdapter(
                 val bitsCount = value.takeLastWhile { it.isDigit() }
                 val bitsName = value.substringBeforeLast(bitsCount)
                 if (bitsCount.isNotEmpty()) {
-                    val cheerEmote = cheerEmotes?.findLast { it.name == bitsName && it.minBits <= bitsCount.toInt() }
+                    val cheerEmote = if (liveMessage == null || liveMessage.bits != null) {
+                        cheerEmotes?.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
+                    } else null
                     if (cheerEmote != null) {
                         emote = cheerEmote
                         if (emote.color != null) {
