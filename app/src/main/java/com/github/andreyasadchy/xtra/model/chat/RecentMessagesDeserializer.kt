@@ -101,6 +101,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
                     isAction = isAction,
                     rewardId = prefixes["custom-reward-id"],
                     isFirst = prefixes["first-msg"] == "1",
+                    bits = prefixes["bits"]?.toIntOrNull(),
                     msgId = prefixes["msg-id"],
                     systemMsg = systemMsg,
                     emotes = emotesList,

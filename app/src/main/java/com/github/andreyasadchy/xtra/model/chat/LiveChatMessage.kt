@@ -12,6 +12,7 @@ data class LiveChatMessage(
     override val badges: List<Badge>? = null,
     override val fullMsg: String? = null,
     val isFirst: Boolean = false,
+    val bits: Int? = null,
     val msgId: String? = null,
     val systemMsg: String? = null,
     val timestamp: Long? = null,
