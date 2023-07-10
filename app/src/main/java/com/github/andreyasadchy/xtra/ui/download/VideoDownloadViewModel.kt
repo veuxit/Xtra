@@ -19,11 +19,16 @@ import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
 import com.iheartradio.m3u8.PlaylistParser
+import com.iheartradio.m3u8.PlaylistWriter
+import com.iheartradio.m3u8.data.Playlist
+import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.net.URL
 import javax.inject.Inject
 
@@ -120,9 +125,26 @@ class VideoDownloadViewModel @Inject constructor(
                             System.currentTimeMillis()
                         } + File.separator
 
-                val offlineVideo = DownloadUtils.prepareDownload(context, video, url, directory, duration, startPosition, fromIndex, toIndex)
+                val urlPath = url.substringBeforeLast('/') + "/"
+                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, directory, duration, startPosition, fromIndex, toIndex)
+                val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
+                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                }
+                val tracks = ArrayList<TrackData>()
+                for (i in fromIndex..toIndex) {
+                    val track = playlist.tracks[i]
+                    tracks.add(
+                        track.buildUpon()
+                            .withUri(track.uri.replace("-unmuted", "-muted"))
+                            .build()
+                    )
+                }
+                File(directory).mkdir()
+                FileOutputStream(offlineVideo.url).use {
+                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                }
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                val request = Request(videoId, url, directory, video.id, video.type, fromIndex, toIndex)
+                val request = Request(videoId, urlPath, directory)
                 offlineRepository.saveRequest(request)
 
                 DownloadUtils.download(context, request)

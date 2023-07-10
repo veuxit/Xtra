@@ -17,15 +17,10 @@ import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FetchProvider
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
 import com.iheartradio.m3u8.*
 import com.iheartradio.m3u8.data.MediaPlaylist
-import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
-import com.iheartradio.m3u8.data.TrackInfo
 import com.tonyodev.fetch2.AbstractFetchListener
 import com.tonyodev.fetch2.Download
 import com.tonyodev.fetch2.Fetch
@@ -35,8 +30,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.io.FileOutputStream
-import java.net.URL
+import java.io.FileInputStream
 import java.util.concurrent.CountDownLatch
 import javax.inject.Inject
 import kotlin.math.min
@@ -172,31 +166,7 @@ class DownloadService : IntentService(TAG) {
             })
             GlobalScope.launch {
                 try {
-                    val skipAccessToken = applicationContext.prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
-                    playlist = URL(if (skipAccessToken <= 1) {
-                        request.url + if (request.videoType?.lowercase() == "highlight") {
-                            "highlight-${request.videoId}.m3u8"
-                        } else {
-                            "index-dvr.m3u8"
-                        }
-                    } else {
-                        val response = playerRepository.loadVideoPlaylist(
-                            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, applicationContext.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                            videoId = request.videoId!!,
-                            playerType = applicationContext.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
-                        )
-                        if (response.isSuccessful) {
-                            "https://.*\\.m3u8".toRegex().find(response.body()!!.string())!!.value
-                        } else {
-                            if (skipAccessToken == 2) {
-                                request.url + if (request.videoType?.lowercase() == "highlight") {
-                                    "highlight-${request.videoId}.m3u8"
-                                } else {
-                                    "index-dvr.m3u8"
-                                }
-                            } else throw Exception()
-                        }
-                    }).openStream().use {
+                    playlist = FileInputStream(File(offlineVideo.url)).use {
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                     }
                     enqueueNext()
@@ -250,16 +220,13 @@ class DownloadService : IntentService(TAG) {
             return
         }
         with(request) {
-            val current = segmentFrom!! + offlineVideo.progress
+            val current = offlineVideo.progress
             try {
-                for (i in current..min(current + ENQUEUE_SIZE, segmentTo!!)) {
+                for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
                     val track = tracks[i]
-                    track.uri.replace("-unmuted", "-muted").let {
-                        requests.add(FetchRequest(url + it, path + it).apply { groupId = offlineVideoId })
-                    }
+                    requests.add(FetchRequest(url + track.uri, path + track.uri).apply { groupId = offlineVideoId })
                 }
             } catch (e: IndexOutOfBoundsException) {
-                offlineRepository.updateVideo(offlineVideo.apply { segmentTo = tracks.lastIndex })
             }
         }
         fetch.enqueue(requests)
@@ -275,43 +242,6 @@ class DownloadService : IntentService(TAG) {
 
     @SuppressLint("RestrictedApi")
     private fun onDownloadCompleted() {
-        if (offlineVideo.vod) {
-            Log.d(TAG, "Downloaded video")
-            with(request) {
-                val tracks = ArrayList<TrackData>(offlineVideo.maxProgress)
-                try {
-                    for (i in segmentFrom!!..segmentTo!!) {
-                        val track = playlist.tracks[i] //TODO encrypt files
-                        tracks.add(
-                            TrackData.Builder()
-                                .withUri("$path${track.uri.replace("-unmuted", "-muted")}")
-                                .withTrackInfo(TrackInfo(track.trackInfo.duration, track.trackInfo.title))
-                                .build()
-                        )
-                    }
-                } catch (e: UninitializedPropertyAccessException) {
-                    GlobalScope.launch {
-                        delay(3000L)
-                        onDownloadCompleted()
-                    }
-                    return
-                } catch (e: IndexOutOfBoundsException) {
-                }
-                val mediaPlaylist = MediaPlaylist.Builder()
-                    .withTargetDuration(playlist.targetDuration)
-                    .withTracks(tracks)
-                    .build()
-                val playlist = Playlist.Builder()
-                    .withMediaPlaylist(mediaPlaylist)
-                    .build()
-                FileOutputStream(offlineVideo.url).use {
-                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(playlist)
-                }
-                Log.d(TAG, "Playlist created")
-            }
-        } else {
-            Log.d(TAG, "Downloaded clip")
-        }
         offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADED })
         offlineRepository.deleteRequest(request)
         val intent = Intent(this, MainActivity::class.java).apply {
