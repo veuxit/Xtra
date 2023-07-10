@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
+import android.graphics.Color
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -197,8 +198,15 @@ class DownloadsAdapter(
                                 context.getString(R.string.download_pending)
                             }
                             visible()
-                            setOnClickListener { deleteVideo(item) }
-                            setOnLongClickListener { deleteVideo(item); true }
+                            if (item.vod) {
+                                background = null
+                                isClickable = false
+                                isFocusable = false
+                                setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                            } else {
+                                setOnClickListener { deleteVideo(item) }
+                                setOnLongClickListener { deleteVideo(item); true }
+                            }
                         }
                     }
                 }

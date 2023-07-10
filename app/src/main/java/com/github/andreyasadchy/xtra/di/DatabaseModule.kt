@@ -178,6 +178,14 @@ class DatabaseModule {
                                 db.execSQL("ALTER TABLE recent_emotes1 RENAME TO recent_emotes")
                             }
                         },
+                        object : Migration(20, 21) {
+                            override fun migrate(db: SupportSQLiteDatabase) {
+                                db.execSQL("CREATE TABLE IF NOT EXISTS requests1 (offline_video_id INTEGER NOT NULL, url TEXT NOT NULL, path TEXT NOT NULL, PRIMARY KEY (offline_video_id), FOREIGN KEY('offline_video_id') REFERENCES videos('id') ON DELETE CASCADE)")
+                                db.execSQL("INSERT INTO requests1 (offline_video_id, url, path) SELECT offline_video_id, url, path FROM requests")
+                                db.execSQL("DROP TABLE requests")
+                                db.execSQL("ALTER TABLE requests1 RENAME TO requests")
+                            }
+                        },
                     )
                     .build()
 }
