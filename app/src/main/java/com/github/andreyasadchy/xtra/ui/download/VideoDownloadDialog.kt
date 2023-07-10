@@ -142,7 +142,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             }
                             fun startDownload() {
                                 val quality = spinner.selectedItem.toString()
-                                val url = videoInfo.qualities.getValue(quality).substringBeforeLast('/') + "/"
+                                val url = videoInfo.qualities.getValue(quality)
                                 viewModel.download(url, downloadPath, quality, fromIndex, toIndex)
                                 dismiss()
                             }

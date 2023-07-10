@@ -14,12 +14,4 @@ data class Request(
         @ColumnInfo(name = "offline_video_id")
         val offlineVideoId: Int,
         val url: String,
-        val path: String,
-        @ColumnInfo(name = "video_id")
-        val videoId: String? = null,
-        @ColumnInfo(name = "video_type")
-        val videoType: String? = null,
-        @ColumnInfo(name = "segment_from")
-        val segmentFrom: Int? = null,
-        @ColumnInfo(name = "segment_to")
-        var segmentTo: Int? = null) : Parcelable
+        val path: String) : Parcelable
