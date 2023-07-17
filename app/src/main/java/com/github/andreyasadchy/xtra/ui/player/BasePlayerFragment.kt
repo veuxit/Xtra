@@ -21,7 +21,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.trackPipAnimationHintView
 import androidx.core.content.edit
 import androidx.core.os.bundleOf
-import androidx.core.view.*
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -47,7 +51,19 @@ import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.CustomPlayerView
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.LifecycleListener
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.disable
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.hideKeyboard
+import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
+import com.github.andreyasadchy.xtra.util.isKeyboardShown
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -131,7 +147,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     if (view != null) {
                         if (this@BasePlayerFragment is StreamPlayerFragment && !prefs.getBoolean(C.PLAYER_PAUSE, false) &&
                             events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
-                            requireView().findViewById<ImageButton>(R.id.exo_play_pause)?.apply {
+                            requireView().findViewById<ImageButton>(androidx.media3.ui.R.id.exo_play_pause)?.apply {
                                 if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
                                     gone()
                                 } else {
@@ -694,10 +710,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (available && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
                 visible()
                 if (enabled) {
-                    setImageResource(R.drawable.exo_ic_subtitle_on)
+                    setImageResource(androidx.media3.ui.R.drawable.exo_ic_subtitle_on)
                     setOnClickListener { toggleSubtitles(false) }
                 } else {
-                    setImageResource(R.drawable.exo_ic_subtitle_off)
+                    setImageResource(androidx.media3.ui.R.drawable.exo_ic_subtitle_off)
                     setOnClickListener { toggleSubtitles(true) }
                 }
             } else {
