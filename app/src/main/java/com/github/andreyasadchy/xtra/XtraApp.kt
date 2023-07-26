@@ -3,7 +3,9 @@ package com.github.andreyasadchy.xtra
 import android.app.Application
 import android.content.Context
 import android.os.Build
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.GifDecoder
@@ -14,10 +16,11 @@ import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 
 @HiltAndroidApp
-class XtraApp : Application(), ImageLoaderFactory {
+class XtraApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     companion object {
         lateinit var INSTANCE: Application
@@ -44,6 +47,14 @@ class XtraApp : Application(), ImageLoaderFactory {
     fun removeLifecycleListener(listener: LifecycleListener) {
         appLifecycleObserver.removeListener(listener)
     }
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override fun getWorkManagerConfiguration(): Configuration =
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun newImageLoader(): ImageLoader {
         val builder = ImageLoader.Builder(this).apply {

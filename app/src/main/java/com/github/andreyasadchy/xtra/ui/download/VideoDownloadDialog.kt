@@ -143,7 +143,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             fun startDownload() {
                                 val quality = spinner.selectedItem.toString()
                                 val url = videoInfo.qualities.getValue(quality)
-                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex)
+                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex, requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                                 dismiss()
                             }
                             startDownload()
