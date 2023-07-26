@@ -2,8 +2,10 @@ package com.github.andreyasadchy.xtra
 
 import android.app.Application
 import android.content.Context
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.multidex.MultiDex
+import androidx.work.Configuration
 import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.C
@@ -16,6 +18,7 @@ import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
 import java.security.KeyStore
 import java.security.Security
+import javax.inject.Inject
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -23,7 +26,7 @@ import javax.net.ssl.X509TrustManager
 
 
 @HiltAndroidApp
-class XtraApp : Application() {
+class XtraApp : Application(), Configuration.Provider {
 
     companion object {
         lateinit var INSTANCE: Application
@@ -69,4 +72,11 @@ class XtraApp : Application() {
         appLifecycleObserver.removeListener(listener)
     }
 
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override fun getWorkManagerConfiguration(): Configuration =
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 }

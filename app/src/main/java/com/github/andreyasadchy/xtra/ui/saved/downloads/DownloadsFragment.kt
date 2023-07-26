@@ -10,11 +10,16 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentSavedBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
+import com.github.andreyasadchy.xtra.ui.download.DownloadWorker
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -36,7 +41,17 @@ class DownloadsFragment : BaseNetworkFragment(), Scrollable {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
             val activity = requireActivity() as MainActivity
-            adapter = DownloadsAdapter(this@DownloadsFragment) {
+            adapter = DownloadsAdapter(this@DownloadsFragment, {
+                WorkManager.getInstance(requireContext()).cancelUniqueWork(it.toString())
+            }, {
+                WorkManager.getInstance(requireContext()).enqueueUniqueWork(
+                    it.toString(),
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<DownloadWorker>()
+                        .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to it))
+                        .build()
+                )
+            }, {
                 val delete = getString(R.string.delete)
                 AlertDialog.Builder(activity)
                     .setTitle(delete)
@@ -44,7 +59,7 @@ class DownloadsFragment : BaseNetworkFragment(), Scrollable {
                     .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }
                     .setNegativeButton(getString(android.R.string.cancel), null)
                     .show()
-            }
+            })
             adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
                 override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                     adapter.unregisterAdapterDataObserver(this)

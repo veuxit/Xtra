@@ -5,6 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -64,7 +68,7 @@ class ClipDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String) {
+    fun download(url: String, path: String, quality: String, useWorkManager: Boolean) {
         GlobalScope.launch {
             val context = getApplication<Application>()
 
@@ -78,10 +82,20 @@ class ClipDownloadViewModel @Inject constructor(
 
             val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, filePath, clip.duration?.toLong()?.times(1000L), startPosition)
             val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-            val request = Request(videoId, url, offlineVideo.url)
-            offlineRepository.saveRequest(request)
+            if (useWorkManager) {
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    videoId.toString(),
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<DownloadWorker>()
+                        .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                        .build()
+                )
+            } else {
+                val request = Request(videoId, url, offlineVideo.url)
+                offlineRepository.saveRequest(request)
 
-            DownloadUtils.download(context, request)
+                DownloadUtils.download(context, request)
+            }
         }
     }
 }

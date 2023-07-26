@@ -515,6 +515,12 @@
         app:iconSpaceReserved="false" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="debug_workmanager_downloads"
+        android:title="@string/use_workmanager_downloads"
+        app:iconSpaceReserved="false"/>
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="debug_show_conscrypt_error_toast"
         android:title="@string/show_conscrypt_error_toast"
