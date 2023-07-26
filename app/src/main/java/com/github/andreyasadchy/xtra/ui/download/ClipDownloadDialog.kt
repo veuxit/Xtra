@@ -15,7 +15,9 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -72,7 +74,7 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             cancel.setOnClickListener { dismiss() }
             download.setOnClickListener {
                 val quality = spinner.selectedItem.toString()
-                viewModel.download(qualities.getValue(quality), downloadPath, quality)
+                viewModel.download(qualities.getValue(quality), downloadPath, quality, requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                 dismiss()
             }
         }

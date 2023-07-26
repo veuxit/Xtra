@@ -14,6 +14,8 @@ fragment = "1.6.0"
 glide = "4.15.1"
 glide-webpdecoder = "2.3.4.15.1"
 hilt = "2.47"
+hilt-extension-compiler = "1.0.0"
+hilt-work = "1.0.0"
 kotlin = "1.9.0"
 lifecycle = "2.6.1"
 material = "1.9.0"
@@ -28,6 +30,7 @@ retrofit = "2.9.0"
 room = "2.6.0-alpha01"
 swiperefreshlayout = "1.1.0"
 webkit = "1.7.0"
+work = "2.8.1"
 
 [libraries]
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
@@ -49,6 +52,8 @@ glide-okhttp = { module = "com.github.bumptech.glide:okhttp3-integration", versi
 glide-webpdecoder = { module = "com.github.zjupure:webpdecoder", version.ref = "glide-webpdecoder" }
 hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+hilt-extension-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-extension-compiler" }
+hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
 lifecycle-common-java8 = { module = "androidx.lifecycle:lifecycle-common-java8", version.ref = "lifecycle" }
 lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycle" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
@@ -73,6 +78,7 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
 webkit = { module = "androidx.webkit:webkit", version.ref = "webkit" }
+work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

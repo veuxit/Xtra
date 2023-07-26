@@ -24,8 +24,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 33
-        versionCode = 201
-        versionName = "2.22.1"
+        versionCode = 202
+        versionName = "2.23.0"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr")
     }
 
@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.core.ktx)
     implementation(libs.fragment.ktx)
     implementation(libs.navigation.fragment.ktx)
@@ -113,6 +114,8 @@ dependencies {
 
     implementation(libs.hilt)
     kapt(libs.hilt.compiler)
+    implementation(libs.hilt.work)
+    kapt(libs.hilt.extension.compiler)
 
     implementation(libs.coroutines)
 }

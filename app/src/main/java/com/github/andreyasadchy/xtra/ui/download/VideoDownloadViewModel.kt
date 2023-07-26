@@ -5,6 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.offline.Request
@@ -111,7 +115,7 @@ class VideoDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String, fromIndex: Int, toIndex: Int) {
+    fun download(url: String, path: String, quality: String, fromIndex: Int, toIndex: Int, useWorkManager: Boolean) {
         GlobalScope.launch {
             with(_videoInfo.value!!) {
                 val context = getApplication<Application>()
@@ -144,10 +148,20 @@ class VideoDownloadViewModel @Inject constructor(
                     PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                 }
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                val request = Request(videoId, urlPath, directory)
-                offlineRepository.saveRequest(request)
+                if (useWorkManager) {
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        videoId.toString(),
+                        ExistingWorkPolicy.KEEP,
+                        OneTimeWorkRequestBuilder<DownloadWorker>()
+                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                            .build()
+                    )
+                } else {
+                    val request = Request(videoId, urlPath, directory)
+                    offlineRepository.saveRequest(request)
 
-                DownloadUtils.download(context, request)
+                    DownloadUtils.download(context, request)
+                }
             }
         }
     }

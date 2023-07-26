@@ -31,6 +31,8 @@ import com.github.andreyasadchy.xtra.util.visible
 
 class DownloadsAdapter(
     private val fragment: Fragment,
+    private val stopDownload: (Int) -> Unit,
+    private val resumeDownload: (Int) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit) : ListAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
@@ -178,8 +180,14 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
+                            if (context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false) && item.status != OfflineVideo.STATUS_DOWNLOADED) {
+                                menu.findItem(R.id.stopDownload).isVisible = true
+                                menu.findItem(R.id.resumeDownload).isVisible = true
+                            }
                             setOnMenuItemClickListener {
                                 when(it.itemId) {
+                                    R.id.stopDownload -> stopDownload(item.id)
+                                    R.id.resumeDownload -> resumeDownload(item.id)
                                     R.id.delete -> deleteVideo(item)
                                     else -> menu.close()
                                 }

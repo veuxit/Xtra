@@ -2,9 +2,12 @@ package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FetchProvider
+import com.github.andreyasadchy.xtra.util.prefs
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.PlaylistParser
@@ -25,7 +28,11 @@ class DownloadsViewModel @Inject internal constructor(
     fun delete(context: Context, video: OfflineVideo) {
         repository.deleteVideo(context, video)
         GlobalScope.launch {
-            if (video.status == OfflineVideo.STATUS_DOWNLOADED) {
+            val useWorkManager = context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
+            if (video.status == OfflineVideo.STATUS_DOWNLOADED || useWorkManager) {
+                if (useWorkManager) {
+                    WorkManager.getInstance(context).cancelUniqueWork(video.id.toString())
+                }
                 val playlistFile = File(video.url)
                 if (!playlistFile.exists()) {
                     return@launch
