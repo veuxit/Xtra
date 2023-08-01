@@ -154,7 +154,6 @@
     <string name="player_chatbartoggle">Показать строку переключения чата</string>
     <string name="player_chattoggle">Кнопка переключения чата</string>
     <string name="player_fullscreen">Кнопка полного экрана</string>
-    <string name="player_viewericon">Значок рядом со счётчиком зрителей</string>
     <string name="player_pause">Кнопка паузы в прямых трансляциях</string>
     <string name="settings_ui">ИНТЕРФЕЙС</string>
     <string name="settings_chat">ЧАТ</string>
@@ -586,4 +585,5 @@
     <string name="stop_download">Остановить загрузку</string>
     <string name="resume_download">Возобновить загрузку</string>
     <string name="use_workmanager_downloads">Использовать WorkManager для загрузок</string>
+    <string name="show_view_count_icon">Show view count and uptime icons</string>
 </resources>
