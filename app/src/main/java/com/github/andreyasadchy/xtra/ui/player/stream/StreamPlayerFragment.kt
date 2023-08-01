@@ -3,10 +3,12 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Chronometer
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -50,6 +52,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.TimeZone
 
 @AndroidEntryPoint
 class StreamPlayerFragment : BasePlayerFragment() {
@@ -90,7 +93,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
         viewModel.stream.observe(viewLifecycleOwner) {
             chatFragment.updateStreamId(it?.id)
-            if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.viewers)?.text.isNullOrBlank()) {
+            if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()) {
                 updateViewerCount(it?.viewerCount)
             }
             if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
@@ -122,7 +125,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
             }
         }
         if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
-            requireView().findViewById<LinearLayout>(R.id.viewersLayout)?.apply {
+            requireView().findViewById<LinearLayout>(R.id.playerViewers)?.apply {
                 setOnClickListener { openViewerList() }
             }
         }
@@ -138,6 +141,13 @@ class StreamPlayerFragment : BasePlayerFragment() {
                         channelLogo = stream.channelLogo
                     ))
                     slidingLayout.minimize()
+                }
+            }
+        }
+        if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
+            stream.startedAt?.let {
+                TwitchApiHelper.parseIso8601Date(it)?.let { startedAtMs ->
+                    updateUptime(TimeZone.getDefault().getOffset(System.currentTimeMillis()) + startedAtMs)
                 }
             }
         }
@@ -347,8 +357,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
     }
 
     fun updateViewerCount(viewerCount: Int?) {
-        val viewers = requireView().findViewById<TextView>(R.id.viewers)
-        val viewerIcon = requireView().findViewById<ImageView>(R.id.viewerIcon)
+        val viewers = requireView().findViewById<TextView>(R.id.playerViewersText)
+        val viewerIcon = requireView().findViewById<ImageView>(R.id.playerViewersIcon)
         if (viewerCount != null) {
             viewers?.text = TwitchApiHelper.formatCount(requireContext(), viewerCount)
             if (prefs.getBoolean(C.PLAYER_VIEWERICON, true)) {
@@ -357,6 +367,39 @@ class StreamPlayerFragment : BasePlayerFragment() {
         } else {
             viewers?.text = null
             viewerIcon?.gone()
+        }
+    }
+
+    fun updateLive(live: Boolean?, uptimeMs: Long?, channelLogin: String?) {
+        if (channelLogin == stream.channelLogin) {
+            live?.let {
+                if (live) {
+                    restartPlayer()
+                }
+                updateUptime(uptimeMs)
+            }
+        }
+    }
+
+    private fun updateUptime(uptimeMs: Long?) {
+        val layout = requireView().findViewById<LinearLayout>(R.id.playerUptime)
+        val uptime = requireView().findViewById<Chronometer>(R.id.playerUptimeText)
+        uptime?.stop()
+        if (uptimeMs != null && prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
+            layout?.visible()
+            uptime?.apply {
+                base = SystemClock.elapsedRealtime() + uptimeMs - System.currentTimeMillis()
+                start()
+            }
+            requireView().findViewById<ImageView>(R.id.playerUptimeIcon)?.apply {
+                if (prefs.getBoolean(C.PLAYER_VIEWERICON, true)) {
+                    visible()
+                } else {
+                    gone()
+                }
+            }
+        } else {
+            layout?.gone()
         }
     }
 

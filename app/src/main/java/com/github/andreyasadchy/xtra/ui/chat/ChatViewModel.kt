@@ -34,6 +34,7 @@ import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Command
 import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
+import com.github.andreyasadchy.xtra.util.chat.PlaybackMessage
 import com.github.andreyasadchy.xtra.util.chat.PointsEarned
 import com.github.andreyasadchy.xtra.util.chat.PubSubCallback
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
@@ -94,6 +95,7 @@ class ChatViewModel @Inject constructor(
     var raidClosed = false
     val viewerCount = MutableLiveData<Int?>()
     val title = MutableLiveData<BroadcastSettings?>()
+    val streamLiveChanged = MutableLiveData<Pair<PlaybackMessage, String?>>()
     var streamId: String? = null
     private val rewardList = mutableListOf<Pair<LiveChatMessage?, PubSubPointReward?>>()
 
@@ -623,15 +625,16 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onPlaybackMessage(live: Boolean?, viewers: Int?) {
-            live?.let {
+        override fun onPlaybackMessage(message: PlaybackMessage) {
+            message.live?.let {
                 if (it) {
                     _command.postValue(Command(duration = channelLogin, type = "stream_live"))
                 } else {
                     _command.postValue(Command(duration = channelLogin, type = "stream_offline"))
                 }
+                streamLiveChanged.postValue(Pair(message, channelLogin))
             }
-            viewerCount.postValue(viewers)
+            viewerCount.postValue(message.viewers)
         }
 
         override fun onTitleUpdate(message: BroadcastSettings) {

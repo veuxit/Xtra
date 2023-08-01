@@ -310,10 +310,18 @@
         <item name="android:visibility">gone</item>
     </style>
 
-    <style name="PlayerViewers" parent="PlayerImage">
+    <style name="PlayerViewersIcon" parent="PlayerImage">
         <item name="android:layout_width">30dp</item>
         <item name="android:layout_height">30dp</item>
-        <item name="android:src">@drawable/baseline_person_black_36</item>
+        <item name="android:src">@drawable/baseline_person_black_24</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="PlayerUptimeIcon" parent="PlayerImage">
+        <item name="android:layout_width">12dp</item>
+        <item name="android:layout_height">12dp</item>
+        <item name="android:src">@drawable/baseline_circle_24</item>
+        <item name="tint">@color/liveStreamRed</item>
         <item name="android:visibility">gone</item>
     </style>
 
