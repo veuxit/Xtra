@@ -8,6 +8,10 @@ plugins {
     alias(libs.plugins.apollo3)
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 android {
     signingConfigs {
         getByName("debug") {
@@ -24,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 33
-        versionCode = 203
-        versionName = "2.24.0"
+        versionCode = 204
+        versionName = "2.24.1"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr")
     }
 
@@ -41,13 +45,6 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
         }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
     }
     buildFeatures {
         buildConfig = true

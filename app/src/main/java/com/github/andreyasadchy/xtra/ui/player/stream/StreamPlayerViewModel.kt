@@ -132,6 +132,7 @@ class StreamPlayerViewModel @Inject constructor(
                 gameName = it?.gameName
                 title = it?.title
                 viewerCount = it?.viewerCount
+                startedAt = it?.startedAt
             }
         }
         _stream.postValue(s)
