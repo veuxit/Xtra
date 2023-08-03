@@ -17,6 +17,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -100,6 +101,13 @@ class StreamPlayerFragment : BasePlayerFragment() {
                     requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
                     requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()) {
                 updateTitle(BroadcastSettings(it?.title, it?.gameId, it?.gameName))
+            }
+            if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) && requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false) {
+                it?.startedAt?.let { date ->
+                    TwitchApiHelper.parseIso8601Date(date)?.let { startedAtMs ->
+                        updateUptime(TimeZone.getDefault().getOffset(System.currentTimeMillis()) + startedAtMs)
+                    }
+                }
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
