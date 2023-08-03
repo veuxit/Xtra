@@ -15,7 +15,7 @@ data class Stream(
         val type: String? = null,
         var title: String? = null,
         var viewerCount: Int? = null,
-        val startedAt: String? = null,
+        var startedAt: String? = null,
         val thumbnailUrl: String? = null,
 
         var profileImageUrl: String? = null,
