@@ -82,6 +82,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
         viewModel.loaded.observe(viewLifecycleOwner) {
             if (it) {
+                loaded = true
                 settings?.enable()
                 download?.enable()
                 mode?.enable()
@@ -232,7 +233,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(
                 PlaybackService.ITEM to video,
                 PlaybackService.USING_PLAYLIST to false,
-                PlaybackService.PLAYBACK_POSITION to playbackPosition
+                PlaybackService.PLAYBACK_POSITION to playbackPosition,
+                PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
             )), Bundle.EMPTY)
         } else {
             viewModel.load(
@@ -245,7 +247,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                     PlaybackService.ITEM to video,
                     PlaybackService.URI to url.toString(),
                     PlaybackService.USING_PLAYLIST to true,
-                    PlaybackService.PLAYBACK_POSITION to playbackPosition
+                    PlaybackService.PLAYBACK_POSITION to playbackPosition,
+                    PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
                 )), Bundle.EMPTY)
             }
         }
@@ -356,9 +359,12 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     companion object {
         private const val KEY_VIDEO = "video"
         private const val KEY_OFFSET = "offset"
+        private const val KEY_IGNORE_SAVED_POSITION = "ignoreSavedPosition"
+        private var loaded = false
 
-        fun newInstance(video: Video, offset: Double? = null): VideoPlayerFragment {
-            return VideoPlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_OFFSET to offset) }
+        fun newInstance(video: Video, offset: Double? = null, ignoreSavedPosition: Boolean = false): VideoPlayerFragment {
+            loaded = false
+            return VideoPlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_OFFSET to offset, KEY_IGNORE_SAVED_POSITION to ignoreSavedPosition) }
         }
     }
 }
