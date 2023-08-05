@@ -115,7 +115,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                     ((clip.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
                 } else {
                     0.0
-                }))
+                }), true)
             }
         }
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
