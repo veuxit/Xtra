@@ -14,6 +14,8 @@ class OfflinePlayerViewModel @Inject constructor(
     localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(repository, localFollowsChannel) {
 
     fun savePosition(id: Int, position: Long) {
-        offlineRepository.updateVideoPosition(id, position)
+        if (loaded.value == true) {
+            offlineRepository.updateVideoPosition(id, position)
+        }
     }
 }

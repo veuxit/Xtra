@@ -835,15 +835,15 @@ open class PlaybackService : MediaSessionService() {
 
     private fun savePosition() {
         item?.let { item ->
-            mediaSession?.player?.currentPosition?.let { position ->
-                if (prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            mediaSession?.player?.let { player ->
+                if (!player.currentTracks.isEmpty && prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
                     when (item) {
                         is Video -> {
                             item.id?.toLongOrNull()?.let { id ->
-                                playerRepository.saveVideoPosition(VideoPosition(id, position))
+                                playerRepository.saveVideoPosition(VideoPosition(id, player.currentPosition))
                             }
                         }
-                        is OfflineVideo -> offlineRepository.updateVideoPosition(item.id, position)
+                        is OfflineVideo -> offlineRepository.updateVideoPosition(item.id, player.currentPosition)
                     }
                 }
             }
