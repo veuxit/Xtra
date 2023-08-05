@@ -56,7 +56,9 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun savePosition(id: Long, position: Long) {
-        playerRepository.saveVideoPosition(VideoPosition(id, position))
+        if (loaded.value == true) {
+            playerRepository.saveVideoPosition(VideoPosition(id, position))
+        }
     }
 
     fun loadGamesList(gqlHeaders: Map<String, String>, videoId: String?) {
