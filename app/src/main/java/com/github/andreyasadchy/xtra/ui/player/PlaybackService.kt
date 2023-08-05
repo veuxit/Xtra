@@ -402,7 +402,8 @@ class PlaybackService : MediaSessionService() {
                                     session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                     session.player.prepare()
                                     session.player.playWhenReady = true
-                                    session.player.seekTo(customCommand.customExtras.getLong(PLAYBACK_POSITION))
+                                    session.player.seekTo(savedPosition?.let { if (it.id == item.id?.toLongOrNull()) it.position else null }
+                                        ?: customCommand.customExtras.getLong(PLAYBACK_POSITION))
                                 }
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -464,7 +465,9 @@ class PlaybackService : MediaSessionService() {
                                 session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 session.player.prepare()
                                 session.player.playWhenReady = true
-                                session.player.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) item.lastWatchPosition ?: 0 else 0)
+                                session.player.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                                    savedPosition?.let { if (it.id == item.id.toLong()) it.position else null } ?: item.lastWatchPosition ?: 0
+                                } else 0)
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
@@ -886,10 +889,15 @@ class PlaybackService : MediaSessionService() {
                     when (item) {
                         is Video -> {
                             item.id?.toLongOrNull()?.let { id ->
-                                playerRepository.saveVideoPosition(VideoPosition(id, player.currentPosition))
+                                val position = VideoPosition(id, player.currentPosition)
+                                savedPosition = position
+                                playerRepository.saveVideoPosition(position)
                             }
                         }
-                        is OfflineVideo -> offlineRepository.updateVideoPosition(item.id, player.currentPosition)
+                        is OfflineVideo -> {
+                            savedPosition = VideoPosition(item.id.toLong(), player.currentPosition)
+                            offlineRepository.updateVideoPosition(item.id, player.currentPosition)
+                        }
                     }
                 }
             }
@@ -919,6 +927,7 @@ class PlaybackService : MediaSessionService() {
         private var mediaItem: MediaItem? = null
         private var headers: HashMap<String, String>? = null
         private var playbackPosition: Long = 0
+        private var savedPosition: VideoPosition? = null
 
         private var usingPlaylist = false
         private var usingAutoQuality = false
