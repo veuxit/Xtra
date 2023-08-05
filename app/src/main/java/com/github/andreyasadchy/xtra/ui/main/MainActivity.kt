@@ -226,7 +226,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         viewModel.video.observe(this) { video ->
                             if (video != null && !video.id.isNullOrBlank()) {
-                                startVideo(video, offset)
+                                startVideo(video, offset, offset != null)
                             }
                         }
                     }
@@ -304,8 +304,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         startPlayer(StreamPlayerFragment.newInstance(stream))
     }
 
-    fun startVideo(video: Video, offset: Double?) {
-        startPlayer(VideoPlayerFragment.newInstance(video, offset))
+    fun startVideo(video: Video, offset: Double?, ignoreSavedPosition: Boolean = false) {
+        startPlayer(VideoPlayerFragment.newInstance(video, offset, ignoreSavedPosition))
     }
 
     fun startClip(clip: Clip) {

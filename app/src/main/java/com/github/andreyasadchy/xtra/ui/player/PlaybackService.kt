@@ -395,8 +395,11 @@ open class PlaybackService : MediaSessionService() {
                                     session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                     session.player.prepare()
                                     session.player.playWhenReady = true
-                                    session.player.seekTo(savedPosition?.let { if (it.id == item.id?.toLongOrNull()) it.position else null }
-                                        ?: customCommand.customExtras.getLong(PLAYBACK_POSITION))
+                                    session.player.seekTo(savedPosition?.let {
+                                        if (!customCommand.customExtras.getBoolean(IGNORE_SAVED_POSITION) && it.id == item.id?.toLongOrNull()) {
+                                            it.position
+                                        } else null
+                                    } ?: customCommand.customExtras.getLong(PLAYBACK_POSITION))
                                 }
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -935,6 +938,7 @@ open class PlaybackService : MediaSessionService() {
         const val USING_PLAYLIST = "usingPlaylist"
         const val PLAYLIST_AS_DATA = "playlistAsData"
         const val PLAYBACK_POSITION = "playbackPosition"
+        const val IGNORE_SAVED_POSITION = "ignoreSavedPosition"
         const val PIP_MODE = "pipMode"
         const val DURATION = "duration"
         const val USING_PROXY = "usingProxy"
