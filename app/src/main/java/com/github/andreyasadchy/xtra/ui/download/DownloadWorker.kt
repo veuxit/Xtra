@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
@@ -122,7 +123,11 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
                 }, if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
             addAction(android.R.drawable.ic_delete, applicationContext.getString(R.string.stop), WorkManager.getInstance(applicationContext).createCancelPendingIntent(id))
         }.build()
-        return ForegroundInfo(offlineVideo.id, notification)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(offlineVideo.id, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(offlineVideo.id, notification)
+        }
     }
 
     companion object {

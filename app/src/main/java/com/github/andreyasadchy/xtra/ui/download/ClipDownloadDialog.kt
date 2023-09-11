@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.download
 
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -74,7 +75,7 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             cancel.setOnClickListener { dismiss() }
             download.setOnClickListener {
                 val quality = spinner.selectedItem.toString()
-                viewModel.download(qualities.getValue(quality), downloadPath, quality, requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                viewModel.download(qualities.getValue(quality), downloadPath, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                 dismiss()
             }
         }
