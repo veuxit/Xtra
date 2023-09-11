@@ -163,7 +163,6 @@
     <string name="api_gql">GQL istemci kimliği</string>
     <string name="playback_speed">Oynatma hızı</string>
     <string name="quality">Kalite</string>
-    <string name="speed1">Normal</string>
     <string name="saved_value">Kaydedilen değer</string>
     <string name="player_volumebutton">Ses düğmesini göster</string>
     <string name="video_type_archive">Geçmiş yayın</string>
@@ -586,4 +585,5 @@
     <string name="resume_download">Resume download</string>
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>

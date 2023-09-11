@@ -55,7 +55,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="?attr/secondaryTextColor"
-                tools:text="Normal" />
+                android:visibility="gone"
+                tools:text="1.0"
+                tools:visibility="visible" />
 
         </LinearLayout>
 

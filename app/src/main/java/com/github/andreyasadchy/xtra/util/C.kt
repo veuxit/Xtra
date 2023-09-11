@@ -108,6 +108,7 @@ object C {
     const val PLAYER_QUALITY = "player_quality"
     const val PLAYER_VOLUME = "player_volume"
     const val PLAYER_SPEED = "player_speed"
+    const val PLAYER_SPEED_LIST = "player_speed_list"
     const val PLAYER_AUDIO_COMPRESSOR = "player_audio_compressor"
     const val PLAYER_REWIND = "playerRewind"
     const val PLAYER_FORWARD = "playerForward"

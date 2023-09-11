@@ -163,7 +163,6 @@
     <string name="api_gql">ID do cliente GQL</string>
     <string name="playback_speed">Velocidade de reprodução</string>
     <string name="quality">Qualidade</string>
-    <string name="speed1">Normal</string>
     <string name="saved_value">Valor salvo</string>
     <string name="player_volumebutton">Mostrar botão de volume</string>
     <string name="video_type_archive">Transmissão passada</string>
@@ -586,4 +585,5 @@
     <string name="resume_download">Retomar download</string>
     <string name="use_workmanager_downloads">Usar WorkManager para downloads</string>
     <string name="show_view_count_icon">Mostrar contagem de visualizações e ícones de tempo de atividade</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>
