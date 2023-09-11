@@ -206,6 +206,10 @@ class SettingsActivity : AppCompatActivity() {
                 IntegrityDialog.show(childFragmentManager)
                 true
             }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                findPreference<SwitchPreferenceCompat>(C.DEBUG_WORKMANAGER_DOWNLOADS)?.isVisible = false
+            }
         }
 
         override fun onSaveInstanceState(outState: Bundle) {

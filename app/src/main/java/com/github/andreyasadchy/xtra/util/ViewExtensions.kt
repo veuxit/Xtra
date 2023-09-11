@@ -144,7 +144,7 @@ fun ViewPager2.reduceDragSensitivity() {
 }
 
 class TextWithCanvas(context: Context, attrs: AttributeSet) : AppCompatTextView(context, attrs) {
-    override fun draw(canvas: Canvas?) {
+    override fun draw(canvas: Canvas) {
         for (i in 0..6) {
             super.draw(canvas)
         }
