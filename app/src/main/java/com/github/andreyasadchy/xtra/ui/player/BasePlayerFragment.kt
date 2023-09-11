@@ -476,12 +476,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
             REQUEST_CODE_SPEED -> {
-                SPEEDS.getOrNull(index)?.let {
-                    player?.setPlaybackSpeed(it)
-                    prefs.edit { putFloat(C.PLAYER_SPEED, it) }
-                }
-                SPEED_LABELS.getOrNull(index)?.let {
-                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSpeed(requireContext().getString(it))
+                prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.let { speeds ->
+                    speeds.getOrNull(index)?.toFloatOrNull()?.let { speed ->
+                        player?.setPlaybackSpeed(speed)
+                        prefs.edit { putFloat(C.PLAYER_SPEED, speed) }
+                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSpeed(speeds.find { it == player?.playbackParameters?.speed.toString() })
+                    }
                 }
             }
         }
@@ -523,7 +523,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     fun showSpeedDialog() {
         player?.playbackParameters?.speed?.let {
-            FragmentUtils.showRadioButtonDialogFragment(requireContext(), childFragmentManager, SPEED_LABELS, SPEEDS.indexOf(it), REQUEST_CODE_SPEED)
+            prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.let { speeds ->
+                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, speeds, speeds.indexOf(it.toString()), REQUEST_CODE_SPEED)
+            }
         }
     }
 
@@ -829,8 +831,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     companion object {
-        val SPEEDS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-        val SPEED_LABELS = listOf(R.string.speed0_25, R.string.speed0_5, R.string.speed0_75, R.string.speed1, R.string.speed1_25, R.string.speed1_5, R.string.speed1_75, R.string.speed2)
         private const val REQUEST_CODE_QUALITY = 0
         private const val REQUEST_CODE_SPEED = 1
     }

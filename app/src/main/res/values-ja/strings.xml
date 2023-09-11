@@ -163,7 +163,6 @@
     <string name="api_gql">GQLクライアントID</string>
     <string name="playback_speed">再生速度</string>
     <string name="quality">画質</string>
-    <string name="speed1">標準</string>
     <string name="saved_value">保存した値</string>
     <string name="player_volumebutton">音量ボタンの表示</string>
     <string name="video_type_archive">過去の配信</string>
@@ -586,4 +585,5 @@
     <string name="resume_download">Resume download</string>
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>

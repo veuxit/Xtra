@@ -424,6 +424,12 @@
         android:title="@string/player_defaultquality"
         app:iconSpaceReserved="false"/>
 
+    <EditTextPreference
+        android:defaultValue="0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0"
+        android:key="player_speed_list"
+        android:title="@string/playback_speeds"
+        app:iconSpaceReserved="false" />
+
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="player_use_videopositions"
