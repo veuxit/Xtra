@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -18,8 +19,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
-import com.acsbendi.requestinspectorwebview.RequestInspectorWebViewClient
-import com.acsbendi.requestinspectorwebview.WebViewRequest
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivityLoginBinding
 import com.github.andreyasadchy.xtra.model.Account
@@ -50,6 +49,7 @@ class LoginActivity : AppCompatActivity() {
     private var helixToken: String? = null
     private var gqlToken: String? = null
     private var deviceCode: String? = null
+    private var readHeaders = false
 
     private lateinit var binding: ActivityLoginBinding
 
@@ -189,9 +189,24 @@ class LoginActivity : AppCompatActivity() {
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
 
+                override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
+                    if (readHeaders) {
+                        val token = webViewRequest.requestHeaders.entries.firstOrNull {
+                            it.key.equals(C.HEADER_TOKEN, true) && !it.value.equals("undefined", true)
+                        }?.value?.removePrefix("OAuth ")
+                        if (!token.isNullOrBlank()) {
+                            val clientId = webViewRequest.requestHeaders.entries.firstOrNull { it.key.equals(C.HEADER_CLIENT_ID, true) }?.value
+                            loginIfValidUrl("token=${token}&", "", null, null, clientId, 1)
+                        }
+                    }
+                    return super.shouldInterceptRequest(view, webViewRequest)
+                }
+
                 @Deprecated("Deprecated in Java")
                 override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                    loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                    if (!readHeaders) {
+                        loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                    }
                     return false
                 }
 
@@ -209,23 +224,10 @@ class LoginActivity : AppCompatActivity() {
             }
             if (apiSetting == 1) {
                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                    readHeaders()
+                    readHeaders = true
                     loadUrl("https://www.twitch.tv/login")
                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)
             } else loadUrl(helixAuthUrl)
-        }
-    }
-
-    private fun readHeaders() {
-        binding.webView.webViewClient = object : RequestInspectorWebViewClient(binding.webView) {
-            override fun shouldInterceptRequest(view: WebView, webViewRequest: WebViewRequest): WebResourceResponse? {
-                val token = webViewRequest.headers[C.HEADER_TOKEN]?.takeUnless { it == "undefined" }?.removePrefix("OAuth ")
-                if (!token.isNullOrBlank()) {
-                    val clientId = webViewRequest.headers[C.HEADER_CLIENT_ID]
-                    loginIfValidUrl("token=${token}&", "", null, null, clientId, 1)
-                }
-                return super.shouldInterceptRequest(view, webViewRequest)
-            }
         }
     }
 
@@ -341,7 +343,7 @@ class LoginActivity : AppCompatActivity() {
                                     progressBar.gone()
                                     if ((prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0) == 1) {
                                         if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                            readHeaders()
+                                            readHeaders = true
                                             webView.loadUrl("https://www.twitch.tv/login")
                                         } else getGqlAuthUrl(gqlClientId, gqlRedirect)
                                     } else webView.loadUrl(helixAuthUrl)
@@ -349,7 +351,7 @@ class LoginActivity : AppCompatActivity() {
                             }
                             if (apiSetting == 0 && tokens.count() == 1) {
                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                    readHeaders()
+                                    readHeaders = true
                                     webView.loadUrl("https://www.twitch.tv/login")
                                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)
                             }
