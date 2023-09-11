@@ -88,8 +88,6 @@ dependencies {
 
     implementation(libs.apollo.runtime)
 
-    implementation(libs.request.inspector.webview)
-
     implementation(libs.fetch)
     implementation(libs.fetch.okhttp)
     implementation(libs.open.m3u8)

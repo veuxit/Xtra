@@ -6,16 +6,16 @@ import android.content.DialogInterface
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.setFragmentResult
-import com.acsbendi.requestinspectorwebview.RequestInspectorWebViewClient
-import com.acsbendi.requestinspectorwebview.WebViewRequest
 import com.github.andreyasadchy.xtra.databinding.DialogIntegrityBinding
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -46,18 +46,21 @@ class IntegrityDialog : DialogFragment() {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             webChromeClient = WebChromeClient()
-            webViewClient = object : RequestInspectorWebViewClient(binding.webView) {
+            webViewClient = object : WebViewClient() {
 
-                override fun shouldInterceptRequest(view: WebView, webViewRequest: WebViewRequest): WebResourceResponse? {
-                    if (!webViewRequest.headers["client-integrity"].isNullOrBlank()) {
+                override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
+                    if (!webViewRequest.requestHeaders.entries.firstOrNull { it.key.equals("Client-Integrity", true) }?.value.isNullOrBlank()) {
                         context.prefs().edit {
                             putLong(C.INTEGRITY_EXPIRATION, System.currentTimeMillis() + 57600000)
                             putString(C.GQL_HEADERS, JSONObject(
                                 if (context.prefs().getBoolean(C.GET_ALL_GQL_HEADERS, false)) {
-                                    webViewRequest.headers
+                                    webViewRequest.requestHeaders
                                 } else {
-                                    webViewRequest.headers.filterKeys {
-                                        it == C.HEADER_TOKEN || it == C.HEADER_CLIENT_ID || it == "client-integrity" || it == "x-device-id"
+                                    webViewRequest.requestHeaders.filterKeys {
+                                        it.equals(C.HEADER_TOKEN, true) ||
+                                                it.equals(C.HEADER_CLIENT_ID, true) ||
+                                                it.equals("Client-Integrity", true) ||
+                                                it.equals("X-Device-Id", true)
                                     }
                                 }
                             ).toString())
