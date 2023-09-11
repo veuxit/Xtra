@@ -163,7 +163,6 @@
     <string name="api_gql">ИД клиента GQL</string>
     <string name="playback_speed">Скорость воспроизведения</string>
     <string name="quality">Качество</string>
-    <string name="speed1">Обычная</string>
     <string name="saved_value">Сохранённое значение</string>
     <string name="player_volumebutton">Кнопка громкости</string>
     <string name="video_type_archive">Прошедшая трансляция</string>
@@ -586,4 +585,5 @@
     <string name="resume_download">Возобновить загрузку</string>
     <string name="use_workmanager_downloads">Использовать WorkManager для загрузок</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>

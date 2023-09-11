@@ -161,7 +161,6 @@
     <string name="api_gql">GQL id klien</string>
     <string name="playback_speed">Kecepatan pemutaran</string>
     <string name="quality">Kualitas</string>
-    <string name="speed1">Normal</string>
     <string name="saved_value">Simpan nilai</string>
     <string name="player_volumebutton">Tampilkan tombol volume</string>
     <string name="video_type_archive">Siaran terakhir</string>
@@ -586,4 +585,5 @@
     <string name="resume_download">Resume download</string>
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>

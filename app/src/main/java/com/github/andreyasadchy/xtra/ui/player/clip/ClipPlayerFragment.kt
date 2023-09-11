@@ -90,7 +90,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 setOnClickListener {
                     FragmentUtils.showPlayerSettingsDialog(
                         fragmentManager = childFragmentManager,
-                        speedText = SPEED_LABELS.getOrNull(SPEEDS.indexOf(player?.playbackParameters?.speed))?.let { requireContext().getString(it) }
+                        speedText = prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.find { it == player?.playbackParameters?.speed.toString() },
                     )
                 }
             }

@@ -2,13 +2,6 @@
 <resources>
     <string name="app_name" translatable="false">Xtra</string>
     <string name="notification_downloads_channel_id" translatable="false">xtra_downloads_channel</string>
-    <string name="speed0.25" translatable="false">0.25x</string>
-    <string name="speed0.5" translatable="false">0.5x</string>
-    <string name="speed0.75" translatable="false">0.75x</string>
-    <string name="speed1.25" translatable="false">1.25x</string>
-    <string name="speed1.5" translatable="false">1.5x</string>
-    <string name="speed1.75" translatable="false">1.75x</string>
-    <string name="speed2" translatable="false">2.0x</string>
     <string name="lang_de" translatable="false">Deutsch</string>
     <string name="lang_en" translatable="false">English</string>
     <string name="lang_es" translatable="false">Español</string>
@@ -182,7 +175,6 @@
     <string name="api_gql">GQL client id</string>
     <string name="playback_speed">Playback speed</string>
     <string name="quality">Quality</string>
-    <string name="speed1">Normal</string>
     <string name="saved_value">Saved value</string>
     <string name="player_volumebutton">Show volume button</string>
     <string name="video_type_archive">Past broadcast</string>
@@ -605,4 +597,5 @@
     <string name="resume_download">Resume download</string>
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
+    <string name="playback_speeds">Playback speeds</string>
 </resources>
