@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -50,6 +49,7 @@ class LoginActivity : AppCompatActivity() {
     private var helixToken: String? = null
     private var gqlToken: String? = null
     private var deviceCode: String? = null
+    private var readHeaders = false
 
     private lateinit var binding: ActivityLoginBinding
 
@@ -191,7 +191,9 @@ class LoginActivity : AppCompatActivity() {
 
                 @Deprecated("Deprecated in Java")
                 override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                    loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                    if (!readHeaders) {
+                        loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                    }
                     return false
                 }
 
@@ -209,15 +211,11 @@ class LoginActivity : AppCompatActivity() {
             }
             if (apiSetting == 1) {
                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                    readHeaders()
+                    readHeaders = true
                     loadUrl("https://www.twitch.tv/login")
                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)
             } else loadUrl(helixAuthUrl)
         }
-    }
-
-    private fun readHeaders() {
-
     }
 
     private fun getGqlAuthUrl(gqlClientId: String?, gqlRedirect: String?) {
@@ -332,7 +330,7 @@ class LoginActivity : AppCompatActivity() {
                                     progressBar.gone()
                                     if ((prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0) == 1) {
                                         if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                            readHeaders()
+                                            readHeaders = true
                                             webView.loadUrl("https://www.twitch.tv/login")
                                         } else getGqlAuthUrl(gqlClientId, gqlRedirect)
                                     } else webView.loadUrl(helixAuthUrl)
@@ -340,7 +338,7 @@ class LoginActivity : AppCompatActivity() {
                             }
                             if (apiSetting == 0 && tokens.count() == 1) {
                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                    readHeaders()
+                                    readHeaders = true
                                     webView.loadUrl("https://www.twitch.tv/login")
                                 } else getGqlAuthUrl(gqlClientId, gqlRedirect)
                             }

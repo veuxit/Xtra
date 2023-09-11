@@ -299,7 +299,7 @@ object TwitchApiHelper {
                     try {
                         val json = JSONObject(it)
                         json.keys().forEach { key ->
-                            put(key.lowercase(), json.optString(key))
+                            put(key, json.optString(key))
                         }
                     } catch (e: Exception) {
 
