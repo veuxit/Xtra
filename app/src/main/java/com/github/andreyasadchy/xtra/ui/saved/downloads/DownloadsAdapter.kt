@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.graphics.Color
+import android.os.Build
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -180,7 +181,7 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if (context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false) && item.status != OfflineVideo.STATUS_DOWNLOADED) {
+                            if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)) && item.status != OfflineVideo.STATUS_DOWNLOADED) {
                                 menu.findItem(R.id.stopDownload).isVisible = true
                                 menu.findItem(R.id.resumeDownload).isVisible = true
                             }

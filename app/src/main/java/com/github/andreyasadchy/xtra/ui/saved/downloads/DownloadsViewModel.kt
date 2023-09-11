@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
@@ -28,7 +29,7 @@ class DownloadsViewModel @Inject internal constructor(
     fun delete(context: Context, video: OfflineVideo) {
         repository.deleteVideo(context, video)
         GlobalScope.launch {
-            val useWorkManager = context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
+            val useWorkManager = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
             if (video.status == OfflineVideo.STATUS_DOWNLOADED || useWorkManager) {
                 if (useWorkManager) {
                     WorkManager.getInstance(context).cancelUniqueWork(video.id.toString())

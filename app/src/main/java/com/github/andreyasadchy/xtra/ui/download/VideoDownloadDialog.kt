@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.download
 
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -143,7 +144,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             fun startDownload() {
                                 val quality = spinner.selectedItem.toString()
                                 val url = videoInfo.qualities.getValue(quality)
-                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex, requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                                 dismiss()
                             }
                             startDownload()
