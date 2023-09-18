@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.download
 
 import android.app.Application
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -74,7 +75,7 @@ class VideoDownloadViewModel @Inject constructor(
                     }.apply {
                         entries.find { it.key.startsWith("audio", true) }?.let {
                             remove(it.key)
-                            put(getApplication<Application>().getString(R.string.audio_only), it.value)
+                            put(ContextCompat.getString(getApplication(), R.string.audio_only), it.value)
                         }
                     }
                     val mediaPlaylist = URL(map.values.elementAt(0)).openStream().use {

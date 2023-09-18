@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.util
 import android.content.Context
 import android.text.format.DateUtils
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
@@ -411,14 +412,14 @@ object TwitchApiHelper {
 
     fun getClipUrlMapFromPreview(url: String): Map<String, String> {
         val appContext = XtraApp.INSTANCE.applicationContext
-        return mapOf(kotlin.Pair(appContext.getString(R.string.source), url.substringBefore("-preview") + ".mp4"))
+        return mapOf(kotlin.Pair(ContextCompat.getString(appContext, R.string.source), url.substringBefore("-preview") + ".mp4"))
     }
 
     fun getMessageIdString(msgId: String?): String? {
         val appContext = XtraApp.INSTANCE.applicationContext
         return when (msgId) {
-            "highlighted-message" -> appContext.getString(R.string.irc_msgid_highlighted_message)
-            "announcement" -> appContext.getString(R.string.irc_msgid_announcement)
+            "highlighted-message" -> ContextCompat.getString(appContext, R.string.irc_msgid_highlighted_message)
+            "announcement" -> ContextCompat.getString(appContext, R.string.irc_msgid_announcement)
             else -> null
         }
     }
