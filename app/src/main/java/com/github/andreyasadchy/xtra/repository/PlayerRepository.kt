@@ -96,7 +96,7 @@ class PlayerRepository @Inject constructor(
                     val json = JsonObject().apply {
                         add("extensions", JsonObject().apply {
                             add("persistedQuery", JsonObject().apply {
-                                addProperty("sha256Hash", "0828119ded1c13477966434e15800ff57ddacf13ba1911c129dc2200705b0712")
+                                addProperty("sha256Hash", "f51c71103d886ee77e4ff84bfc92352acf66a120413f8e99cfcea092e600936f")
                                 addProperty("version", 1)
                             })
                         })
