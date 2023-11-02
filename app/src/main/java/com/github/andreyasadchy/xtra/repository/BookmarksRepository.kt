@@ -19,6 +19,8 @@ class BookmarksRepository @Inject constructor(
     private val localFollowsChannelDao: LocalFollowsChannelDao,
     private val videosDao: VideosDao) {
 
+    fun loadBookmarksPagingSource() = bookmarksDao.getAllPagingSource()
+
     fun loadBookmarksLiveData() = bookmarksDao.getAllLiveData()
 
     suspend fun loadBookmarks() = withContext(Dispatchers.IO) {

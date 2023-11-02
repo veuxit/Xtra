@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -28,11 +31,16 @@ class BookmarksViewModel @Inject internal constructor(
     playerRepository: PlayerRepository,
     private val vodBookmarkIgnoredUsersRepository: VodBookmarkIgnoredUsersRepository) : ViewModel() {
 
-    val bookmarks = bookmarksRepository.loadBookmarksLiveData()
     val positions = playerRepository.loadVideoPositions()
     val ignoredUsers = vodBookmarkIgnoredUsersRepository.loadUsers()
     private var updatedUsers = false
     private var updatedVideos = false
+
+    val flow = Pager(
+        PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30),
+    ) {
+        bookmarksRepository.loadBookmarksPagingSource()
+    }.flow.cachedIn(viewModelScope)
 
     fun delete(context: Context, bookmark: Bookmark) {
         bookmarksRepository.deleteBookmark(context, bookmark)
