@@ -3,6 +3,10 @@ package com.github.andreyasadchy.xtra.ui.saved.downloads
 import android.content.Context
 import android.os.Build
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -24,7 +28,11 @@ class DownloadsViewModel @Inject internal constructor(
     private val repository: OfflineRepository,
     private val fetchProvider: FetchProvider) : ViewModel() {
 
-    val list = repository.loadAllVideos()
+    val flow = Pager(
+        PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30),
+    ) {
+        repository.loadAllVideos()
+    }.flow.cachedIn(viewModelScope)
 
     fun delete(context: Context, video: OfflineVideo) {
         repository.deleteVideo(context, video)

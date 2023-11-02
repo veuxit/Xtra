@@ -28,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 34
-        versionCode = 210
-        versionName = "2.25.3"
+        versionCode = 211
+        versionName = "2.26.0"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW")
     }
 
@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.lifecycle.process)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     kapt(libs.room.compiler)
     implementation(libs.work.runtime.ktx)
     implementation(libs.core.ktx)

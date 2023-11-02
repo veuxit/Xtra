@@ -1,11 +1,15 @@
 package com.github.andreyasadchy.xtra.db
 
 import androidx.lifecycle.LiveData
+import androidx.paging.PagingSource
 import androidx.room.*
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 
 @Dao
 interface BookmarksDao {
+
+    @Query("SELECT * FROM bookmarks")
+    fun getAllPagingSource(): PagingSource<Int, Bookmark>
 
     @Query("SELECT * FROM bookmarks")
     fun getAllLiveData(): LiveData<List<Bookmark>>

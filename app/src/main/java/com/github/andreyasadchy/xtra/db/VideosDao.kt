@@ -1,6 +1,6 @@
 package com.github.andreyasadchy.xtra.db
 
-import androidx.lifecycle.LiveData
+import androidx.paging.PagingSource
 import androidx.room.*
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 
@@ -8,7 +8,7 @@ import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 interface VideosDao {
 
     @Query("SELECT * FROM videos ORDER BY id DESC")
-    fun getAll(): LiveData<List<OfflineVideo>>
+    fun getAll(): PagingSource<Int, OfflineVideo>
 
     @Query("SELECT * FROM videos WHERE id = :id")
     fun getById(id: Int): OfflineVideo?
