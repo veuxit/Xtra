@@ -158,6 +158,7 @@ class FollowedStreamsDataSource(
                 channelLogin = i?.node?.login,
                 channelName = i?.node?.displayName,
                 gameId = i?.node?.stream?.game?.id,
+                gameSlug = i?.node?.stream?.game?.slug,
                 gameName = i?.node?.stream?.game?.displayName,
                 type = i?.node?.stream?.type,
                 title = i?.node?.stream?.broadcaster?.broadcastSettings?.title,
@@ -191,10 +192,10 @@ class FollowedStreamsDataSource(
             if (get != null) {
                 for (i in get) {
                     if (i?.stream?.viewersCount != null) {
-                        streams.add(Stream(id = i.stream.id, channelId = i.id, channelLogin = i.login, channelName = i.displayName, gameId = i.stream.game?.id,
-                            gameName = i.stream.game?.displayName, type = i.stream.type, title = i.stream.broadcaster?.broadcastSettings?.title,
-                            viewerCount = i.stream.viewersCount, startedAt = i.stream.createdAt?.toString(), thumbnailUrl = i.stream.previewImageURL,
-                            profileImageUrl = i.profileImageURL, tags = i.stream.freeformTags?.mapNotNull { it.name })
+                        streams.add(Stream(id = i.stream.id, channelId = i.id, channelLogin = i.login, channelName = i.displayName,
+                            gameId = i.stream.game?.id, gameSlug = i.stream.game?.slug, gameName = i.stream.game?.displayName, type = i.stream.type,
+                            title = i.stream.broadcaster?.broadcastSettings?.title, viewerCount = i.stream.viewersCount, startedAt = i.stream.createdAt?.toString(),
+                            thumbnailUrl = i.stream.previewImageURL, profileImageUrl = i.profileImageURL, tags = i.stream.freeformTags?.mapNotNull { it.name })
                         )
                     }
                 }

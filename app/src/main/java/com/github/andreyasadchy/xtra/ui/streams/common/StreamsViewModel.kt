@@ -47,7 +47,7 @@ class StreamsViewModel @Inject constructor(
                 PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
             }
         ) {
-            if (args.gameId == null && args.gameName == null) {
+            if (args.gameId == null && args.gameSlug == null && args.gameName == null) {
                 StreamsDataSource(
                     helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                     helixToken = Account.get(context).helixToken,
@@ -62,6 +62,7 @@ class StreamsViewModel @Inject constructor(
             } else {
                 GameStreamsDataSource(
                     gameId = args.gameId,
+                    gameSlug = args.gameSlug,
                     gameName = args.gameName,
                     helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                     helixToken = Account.get(context).helixToken,

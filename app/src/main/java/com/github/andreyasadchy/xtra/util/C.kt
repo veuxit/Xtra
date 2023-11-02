@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.util
 
 object C {
     const val GAME_ID = "gameId"
+    const val GAME_SLUG = "gameSlug"
     const val GAME_NAME = "gameName"
     const val STREAM_ID = "streamId"
     const val CHANNEL_ID = "channelId"

@@ -112,6 +112,7 @@ class StreamsDataSource(
                 channelLogin = i?.node?.broadcaster?.login,
                 channelName = i?.node?.broadcaster?.displayName,
                 gameId = i?.node?.game?.id,
+                gameSlug = i?.node?.game?.slug,
                 gameName = i?.node?.game?.displayName,
                 type = i?.node?.type,
                 title = i?.node?.broadcaster?.broadcastSettings?.title,

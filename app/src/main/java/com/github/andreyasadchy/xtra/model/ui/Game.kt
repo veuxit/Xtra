@@ -7,6 +7,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class Game(
     val gameId: String? = null,
+    val gameSlug: String? = null,
     val gameName: String? = null,
     val boxArtUrl: String? = null,
 

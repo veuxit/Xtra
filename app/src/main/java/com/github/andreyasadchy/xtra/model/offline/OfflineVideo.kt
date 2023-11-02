@@ -26,6 +26,7 @@ data class OfflineVideo(
     var channelLogo: String? = null,
     val thumbnail: String? = null,
     val gameId: String? = null,
+    val gameSlug: String? = null,
     val gameName: String? = null,
     val duration: Long? = null,
     @ColumnInfo(name = "upload_date")

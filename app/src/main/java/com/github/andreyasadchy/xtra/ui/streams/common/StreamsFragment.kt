@@ -43,18 +43,18 @@ class StreamsFragment : PagedListFragment(), Scrollable, StreamsSortDialog.OnFil
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = if (requireContext().prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
-            StreamsCompactAdapter(this, args, args.gameId != null || args.gameName != null)
+            StreamsCompactAdapter(this, args, args.gameId != null || args.gameSlug != null || args.gameName != null)
         } else {
-            StreamsAdapter(this, args, args.gameId != null || args.gameName != null)
+            StreamsAdapter(this, args, args.gameId != null || args.gameSlug != null || args.gameName != null)
         }
         setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
     }
 
     override fun initialize() {
-        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow, enableScrollTopButton = args.gameId != null || args.gameName != null || !args.tags.isNullOrEmpty())
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow, enableScrollTopButton = args.gameId != null || args.gameSlug != null || args.gameName != null || !args.tags.isNullOrEmpty())
         with(binding) {
             sortBar.root.visible()
-            if (args.gameId != null && args.gameName != null) {
+            if (args.gameId != null || args.gameSlug != null || args.gameName != null) {
                 sortBar.root.setOnClickListener {
                     StreamsSortDialog.newInstance(
                         sort = viewModel.sort

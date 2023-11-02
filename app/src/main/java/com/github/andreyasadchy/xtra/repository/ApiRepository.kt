@@ -76,9 +76,9 @@ class ApiRepository @Inject constructor(
             val get = get1.data?.users?.firstOrNull()
             if (get != null) {
                 Stream(id = get.stream?.id, channelId = channelId, channelLogin = get.login, channelName = get.displayName, gameId = get.stream?.game?.id,
-                    gameName = get.stream?.game?.displayName, type = get.stream?.type, title = get.stream?.broadcaster?.broadcastSettings?.title,
-                    viewerCount = get.stream?.viewersCount, startedAt = get.stream?.createdAt?.toString(), thumbnailUrl = get.stream?.previewImageURL,
-                    profileImageUrl = get.profileImageURL)
+                    gameSlug = get.stream?.game?.slug, gameName = get.stream?.game?.displayName, type = get.stream?.type,
+                    title = get.stream?.broadcaster?.broadcastSettings?.title, viewerCount = get.stream?.viewersCount,
+                    startedAt = get.stream?.createdAt?.toString(), thumbnailUrl = get.stream?.previewImageURL, profileImageUrl = get.profileImageURL)
             } else null
         } catch (e: Exception) {
             if (checkIntegrity && e.message == "failed integrity check") throw e
@@ -157,6 +157,7 @@ class ApiRepository @Inject constructor(
                     channelLogin = i.login,
                     channelName = i.displayName,
                     gameId = i.stream?.game?.id,
+                    gameSlug = i.stream?.game?.slug,
                     gameName = i.stream?.game?.displayName,
                     type = i.stream?.type,
                     title = i.stream?.title,

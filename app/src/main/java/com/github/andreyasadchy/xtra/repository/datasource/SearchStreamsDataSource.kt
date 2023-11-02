@@ -103,6 +103,7 @@ class SearchStreamsDataSource(
                     channelLogin = i.broadcaster?.login,
                     channelName = i.broadcaster?.displayName,
                     gameId = i.game?.id,
+                    gameSlug = i.game?.slug,
                     gameName = i.game?.displayName,
                     type = i.type,
                     title = i.broadcaster?.broadcastSettings?.title,

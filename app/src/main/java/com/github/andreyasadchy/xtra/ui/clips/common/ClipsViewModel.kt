@@ -106,6 +106,7 @@ class ClipsViewModel @Inject constructor(
                 }
                 GameClipsDataSource(
                     gameId = args.gameId,
+                    gameSlug = args.gameSlug,
                     gameName = args.gameName,
                     helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                     helixToken = Account.get(context).helixToken,

@@ -41,7 +41,6 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.BroadcastSettings
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.gone
@@ -100,7 +99,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
             if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
                     requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
                     requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()) {
-                updateTitle(BroadcastSettings(it?.title, it?.gameId, it?.gameName))
+                updateTitle(it?.title, it?.gameId, it?.gameSlug, it?.gameName)
             }
             if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) && requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false) {
                 it?.startedAt?.let { date ->
@@ -159,7 +158,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 }
             }
         }
-        updateTitle(BroadcastSettings(stream.title, stream.gameId, stream.gameName))
+        updateTitle(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
@@ -411,41 +410,41 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
     }
 
-    fun updateTitle(data: BroadcastSettings?) {
-        if (data != null) {
-            requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
-                if (!data.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
-                    text = data.title.trim()
-                    visible()
-                } else {
-                    text = null
-                    gone()
-                }
+    fun updateTitle(title: String?, gameId: String?, gameSlug: String?, gameName: String?) {
+        requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
+            if (!title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+                text = title.trim()
+                visible()
+            } else {
+                text = null
+                gone()
             }
-            requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
-                if (!data.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
-                    text = data.gameName
-                    visible()
-                    setOnClickListener {
-                        findNavController().navigate(
-                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
-                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                    gameId = data.gameId,
-                                    gameName = data.gameName
-                                )
-                            } else {
-                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                    gameId = data.gameId,
-                                    gameName = data.gameName
-                                )
-                            }
-                        )
-                        slidingLayout.minimize()
-                    }
-                } else {
-                    text = null
-                    gone()
+        }
+        requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
+            if (!gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+                text = gameName
+                visible()
+                setOnClickListener {
+                    findNavController().navigate(
+                        if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                gameId = gameId,
+                                gameSlug = gameSlug,
+                                gameName = gameName
+                            )
+                        } else {
+                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                gameId = gameId,
+                                gameSlug = gameSlug,
+                                gameName = gameName
+                            )
+                        }
+                    )
+                    slidingLayout.minimize()
                 }
+            } else {
+                text = null
+                gone()
             }
         }
     }

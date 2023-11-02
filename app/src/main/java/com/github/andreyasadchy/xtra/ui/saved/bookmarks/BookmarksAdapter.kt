@@ -88,11 +88,13 @@ class BookmarksAdapter(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
                                 GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName
                                 )
                             } else {
                                 GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName
                                 )
                             }
@@ -110,6 +112,7 @@ class BookmarksAdapter(
                             channelName = item.userName,
                             profileImageUrl = item.userLogo,
                             gameId = item.gameId,
+                            gameSlug = item.gameSlug,
                             gameName = item.gameName,
                             title = item.title,
                             uploadDate = item.createdAt,

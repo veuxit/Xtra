@@ -101,7 +101,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "16d402536bdd88b9db9a7cc87da5769607676abf22ad46b6cfab57a2b8b0b20e")
+                    addProperty("sha256Hash", "9796f0a2f336c1e8a78d8ff362291cc2d43bbb1036d39f146d22d636f03f641d")
                     addProperty("version", 1)
                 })
             })
@@ -139,7 +139,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "1d1914ca3cbfaa607ecd5595b2e305e96acf987c8f25328f7713b25f604c4668")
+                    addProperty("sha256Hash", "2f67f71ba89f3c0ed26a141ec00da1defecb2303595f5cda4298169549783d9e")
                     addProperty("version", 1)
                 })
             })
@@ -166,7 +166,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "b32fa28ffd43e370b42de7d9e6e3b8a7ca310035fdbb83932150443d6b693e4d")
+                    addProperty("sha256Hash", "19cd6b171185fa3937c4fd6f80363a7a38a7dc269c43eb205732159bc932cb01")
                     addProperty("version", 1)
                 })
             })
@@ -185,7 +185,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getTopStreams(headers, json)
     }
 
-    suspend fun loadGameStreams(headers: Map<String, String>, gameName: String?, sort: String?, tags: List<String>?, limit: Int?, cursor: String?): GameStreamsDataResponse {
+    suspend fun loadGameStreams(headers: Map<String, String>, gameSlug: String?, sort: String?, tags: List<String>?, limit: Int?, cursor: String?): GameStreamsDataResponse {
         val array = JsonArray()
         if (tags != null) {
             for (i in tags) {
@@ -195,7 +195,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "df4bb6cc45055237bfaf3ead608bbafb79815c7100b6ee126719fac3762ddf8b")
+                    addProperty("sha256Hash", "3c9a94ee095c735e43ed3ad6ce6d4cbd03c4c6f754b31de54993e0d48fd54e30")
                     addProperty("version", 1)
                 })
             })
@@ -203,7 +203,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             add("variables", JsonObject().apply {
                 addProperty("cursor", cursor)
                 addProperty("limit", limit)
-                addProperty("name", gameName)
+                addProperty("slug", gameSlug)
                 addProperty("sortTypeIsRecency", false)
                 add("options", JsonObject().apply {
                     add("freeformTags", array)
@@ -214,11 +214,11 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getGameStreams(headers, json)
     }
 
-    suspend fun loadGameVideos(headers: Map<String, String>, gameName: String?, type: String?, sort: String?, limit: Int?, cursor: String?): GameVideosDataResponse {
+    suspend fun loadGameVideos(headers: Map<String, String>, gameSlug: String?, type: String?, sort: String?, limit: Int?, cursor: String?): GameVideosDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "c04a45b3adfcfacdff2bf4c4172ca4904870d62d6d19f3d490705c5d0a9e511e")
+                    addProperty("sha256Hash", "e7db9e6e9ca5ab518adcfe6813b236e9cd9c3a9a70663e698c909ca173ecf1f1")
                     addProperty("version", 1)
                 })
             })
@@ -228,7 +228,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                     addProperty("broadcastTypes", type)
                 }
                 addProperty("followedCursor", cursor)
-                addProperty("gameName", gameName)
+                addProperty("slug", gameSlug)
                 addProperty("videoLimit", limit)
                 addProperty("videoSort", sort)
             })
@@ -236,11 +236,11 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getGameVideos(headers, json)
     }
 
-    suspend fun loadGameClips(headers: Map<String, String>, gameName: String?, sort: String?, limit: Int?, cursor: String?): GameClipsDataResponse {
+    suspend fun loadGameClips(headers: Map<String, String>, gameSlug: String?, sort: String?, limit: Int?, cursor: String?): GameClipsDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "0d8d0eba9fc7ef77de54a7d933998e21ad7a1274c867ec565ac14ffdce77b1f9")
+                    addProperty("sha256Hash", "1dd78a0ab0008cb6907046c71d94b6798d59d3828c2720a55fc3f16785ff9769")
                     addProperty("version", 1)
                 })
             })
@@ -250,7 +250,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                     addProperty("filter", sort)
                 })
                 addProperty("cursor", cursor)
-                addProperty("gameName", gameName)
+                addProperty("categorySlug", gameSlug)
                 addProperty("limit", limit)
             })
         }
@@ -281,7 +281,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "b73ad2bfaecfd30a9e6c28fada15bd97032c83ec77a0440766a56fe0bd632777")
+                    addProperty("sha256Hash", "af4bd82dcacdda3d693ed274e29b2c97b4990de2b1e683994b16ea26f3abd1af")
                     addProperty("version", 1)
                 })
             })
@@ -584,7 +584,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "26fa7fb132379e29dc9dc5757ced2d2259ae0ab69460e2b9a7db9cff60e57cd2")
+                    addProperty("sha256Hash", "556e6457d0347d3f831b0560fabc126860ce47f14bd7ed13432bc43548e2b459")
                     addProperty("version", 1)
                 })
             })
@@ -636,7 +636,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "f41c04483bc94b8a046aadca5b83f144205eb588009147a96cf0d89b88905c96")
+                    addProperty("sha256Hash", "f3c5d45175d623ed3d5ff4ca4c7de379ea6a1a4852236087dc1b81b7dbfd3114")
                     addProperty("version", 1)
                 })
             })

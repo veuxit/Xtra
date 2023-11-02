@@ -86,6 +86,7 @@ class FollowedVideosDataSource(
                 channelLogin = i?.node?.owner?.login,
                 channelName = i?.node?.owner?.displayName,
                 gameId = i?.node?.game?.id,
+                gameSlug = i?.node?.game?.slug,
                 gameName = i?.node?.game?.displayName,
                 type = i?.node?.broadcastType?.toString(),
                 title = i?.node?.title,

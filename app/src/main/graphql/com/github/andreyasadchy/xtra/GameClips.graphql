@@ -1,5 +1,5 @@
-query GameClips($id: ID, $name: String, $languages: [Language!], $sort: ClipsPeriod, $first: Int, $after: Cursor) {
-    game(id: $id, name: $name) {
+query GameClips($id: ID, $slug: String, $name: String, $languages: [Language!], $sort: ClipsPeriod, $first: Int, $after: Cursor) {
+    game(id: $id, slug: $slug, name: $name) {
         clips(first: $first, after: $after, criteria: { languages: $languages, period: $sort }) {
             edges {
                 cursor

@@ -61,11 +61,13 @@ class ChannelVideosAdapter(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
                                 GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName
                                 )
                             } else {
                                 GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName
                                 )
                             }

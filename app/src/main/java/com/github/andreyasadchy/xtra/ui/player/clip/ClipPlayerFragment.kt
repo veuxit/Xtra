@@ -148,11 +148,13 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                         if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
                             GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                 gameId = clip.gameId,
+                                gameSlug = clip.gameSlug,
                                 gameName = clip.gameName
                             )
                         } else {
                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                 gameId = clip.gameId,
+                                gameSlug = clip.gameSlug,
                                 gameName = clip.gameName
                             )
                         }

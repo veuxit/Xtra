@@ -19,6 +19,7 @@ data class Clip(
         val duration: Double? = null,
         val vodOffset: Int? = null,
 
+        override var gameSlug: String? = null,
         override var gameName: String? = null,
         override var channelLogin: String? = null,
         var profileImageUrl: String? = null,
