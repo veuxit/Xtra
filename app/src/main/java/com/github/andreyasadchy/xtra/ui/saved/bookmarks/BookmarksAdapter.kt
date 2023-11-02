@@ -7,8 +7,8 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
@@ -32,7 +32,7 @@ class BookmarksAdapter(
     private val refreshVideo: (String?) -> Unit,
     private val showDownloadDialog: (Video) -> Unit,
     private val vodIgnoreUser: (String) -> Unit,
-    private val deleteVideo: (Bookmark) -> Unit) : ListAdapter<Bookmark, BookmarksAdapter.PagingViewHolder>(
+    private val deleteVideo: (Bookmark) -> Unit) : PagingDataAdapter<Bookmark, BookmarksAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Bookmark>() {
         override fun areItemsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
             oldItem.id == newItem.id
@@ -55,7 +55,7 @@ class BookmarksAdapter(
 
     fun setVideoPositions(positions: Map<Long, Long>) {
         this.positions = positions
-        if (!currentList.isNullOrEmpty()) {
+        if (itemCount != 0) {
             notifyDataSetChanged()
         }
     }
@@ -64,7 +64,7 @@ class BookmarksAdapter(
 
     fun setIgnoredUsers(list: List<VodBookmarkIgnoredUser>) {
         this.ignored = list
-        if (!currentList.isNullOrEmpty()) {
+        if (itemCount != 0) {
             notifyDataSetChanged()
         }
     }

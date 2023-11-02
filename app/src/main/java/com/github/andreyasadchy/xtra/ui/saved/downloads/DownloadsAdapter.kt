@@ -11,8 +11,8 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
@@ -34,7 +34,7 @@ class DownloadsAdapter(
     private val fragment: Fragment,
     private val stopDownload: (Int) -> Unit,
     private val resumeDownload: (Int) -> Unit,
-    private val deleteVideo: (OfflineVideo) -> Unit) : ListAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
+    private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
             return oldItem.id == newItem.id
