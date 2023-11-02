@@ -129,6 +129,7 @@ class StreamPlayerViewModel @Inject constructor(
                     id = it?.id
                 }
                 gameId = it?.gameId
+                gameSlug = it?.gameSlug
                 gameName = it?.gameName
                 title = it?.title
                 viewerCount = it?.viewerCount

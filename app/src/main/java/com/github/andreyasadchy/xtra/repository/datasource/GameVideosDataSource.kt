@@ -20,6 +20,7 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GameVideosDataSource(
     private val gameId: String?,
+    private val gameSlug: String?,
     private val gameName: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -122,7 +123,8 @@ class GameVideosDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(GameVideosQuery(
             id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
-            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
+            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) Optional.Present(gameSlug) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             languages = Optional.Present(gqlQueryLanguages),
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
@@ -152,6 +154,7 @@ class GameVideosDataSource(
                 uploadDate = i?.node?.createdAt?.toString(),
                 duration = i?.node?.lengthSeconds?.toString(),
                 gameId = gameId,
+                gameSlug = gameSlug,
                 gameName = gameName,
                 thumbnailUrl = i?.node?.previewThumbnailURL,
                 profileImageUrl = i?.node?.owner?.profileImageURL,
@@ -165,11 +168,12 @@ class GameVideosDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val get = gqlApi.loadGameVideos(gqlHeaders, gameName, gqlType, gqlSort, params.loadSize, offset)
+        val get = gqlApi.loadGameVideos(gqlHeaders, gameSlug, gqlType, gqlSort, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data.onEach {
             it.gameId = gameId
+            it.gameSlug = gameSlug
             it.gameName = gameName
         }
     }

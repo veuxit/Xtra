@@ -67,12 +67,14 @@ class TagSearchAdapter(
                                         if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
                                             GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                                 gameId = args.gameId,
+                                                gameSlug = args.gameSlug,
                                                 gameName = args.gameName,
                                                 tags = arrayOf(item.name),
                                             )
                                         } else {
                                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                                 gameId = args.gameId,
+                                                gameSlug = args.gameSlug,
                                                 gameName = args.gameName,
                                                 tags = arrayOf(item.name),
                                             )

@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GameStreamsDataSource(
     private val gameId: String?,
+    private val gameSlug: String?,
     private val gameName: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -108,7 +109,8 @@ class GameStreamsDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
         val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(GameStreamsQuery(
             id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
-            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
+            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) Optional.Present(gameSlug) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             sort = Optional.Present(gqlQuerySort),
             tags = Optional.Present(tags),
             first = Optional.Present(params.loadSize),
@@ -125,6 +127,7 @@ class GameStreamsDataSource(
                 channelLogin = i?.node?.broadcaster?.login,
                 channelName = i?.node?.broadcaster?.displayName,
                 gameId = gameId,
+                gameSlug = gameSlug,
                 gameName = gameName,
                 type = i?.node?.type,
                 title = i?.node?.broadcaster?.broadcastSettings?.title,
@@ -141,11 +144,12 @@ class GameStreamsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlHeaders, gameName, gqlSort?.value, tags, params.loadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort?.value, tags, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data.onEach {
             it.gameId = gameId
+            it.gameSlug = gameSlug
             it.gameName = gameName
         }
     }

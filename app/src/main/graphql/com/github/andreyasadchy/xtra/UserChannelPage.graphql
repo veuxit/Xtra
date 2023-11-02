@@ -24,6 +24,7 @@ query UserChannelPage($id: ID, $login: String) {
             game {
                 id
                 displayName
+                slug
             }
             id
             title

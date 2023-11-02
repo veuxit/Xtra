@@ -16,6 +16,7 @@ query SearchStreams($query: String!, $first: Int, $after: Cursor) {
                 game {
                     id
                     displayName
+                    slug
                 }
                 id
                 previewImageURL

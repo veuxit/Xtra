@@ -10,6 +10,7 @@ import kotlinx.parcelize.Parcelize
 @Entity(tableName = "local_follows_games")
 data class LocalFollowGame(
     val gameId: String? = null,
+    val gameSlug: String? = null,
     var gameName: String? = null,
     var boxArt: String? = null) : Parcelable {
 

@@ -133,6 +133,7 @@ class ChannelClipsDataSource(
                 videoId = i?.node?.video?.id,
                 vodOffset = i?.node?.videoOffsetSeconds,
                 gameId = i?.node?.game?.id,
+                gameSlug = i?.node?.game?.slug,
                 gameName = i?.node?.game?.displayName,
                 title = i?.node?.title,
                 viewCount = i?.node?.viewCount,

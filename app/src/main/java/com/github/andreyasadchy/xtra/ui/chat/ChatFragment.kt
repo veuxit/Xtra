@@ -103,7 +103,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewModel.raidClicked.observe(viewLifecycleOwner) { onRaidClicked() }
                 viewModel.streamLiveChanged.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateLive(it.first.live, it.first.serverTime?.times(1000), it.second) }
                 viewModel.viewerCount.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it) }
-                viewModel.title.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateTitle(it) }
+                viewModel.title.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateTitle(it?.title, it?.gameId, null, it?.gameName) }
             }
         }
     }

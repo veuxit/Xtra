@@ -9,6 +9,7 @@ query UserClips($id: ID, $login: String, $sort: ClipsPeriod, $first: Int, $after
                     game {
                         id
                         displayName
+                        slug
                     }
                     slug
                     thumbnailURL

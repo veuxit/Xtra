@@ -6,6 +6,7 @@ query UserFollowedGames($first: Int) {
                 broadcastersCount
                 displayName
                 id
+                slug
                 tags(tagType: CONTENT) {
                     id
                     localizedName

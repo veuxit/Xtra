@@ -104,6 +104,7 @@ class GamesDataSource(
             }
             list.add(Game(
                 gameId = i?.node?.id,
+                gameSlug = i?.node?.slug,
                 gameName = i?.node?.displayName,
                 boxArtUrl = i?.node?.boxArtURL,
                 viewersCount = i?.node?.viewersCount,

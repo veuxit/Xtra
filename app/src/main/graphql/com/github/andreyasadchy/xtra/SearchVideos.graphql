@@ -13,6 +13,7 @@ query SearchVideos($query: String!, $first: Int, $after: String) {
                 game {
                     displayName
                     id
+                    slug
                 }
                 id
                 lengthSeconds

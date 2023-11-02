@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GameClipsDataSource(
     private val gameId: String?,
+    private val gameSlug: String?,
     private val gameName: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -113,7 +114,8 @@ class GameClipsDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Clip> {
         val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(GameClipsQuery(
             id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
-            name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
+            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) Optional.Present(gameSlug) else Optional.Absent,
+            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             languages = Optional.Present(gqlQueryLanguages),
             sort = Optional.Present(gqlQueryPeriod),
             first = Optional.Present(params.loadSize),
@@ -132,6 +134,7 @@ class GameClipsDataSource(
                 videoId = i?.node?.video?.id,
                 vodOffset = i?.node?.videoOffsetSeconds,
                 gameId = gameId,
+                gameSlug = gameSlug,
                 gameName = gameName,
                 title = i?.node?.title,
                 viewCount = i?.node?.viewCount,
@@ -148,11 +151,12 @@ class GameClipsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Clip> {
-        val get = gqlApi.loadGameClips(gqlHeaders, gameName, gqlPeriod, params.loadSize, offset)
+        val get = gqlApi.loadGameClips(gqlHeaders, gameSlug, gqlPeriod, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data.onEach {
             it.gameId = gameId
+            it.gameSlug = gameSlug
             it.gameName = gameName
         }
     }

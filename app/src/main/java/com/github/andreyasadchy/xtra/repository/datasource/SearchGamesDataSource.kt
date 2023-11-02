@@ -106,6 +106,7 @@ class SearchGamesDataSource(
                 }
                 list.add(Game(
                     gameId = i.id,
+                    gameSlug = i.slug,
                     gameName = i.displayName,
                     boxArtUrl = i.boxArtURL,
                     viewersCount = i.viewersCount ?: 0, // returns null if 0

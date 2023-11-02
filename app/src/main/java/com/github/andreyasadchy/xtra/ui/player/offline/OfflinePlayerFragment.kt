@@ -93,11 +93,13 @@ class OfflinePlayerFragment : BasePlayerFragment() {
                         if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
                             GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                 gameId = video.gameId,
+                                gameSlug = video.gameSlug,
                                 gameName = video.gameName
                             )
                         } else {
                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                 gameId = video.gameId,
+                                gameSlug = video.gameSlug,
                                 gameName = video.gameName
                             )
                         }

@@ -16,6 +16,7 @@ query TopStreams($tags: [String!], $first: Int, $after: Cursor) {
                 game {
                     id
                     displayName
+                    slug
                 }
                 id
                 previewImageURL

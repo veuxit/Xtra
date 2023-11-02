@@ -86,6 +86,7 @@ class SearchVideosDataSource(
                 duration = i.lengthSeconds?.toString(),
                 thumbnailUrl = i.previewThumbnailURL,
                 gameId = i.game?.id,
+                gameSlug = i.game?.slug,
                 gameName = i.game?.displayName,
                 profileImageUrl = i.owner?.profileImageURL,
                 tags = tags,

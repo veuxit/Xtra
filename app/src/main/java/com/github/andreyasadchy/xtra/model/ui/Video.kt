@@ -19,6 +19,7 @@ data class Video(
     val duration: String? = null,
 
     override var gameId: String? = null,
+    override var gameSlug: String? = null,
     override var gameName: String? = null,
     var profileImageUrl: String? = null,
     val tags: List<Tag>? = null,

@@ -17,6 +17,7 @@ data class Bookmark(
     var userBroadcasterType: String? = null,
     var userLogo: String? = null,
     val gameId: String? = null,
+    val gameSlug: String? = null,
     val gameName: String? = null,
     val title: String? = null,
     val createdAt: String? = null,

@@ -83,7 +83,7 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable {
                     if (errorMessage.isNullOrBlank()) {
                         followButton.setOnClickListener {
                             if (!following) {
-                                viewModel.saveFollowGame(requireContext(), args.gameId, args.gameName)
+                                viewModel.saveFollowGame(requireContext(), args.gameId, args.gameSlug, args.gameName)
                             } else {
                                 FragmentUtils.showUnfollowDialog(requireContext(), args.gameName) {
                                     viewModel.deleteFollowGame(requireContext(), args.gameId)
