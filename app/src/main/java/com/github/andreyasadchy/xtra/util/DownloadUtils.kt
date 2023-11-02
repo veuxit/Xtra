@@ -88,6 +88,7 @@ object DownloadUtils {
                 channelLogo = downloadedLogo,
                 thumbnail = downloadedThumbnail,
                 gameId = gameId,
+                gameSlug = gameSlug,
                 gameName = gameName,
                 duration = duration,
                 uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601Date(it) },

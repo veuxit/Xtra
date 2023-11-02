@@ -62,7 +62,7 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowGame(context: Context, gameId: String?, gameName: String?) {
+    fun saveFollowGame(context: Context, gameId: String?, gameSlug: String?, gameName: String?) {
         GlobalScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
@@ -91,7 +91,7 @@ class GamePagerViewModel @Inject constructor(
 
                         }
                         val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${gameId}.png").absolutePath
-                        localFollowsGame.saveFollow(LocalFollowGame(gameId, gameName, downloadedLogo))
+                        localFollowsGame.saveFollow(LocalFollowGame(gameId, gameSlug, gameName, downloadedLogo))
                         follow.postValue(Pair(true, null))
                     }
                 }

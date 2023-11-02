@@ -9,6 +9,7 @@ interface Downloadable {
     val channelName: String?
     val channelLogo: String?
     val gameId: String?
+    val gameSlug: String?
     val gameName: String?
     val uploadDate: String?
     val type: String?

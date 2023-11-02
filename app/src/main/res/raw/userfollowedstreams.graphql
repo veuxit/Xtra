@@ -18,6 +18,7 @@ query ($first: Int, $after: Cursor) {
                         game {
                             displayName
                             id
+                            slug
                         }
                         id
                         previewImageURL

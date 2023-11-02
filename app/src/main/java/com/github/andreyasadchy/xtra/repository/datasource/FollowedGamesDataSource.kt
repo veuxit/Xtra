@@ -23,7 +23,7 @@ class FollowedGamesDataSource(
             val response = try {
                 val list = mutableListOf<Game>()
                 for (i in localFollowsGame.loadFollows()) {
-                    list.add(Game(gameId = i.gameId, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
+                    list.add(Game(gameId = i.gameId, gameSlug = i.gameSlug, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
                 }
                 val remote = try {
                     when (apiPref.elementAt(0)?.second) {

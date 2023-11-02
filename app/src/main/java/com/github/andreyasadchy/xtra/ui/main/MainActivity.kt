@@ -253,6 +253,23 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         }
                     }
                 }
+                url.contains("twitch.tv/directory/category/") -> {
+                    val slug = url.substringAfter("twitch.tv/directory/category/").takeIf { it.isNotBlank() }?.substringBefore("/")
+                    if (!slug.isNullOrBlank()) {
+                        playerFragment?.minimize()
+                        navController.navigate(
+                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                    gameSlug = slug
+                                )
+                            } else {
+                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                    gameSlug = slug
+                                )
+                            }
+                        )
+                    }
+                }
                 url.contains("twitch.tv/directory/game/") -> {
                     val name = url.substringAfter("twitch.tv/directory/game/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!name.isNullOrBlank()) {

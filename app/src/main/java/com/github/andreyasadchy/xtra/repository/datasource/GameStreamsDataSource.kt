@@ -17,6 +17,7 @@ import com.google.gson.JsonObject
 
 class GameStreamsDataSource(
     private val gameId: String?,
+    private val gameSlug: String?,
     private val gameName: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -131,11 +132,12 @@ class GameStreamsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlHeaders, gameName, gqlSort?.value, tags, params.loadSize, offset)
+        val get = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort?.value, tags, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data.onEach {
             it.gameId = gameId
+            it.gameSlug = gameSlug
             it.gameName = gameName
         }
     }

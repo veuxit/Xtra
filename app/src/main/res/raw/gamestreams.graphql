@@ -1,5 +1,5 @@
-query ($id: ID, $name: String, $sort: StreamSort, $tags: [String!], $first: Int, $after: Cursor) {
-    game(id: $id, name: $name) {
+query ($id: ID, $slug: String, $name: String, $sort: StreamSort, $tags: [String!], $first: Int, $after: Cursor) {
+    game(id: $id, slug: $slug, name: $name) {
         streams(first: $first, after: $after, options: { sort: $sort, freeformTags: $tags }) {
             edges {
                 cursor

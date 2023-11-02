@@ -7,6 +7,7 @@ query ($query: String!, $first: Int, $after: Cursor) {
                 broadcastersCount
                 displayName
                 id
+                slug
                 tags(tagType: CONTENT) {
                     id
                     localizedName

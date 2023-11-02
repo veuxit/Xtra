@@ -87,6 +87,7 @@ abstract class BaseVideosViewModel(
                     userBroadcasterType = userTypes?.broadcasterType,
                     userLogo = downloadedLogo,
                     gameId = video.gameId,
+                    gameSlug = video.gameSlug,
                     gameName = video.gameName,
                     title = video.title,
                     createdAt = video.uploadDate,

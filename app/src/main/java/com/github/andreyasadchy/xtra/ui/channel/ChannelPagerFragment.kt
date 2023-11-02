@@ -269,22 +269,22 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                 streamLayout.visible()
                 gameName.visible()
                 gameName.text = stream?.gameName
-                stream?.gameId?.let { id ->
-                    gameName.setOnClickListener {
-                        findNavController().navigate(
-                            if (requireContext().prefs().getBoolean(C.UI_GAMEPAGER, true)) {
-                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                    gameId = id,
-                                    gameName = stream.gameName
-                                )
-                            } else {
-                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                    gameId = id,
-                                    gameName = stream.gameName
-                                )
-                            }
-                        )
-                    }
+                gameName.setOnClickListener {
+                    findNavController().navigate(
+                        if (requireContext().prefs().getBoolean(C.UI_GAMEPAGER, true)) {
+                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                gameId = stream?.gameId,
+                                gameSlug = stream?.gameSlug,
+                                gameName = stream?.gameName
+                            )
+                        } else {
+                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                gameId = stream?.gameId,
+                                gameSlug = stream?.gameSlug,
+                                gameName = stream?.gameName
+                            )
+                        }
+                    )
                 }
             } else {
                 gameName.gone()

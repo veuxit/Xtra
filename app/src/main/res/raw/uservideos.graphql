@@ -18,6 +18,7 @@ query ($id: ID, $login: String, $sort: VideoSort, $types: [BroadcastType!], $fir
                     game {
                         id
                         displayName
+                        slug
                     }
                     id
                     lengthSeconds

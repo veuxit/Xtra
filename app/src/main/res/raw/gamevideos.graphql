@@ -1,5 +1,5 @@
-query ($id: ID, $name: String, $languages: [String!], $sort: VideoSort, $type: [BroadcastType!], $first: Int, $after: Cursor) {
-    game(id: $id, name: $name) {
+query ($id: ID, $slug: String, $name: String, $languages: [String!], $sort: VideoSort, $type: [BroadcastType!], $first: Int, $after: Cursor) {
+    game(id: $id, slug: $slug, name: $name) {
         videos(first: $first, after: $after, languages: $languages, types: $type, sort: $sort) {
             edges {
                 cursor

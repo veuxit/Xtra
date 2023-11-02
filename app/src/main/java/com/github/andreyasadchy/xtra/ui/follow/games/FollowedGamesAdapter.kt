@@ -53,12 +53,14 @@ class FollowedGamesAdapter(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
                                 GamePagerFragmentDirections.actionGlobalGamePagerFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName,
                                     updateLocal = item.followLocal
                                 )
                             } else {
                                 GameMediaFragmentDirections.actionGlobalGameMediaFragment(
                                     gameId = item.gameId,
+                                    gameSlug = item.gameSlug,
                                     gameName = item.gameName,
                                     updateLocal = item.followLocal
                                 )
