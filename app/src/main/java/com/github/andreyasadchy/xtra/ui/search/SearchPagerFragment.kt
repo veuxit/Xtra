@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -11,10 +12,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.DialogUserResultBinding
 import com.github.andreyasadchy.xtra.databinding.FragmentSearchBinding
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.common.AlertDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -30,7 +31,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 @AndroidEntryPoint
-class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResultListener, AlertDialogFragment.OnDialogResultListener {
+class SearchPagerFragment : BaseNetworkFragment() {
 
     private var _binding: FragmentSearchBinding? = null
     private val binding get() = _binding!!
@@ -84,7 +85,41 @@ class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResult
         with(binding) {
             menu.visible()
             menu.setOnClickListener {
-                UserResultDialog.show(childFragmentManager)
+                val binding = DialogUserResultBinding.inflate(layoutInflater)
+                AlertDialog.Builder(requireContext()).apply {
+                    setView(binding.root)
+                    setNegativeButton(getString(android.R.string.cancel), null)
+                    setPositiveButton(getString(android.R.string.ok)) { _, _ ->
+                        val result = binding.editText.text?.toString()
+                        val checkedId = if (binding.radioButton.isChecked) 0 else 1
+                        if (!result.isNullOrBlank()) {
+                            userResult = Pair(checkedId, result)
+                            viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
+                            viewModel.userResult.observe(viewLifecycleOwner) {
+                                if (it != null) {
+                                    if (!it.first.isNullOrBlank()) {
+                                        AlertDialog.Builder(requireContext()).apply {
+                                            setTitle(it.first)
+                                            setMessage(it.second)
+                                            setNegativeButton(getString(android.R.string.cancel), null)
+                                            setPositiveButton(getString(R.string.view_profile)) { _, _ -> viewUserResult() }
+                                        }.show()
+                                    } else {
+                                        viewUserResult()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    setNeutralButton(getString(R.string.view_profile)) { _, _ ->
+                        val result = binding.editText.text?.toString()
+                        val checkedId = if (binding.radioButton.isChecked) 0 else 1
+                        if (!result.isNullOrBlank()) {
+                            userResult = Pair(checkedId, result)
+                            viewUserResult()
+                        }
+                    }
+                }.show()
             }
             toolbar.apply {
                 navigationIcon = Utils.getNavigationIcon(activity)
@@ -127,40 +162,6 @@ class SearchPagerFragment : BaseNetworkFragment(), UserResultDialog.OnUserResult
                 1 -> findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(channelLogin = it.second))
                 else -> {}
             }
-        }
-    }
-
-    override fun onUserResult(resultCode: Int, checkedId: Int, result: String) {
-        if (result.isNotBlank()) {
-            userResult = Pair(checkedId, result)
-            when (resultCode) {
-                UserResultDialog.RESULT_POSITIVE -> {
-                    viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
-                    viewModel.userResult.observe(viewLifecycleOwner) {
-                        if (it != null) {
-                            if (!it.first.isNullOrBlank()) {
-                                AlertDialogFragment.show(
-                                    fragmentManager = childFragmentManager,
-                                    requestCode = 0,
-                                    title = it.first,
-                                    message = it.second,
-                                    positiveButton = getString(R.string.view_profile),
-                                    negativeButton = getString(android.R.string.cancel),
-                                )
-                            } else {
-                                viewUserResult()
-                            }
-                        }
-                    }
-                }
-                UserResultDialog.RESULT_NEUTRAL -> viewUserResult()
-            }
-        }
-    }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int) {
-        if (requestCode == 0 && resultCode == AlertDialogFragment.RESULT_POSITIVE) {
-            viewUserResult()
         }
     }
 
