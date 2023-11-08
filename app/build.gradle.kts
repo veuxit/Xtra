@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin)
-    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.apollo3)
@@ -29,7 +29,7 @@ android {
         minSdk = 21
         targetSdk = 34
         versionCode = 121
-        versionName = "2.26.0"
+        versionName = "2.26.1"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW")
     }
 
@@ -74,7 +74,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.room.paging)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
     implementation(libs.work.runtime.ktx)
     implementation(libs.core.ktx)
     implementation(libs.fragment.ktx)
@@ -104,22 +104,20 @@ dependencies {
     implementation(libs.coil.gif)
 
     implementation(libs.glide)
-    kapt(libs.glide.compiler)
+    ksp(libs.glide.ksp)
     implementation(libs.glide.okhttp)
     implementation(libs.glide.webpdecoder)
 
     implementation(libs.hilt)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.hilt.work)
-    kapt(libs.hilt.extension.compiler)
+    ksp(libs.hilt.extension.compiler)
 
     implementation(libs.coroutines)
 }
 
-kapt {
-    arguments {
-        arg("room.schemaLocation", "$projectDir/schemas")
-    }
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 apollo {
