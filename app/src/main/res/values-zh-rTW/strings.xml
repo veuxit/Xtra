@@ -51,7 +51,7 @@
     <string name="storage_permission_title">此應用程式需要儲存空間權限</string>
     <string name="storage_permission_message">下載影片需要儲存空間權限。</string>
     <string name="permission_denied">所需的權限被拒絕</string>
-    <string name="nothing_here">這裡沒有任何</string>
+    <string name="nothing_here">這裡什麼都沒有</string>
     <string name="watch_live">觀看實況</string>
     <string name="watch_rerun">觀看重播</string>
     <string name="open_player">開啟播放器</string>
@@ -135,7 +135,7 @@
     <string name="navigationBarColor">導覽列顏色</string>
     <string name="rounduserimage">圓形個人檔案圖片</string>
     <string name="truncated_view_counts">簡易的觀看數量</string>
-    <string name="broadcastersCount">在遊戲顯示實況者數量</string>
+    <string name="broadcastersCount">在遊戲項目上顯示實況者數量</string>
     <string name="startonfollowed">開始於追隨中頁面</string>
     <string name="when_logged_in">登入時</string>
     <string name="show_follow_button">顯示追隨按鈕</string>
@@ -385,7 +385,7 @@
     <string name="broadcaster">實況主</string>
     <string name="user_count">%s 使用者在聊天室</string>
     <string name="position">位置：%s</string>
-    <string name="player_viewerlist">從觀看次數中開始觀眾清單</string>
+    <string name="player_viewerlist">從觀看次數中開啟觀眾清單</string>
     <string name="use_followpager">對於追隨頁面使用分頁布局</string>
     <string name="default_follow_tab">預設的追隨分頁</string>
     <string name="sleep_timer_lock">之後鎖定畫面</string>
@@ -422,7 +422,7 @@
     <string name="save_video_positions">儲存已觀看的影片位置</string>
     <string name="clear_video_positions">清除影片位置</string>
     <string name="cleared">已清除</string>
-    <string name="irc_msgid_highlighted_message">突顯的訊息</string>
+    <string name="irc_msgid_highlighted_message">醒目的訊息</string>
     <string name="irc_msgid_announcement">公告</string>
     <string name="debug_secondview">在應用程式子母畫面中可動的</string>
     <string name="add_bookmark">加入書籤</string>
@@ -510,7 +510,7 @@
     <string name="connect_chat">連接聊天室</string>
     <string name="raid_text">與 %2$d 觀眾揪團至 %1$s</string>
     <string name="show_raids">顯示揪團</string>
-    <string name="auto_switch_raids">自動地在揪團上切換流</string>
+    <string name="auto_switch_raids">自動地在揪團上切換串流</string>
     <string name="search_streams">搜尋串流</string>
     <string name="reload_emotes">重新載入表情符號</string>
     <string name="api_current_login">目前的登入</string>
