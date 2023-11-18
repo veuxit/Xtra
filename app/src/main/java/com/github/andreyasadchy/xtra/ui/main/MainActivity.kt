@@ -125,6 +125,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 putBoolean(C.FIRST_LAUNCH5, false)
             }
         }
+        if (prefs.getBoolean(C.FIRST_LAUNCH6, true)) {
+            prefs.edit {
+                if (prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() == 0) {
+                    putBoolean(C.PLAYER_STREAM_PROXY, true)
+                }
+                putBoolean(C.FIRST_LAUNCH6, false)
+            }
+        }
         viewModel.integrity.observe(this) {
             if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
                 IntegrityDialog.show(supportFragmentManager)

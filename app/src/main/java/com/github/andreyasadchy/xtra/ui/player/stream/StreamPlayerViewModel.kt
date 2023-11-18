@@ -35,9 +35,9 @@ class StreamPlayerViewModel @Inject constructor(
     val stream: MutableLiveData<Stream?>
         get() = _stream
 
-    var result = MutableLiveData<Triple<String, Int, Boolean>>()
+    var result = MutableLiveData<String>()
 
-    var useProxy: Int? = null
+    var useProxy = false
     var playingAds = false
 
     suspend fun checkPlaylist(url: String): Boolean {
@@ -70,10 +70,10 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    fun load(gqlHeaders: Map<String, String>, channelLogin: String, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?) {
+    fun load(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?) {
         viewModelScope.launch {
             try {
-                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, useProxy, proxyUrl, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword)
+                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword)
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     _integrity.postValue(true)

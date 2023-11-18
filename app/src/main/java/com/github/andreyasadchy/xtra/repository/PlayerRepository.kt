@@ -7,7 +7,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.MiscApi
-import com.github.andreyasadchy.xtra.api.TTVLolApi
 import com.github.andreyasadchy.xtra.api.UsherApi
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
@@ -50,8 +49,7 @@ class PlayerRepository @Inject constructor(
     private val misc: MiscApi,
     private val graphQL: GraphQLRepository,
     private val recentEmotes: RecentEmotesDao,
-    private val videoPositions: VideoPositionsDao,
-    private val ttvLolApi: TTVLolApi) {
+    private val videoPositions: VideoPositionsDao) {
 
     suspend fun getResponse(url: String, body: RequestBody? = null, headers: Map<String, String>? = null, proxyHost: String? = null, proxyPort: Int? = null, proxyUser: String? = null, proxyPassword: String? = null): String = withContext(Dispatchers.IO) {
         okHttpClient.newBuilder().apply {
@@ -74,84 +72,66 @@ class PlayerRepository @Inject constructor(
         }.build()).execute().use { it.body.string() }
     }
 
-    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): Triple<String, Int, Boolean> = withContext(Dispatchers.IO) {
-        when {
-            useProxy == 0 && !proxyUrl.isNullOrBlank() -> {
-                val url = proxyUrl.replace("\$channel", channelLogin)
-                Triple(url, 0, false)
+    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
+        val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId)
+        val accessToken = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
+            val json = JsonObject().apply {
+                add("extensions", JsonObject().apply {
+                    add("persistedQuery", JsonObject().apply {
+                        addProperty("sha256Hash", "f51c71103d886ee77e4ff84bfc92352acf66a120413f8e99cfcea092e600936f")
+                        addProperty("version", 1)
+                    })
+                })
+                addProperty("operationName", "PlaybackAccessToken")
+                add("variables", JsonObject().apply {
+                    addProperty("isLive", true)
+                    addProperty("login", channelLogin)
+                    addProperty("isVod", false)
+                    addProperty("vodID", "")
+                    addProperty("playerType", playerType)
+                })
             }
-            useProxy == 1 && ttvLolApi.ping().let { it.isSuccessful && it.body()?.string() == "1" } -> {
-                val url = buildUrl(
-                    "https://api.ttv.lol/playlist/$channelLogin.m3u8%3F", //manually insert "?" everywhere, some problem with encoding, too lazy for a proper solution
-                    "allow_source", "true",
-                    "allow_audio_only", "true",
-                    "fast_bread", "true",
-                    "p", Random.nextInt(9999999).toString()
-                ).toString()
-                Triple(url, 1, false)
-            }
-            else -> {
-                val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId)
-                val accessToken = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
-                    val json = JsonObject().apply {
-                        add("extensions", JsonObject().apply {
-                            add("persistedQuery", JsonObject().apply {
-                                addProperty("sha256Hash", "f51c71103d886ee77e4ff84bfc92352acf66a120413f8e99cfcea092e600936f")
-                                addProperty("version", 1)
-                            })
-                        })
-                        addProperty("operationName", "PlaybackAccessToken")
-                        add("variables", JsonObject().apply {
-                            addProperty("isLive", true)
-                            addProperty("login", channelLogin)
-                            addProperty("isVod", false)
-                            addProperty("vodID", "")
-                            addProperty("playerType", playerType)
-                        })
-                    }
-                    val text = getResponse(
-                        url = "https://gql.twitch.tv/gql/",
-                        body = json.toString().toRequestBody(),
-                        headers = accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" },
-                        proxyHost = proxyHost,
-                        proxyPort = proxyPort,
-                        proxyUser = proxyUser,
-                        proxyPassword = proxyPassword
-                    )
-                    val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-                    val message = data?.optString("streamPlaybackAccessToken")?.let { if (it.isNotBlank() && !data.isNull("streamPlaybackAccessToken")) JSONObject(it) else null }
-                    PlaybackAccessToken(
-                        token = message?.optString("value"),
-                        signature = message?.optString("signature"),
-                    )
-                } else {
-                    graphQL.loadPlaybackAccessToken(
-                        headers = accessTokenHeaders,
-                        login = channelLogin,
-                        playerType = playerType
-                    ).streamToken
-                }
-                val url = buildUrl(
-                    "https://usher.ttvnw.net/api/channel/hls/$channelLogin.m3u8?",
-                    "allow_source", "true",
-                    "allow_audio_only", "true",
-                    "fast_bread", "true", //low latency
-                    "p", Random.nextInt(9999999).toString(),
-                    "sig", accessToken?.signature ?: "",
-                    "token", accessToken?.token ?: ""
-                ).toString()
-                if (proxyMultivariantPlaylist && !proxyHost.isNullOrBlank() && proxyPort != null) {
-                    val response = getResponse(
-                        url = url,
-                        proxyHost = proxyHost,
-                        proxyPort = proxyPort,
-                        proxyUser = proxyUser,
-                        proxyPassword = proxyPassword
-                    )
-                    Triple(Base64.encodeToString(response.toByteArray(), Base64.DEFAULT), 2, true)
-                } else Triple(url, 2, false)
-            }
+            val text = getResponse(
+                url = "https://gql.twitch.tv/gql/",
+                body = json.toString().toRequestBody(),
+                headers = accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" },
+                proxyHost = proxyHost,
+                proxyPort = proxyPort,
+                proxyUser = proxyUser,
+                proxyPassword = proxyPassword
+            )
+            val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
+            val message = data?.optString("streamPlaybackAccessToken")?.let { if (it.isNotBlank() && !data.isNull("streamPlaybackAccessToken")) JSONObject(it) else null }
+            PlaybackAccessToken(
+                token = message?.optString("value"),
+                signature = message?.optString("signature"),
+            )
+        } else {
+            graphQL.loadPlaybackAccessToken(
+                headers = accessTokenHeaders,
+                login = channelLogin,
+                playerType = playerType
+            ).streamToken
         }
+        val url = buildUrl(
+            "https://usher.ttvnw.net/api/channel/hls/$channelLogin.m3u8?",
+            "allow_source", "true",
+            "allow_audio_only", "true",
+            "fast_bread", "true", //low latency
+            "p", Random.nextInt(9999999).toString(),
+            "sig", accessToken?.signature ?: "",
+            "token", accessToken?.token ?: ""
+        ).toString()
+        if (proxyMultivariantPlaylist) {
+            val response = getResponse(
+                url = url,
+                proxyHost = proxyHost,
+                proxyPort = proxyPort,
+                proxyUser = proxyUser,
+                proxyPassword = proxyPassword
+            )
+            Base64.encodeToString(response.toByteArray(), Base64.DEFAULT)
+        } else url
     }
 
     suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?): Uri = withContext(Dispatchers.IO) {

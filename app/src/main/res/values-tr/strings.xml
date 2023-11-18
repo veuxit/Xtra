@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">Bu video sadece aboneler tarafından izlenebilir</string>
     <string name="player_error">Oynatıcı hatası. Yeniden deneniyor</string>
     <string name="picture_in_picture">Resim içinde Resim</string>
-    <string name="adblock_not_working">TTV.LOL çevrimdışı. Bu arada yayınları izlemek için reklam engellemeyi devre dışı bırakın</string>
     <string name="source_vod_start">Başlangıç: %s</string>
     <string name="source_vod_end">Bitiş: %s</string>
     <string name="stream_ended">Yayın sona erdi</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">Yayın proxy\'si</string>
     <string name="stream_proxy_url">Özel proxy url\'si</string>
     <string name="stream_proxy_url_desc">\"$channel\" kanal girişi ile değiştirilecektir</string>
-    <string name="streamProxyEntries1">Özel url</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">Spoof X-Forwarded-For</string>
     <string name="proxy_error">Proxy hatası</string>
     <string name="show_subtitles_button">Altyazı düğmesini göster</string>
     <string name="show_subtitles">Altyazıları göster</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
     <string name="playback_speeds">Playback speeds</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>

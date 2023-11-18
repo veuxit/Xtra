@@ -52,6 +52,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.TimeZone
 
 @AndroidEntryPoint
@@ -215,7 +216,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     override fun startPlayer() {
         super.startPlayer()
-        viewModel.useProxy = prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() ?: 1
+        viewModel.useProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
         if (viewModel._stream.value == null) {
             viewModel._stream.value = stream
             loadStream(stream)
@@ -226,47 +227,58 @@ class StreamPlayerFragment : BasePlayerFragment() {
     private fun loadStream(stream: Stream) {
         player?.prepare()
         try {
-            stream.channelLogin?.let { viewModel.load(
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, false)),
-                channelLogin = it,
-                proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "https://api.ttv.lol/playlist/\$channel.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true"),
-                randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
-                xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
-                playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
-                proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
-                proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true),
-                proxyHost = prefs.getString(C.PROXY_HOST, null),
-                proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull(),
-                proxyUser = prefs.getString(C.PROXY_USER, null),
-                proxyPassword = prefs.getString(C.PROXY_PASSWORD, null)
-            ) }
-            viewModel.result.observe(viewLifecycleOwner) { result ->
-                if (result != null) {
-                    when (viewModel.useProxy) {
-                        0 -> {
-                            if (result.second != 0) {
-                                requireContext().toast(R.string.proxy_error)
-                                viewModel.useProxy = 2
+            stream.channelLogin?.let { channelLogin ->
+                val proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "https://api.ttv.lol/playlist/\$channel.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true")
+                val headers = prefs.getString(C.PLAYER_STREAM_HEADERS, null)?.let {
+                    try {
+                        val json = JSONObject(it)
+                        hashMapOf<String, String>().apply {
+                            json.keys().forEach { key ->
+                                put(key, json.optString(key))
                             }
                         }
-                        1 -> {
-                            if (result.second != 1) {
-                                requireContext().toast(R.string.adblock_not_working)
-                                viewModel.useProxy = 2
-                            }
-                        }
+                    } catch (e: Exception) {
+                        null
                     }
+                }
+                if (viewModel.useProxy && !proxyUrl.isNullOrBlank()) {
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
                         PlaybackService.ITEM to stream,
-                        PlaybackService.URI to result.first,
-                        PlaybackService.HEADERS to if (result.second == 1) {
-                            (hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
-                        } else if (viewModel.useProxy == 3) {
-                            (hashMapOf("X-Forwarded-For" to "::1"))
-                        } else null,
-                        PlaybackService.PLAYLIST_AS_DATA to result.third
+                        PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
+                        PlaybackService.HEADERS to headers,
                     )), Bundle.EMPTY)
                     player?.prepare()
+                } else {
+                    if (viewModel.useProxy) {
+                        viewModel.useProxy = false
+                    }
+                    val proxyHost = prefs.getString(C.PROXY_HOST, null)
+                    val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
+                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
+                    viewModel.load(
+                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
+                        channelLogin = channelLogin,
+                        randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                        xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                        playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
+                        proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
+                        proxyMultivariantPlaylist = proxyMultivariantPlaylist,
+                        proxyHost = proxyHost,
+                        proxyPort = proxyPort,
+                        proxyUser = prefs.getString(C.PROXY_USER, null),
+                        proxyPassword = prefs.getString(C.PROXY_PASSWORD, null)
+                    )
+                    viewModel.result.observe(viewLifecycleOwner) { result ->
+                        if (result != null) {
+                            player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
+                                PlaybackService.ITEM to stream,
+                                PlaybackService.URI to result,
+                                PlaybackService.HEADERS to headers,
+                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
+                            )), Bundle.EMPTY)
+                            player?.prepare()
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -327,19 +339,9 @@ class StreamPlayerFragment : BasePlayerFragment() {
                             responseCode == 404 -> {
                                 requireContext().toast(R.string.stream_ended)
                             }
-                            viewModel.useProxy == 0 && responseCode >= 400 -> {
+                            viewModel.useProxy && responseCode >= 400 -> {
                                 requireContext().toast(R.string.proxy_error)
-                                viewModel.useProxy = 2
-                                viewLifecycleOwner.lifecycleScope.launch {
-                                    delay(1500L)
-                                    try {
-                                        restartPlayer()
-                                    } catch (e: Exception) {}
-                                }
-                            }
-                            viewModel.useProxy == 1 && responseCode >= 400 -> {
-                                requireContext().toast(R.string.adblock_not_working)
-                                viewModel.useProxy = 2
+                                viewModel.useProxy = false
                                 viewLifecycleOwner.lifecycleScope.launch {
                                     delay(1500L)
                                     try {
