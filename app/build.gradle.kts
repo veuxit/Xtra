@@ -100,6 +100,10 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.checker.qual)
 
+    constraints {
+        implementation("androidx.media:media:1.7.0-rc01") // https://github.com/androidx/media/blob/release/constants.gradle#L47
+    }
+
     implementation(libs.coil)
     implementation(libs.coil.gif)
 
