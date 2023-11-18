@@ -438,13 +438,11 @@
         android:title="@string/hide_ads"
         app:iconSpaceReserved="false"/>
 
-    <ListPreference
-        android:defaultValue="1"
-        android:entries="@array/streamProxyEntries"
-        android:entryValues="@array/streamProxyValues"
-        android:key="player_proxy"
-        android:summary="%s"
-        android:title="@string/stream_proxy"
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="player_stream_proxy"
+        android:summary="@string/use_custom_proxy_desc"
+        android:title="@string/use_custom_proxy"
         app:iconSpaceReserved="false"/>
 
     <EditTextPreference
@@ -452,6 +450,12 @@
         android:key="player_proxy_url"
         android:summary="@string/stream_proxy_url_desc"
         android:title="@string/stream_proxy_url"
+        app:iconSpaceReserved="false" />
+
+    <EditTextPreference
+        android:key="player_stream_headers"
+        android:summary="@string/stream_headers_desc"
+        android:title="@string/stream_headers"
         app:iconSpaceReserved="false" />
 
     <Preference

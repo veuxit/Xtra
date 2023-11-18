@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">Dieses Video ist nur für Abonnenten verfügbar</string>
     <string name="player_error">Abspielfehler. Erneuter Versuch</string>
     <string name="picture_in_picture">Bild-in-Bild</string>
-    <string name="adblock_not_working">TTV.LOL ist offline. Deaktivieren Sie Adblock, um in der Zwischenzeit Übertragungen ansehen zu können</string>
     <string name="source_vod_start">Start: %s</string>
     <string name="source_vod_end">Ende: %s</string>
     <string name="stream_ended">Die Übertragung ist zu Ende</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">Übertragungs-Proxy</string>
     <string name="stream_proxy_url">Eigene Proxy-URL</string>
     <string name="stream_proxy_url_desc">\"$channel\" wird durch Kanal Login ersetzt</string>
-    <string name="streamProxyEntries1">Eigene URL</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">Spoof X-Forwarded-For</string>
     <string name="proxy_error">Proxy Fehler</string>
     <string name="show_subtitles_button">Untertitel Button anzeigen</string>
     <string name="show_subtitles">Untertitel ausblenden</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">Use WorkManager for downloads</string>
     <string name="show_view_count_icon">Show view count and uptime icons</string>
     <string name="playback_speeds">Playback speeds</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>

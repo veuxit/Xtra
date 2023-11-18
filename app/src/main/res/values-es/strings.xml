@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">Este video solo está disponible para suscriptores y no se puede ver en la aplicación debido a las restricciones de Twitch</string>
     <string name="player_error">Error del reproductor. Re-intentando</string>
     <string name="picture_in_picture">Imagen-en-imagen</string>
-    <string name="adblock_not_working">TTV.LOL está fuera de línea. Desactiva Adblock para ver directos mientras tanto.</string>
     <string name="source_vod_start">Comienzo: %s</string>
     <string name="source_vod_end">Fin: %s</string>
     <string name="stream_ended">La transmisión ha terminado</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">Proxy de Stream</string>
     <string name="stream_proxy_url">URL de proxy personalizada</string>
     <string name="stream_proxy_url_desc">\"$channel\" se sustituirá por el canal de inicio de sesión</string>
-    <string name="streamProxyEntries1">URL personalizada</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">Falsear X-Forwarded-For</string>
     <string name="proxy_error">Error de Proxy</string>
     <string name="show_subtitles_button">Mostrar botón de subtítulos</string>
     <string name="show_subtitles">Mostrar subtítulos</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">Usar WorkManager para descargas</string>
     <string name="show_view_count_icon">Mostrar el contador de visitas y los iconos de tiempo de actividad</string>
     <string name="playback_speeds">Velocidades de reproducción</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>

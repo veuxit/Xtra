@@ -27,7 +27,7 @@
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="token_include_token_stream"
         android:summary="@string/sub_only_summary"
         android:title="@string/include_gql_token"

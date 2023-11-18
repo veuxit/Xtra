@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">この動画はサブスクライバーのみ視聴可能です</string>
     <string name="player_error">プレイヤーエラーです。再試行します</string>
     <string name="picture_in_picture">ピクチャーインピクチャー</string>
-    <string name="adblock_not_working">TTV.LOLはオフラインです。Adblockを無効にすると配信を視聴できます</string>
     <string name="source_vod_start">開始: %s</string>
     <string name="source_vod_end">終了: %s</string>
     <string name="stream_ended">配信は終了しました</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">ストリームプロキシ</string>
     <string name="stream_proxy_url">カスタムプロキシURL</string>
     <string name="stream_proxy_url_desc">\"$channel\" はチャンネルログインに置き換えられます</string>
-    <string name="streamProxyEntries1">カスタムURL</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">X-Forwarded-Forの偽装</string>
     <string name="proxy_error">プロキシエラー</string>
     <string name="show_subtitles_button">字幕ボタンの表示</string>
     <string name="show_subtitles">字幕の表示</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">ダウンロードにWorkManagerを使用する</string>
     <string name="show_view_count_icon">視聴回数と経過時間のアイコンを表示する</string>
     <string name="playback_speeds">再生速度</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>
