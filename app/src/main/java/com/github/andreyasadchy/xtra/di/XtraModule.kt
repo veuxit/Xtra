@@ -100,22 +100,6 @@ class XtraModule {
 
     @Singleton
     @Provides
-    fun providesTTVLolApi(client: OkHttpClient, gsonConverterFactory: GsonConverterFactory): TTVLolApi {
-        return Retrofit.Builder()
-                .baseUrl("https://api.ttv.lol/")
-                .client(client.newBuilder().addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
-                            .addHeader("X-Donate-To", "https://ttv.lol/donate")
-                            .build()
-                    chain.proceed(request)
-                }.build())
-                .addConverterFactory(gsonConverterFactory)
-                .build()
-                .create(TTVLolApi::class.java)
-    }
-
-    @Singleton
-    @Provides
     fun providesGraphQLApi(client: OkHttpClient, gsonConverterFactory: GsonConverterFactory): GraphQLApi {
         return Retrofit.Builder()
                 .baseUrl("https://gql.twitch.tv/gql/")

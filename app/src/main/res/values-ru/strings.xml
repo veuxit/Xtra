@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">Видео доступно только для подписчиков</string>
     <string name="player_error">Ошибка воспроизведения. Переподключение</string>
     <string name="picture_in_picture">Картинка в картинке</string>
-    <string name="adblock_not_working">TTV.LOL не работает. Отключите блокировщик перед просмотром стримов</string>
     <string name="source_vod_start">Начало: %s</string>
     <string name="source_vod_end">Конец: %s</string>
     <string name="stream_ended">Трансляция завершилась</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">Прокси трансляции</string>
     <string name="stream_proxy_url">Собственный адрес прокси</string>
     <string name="stream_proxy_url_desc">\"$channel\" заменится логином канала</string>
-    <string name="streamProxyEntries1">Собственный адрес</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">Подделывать X-Forwarded-For</string>
     <string name="proxy_error">Ошибка прокси</string>
     <string name="show_subtitles_button">Показывать кнопку субтитров</string>
     <string name="show_subtitles">Показать субтитры</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">Скачивать через WorkManager</string>
     <string name="show_view_count_icon">Значки просмотров и времени в эфире</string>
     <string name="playback_speeds">Скорости воспроизведения</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>

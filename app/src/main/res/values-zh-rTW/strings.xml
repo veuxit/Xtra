@@ -80,7 +80,6 @@
     <string name="video_subscribers_only">此影片僅供訂閱者觀看</string>
     <string name="player_error">播放器錯誤。正在重試</string>
     <string name="picture_in_picture">子母畫面</string>
-    <string name="adblock_not_working">TTV.LOL 已離線。禁用廣告攔截器以同時檢視串流</string>
     <string name="source_vod_start">開始：%s</string>
     <string name="source_vod_end">結束：%s</string>
     <string name="stream_ended">直播已結束</string>
@@ -538,9 +537,6 @@
     <string name="stream_proxy">串流 Proxy</string>
     <string name="stream_proxy_url">自訂 Proxy URL</string>
     <string name="stream_proxy_url_desc">\"$channel\" 將被取代為頻道登入</string>
-    <string name="streamProxyEntries1">自訂 URL</string>
-    <string name="streamProxyEntries2">TTV.LOL</string>
-    <string name="streamProxyEntries3">欺騙 X-Forwarded-For</string>
     <string name="proxy_error">Proxy 錯誤</string>
     <string name="show_subtitles_button">顯示字幕按鈕</string>
     <string name="show_subtitles">顯示字幕</string>
@@ -586,4 +582,8 @@
     <string name="use_workmanager_downloads">使用 WorkManager 進行下載</string>
     <string name="show_view_count_icon">顯示觀看數量與上線時間圖示</string>
     <string name="playback_speeds">播放速度</string>
+    <string name="use_custom_proxy">Use custom proxy</string>
+    <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
+    <string name="stream_headers">Stream request headers</string>
+    <string name="stream_headers_desc">Uses JSON format</string>
 </resources>
