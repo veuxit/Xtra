@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.26.2"
+        versionName = "2.26.3"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW")
     }
 
@@ -56,7 +56,8 @@ android {
     configurations.all {
         resolutionStrategy {
             force("androidx.appcompat:appcompat:1.1.0-rc01") // https://github.com/crackededed/Xtra/issues/3 https://stackoverflow.com/questions/41025200/android-view-inflateexception-error-inflating-class-android-webkit-webview
-            force("com.squareup.okhttp3:logging-interceptor:3.12.0")
+            force("androidx.webkit:webkit:1.9.0-alpha01")
+            force("com.squareup.okhttp3:logging-interceptor:3.12.13")
             force("com.squareup.retrofit2:retrofit:2.6.4")
             force("com.squareup.retrofit2:converter-gson:2.6.4")
         }
@@ -87,7 +88,7 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.room.paging)
     ksp(libs.room.compiler)
-    implementation(libs.work.runtime.ktx)
+    implementation(libs.work.runtime)
     implementation(libs.core.ktx)
     implementation(libs.fragment.ktx)
     implementation(libs.navigation.fragment.ktx)
