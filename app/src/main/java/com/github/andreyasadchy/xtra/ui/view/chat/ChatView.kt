@@ -243,8 +243,7 @@ class ChatView : ConstraintLayout {
         if (!list.isNullOrEmpty()) {
             if (messagingEnabled) {
                 val newItems = list.filter { it !in autoCompleteList }
-                autoCompleteList.addAll(newItems)
-                autoCompleteAdapter?.addAll(newItems)
+                autoCompleteAdapter?.addAll(newItems) ?: autoCompleteList.addAll(newItems)
             }
         }
     }
