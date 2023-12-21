@@ -767,12 +767,12 @@ class PlaybackService : MediaSessionService() {
             else -> {
                 defaultQuality?.split("p")?.let { default ->
                     default[0].filter(Char::isDigit).toIntOrNull()?.let { defaultRes ->
-                        val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
+                        val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
                         qualities.indexOf(qualities.find { qualityString ->
                             qualityString.split("p").let { quality ->
                                 quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                                    val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
-                                    (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes
+                                    val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                                    (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes || qualities.indexOf(qualityString) == audioIndex - 1
                                 } ?: false
                             }
                         }).let { if (it != -1) it else null }
