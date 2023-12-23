@@ -468,6 +468,7 @@ class PlaybackService : MediaSessionService() {
                                     .setMediaMetadata(MediaMetadata.Builder()
                                         .setTitle(item.name)
                                         .setArtist(item.channelName)
+                                        .setArtworkUri(item.channelLogo?.toUri())
                                         .build())
                                     .build())
                                 session.player.volume = prefs.getInt(C.PLAYER_VOLUME, 100) / 100f
@@ -761,26 +762,28 @@ class PlaybackService : MediaSessionService() {
             }
             "saved" -> {
                 if (savedQuality != "Auto") {
-                    qualities.indexOf(savedQuality).let { if (it != -1) it else null }
+                    findQualityIndex(savedQuality)
                 } else null
             }
-            else -> {
-                defaultQuality?.split("p")?.let { default ->
-                    default[0].filter(Char::isDigit).toIntOrNull()?.let { defaultRes ->
-                        val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                        qualities.indexOf(qualities.find { qualityString ->
-                            qualityString.split("p").let { quality ->
-                                quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                                    val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                                    (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes || qualities.indexOf(qualityString) == audioIndex - 1
-                                } ?: false
-                            }
-                        }).let { if (it != -1) it else null }
-                    }
-                }
-            }
+            else -> findQualityIndex(defaultQuality)
         }
         qualityIndex = index ?: 0
+    }
+
+    private fun findQualityIndex(targetQualityString: String?): Int? {
+        return targetQualityString?.split("p")?.let { targetQuality ->
+            targetQuality[0].filter(Char::isDigit).toIntOrNull()?.let { targetRes ->
+                val targetFps = if (targetQuality.size >= 2) targetQuality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                qualities.indexOf(qualities.find { qualityString ->
+                    qualityString.split("p").let { quality ->
+                        quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
+                            val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                            (targetRes == qualityRes && targetFps >= qualityFps) || targetRes > qualityRes || qualities.indexOf(qualityString) == audioIndex - 1
+                        } ?: false
+                    }
+                }).let { if (it != -1) it else null }
+            }
+        }
     }
 
     private fun toggleDynamicsProcessing() {
