@@ -5,15 +5,18 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.Color
 import android.net.ConnectivityManager
 import android.os.Build
 import android.util.TypedValue
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.StringRes
-import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
+import com.google.android.material.color.DynamicColors
 
 val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
     val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
@@ -40,27 +43,51 @@ fun Activity.applyTheme(): String {
     } else {
         prefs().getString(C.THEME, "0")!!
     }
-    setTheme(when(theme) {
-        "1" -> R.style.AmoledTheme
-        "2" -> R.style.LightTheme
-        "3" -> R.style.BlueTheme
-        else -> R.style.DarkTheme
-    })
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs().getBoolean(C.UI_STATUSBAR, true)) {
-        when (theme) {
-            "1" -> window.statusBarColor = ContextCompat.getColor(this, R.color.primaryAmoled)
-            "2" -> window.statusBarColor = ContextCompat.getColor(this, R.color.primaryLight)
-            "3" -> window.statusBarColor = ContextCompat.getColor(this, R.color.primaryBlue)
-            else -> window.statusBarColor = ContextCompat.getColor(this, R.color.primaryDark)
-        }
+    if (prefs().getBoolean(C.UI_THEME_ROUNDED_CORNERS, true)) {
+        setTheme(when(theme) {
+            "4" -> R.style.DarkTheme
+            "5" -> R.style.LightTheme
+            "1" -> R.style.AmoledTheme
+            "2" -> R.style.LightTheme
+            "3" -> R.style.BlueTheme
+            else -> R.style.DarkTheme
+        })
+    } else {
+        setTheme(when(theme) {
+            "4" -> R.style.DarkThemeNoCorners
+            "5" -> R.style.LightThemeNoCorners
+            "1" -> R.style.AmoledThemeNoCorners
+            "2" -> R.style.LightThemeNoCorners
+            "3" -> R.style.BlueThemeNoCorners
+            else -> R.style.DarkThemeNoCorners
+        })
     }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs().getBoolean(C.UI_NAVBAR, true)) {
-        when (theme) {
-            "1" -> window.navigationBarColor = ContextCompat.getColor(this, R.color.primaryAmoled)
-            "2" -> window.navigationBarColor = ContextCompat.getColor(this, R.color.primaryLight)
-            "3" -> window.navigationBarColor = ContextCompat.getColor(this, R.color.primaryBlue)
-            else -> window.navigationBarColor = ContextCompat.getColor(this, R.color.primaryDark)
+    if (listOf("4", "5").contains(theme)) {
+        DynamicColors.applyToActivityIfAvailable(this)
+    }
+    val isLightTheme = theme.isLightTheme
+    WindowInsetsControllerCompat(window, window.decorView).run {
+        isAppearanceLightStatusBars = isLightTheme
+        isAppearanceLightNavigationBars = isLightTheme
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if (prefs().getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            @Suppress("DEPRECATION")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+            }
+        } else {
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = false
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> window.navigationBarColor = Color.TRANSPARENT
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.O -> {
+                    if (!isLightTheme) {
+                        window.navigationBarColor = Color.TRANSPARENT
+                    }
+                }
+            }
         }
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

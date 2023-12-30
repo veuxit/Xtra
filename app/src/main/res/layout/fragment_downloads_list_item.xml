@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/Card">
+    style="@style/Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -79,9 +81,11 @@
 
         </LinearLayout>
 
-        <ProgressBar
+        <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/progressBar"
-            style="@style/VideoProgressBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layoutDirection="ltr"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/thumbnail"
@@ -104,15 +108,13 @@
 
         <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_centerVertical="true"
+            android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginLeft="10dp"
             android:layout_marginEnd="10dp"
             android:layout_marginRight="10dp"
             android:layout_marginTop="7dp"
             android:layout_marginBottom="7dp"
-            android:gravity="center_vertical"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/options"
@@ -121,33 +123,29 @@
 
             <TextView
                 android:id="@+id/title"
-                style="@style/VideoTitle"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="start"
-                android:textAlignment="viewStart"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:visibility="gone"
                 tools:text="@sample/videos.json/vods/title"
                 tools:visibility="visible" />
 
             <TextView
                 android:id="@+id/username"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="start"
-                android:textAlignment="viewStart"
-                android:textColor="?attr/secondaryTextColor"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?android:attr/textColorSecondary"
                 android:visibility="gone"
                 tools:text="@sample/videos.json/vods/channel/name"
                 tools:visibility="visible" />
 
             <TextView
                 android:id="@+id/gameName"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="start"
-                android:textAlignment="viewStart"
-                android:textColor="?attr/secondaryTextColor"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?android:attr/textColorSecondary"
                 android:visibility="gone"
                 tools:text="@sample/videos.json/vods/game"
                 tools:visibility="visible" />
@@ -169,6 +167,7 @@
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:textAppearance="?attr/textAppearanceTitleLarge"
         android:textColor="@android:color/white"
         android:textSize="30sp"
         android:textAllCaps="true"
@@ -179,4 +178,4 @@
         android:clickable="true"
         android:focusable="true" />
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

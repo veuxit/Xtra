@@ -13,7 +13,6 @@
     <EditTextPreference
         android:defaultValue="ilfexgv3nnljz3isbm257gzwrzr7bi"
         android:key="helix_client_id"
-        android:maxLines="1"
         android:title="@string/api_helix"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />
@@ -21,7 +20,6 @@
     <EditTextPreference
         android:defaultValue="https://localhost"
         android:key="helix_redirect"
-        android:maxLines="1"
         android:title="@string/api_helix_redirect"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />
@@ -29,7 +27,6 @@
     <EditTextPreference
         android:defaultValue="kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
         android:key="gql_client_id2"
-        android:maxLines="1"
         android:title="@string/api_gql"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />
@@ -37,7 +34,6 @@
     <EditTextPreference
         android:defaultValue="https://www.twitch.tv/"
         android:key="gql_redirect2"
-        android:maxLines="1"
         android:title="@string/api_gql_redirect"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false" />

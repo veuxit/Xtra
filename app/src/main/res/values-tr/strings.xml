@@ -70,7 +70,7 @@
     <string name="rewind">Geri sarma</string>
     <string name="forward">İleri sarma</string>
     <string name="seconds_full">%s saniye</string>
-    <string name="unfollow">%s takipten çıkılsın mı?</string>
+    <string name="unfollow_channel">%s takipten çıkılsın mı?</string>
     <string name="now_following">Artık %s takip ediliyor</string>
     <string name="unfollowed">%s takipten çıkıldı</string>
     <string name="yes">Evet</string>
@@ -130,8 +130,6 @@
     <string name="language">Dil</string>
     <string name="never">Asla</string>
     <string name="blue">Mavi</string>
-    <string name="statusBarColor">Durum çubuğu rengi</string>
-    <string name="navigationBarColor">Gezinti çubuğu rengi</string>
     <string name="rounduserimage">Yuvarlak profil resimleri</string>
     <string name="truncated_view_counts">Kesilmiş görüntülenme sayıları</string>
     <string name="broadcastersCount">Oyunların üzerinde yayıncıların sayısını göster</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
     <string name="stream_headers">Stream request headers</string>
     <string name="stream_headers_desc">Uses JSON format</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

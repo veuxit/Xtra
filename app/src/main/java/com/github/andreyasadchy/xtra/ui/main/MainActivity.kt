@@ -8,17 +8,25 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
+import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentTransaction
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -49,10 +57,13 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
+import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
+import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
+import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -78,6 +89,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         }
     }
     private lateinit var prefs: SharedPreferences
+    private var theme: String? = null
     var orientation: Int = 1
 
     //Lifecycle methods
@@ -100,6 +112,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 if (resources.getBoolean(R.bool.isTablet)) {
                     putString(C.PORTRAIT_COLUMN_COUNT, "2")
                     putString(C.LANDSCAPE_COLUMN_COUNT, "3")
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    putString(C.THEME, "4")
                 }
             }
         }
@@ -152,9 +167,22 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 IntegrityDialog.show(supportFragmentManager)
             }
         }
-        applyTheme()
+        theme = applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setNavBarColor(isInPortraitOrientation)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.navHostFragment.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                leftMargin = insets.left
+                rightMargin = insets.right
+            }
+            binding.navBarContainer.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                leftMargin = insets.left
+                rightMargin = insets.right
+            }
+            windowInsets
+        }
 
         val notInitialized = savedInstanceState == null
         initNavigation()
@@ -178,8 +206,41 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         handleIntent(intent)
     }
 
+    private fun setNavBarColor(isPortrait: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs().getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = !isPortrait
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                    window.navigationBarColor = if (isPortrait) {
+                        Color.TRANSPARENT
+                    } else {
+                        ContextCompat.getColor(this, if (!theme.isLightTheme) R.color.darkScrim else R.color.lightScrim)
+                    }
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                    if (!theme.isLightTheme) {
+                        window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
+                    }
+                }
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.M -> {
+                    @Suppress("DEPRECATION")
+                    if (!theme.isLightTheme) {
+                        if (isPortrait) {
+                            window.navigationBarColor = Color.TRANSPARENT
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                        } else {
+                            window.navigationBarColor = ContextCompat.getColor(this, R.color.darkScrim)
+                            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        setNavBarColor(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT)
         orientation = newConfig.orientation
     }
 
@@ -228,7 +289,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         when (requestCode) {
             0 -> {
                 if (grantResults.isNotEmpty() && grantResults.indexOf(PackageManager.PERMISSION_DENIED) == -1) {
-                    val fragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
+                    val fragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)?.childFragmentManager?.findFragmentById(R.id.fragmentContainer)
                     if (fragment is HasDownloadDialog) {
                         fragment.showDownloadDialog()
                     } else if (fragment is GamePagerFragment && fragment.currentFragment is HasDownloadDialog) {
@@ -438,6 +499,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             }
         }, null)
         binding.navBar.apply {
+            if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true)) {
+                itemBackground = ColorDrawable(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
+            }
             menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
             menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
             if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {

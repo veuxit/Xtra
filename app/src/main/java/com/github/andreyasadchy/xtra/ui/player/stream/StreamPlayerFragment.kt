@@ -14,7 +14,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -48,6 +47,7 @@ import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -467,7 +467,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val tags = result.get().extras.getString(PlaybackService.RESULT)
                     if (!tags.isNullOrBlank()) {
-                        AlertDialog.Builder(requireContext()).apply {
+                        MaterialAlertDialogBuilder(requireContext()).apply {
                             setView(NestedScrollView(context).apply {
                                 addView(HorizontalScrollView(context).apply {
                                     addView(TextView(context).apply {
@@ -477,12 +477,11 @@ class StreamPlayerFragment : BasePlayerFragment() {
                                     })
                                 })
                             })
-                            setNegativeButton(R.string.copy_clip) { dialog, _ ->
+                            setNegativeButton(R.string.copy_clip) { _, _ ->
                                 val clipboard = ContextCompat.getSystemService(requireContext(), ClipboardManager::class.java)
                                 clipboard?.setPrimaryClip(ClipData.newPlainText("label", tags))
-                                dialog.dismiss()
                             }
-                            setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
+                            setPositiveButton(android.R.string.ok, null)
                         }.show()
                     }
                 }

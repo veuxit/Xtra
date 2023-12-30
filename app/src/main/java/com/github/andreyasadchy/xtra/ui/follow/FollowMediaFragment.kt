@@ -1,22 +1,29 @@
 package com.github.andreyasadchy.xtra.ui.follow
 
+import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
+import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentMediaBinding
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
-import com.github.andreyasadchy.xtra.ui.common.MediaFragment
+import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
+import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.follow.channels.FollowedChannelsFragment
 import com.github.andreyasadchy.xtra.ui.follow.games.FollowedGamesFragment
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
@@ -27,14 +34,28 @@ import com.github.andreyasadchy.xtra.ui.streams.followed.FollowedStreamsFragment
 import com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
-class FollowMediaFragment : MediaFragment(), Scrollable {
+class FollowMediaFragment : Fragment(), Scrollable, FragmentHost {
 
     private var _binding: FragmentMediaBinding? = null
     private val binding get() = _binding!!
+
+    private var previousItem = -1
+
+    override val currentFragment: Fragment?
+        get() = childFragmentManager.findFragmentById(R.id.fragmentContainer)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        previousItem = savedInstanceState?.getInt("previousItem", -1) ?: -1
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMediaBinding.inflate(inflater, container, false)
@@ -46,64 +67,49 @@ class FollowMediaFragment : MediaFragment(), Scrollable {
         with(binding) {
             val activity = requireActivity() as MainActivity
             val account = Account.get(activity)
-            search.setOnClickListener { findNavController().navigate(SearchPagerFragmentDirections.actionGlobalSearchPagerFragment()) }
-            menu.setOnClickListener { it ->
-                PopupMenu(activity, it).apply {
-                    inflate(R.menu.top_menu)
-                    menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
-                    setOnMenuItemClickListener {
-                        when(it.itemId) {
-                            R.id.settings -> { activity.startActivityFromFragment(this@FollowMediaFragment, Intent(activity, SettingsActivity::class.java), 3) }
-                            R.id.login -> {
-                                if (account is NotLoggedIn) {
-                                    activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
-                                } else {
-                                    AlertDialog.Builder(activity).apply {
-                                        setTitle(getString(R.string.logout_title))
-                                        account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
-                                        setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
-                                        setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
-                                    }.show()
-                                }
-                            }
+            val navController = findNavController()
+            val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
+            toolbar.setupWithNavController(navController, appBarConfiguration)
+            toolbar.menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
+            toolbar.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.search -> {
+                        findNavController().navigate(SearchPagerFragmentDirections.actionGlobalSearchPagerFragment())
+                        true
+                    }
+                    R.id.settings -> {
+                        activity.startActivityFromFragment(this@FollowMediaFragment, Intent(activity, SettingsActivity::class.java), 3)
+                        true
+                    }
+                    R.id.login -> {
+                        if (account is NotLoggedIn) {
+                            activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
+                        } else {
+                            MaterialAlertDialogBuilder(activity).apply {
+                                setTitle(getString(R.string.logout_title))
+                                account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                setNegativeButton(getString(R.string.no), null)
+                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
+                            }.show()
                         }
                         true
                     }
-                    show()
+                    else -> false
                 }
             }
+            val loggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()
             spinner.visible()
-            spinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item,
-                if (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()) {
-                    resources.getStringArray(R.array.spinnerFollowedEntries)
-                } else {
-                    resources.getStringArray(R.array.spinnerFollowedEntriesNotLoggedIn)
-                }
-            )
-            spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    currentFragment = if (position != previousItem) {
-                        val newFragment = onSpinnerItemSelected(position)
-                        childFragmentManager.beginTransaction().replace(R.id.fragmentContainer, newFragment).commit()
+            (spinner.editText as? MaterialAutoCompleteTextView)?.apply {
+                setSimpleItems(resources.getStringArray(if (loggedIn) R.array.spinnerFollowedEntries else R.array.spinnerFollowedEntriesNotLoggedIn))
+                setOnItemClickListener { _, _, position, _ ->
+                    if (position != previousItem) {
+                        childFragmentManager.beginTransaction().replace(R.id.fragmentContainer, onSpinnerItemSelected(loggedIn, position)).commit()
                         previousItem = position
-                        newFragment
-                    } else {
-                        childFragmentManager.findFragmentById(R.id.fragmentContainer)
                     }
                 }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
-        }
-    }
-
-    override fun onSpinnerItemSelected(position: Int): Fragment {
-        with(binding) {
-            val loggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()
-            if (firstLaunch) {
-                val defaultItem = requireContext().prefs().getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toIntOrNull() ?: 0
-                spinner.setSelection(
-                    if (loggedIn) {
+                if (previousItem == -1) {
+                    val defaultItem = requireContext().prefs().getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toIntOrNull() ?: 0
+                    val position = if (loggedIn) {
                         defaultItem
                     } else {
                         when (defaultItem) {
@@ -112,23 +118,77 @@ class FollowMediaFragment : MediaFragment(), Scrollable {
                             else -> 0
                         }
                     }
-                )
-                firstLaunch = false
-            }
-            return if (loggedIn) {
-                when (position) {
-                    0 -> FollowedStreamsFragment()
-                    1 -> FollowedVideosFragment()
-                    2 -> FollowedChannelsFragment()
-                    else -> FollowedGamesFragment()
+                    childFragmentManager.beginTransaction().replace(R.id.fragmentContainer, onSpinnerItemSelected(loggedIn, position)).commit()
+                    previousItem = position
                 }
-            } else {
-                when (position) {
-                    0 -> FollowedStreamsFragment()
-                    1 -> FollowedChannelsFragment()
-                    else -> FollowedGamesFragment()
+                setText(adapter.getItem(previousItem).toString(), false)
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    isFocusable = true
+                    isEnabled = false
+                    setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
+                } else {
+                    setRawInputType(InputType.TYPE_NULL)
                 }
             }
+            childFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                    if (requireContext().prefs().getBoolean(C.UI_THEME_APPBAR_LIFT, true)) {
+                        f.view?.findViewById<RecyclerView>(R.id.recyclerView)?.let {
+                            appBar.setLiftOnScrollTargetView(it)
+                            it.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                                    super.onScrolled(recyclerView, dx, dy)
+                                    appBar.isLifted = recyclerView.canScrollVertically(-1)
+                                }
+                            })
+                            it.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                                appBar.isLifted = it.canScrollVertically(-1)
+                            }
+                        }
+                    } else {
+                        appBar.setLiftable(false)
+                        appBar.background = null
+                    }
+                    (f as? Sortable)?.setupSortBar(sortBar) ?: sortBar.root.gone()
+                }
+            }, false)
+            ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    topMargin = insets.top
+                }
+                WindowInsetsCompat.CONSUMED
+            }
+        }
+    }
+
+    private fun onSpinnerItemSelected(loggedIn: Boolean, position: Int): Fragment {
+        return if (loggedIn) {
+            when (position) {
+                0 -> FollowedStreamsFragment()
+                1 -> FollowedVideosFragment()
+                2 -> FollowedChannelsFragment()
+                else -> FollowedGamesFragment()
+            }
+        } else {
+            when (position) {
+                0 -> FollowedStreamsFragment()
+                1 -> FollowedChannelsFragment()
+                else -> FollowedGamesFragment()
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("previousItem", previousItem)
+        super.onSaveInstanceState(outState)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
+            requireActivity().recreate()
         }
     }
 

@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
-import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import com.github.andreyasadchy.xtra.R
@@ -14,6 +12,7 @@ import com.github.andreyasadchy.xtra.databinding.PlayerVolumeBinding
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.slider.Slider
 
 
 class PlayerVolumeDialog : ExpandingBottomSheetDialogFragment() {
@@ -50,36 +49,36 @@ class PlayerVolumeDialog : ExpandingBottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
-            val volume = (requireArguments().getFloat(VOLUME, 1f) * 100).toInt()
+            val volume = (requireArguments().getFloat(VOLUME, 1f) * 100)
             setVolume(volume)
-            volumeBar.progress = volume
-            volumeBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar, i: Int, b: Boolean) {
-                    listener.changeVolume((i / 100f))
-                    setVolume(i)
-                }
+            volumeBar.value = volume
+            volumeBar.addOnChangeListener { _, value, _ ->
+                listener.changeVolume((value / 100f))
+                setVolume(value)
+            }
+            volumeBar.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {}
 
-                override fun onStartTrackingTouch(seekBar: SeekBar) {}
-                override fun onStopTrackingTouch(seekBar: SeekBar) {
-                    requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, seekBar.progress) }
+                override fun onStopTrackingTouch(slider: Slider) {
+                    requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, slider.value.toInt()) }
                 }
             })
         }
     }
 
-    private fun setVolume(volume: Int) {
+    private fun setVolume(volume: Float) {
         with(binding) {
-            volumeText.text = volume.toString()
-            if (volume == 0) {
+            volumeText.text = volume.toInt().toString()
+            if (volume == 0f) {
                 volumeMute.setImageResource(R.drawable.baseline_volume_off_black_24)
                 volumeMute.setOnClickListener {
-                    volumeBar.progress = 100
+                    volumeBar.value = 100f
                     requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, 100) }
                 }
             } else {
                 volumeMute.setImageResource(R.drawable.baseline_volume_up_black_24)
                 volumeMute.setOnClickListener {
-                    volumeBar.progress = 0
+                    volumeBar.value = 0f
                     requireContext().prefs().edit { putInt(C.PLAYER_VOLUME, 0) }
                 }
             }

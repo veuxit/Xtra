@@ -61,7 +61,7 @@ import kotlin.concurrent.schedule
 
 
 @AndroidEntryPoint
-open class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaSessionService() {
 
     @Inject
     lateinit var okHttpClient: OkHttpClient

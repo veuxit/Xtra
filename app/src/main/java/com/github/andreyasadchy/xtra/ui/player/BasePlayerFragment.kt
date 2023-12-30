@@ -8,19 +8,23 @@ import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.trackPipAnimationHintView
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.os.bundleOf
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -60,11 +64,13 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.hideKeyboard
 import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
+import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.color.MaterialColors
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.delay
@@ -96,6 +102,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     protected lateinit var prefs: SharedPreferences
 
     private var chatWidthLandscape = 0
+    private var isLightTheme = false
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -121,6 +128,16 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             activity.isInPortraitOrientation
         }
         activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
+        WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        val theme = if (prefs.getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
+            when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
+                Configuration.UI_MODE_NIGHT_YES -> prefs.getString(C.UI_THEME_DARK_ON, "0")!!
+                else -> prefs.getString(C.UI_THEME_DARK_OFF, "2")!!
+            }
+        } else {
+            prefs.getString(C.THEME, "0")!!
+        }
+        isLightTheme = theme.isLightTheme
     }
 
     override fun onStart() {
@@ -203,13 +220,30 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        slidingLayout = view as SlidingLayout
+        chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            slidingLayout.apply {
+                updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    topMargin = if (isPortrait) insets.top else 0
+                }
+                savedInsets = insets
+                if (!isMaximized && !isPortrait) {
+                    init()
+                }
+            }
+            chatLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = insets.bottom
+            }
+            WindowInsetsCompat.CONSUMED
+        }
         viewModel.integrity.observe(viewLifecycleOwner) {
             if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
                 IntegrityDialog.show(childFragmentManager)
             }
         }
         val activity = requireActivity() as MainActivity
-        slidingLayout = view as SlidingLayout
         slidingLayout.addListener(activity)
         slidingLayout.addListener(this)
         slidingLayout.maximizedSecondViewVisibility = if (prefs.getBoolean(C.KEY_CHAT_OPENED, true)) View.VISIBLE else View.GONE //TODO
@@ -221,7 +255,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
         }
-        chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
         aspectRatioFrameLayout = view.findViewById(R.id.aspectRatioFrameLayout)
         aspectRatioFrameLayout.setAspectRatio(16f / 9f)
         chatWidthLandscape = prefs.getInt(C.LANDSCAPE_CHAT_WIDTH, 0)
@@ -428,7 +461,15 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
         backPressedCallback.remove()
         playerView.useController = false
-        if (!isPortrait) {
+        if (isPortrait) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                }
+                requireActivity().window.statusBarColor = Color.TRANSPARENT
+            }
+        } else {
             showStatusBar()
             val activity = requireActivity()
             activity.lifecycleScope.launch {
@@ -447,7 +488,21 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (!playerView.controllerHideOnTouch) { //TODO
             playerView.showController()
         }
-        if (!isPortrait) {
+        if (isPortrait) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                    requireActivity().window.statusBarColor = if (!isLightTheme) {
+                        MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
+                    } else {
+                        ContextCompat.getColor(requireContext(), R.color.darkScrimOnLightSurface)
+                    }
+                } else {
+                    requireActivity().window.statusBarColor = MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
+                }
+            }
+        } else {
             hideStatusBar()
         }
     }
@@ -592,6 +647,19 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     it.gone()
                 }
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && slidingLayout.isMaximized && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                    requireActivity().window.statusBarColor = if (!isLightTheme) {
+                        MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
+                    } else {
+                        ContextCompat.getColor(requireContext(), R.color.darkScrimOnLightSurface)
+                    }
+                } else {
+                    requireActivity().window.statusBarColor = MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
+                }
+            }
             showStatusBar()
             aspectRatioFrameLayout.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -636,6 +704,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 if (it.hasOnClickListeners()) {
                     it.visible()
                 }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && slidingLayout.isMaximized && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                }
+                requireActivity().window.statusBarColor = Color.TRANSPARENT
             }
             slidingLayout.post {
                 if (slidingLayout.isMaximized) {
@@ -706,8 +781,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     private fun showStatusBar() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            WindowCompat.setDecorFitsSystemWindows(requireActivity().window, true)
-            WindowInsetsControllerCompat(requireActivity().window, requireActivity().window.decorView).show(WindowInsetsCompat.Type.systemBars())
+            if (!prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                WindowCompat.setDecorFitsSystemWindows(requireActivity().window, true)
+            }
+            WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).show(WindowInsetsCompat.Type.systemBars())
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 if (isAdded) {
@@ -719,11 +796,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     private fun hideStatusBar() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
-            WindowInsetsControllerCompat(requireActivity().window, requireActivity().window.decorView).let { controller ->
-                controller.hide(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (!prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
+                WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
             }
+            WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 if (isAdded) {
@@ -734,7 +810,14 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     private fun lockScreen() {
-        if ((requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager).isScreenOn) {
+        val powerManager = requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                powerManager.isInteractive
+            } else {
+                @Suppress("DEPRECATION")
+                powerManager.isScreenOn
+            }
+        ) {
             try {
                 (requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
             } catch (e: SecurityException) {}

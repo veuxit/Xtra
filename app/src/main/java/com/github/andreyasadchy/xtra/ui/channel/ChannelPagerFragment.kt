@@ -9,13 +9,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
+import androidx.core.view.marginBottom
+import androidx.core.view.marginTop
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChannelBinding
@@ -23,9 +30,10 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
-import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
+import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
+import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
@@ -45,20 +53,29 @@ import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.CollapsingToolbarLayout
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 
 
 @AndroidEntryPoint
-class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
+class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
 
     private var _binding: FragmentChannelBinding? = null
     private val binding get() = _binding!!
     private val args: ChannelPagerFragmentArgs by navArgs()
     private val viewModel: ChannelPagerViewModel by viewModels()
 
+    override val currentFragment: Fragment?
+        get() = childFragmentManager.findFragmentByTag("f${binding.viewPager.currentItem}")
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentChannelBinding.inflate(inflater, container, false)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            binding.sortBar.root.visible()
+        }
         return binding.root
     }
 
@@ -107,13 +124,56 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                     userImage.gone()
                 }
             }
-            toolbar.apply {
-                navigationIcon = Utils.getNavigationIcon(activity)
-                setNavigationOnClickListener { activity.popFragment() }
+            val navController = findNavController()
+            val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
+            toolbar.setupWithNavController(navController, appBarConfiguration)
+            toolbar.menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
+            toolbar.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.followButton -> {
+                        viewModel.follow.value?.let {
+                            val following = it.first
+                            val errorMessage = it.second
+                            if (errorMessage.isNullOrBlank()) {
+                                if (!following) {
+                                    viewModel.saveFollowChannel(requireContext(), args.channelId, args.channelLogin, args.channelName, args.channelLogo)
+                                } else {
+                                    FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
+                                        viewModel.deleteFollowChannel(requireContext(), args.channelId)
+                                    }
+                                }
+                            }
+                        }
+                        true
+                    }
+                    R.id.search -> {
+                        findNavController().navigate(SearchPagerFragmentDirections.actionGlobalSearchPagerFragment())
+                        true
+                    }
+                    R.id.settings -> {
+                        activity.startActivityFromFragment(this@ChannelPagerFragment, Intent(activity, SettingsActivity::class.java), 3)
+                        true
+                    }
+                    R.id.login -> {
+                        if (account is NotLoggedIn) {
+                            activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
+                        } else {
+                            MaterialAlertDialogBuilder(activity).apply {
+                                setTitle(getString(R.string.logout_title))
+                                account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                setNegativeButton(getString(R.string.no), null)
+                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
+                            }.show()
+                        }
+                        true
+                    }
+                    else -> false
+                }
             }
             val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
-                followButton.visible()
+                val followButton = toolbar.menu.findItem(R.id.followButton)
+                followButton.isVisible = true
                 var initialized = false
                 viewModel.follow.observe(viewLifecycleOwner) { pair ->
                     val following = pair.first
@@ -128,58 +188,48 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                         initialized = true
                     }
                     if (errorMessage.isNullOrBlank()) {
-                        followButton.setOnClickListener {
-                            if (!following) {
-                                viewModel.saveFollowChannel(requireContext(), args.channelId, args.channelLogin, args.channelName, args.channelLogo)
-                            } else {
-                                FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
-                                    viewModel.deleteFollowChannel(requireContext(), args.channelId)
-                                }
-                            }
-                        }
-                        followButton.setImageResource(if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
+                        followButton.icon = ContextCompat.getDrawable(requireContext(), if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
+                        followButton.title = requireContext().getString(if (following) R.string.unfollow else R.string.follow)
                     }
                 }
             }
-            search.setOnClickListener { findNavController().navigate(SearchPagerFragmentDirections.actionGlobalSearchPagerFragment()) }
-            menu.setOnClickListener { it ->
-                PopupMenu(activity, it).apply {
-                    inflate(R.menu.top_menu)
-                    menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
-                    setOnMenuItemClickListener {
-                        when(it.itemId) {
-                            R.id.settings -> { activity.startActivityFromFragment(this@ChannelPagerFragment, Intent(activity, SettingsActivity::class.java), 3) }
-                            R.id.login -> {
-                                if (account is NotLoggedIn) {
-                                    activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
-                                } else {
-                                    AlertDialog.Builder(activity).apply {
-                                        setTitle(getString(R.string.logout_title))
-                                        account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
-                                        setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
-                                        setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
-                                    }.show()
-                                }
-                            }
-                            else -> menu.close()
-                        }
-                        true
-                    }
-                    show()
-                }
+            if (!requireContext().prefs().getBoolean(C.UI_THEME_APPBAR_LIFT, true)) {
+                appBar.setLiftable(false)
+                appBar.background = null
+                collapsingToolbar.setContentScrimColor(MaterialColors.getColor(collapsingToolbar, com.google.android.material.R.attr.colorSurface))
             }
-        }
-        with(binding.pagerLayout) {
             viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                private val layoutParams = binding.collapsingToolbar.layoutParams as AppBarLayout.LayoutParams
+                private val layoutParams = collapsingToolbar.layoutParams as AppBarLayout.LayoutParams
                 private val originalScrollFlags = layoutParams.scrollFlags
 
                 override fun onPageSelected(position: Int) {
                     layoutParams.scrollFlags = if (position != 2) {
                         originalScrollFlags
                     } else {
-                        binding.appBar.setExpanded(false, isResumed)
+                        appBar.setExpanded(false, isResumed)
+                        appBar.background = null
                         AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL
+                    }
+                    viewPager.doOnLayout {
+                        childFragmentManager.findFragmentByTag("f${position}").let { fragment ->
+                            if (fragment is Sortable) {
+                                fragment.setupSortBar(sortBar)
+                                sortBar.root.doOnLayout {
+                                    toolbarContainer.layoutParams = (toolbarContainer.layoutParams as CollapsingToolbarLayout.LayoutParams).apply { bottomMargin = toolbarContainer2.height }
+                                    val toolbarHeight = toolbarContainer.marginTop + toolbarContainer.marginBottom
+                                    toolbar.layoutParams = toolbar.layoutParams.apply { height = toolbarHeight }
+                                    collapsingToolbar.scrimVisibleHeightTrigger = toolbarHeight + 1
+                                }
+                            } else {
+                                sortBar.root.gone()
+                                toolbarContainer2.doOnLayout {
+                                    toolbarContainer.layoutParams = (toolbarContainer.layoutParams as CollapsingToolbarLayout.LayoutParams).apply { bottomMargin = toolbarContainer2.height }
+                                    val toolbarHeight = toolbarContainer.marginTop + toolbarContainer.marginBottom
+                                    toolbar.layoutParams = toolbar.layoutParams.apply { height = toolbarHeight }
+                                    collapsingToolbar.scrimVisibleHeightTrigger = toolbarHeight + 1
+                                }
+                            }
+                        }
                     }
                 }
             })
@@ -194,11 +244,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                     else -> getString(R.string.chat)
                 }
             }.attach()
+            ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                collapsingToolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    topMargin = insets.top
+                }
+                WindowInsetsCompat.CONSUMED
+            }
         }
     }
-
-    val currentFragment: Fragment?
-        get() = childFragmentManager.findFragmentByTag("f${binding.pagerLayout.viewPager.currentItem}")
 
     override fun initialize() {
         viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
@@ -340,6 +394,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                 bannerImage.visible()
                 bannerImage.loadImage(this@ChannelPagerFragment, user.bannerImageURL)
                 if (userName.isVisible) {
+                    userName.setTextColor(Color.WHITE)
                     userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)
                 }
             } else {

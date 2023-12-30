@@ -136,6 +136,8 @@
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">10sp</item>
         <item name="android:textColor">@android:color/white</item>
+        <item name="backgroundTint">@android:color/white</item>
+        <item name="android:insetBottom">0dp</item>
     </style>
 
     <style name="PlayerForward" parent="PlayerLargeImage">
@@ -146,6 +148,8 @@
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">10sp</item>
         <item name="android:textColor">@android:color/white</item>
+        <item name="backgroundTint">@android:color/white</item>
+        <item name="android:insetBottom">0dp</item>
     </style>
 
     <style name="PlayerPlayPause" parent="PlayerLargeImage">

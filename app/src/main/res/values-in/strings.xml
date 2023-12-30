@@ -70,7 +70,7 @@
     <string name="rewind">Putar ulang</string>
     <string name="forward">Maju cepat</string>
     <string name="seconds_full">%s detik</string>
-    <string name="unfollow">Berhenti ikuti %s?</string>
+    <string name="unfollow_channel">Berhenti ikuti %s?</string>
     <string name="now_following">Anda mengikuti %s</string>
     <string name="unfollowed">Berhenti ikuti %s</string>
     <string name="yes">Ya</string>
@@ -128,8 +128,6 @@
     <string name="language">Bahasa</string>
     <string name="never">Tidak pernah</string>
     <string name="blue">Biru</string>
-    <string name="statusBarColor">Warna status bar</string>
-    <string name="navigationBarColor">Warna navigasi bar</string>
     <string name="rounduserimage">Lingkari gambar profil</string>
     <string name="truncated_view_counts">Singkat jumlah penonton</string>
     <string name="broadcastersCount">Tampilkan banyaknya penyiar di game</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
     <string name="stream_headers">Stream request headers</string>
     <string name="stream_headers_desc">Uses JSON format</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

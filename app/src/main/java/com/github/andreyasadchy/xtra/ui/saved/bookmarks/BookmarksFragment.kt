@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.saved.bookmarks
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +18,7 @@ import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -37,7 +37,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        pagingAdapter = BookmarksAdapter(this@BookmarksFragment, {
+        pagingAdapter = BookmarksAdapter(this, {
             viewModel.updateVideo(
                 context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
@@ -51,7 +51,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             viewModel.vodIgnoreUser(it)
         }, {
             val delete = getString(R.string.delete)
-            AlertDialog.Builder(requireActivity())
+            MaterialAlertDialogBuilder(requireActivity())
                 .setTitle(delete)
                 .setMessage(getString(R.string.are_you_sure))
                 .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }

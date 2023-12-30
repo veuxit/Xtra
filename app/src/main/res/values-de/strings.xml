@@ -70,7 +70,7 @@
     <string name="rewind">Zurückspulen</string>
     <string name="forward">Vorspulen</string>
     <string name="seconds_full">%s Sekunden</string>
-    <string name="unfollow">%s entfolgen?</string>
+    <string name="unfollow_channel">%s entfolgen?</string>
     <string name="now_following">Du folgst nun %s</string>
     <string name="unfollowed">Du folgst %s nicht mehr</string>
     <string name="yes">Ja</string>
@@ -130,8 +130,6 @@
     <string name="language">Sprache</string>
     <string name="never">Nie</string>
     <string name="blue">Blau</string>
-    <string name="statusBarColor">Statuszeilen Farbe</string>
-    <string name="navigationBarColor">Navigationszeilen Farbe</string>
     <string name="rounduserimage">Runde Profilbilder</string>
     <string name="truncated_view_counts">Gekürzte Zuschaueranzahl</string>
     <string name="broadcastersCount">Anzahl der Broadcasters je Spiel anzeigen</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
     <string name="stream_headers">Stream request headers</string>
     <string name="stream_headers_desc">Uses JSON format</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

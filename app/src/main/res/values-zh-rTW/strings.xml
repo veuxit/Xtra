@@ -70,7 +70,7 @@
     <string name="rewind">倒轉</string>
     <string name="forward">快轉</string>
     <string name="seconds_full">%s 秒</string>
-    <string name="unfollow">取消追隨 %s？</string>
+    <string name="unfollow_channel">取消追隨 %s？</string>
     <string name="now_following">您現在正在追隨 %s</string>
     <string name="unfollowed">已取消追隨 %s</string>
     <string name="yes">是</string>
@@ -130,8 +130,6 @@
     <string name="language">語言</string>
     <string name="never">永不</string>
     <string name="blue">藍色</string>
-    <string name="statusBarColor">狀態列顏色</string>
-    <string name="navigationBarColor">導覽列顏色</string>
     <string name="rounduserimage">圓形個人檔案圖片</string>
     <string name="truncated_view_counts">簡易的觀看數量</string>
     <string name="broadcastersCount">在遊戲項目上顯示實況者數量</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
     <string name="stream_headers">Stream request headers</string>
     <string name="stream_headers_desc">Uses JSON format</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

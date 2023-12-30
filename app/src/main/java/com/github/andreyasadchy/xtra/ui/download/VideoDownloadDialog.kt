@@ -1,21 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.download
 
+import android.app.Dialog
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import android.text.format.DateUtils
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.ArrayAdapter
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.children
 import androidx.core.view.isVisible
-import androidx.core.widget.NestedScrollView
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
@@ -26,6 +22,9 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -48,22 +47,18 @@ class VideoDownloadDialog : BaseDownloadDialog() {
     private val binding get() = _binding!!
     private val viewModel: VideoDownloadViewModel by viewModels()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = DialogVideoDownloadBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        _binding = DialogVideoDownloadBinding.inflate(layoutInflater)
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setView(binding.root)
+        viewModel.integrity.observe(this) {
             if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
                 IntegrityDialog.show(childFragmentManager)
             }
         }
-        viewModel.videoInfo.observe(viewLifecycleOwner) {
+        viewModel.videoInfo.observe(this) {
             if (it != null) {
-                ((requireView() as NestedScrollView).children.first() as ConstraintLayout).children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
+                binding.layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
                 init(it)
             } else {
                 dismiss()
@@ -81,31 +76,43 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                 viewModel.setVideoInfo(it)
             }
         }
+        return builder.create()
     }
 
     private fun init(videoInfo: VideoDownloadInfo) {
         with(binding) {
             val context = requireContext()
-            init(context, storageSelectionContainer)
+            init(context, storageSelectionContainer, download)
             with(videoInfo) {
-                spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
-                with(DateUtils.formatElapsedTime(totalDuration / 1000L)) {
-                    duration.text = context.getString(R.string.duration, this)
-                    timeTo.hint = this.let { if (it.length != 5) it else "00:$it" }
+                (spinner.editText as? MaterialAutoCompleteTextView)?.apply {
+                    setSimpleItems(qualities.keys.toTypedArray())
+                    setText(adapter.getItem(0).toString(), false)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        isFocusable = true
+                        isEnabled = false
+                        setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
+                    } else {
+                        setRawInputType(InputType.TYPE_NULL)
+                    }
                 }
-                timeFrom.hint = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
-                timeFrom.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
-                addTextChangeListener(timeFrom)
-                addTextChangeListener(timeTo)
+                val defaultFrom = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
+                val totalTime = DateUtils.formatElapsedTime(totalDuration / 1000L)
+                val defaultTo = totalTime.let { if (it.length != 5) it else "00:$it" }
+                duration.text = context.getString(R.string.duration, totalTime)
+                timeTo.editText?.hint = defaultTo
+                timeFrom.editText?.hint = defaultFrom
+                timeFrom.editText?.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
+                addTextChangeListener(timeFrom.editText!!)
+                addTextChangeListener(timeTo.editText!!)
                 cancel.setOnClickListener { dismiss() }
 
                 fun download() {
-                    val from = parseTime(timeFrom) ?: return
-                    val to = parseTime(timeTo) ?: return
+                    val from = parseTime(timeFrom.editText!!, defaultFrom) ?: return
+                    val to = parseTime(timeTo.editText!!, defaultTo) ?: return
                     when {
                         to > totalDuration -> {
                             timeTo.requestFocus()
-                            timeTo.error = getString(R.string.to_is_longer)
+                            timeTo.editText?.error = getString(R.string.to_is_longer)
                         }
                         from < to -> {
                             val fromIndex = if (from == 0L) {
@@ -142,7 +149,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                                 if (tmpIndex < 0) -tmpIndex else tmpIndex
                             }
                             fun startDownload() {
-                                val quality = spinner.selectedItem.toString()
+                                val quality = spinner.editText?.text.toString()
                                 val url = videoInfo.qualities.getValue(quality)
                                 viewModel.download(url, downloadPath, quality, fromIndex, toIndex, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                                 dismiss()
@@ -151,15 +158,15 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                         }
                         from >= to -> {
                             timeFrom.requestFocus()
-                            timeFrom.error = getString(R.string.from_is_greater)
+                            timeFrom.editText?.error = getString(R.string.from_is_greater)
                         }
                         else -> {
                             timeTo.requestFocus()
-                            timeTo.error = getString(R.string.to_is_lesser)
+                            timeTo.editText?.error = getString(R.string.to_is_lesser)
                         }
                     }
                 }
-                timeTo.setOnEditorActionListener { _, actionId, _ ->
+                timeTo.editText?.setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == EditorInfo.IME_ACTION_DONE) {
                         download()
                         true
@@ -172,9 +179,9 @@ class VideoDownloadDialog : BaseDownloadDialog() {
         }
     }
 
-    private fun parseTime(textView: TextView): Long? {
+    private fun parseTime(textView: TextView, default: String): Long? {
         with(textView) {
-            val value = if (text.isEmpty()) hint else text
+            val value = if (text.isEmpty()) default else text
             val time = value.split(':')
             try {
                 if (time.size != 3) throw IllegalArgumentException()

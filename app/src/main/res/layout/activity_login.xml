@@ -6,10 +6,11 @@
     android:layout_height="match_parent"
     tools:ignore="SpUsage">
 
-    <ProgressBar
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:indeterminate="true"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -36,17 +37,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:background="?attr/primaryColor">
+            android:gravity="center_horizontal">
 
             <TextView
                 android:id="@+id/havingTrouble"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/trouble_logging_in"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textSize="18sp"
-                android:textStyle="normal"
-                android:textColor="?attr/textColor"
                 android:padding="10dp"
                 android:background="?attr/selectableItemBackground"/>
         </LinearLayout>

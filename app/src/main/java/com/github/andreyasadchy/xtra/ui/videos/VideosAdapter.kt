@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.res.use
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
@@ -161,6 +163,9 @@ class VideosAdapter(
                         for (tag in item.tags) {
                             val text = TextView(context)
                             text.text = tag.name
+                            context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceBodyMedium)).use {
+                                TextViewCompat.setTextAppearance(text, it.getResourceId(0, 0))
+                            }
                             if (tag.name != null) {
                                 text.setOnClickListener {
                                     fragment.findNavController().navigate(GamePagerFragmentDirections.actionGlobalGamePagerFragment(
