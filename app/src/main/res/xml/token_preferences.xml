@@ -6,7 +6,6 @@
         android:defaultValue="twitch-web-wall-mason"
         android:dependency="token_random_deviceid"
         android:key="token_xdeviceid"
-        android:maxLines="1"
         android:title="X-Device-Id"
         app:iconSpaceReserved="false"
         app:useSimpleSummaryProvider="true" />
@@ -21,7 +20,6 @@
     <EditTextPreference
         android:defaultValue="site"
         android:key="token_playertype"
-        android:maxLines="1"
         android:title="playerType"
         app:iconSpaceReserved="false"
         app:useSimpleSummaryProvider="true" />
@@ -37,7 +35,6 @@
     <EditTextPreference
         android:defaultValue="channel_home_live"
         android:key="token_playertype_video"
-        android:maxLines="1"
         android:title="playerType"
         app:iconSpaceReserved="false"
         app:useSimpleSummaryProvider="true" />

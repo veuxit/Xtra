@@ -2,11 +2,10 @@ package com.github.andreyasadchy.xtra.ui.download
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.widget.Button
+import android.view.View
 import android.widget.RadioButton
 import androidx.core.content.edit
 import androidx.fragment.app.DialogFragment
-import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.StorageSelectionBinding
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
@@ -32,7 +31,7 @@ abstract class BaseDownloadDialog : DialogFragment() {
             return storage[index].path
         }
 
-    protected fun init(context: Context, binding: StorageSelectionBinding) {
+    protected fun init(context: Context, binding: StorageSelectionBinding, downloadButton: View) {
         storageSelectionContainer = binding
         prefs = context.prefs()
         storage = DownloadUtils.getAvailableStorage(context)
@@ -50,7 +49,7 @@ abstract class BaseDownloadDialog : DialogFragment() {
         } else {
             storageSelectionContainer.root.visible()
             storageSelectionContainer.noStorageDetected.visible()
-            requireView().findViewById<Button>(R.id.download).gone()
+            downloadButton.gone()
         }
     }
 

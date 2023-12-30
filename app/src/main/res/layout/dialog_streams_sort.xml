@@ -7,7 +7,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="5dp">
+        android:padding="8dp">
 
         <RadioGroup
             android:id="@+id/sort"
@@ -18,29 +18,34 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/sort"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
                 android:textStyle="bold"
                 android:layout_marginStart="5dp" />
 
             <RadioButton
                 android:id="@+id/viewers_high"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/viewers_high"/>
 
             <RadioButton
                 android:id="@+id/viewers_low"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/viewers_low"/>
 
         </RadioGroup>
 
         <Button
             android:id="@+id/apply"
+            style="@style/Widget.Material3.Button.ElevatedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/apply"/>
 
         <Button
             android:id="@+id/selectTags"
+            style="@style/Widget.Material3.Button.ElevatedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/tags"/>

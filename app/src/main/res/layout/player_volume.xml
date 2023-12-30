@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="5dp">
+    android:layout_height="wrap_content"
+    android:padding="8dp">
 
     <ImageButton
         android:id="@+id/volumeMute"
@@ -12,31 +13,36 @@
         android:layout_marginStart="8dp"
         android:background="?android:selectableItemBackground"
         android:src="@drawable/baseline_volume_up_black_24"
-        app:tint="?attr/textColor" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/volumeBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorControlNormal" />
 
-    <SeekBar
+    <com.google.android.material.slider.Slider
         android:id="@+id/volumeBar"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="1dp"
-        android:layout_toStartOf="@+id/volumeText1"
-        android:layout_toEndOf="@id/volumeMute"
-        android:max="100" />
+        android:valueFrom="0.0"
+        android:valueTo="100.0"
+        app:labelBehavior="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/volumeText"
+        app:layout_constraintStart_toEndOf="@id/volumeMute"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
-        android:id="@+id/volumeText1"
+    <TextView
+        android:id="@+id/volumeText"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_alignParentEnd="true"
         android:layout_marginEnd="10dp"
-        android:gravity="center">
+        android:gravity="center"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="100" />
 
-        <TextView
-            android:id="@+id/volumeText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="20sp" />
-
-    </LinearLayout>
-
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

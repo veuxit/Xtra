@@ -12,7 +12,9 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.widget.AppCompatRadioButton
 import androidx.core.os.bundleOf
+import androidx.core.view.setPadding
 import androidx.core.widget.NestedScrollView
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
 
 
 class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
@@ -45,8 +47,11 @@ class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val context = requireContext()
         val arguments = requireArguments()
-        val layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-        val radioGroup = RadioGroup(context).also { it.layoutParams = layoutParams }
+        val params = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
+        val radioGroup = RadioGroup(context).apply {
+            layoutParams = params
+            setPadding(context.convertDpToPixels(8F))
+        }
         val checkedId = arguments.getInt(CHECKED)
         val clickListener = View.OnClickListener { v ->
             val clickedId = v.id
@@ -63,7 +68,7 @@ class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
                 tag = tags?.getOrNull(index)
                 setOnClickListener(clickListener)
             }
-            radioGroup.addView(button, layoutParams)
+            radioGroup.addView(button, params)
         }
         radioGroup.check(checkedId)
         return NestedScrollView(context).apply { addView(radioGroup) }

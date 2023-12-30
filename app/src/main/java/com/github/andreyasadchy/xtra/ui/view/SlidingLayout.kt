@@ -12,6 +12,7 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.widget.LinearLayout
+import androidx.core.graphics.Insets
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
@@ -24,7 +25,6 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
 import com.github.andreyasadchy.xtra.util.prefs
 
-private const val BOTTOM_MARGIN = 75f //before scaling
 private const val ANIMATION_DURATION = 250L
 
 class SlidingLayout : LinearLayout {
@@ -33,6 +33,7 @@ class SlidingLayout : LinearLayout {
     private val viewDragHelper = ViewDragHelper.create(this, 1f, SlidingCallback())
     private lateinit var dragView: View
     var secondView: View? = null
+    var savedInsets: Insets? = null
 
     private var timeBar: DefaultTimeBar? = null
     private var topBound = 0
@@ -228,7 +229,7 @@ class SlidingLayout : LinearLayout {
         listeners.forEach { it.onMinimize() }
     }
 
-    private fun init() {
+    fun init() {
         debug = context.prefs().getBoolean(C.DEBUG_SECONDVIEW, false)
         dragView.post {
             topBound = paddingTop
@@ -239,11 +240,12 @@ class SlidingLayout : LinearLayout {
                 minScaleX = 0.3f
                 minScaleY = 0.325f
             }
-            bottomMargin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, BOTTOM_MARGIN / (1f - minScaleY), resources.displayMetrics)
+            val navBarHeight = rootView.findViewById<LinearLayout>(R.id.navBarContainer)?.height ?: 100
+            bottomMargin = (navBarHeight / (1f - minScaleY)) + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 30F, resources.displayMetrics)
 
             fun initialize() {
                 minimizeThreshold = height / 5
-                pivotX = width * 0.95f
+                pivotX = (width - ((savedInsets?.right ?: 0) / (1f - minScaleX))) * 0.95f
                 if (isPortrait) {
                     bottomBound = height / 2
                     pivotY = height * 2 - dragView.height - bottomMargin

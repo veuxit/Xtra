@@ -1,16 +1,11 @@
 package com.github.andreyasadchy.xtra.ui.download
 
+import android.app.Dialog
 import android.os.Build
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.children
 import androidx.core.view.isVisible
-import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
@@ -19,6 +14,8 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -39,16 +36,11 @@ class ClipDownloadDialog : BaseDownloadDialog() {
     private val binding get() = _binding!!
     private val viewModel: ClipDownloadViewModel by viewModels()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = DialogClipDownloadBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    @Deprecated("Deprecated in Java")
-    @Suppress("UNCHECKED_CAST")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        _binding = DialogClipDownloadBinding.inflate(layoutInflater)
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setView(binding.root)
+        viewModel.integrity.observe(this) {
             if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
                 IntegrityDialog.show(childFragmentManager)
             }
@@ -61,20 +53,24 @@ class ClipDownloadDialog : BaseDownloadDialog() {
                 skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
             )
         }
-        viewModel.qualities.observe(viewLifecycleOwner) {
-            ((requireView() as NestedScrollView).children.first() as ConstraintLayout).children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
+        viewModel.qualities.observe(this) {
+            binding.layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
             init(it)
         }
+        return builder.create()
     }
 
     private fun init(qualities: Map<String, String>) {
         with(binding) {
             val context = requireContext()
-            init(context, binding.storageSelectionContainer)
-            spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
+            init(context, binding.storageSelectionContainer, download)
+            (spinner.editText as? MaterialAutoCompleteTextView)?.apply {
+                setSimpleItems(qualities.keys.toTypedArray())
+                setText(adapter.getItem(0).toString(), false)
+            }
             cancel.setOnClickListener { dismiss() }
             download.setOnClickListener {
-                val quality = spinner.selectedItem.toString()
+                val quality = spinner.editText?.text.toString()
                 viewModel.download(qualities.getValue(quality), downloadPath, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                 dismiss()
             }

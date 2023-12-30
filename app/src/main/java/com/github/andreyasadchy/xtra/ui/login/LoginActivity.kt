@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -12,10 +13,12 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
@@ -26,6 +29,7 @@ import com.github.andreyasadchy.xtra.model.LoggedIn
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -58,6 +62,16 @@ class LoginActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.root.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = insets.top
+                leftMargin = insets.left
+                rightMargin = insets.right
+                bottomMargin = insets.bottom
+            }
+            windowInsets
+        }
         val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
         val account = Account.get(this)
         if (account !is NotLoggedIn) {
@@ -125,7 +139,7 @@ class LoginActivity : AppCompatActivity() {
         with(binding) {
             webViewContainer.visible()
             havingTrouble.setOnClickListener {
-                AlertDialog.Builder(this@LoginActivity)
+                MaterialAlertDialogBuilder(this@LoginActivity)
                     .setMessage(getString(R.string.login_problem_solution))
                     .setPositiveButton(R.string.log_in) { _, _ ->
                         val intent = Intent(Intent.ACTION_VIEW, helixAuthUrl.toUri())
@@ -143,7 +157,7 @@ class LoginActivity : AppCompatActivity() {
                                 setMargins(margin, 0, margin, 0)
                             }
                         }
-                        val dialog = AlertDialog.Builder(this@LoginActivity)
+                        val dialog = MaterialAlertDialogBuilder(this@LoginActivity)
                             .setTitle(R.string.enter_url)
                             .setView(editText)
                             .setPositiveButton(R.string.log_in) { _, _ ->
@@ -172,7 +186,7 @@ class LoginActivity : AppCompatActivity() {
             } else {
                 prefs().getString(C.THEME, "0")!!
             }
-            if (theme != "2") {
+            if (!theme.isLightTheme) {
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
                     WebSettingsCompat.setForceDark(this.settings, WebSettingsCompat.FORCE_DARK_ON)
                 }

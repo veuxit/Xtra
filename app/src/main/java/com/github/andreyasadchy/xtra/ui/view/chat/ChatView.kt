@@ -13,8 +13,10 @@ import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.res.use
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -536,6 +538,9 @@ class ChatView : ConstraintLayout {
                     }
                     (viewHolder.containerView as TextView).apply {
                         text = (item as Chatter).name
+                        context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceBodyMedium)).use {
+                            TextViewCompat.setTextAppearance(this, it.getResourceId(0, 0))
+                        }
                     }
                 }
             }

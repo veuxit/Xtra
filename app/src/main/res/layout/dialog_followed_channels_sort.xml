@@ -7,7 +7,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="5dp">
+        android:padding="8dp">
 
         <RadioGroup
             android:id="@+id/sort"
@@ -19,21 +19,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:text="@string/sort"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
                 android:textStyle="bold" />
 
             <RadioButton
                 android:id="@+id/time_followed"
-                style="@style/RadioButton"
-                android:text="@string/time_followed"/>
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/time_followed" />
 
             <RadioButton
                 android:id="@+id/alphabetically"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/alphabetically"/>
 
             <RadioButton
                 android:id="@+id/last_broadcast"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/last_broadcast"/>
         </RadioGroup>
 
@@ -47,16 +51,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:text="@string/order"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
                 android:textStyle="bold" />
 
             <RadioButton
                 android:id="@+id/newest_first"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/descending"/>
 
             <RadioButton
                 android:id="@+id/oldest_first"
-                style="@style/RadioButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/ascending"/>
 
         </RadioGroup>
@@ -69,6 +76,7 @@
 
         <Button
             android:id="@+id/apply"
+            style="@style/Widget.Material3.Button.ElevatedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/apply"/>

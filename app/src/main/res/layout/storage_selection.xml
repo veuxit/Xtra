@@ -13,6 +13,7 @@
         android:layout_height="wrap_content"
         android:text="@string/save_to"
         android:layout_gravity="center"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
         android:textStyle="bold"/>
 
     <TextView
@@ -21,6 +22,7 @@
         android:layout_height="wrap_content"
         android:text="@string/no_storage_detected"
         android:gravity="center"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="@android:color/holo_red_light"
         android:visibility="gone"/>
 
