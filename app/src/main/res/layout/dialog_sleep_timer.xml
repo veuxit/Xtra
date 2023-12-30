@@ -28,7 +28,8 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:text="@string/hours"
-                android:textSize="20sp"/>
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textSize="20sp" />
 
             <NumberPicker
                 android:id="@+id/minutes"
@@ -42,7 +43,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="20dp"
                 android:text="@string/minutes"
-                android:textSize="20sp"/>
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textSize="20sp" />
 
         </LinearLayout>
 

@@ -9,22 +9,15 @@
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/primaryColor">
+        app:liftOnScrollTargetViewId="@id/recyclerView">
 
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layout_scrollFlags="scroll|enterAlways">
-
-            <ImageView
-                android:id="@+id/menu"
-                style="@style/MenuButton"/>
-
-            <ImageView
-                android:id="@+id/search"
-                style="@style/Search"/>
-        </androidx.appcompat.widget.Toolbar>
+            android:minHeight="?attr/actionBarSize"
+            app:layout_scrollFlags="scroll|enterAlways"
+            app:menu="@menu/top_menu" />
 
         <include
             android:id="@+id/sortBar"
@@ -37,7 +30,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         layout="@layout/common_recycler_view_layout"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

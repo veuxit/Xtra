@@ -159,6 +159,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                     dismiss()
                 }
                 if (user.bannerImageURL != null) {
+                    userName.setTextColor(Color.WHITE)
                     userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)
                 }
             } else {

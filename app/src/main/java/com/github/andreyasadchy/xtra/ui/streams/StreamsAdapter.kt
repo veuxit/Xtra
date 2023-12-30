@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.res.use
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.paging.PagingDataAdapter
@@ -152,6 +154,9 @@ class StreamsAdapter(
                         for (tag in item.tags) {
                             val text = TextView(context)
                             text.text = tag
+                            context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceBodyMedium)).use {
+                                TextViewCompat.setTextAppearance(text, it.getResourceId(0, 0))
+                            }
                             text.setOnClickListener {
                                 if (args?.gameId != null && args.gameName != null) {
                                     fragment.findNavController().navigate(GamePagerFragmentDirections.actionGlobalGamePagerFragment(

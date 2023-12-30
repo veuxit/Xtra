@@ -6,12 +6,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.core.view.setPadding
 import androidx.core.widget.NestedScrollView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.view.GridRecyclerView
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
 
 
 class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
@@ -40,13 +42,11 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
-        val layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
+        val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         val recycleView = GridRecyclerView(context).apply {
             id = R.id.recyclerView
-            setLayoutParams(layoutParams)
+            layoutParams = params
+            setPadding(context.convertDpToPixels(8F))
             adapter = PlayerGamesDialogAdapter(this@PlayerGamesDialog).also {
                 it.submitList(arguments?.getParcelableArrayList<Game>(C.GAMES_LIST)?.toList())
             }

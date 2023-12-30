@@ -70,7 +70,7 @@
     <string name="rewind">巻き戻し</string>
     <string name="forward">早送り</string>
     <string name="seconds_full">%s 秒</string>
-    <string name="unfollow">%s をフォロー解除しますか？</string>
+    <string name="unfollow_channel">%s をフォロー解除しますか？</string>
     <string name="now_following">%s をフォローしました</string>
     <string name="unfollowed">%s をフォロー解除しました</string>
     <string name="yes">はい</string>
@@ -130,8 +130,6 @@
     <string name="language">言語</string>
     <string name="never">しない</string>
     <string name="blue">ブルー</string>
-    <string name="statusBarColor">ステータスバーの色</string>
-    <string name="navigationBarColor">ナビゲーションバーの色</string>
     <string name="rounduserimage">丸いプロフィール画像</string>
     <string name="truncated_view_counts">視聴回数の切り捨て</string>
     <string name="broadcastersCount">ゲームの配信者数の表示</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">プレイリストを返す URL が必要です</string>
     <string name="stream_headers">ストリームリクエストヘッダー</string>
     <string name="stream_headers_desc">JSON 形式を使用してください</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

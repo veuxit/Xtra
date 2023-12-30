@@ -4,39 +4,49 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogUserResultBinding
 import com.github.andreyasadchy.xtra.databinding.FragmentSearchBinding
-import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
+import com.github.andreyasadchy.xtra.ui.common.FragmentHost
+import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.showKeyboard
-import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 @AndroidEntryPoint
-class SearchPagerFragment : BaseNetworkFragment() {
+class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
 
     private var _binding: FragmentSearchBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SearchPagerViewModel by viewModels()
     private var firstLaunch = true
+
+    override val currentFragment: Fragment?
+        get() = childFragmentManager.findFragmentByTag("f${binding.viewPager.currentItem}")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,9 +58,6 @@ class SearchPagerFragment : BaseNetworkFragment() {
         return binding.root
     }
 
-    val currentFragment: Fragment?
-        get() = childFragmentManager.findFragmentByTag("f${binding.pagerLayout.viewPager.currentItem}")
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.integrity.observe(viewLifecycleOwner) {
@@ -58,10 +65,36 @@ class SearchPagerFragment : BaseNetworkFragment() {
                 IntegrityDialog.show(childFragmentManager)
             }
         }
-        val activity = requireActivity() as MainActivity
-        with(binding.pagerLayout) {
+        with(binding) {
             val adapter = SearchPagerAdapter(this@SearchPagerFragment)
             viewPager.adapter = adapter
+            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    (currentFragment as? Searchable)?.search(binding.searchView.query.toString())
+                    viewPager.doOnLayout {
+                        childFragmentManager.findFragmentByTag("f${position}")?.let { fragment ->
+                            if (requireContext().prefs().getBoolean(C.UI_THEME_APPBAR_LIFT, true)) {
+                                fragment.view?.findViewById<RecyclerView>(R.id.recyclerView)?.let {
+                                    appBar.setLiftOnScrollTargetView(it)
+                                    it.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                                        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                                            super.onScrolled(recyclerView, dx, dy)
+                                            appBar.isLifted = recyclerView.canScrollVertically(-1)
+                                        }
+                                    })
+                                    it.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                                        appBar.isLifted = it.canScrollVertically(-1)
+                                    }
+                                }
+                            } else {
+                                appBar.setLiftable(false)
+                                appBar.background = null
+                            }
+                            (fragment as? Sortable)?.setupSortBar(sortBar) ?: sortBar.root.gone()
+                        }
+                    }
+                }
+            })
             if (firstLaunch) {
                 viewPager.setCurrentItem(2, false)
                 firstLaunch = false
@@ -76,61 +109,65 @@ class SearchPagerFragment : BaseNetworkFragment() {
                     else -> getString(R.string.games)
                 }
             }.attach()
-            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    (currentFragment as? Searchable)?.search(binding.search.query.toString())
-                }
-            })
-        }
-        with(binding) {
-            menu.visible()
-            menu.setOnClickListener {
-                val binding = DialogUserResultBinding.inflate(layoutInflater)
-                AlertDialog.Builder(requireContext()).apply {
-                    setView(binding.root)
-                    setNegativeButton(getString(android.R.string.cancel), null)
-                    setPositiveButton(getString(android.R.string.ok)) { _, _ ->
-                        val result = binding.editText.text?.toString()
-                        val checkedId = if (binding.radioButton.isChecked) 0 else 1
-                        if (!result.isNullOrBlank()) {
-                            userResult = Pair(checkedId, result)
-                            viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
-                            viewModel.userResult.observe(viewLifecycleOwner) {
-                                if (it != null) {
-                                    if (!it.first.isNullOrBlank()) {
-                                        AlertDialog.Builder(requireContext()).apply {
-                                            setTitle(it.first)
-                                            setMessage(it.second)
-                                            setNegativeButton(getString(android.R.string.cancel), null)
-                                            setPositiveButton(getString(R.string.view_profile)) { _, _ -> viewUserResult() }
-                                        }.show()
-                                    } else {
-                                        viewUserResult()
+            val navController = findNavController()
+            val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
+            toolbar.setupWithNavController(navController, appBarConfiguration)
+            toolbar.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.searchUser -> {
+                        val binding = DialogUserResultBinding.inflate(layoutInflater)
+                        MaterialAlertDialogBuilder(requireContext()).apply {
+                            setView(binding.root)
+                            setNegativeButton(getString(android.R.string.cancel), null)
+                            setPositiveButton(getString(android.R.string.ok)) { _, _ ->
+                                val result = binding.editText.editText?.text?.toString()
+                                val checkedId = if (binding.radioButton.isChecked) 0 else 1
+                                if (!result.isNullOrBlank()) {
+                                    userResult = Pair(checkedId, result)
+                                    viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
+                                    viewModel.userResult.observe(viewLifecycleOwner) {
+                                        if (it != null) {
+                                            if (!it.first.isNullOrBlank()) {
+                                                MaterialAlertDialogBuilder(requireContext()).apply {
+                                                    setTitle(it.first)
+                                                    setMessage(it.second)
+                                                    setNegativeButton(getString(android.R.string.cancel), null)
+                                                    setPositiveButton(getString(R.string.view_profile)) { _, _ -> viewUserResult() }
+                                                }.show()
+                                            } else {
+                                                viewUserResult()
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
+                            setNeutralButton(getString(R.string.view_profile)) { _, _ ->
+                                val result = binding.editText.editText?.text?.toString()
+                                val checkedId = if (binding.radioButton.isChecked) 0 else 1
+                                if (!result.isNullOrBlank()) {
+                                    userResult = Pair(checkedId, result)
+                                    viewUserResult()
+                                }
+                            }
+                        }.show()
+                        true
                     }
-                    setNeutralButton(getString(R.string.view_profile)) { _, _ ->
-                        val result = binding.editText.text?.toString()
-                        val checkedId = if (binding.radioButton.isChecked) 0 else 1
-                        if (!result.isNullOrBlank()) {
-                            userResult = Pair(checkedId, result)
-                            viewUserResult()
-                        }
-                    }
-                }.show()
+                    else -> false
+                }
             }
-            toolbar.apply {
-                navigationIcon = Utils.getNavigationIcon(activity)
-                setNavigationOnClickListener { activity.popFragment() }
+            searchView.showKeyboard()
+            ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    topMargin = insets.top
+                }
+                WindowInsetsCompat.CONSUMED
             }
-            search.showKeyboard()
         }
     }
 
     override fun initialize() {
-        binding.search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             private var job: Job? = null
 
             override fun onQueryTextSubmit(query: String): Boolean {

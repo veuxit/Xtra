@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settings_nav_graph"
+    app:startDestination="@id/settingsFragment">
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$SettingsFragment"
+        android:label="@string/settings" >
+        <action
+            android:id="@+id/action_settingsFragment_to_themeSettingsFragment"
+            app:destination="@id/themeSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_playerButtonSettingsFragment"
+            app:destination="@id/playerButtonSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_playerMenuSettingsFragment"
+            app:destination="@id/playerMenuSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_bufferSettingsFragment"
+            app:destination="@id/bufferSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_proxySettingsFragment"
+            app:destination="@id/proxySettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_tokenSettingsFragment"
+            app:destination="@id/tokenSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_dragListFragment"
+            app:destination="@id/dragListFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/themeSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$ThemeSettingsFragment"
+        android:label="@string/theme" />
+    <fragment
+        android:id="@+id/playerButtonSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$PlayerButtonSettingsFragment"
+        android:label="@string/player_buttons" />
+    <fragment
+        android:id="@+id/playerMenuSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$PlayerMenuSettingsFragment"
+        android:label="@string/player_menu" />
+    <fragment
+        android:id="@+id/bufferSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$BufferSettingsFragment"
+        android:label="@string/buffer_settings" />
+    <fragment
+        android:id="@+id/proxySettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$ProxySettingsFragment"
+        android:label="@string/proxy_settings" />
+    <fragment
+        android:id="@+id/tokenSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$TokenSettingsFragment"
+        android:label="@string/token_settings" />
+    <fragment
+        android:id="@+id/dragListFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$DragListFragment"
+        android:label="@string/api_settings" >
+        <action
+            android:id="@+id/action_dragListFragment_to_apiTokenSettingsFragment"
+            app:destination="@id/apiTokenSettingsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/apiTokenSettingsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$ApiTokenSettingsFragment"
+        android:label="@string/tokens" />
+</navigation>

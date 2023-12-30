@@ -70,7 +70,7 @@
     <string name="rewind">Перемотка назад</string>
     <string name="forward">Перемотка вперёд</string>
     <string name="seconds_full">%s секунд</string>
-    <string name="unfollow">Прекратить отслеживание %s?</string>
+    <string name="unfollow_channel">Прекратить отслеживание %s?</string>
     <string name="now_following">Вы теперь отслеживаете %s</string>
     <string name="unfollowed">Вы перестали отслеживать %s</string>
     <string name="yes">Да</string>
@@ -130,8 +130,6 @@
     <string name="language">Язык</string>
     <string name="never">Никогда</string>
     <string name="blue">Синяя</string>
-    <string name="statusBarColor">Закрасить строку состояния</string>
-    <string name="navigationBarColor">Закрасить панель навигации</string>
     <string name="rounduserimage">Круглые аватары</string>
     <string name="truncated_view_counts">Округлять число просмотров</string>
     <string name="broadcastersCount">Счётчик стримеров в играх</string>
@@ -586,4 +584,13 @@
     <string name="use_custom_proxy_desc">Requires an url that returns a playlist</string>
     <string name="stream_headers">Stream request headers</string>
     <string name="stream_headers_desc">Uses JSON format</string>
+    <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="search_user">Get user by ID/login</string>
+    <string name="dynamic_dark">Dynamic dark</string>
+    <string name="dynamic_light">Dynamic light</string>
+    <string name="rounded_corners">Rounded corners</string>
+    <string name="edge_to_edge">Edge-to-edge</string>
+    <string name="appbar_lift">Lift app bar on scroll</string>
+    <string name="bottom_nav_color">Bottom navigation color</string>
 </resources>

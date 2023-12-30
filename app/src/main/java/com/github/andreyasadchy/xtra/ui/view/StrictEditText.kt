@@ -2,9 +2,9 @@ package com.github.andreyasadchy.xtra.ui.view
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.appcompat.widget.AppCompatEditText
+import com.google.android.material.textfield.TextInputEditText
 
-class StrictEditText : AppCompatEditText {
+class StrictEditText : TextInputEditText {
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)

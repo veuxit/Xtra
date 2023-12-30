@@ -5,19 +5,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 import androidx.paging.LoadState
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentSearchTagsBinding
 import com.github.andreyasadchy.xtra.model.ui.Tag
-import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -46,13 +51,18 @@ class TagSearchFragment : PagedListFragment() {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = TagSearchAdapter(this, args)
         setAdapter(binding.recyclerViewLayout.recyclerView, pagingAdapter)
-        val activity = requireActivity() as MainActivity
         with(binding) {
-            toolbar.apply {
-                navigationIcon = Utils.getNavigationIcon(activity)
-                setNavigationOnClickListener { activity.popFragment() }
+            val navController = findNavController()
+            val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
+            toolbar.setupWithNavController(navController, appBarConfiguration)
+            searchView.showKeyboard()
+            ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    topMargin = insets.top
+                }
+                WindowInsetsCompat.CONSUMED
             }
-            search.showKeyboard()
         }
     }
 
@@ -83,7 +93,7 @@ class TagSearchFragment : PagedListFragment() {
             IntegrityDialog.show(childFragmentManager)
         }
         with(binding) {
-            search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 private var job: Job? = null
 
                 override fun onQueryTextSubmit(query: String): Boolean {

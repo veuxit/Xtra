@@ -10,34 +10,34 @@
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/primaryColor">
+        app:liftOnScrollTargetViewId="@id/recyclerView">
 
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layout_scrollFlags="scroll|enterAlways">
+            android:minHeight="?attr/actionBarSize"
+            app:layout_scrollFlags="scroll|enterAlways"
+            app:menu="@menu/top_menu" />
 
-            <ImageView
-                android:id="@+id/menu"
-                style="@style/MenuButton"/>
-
-            <ImageView
-                android:id="@+id/search"
-                style="@style/Search" />
-
-            <ImageButton
-                android:id="@+id/followButton"
-                style="@style/FollowButton"
-                android:visibility="gone"
-                tools:visibility="visible" />
-        </androidx.appcompat.widget.Toolbar>
-
-        <Spinner
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/spinner"
-            style="@style/MediaSpinner"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:visibility="gone"
-            tools:visibility="visible" />
+            app:layout_scrollFlags="scroll|enterAlways"
+            tools:visibility="visible">
+
+            <AutoCompleteTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <include
+            android:id="@+id/sortBar"
+            layout="@layout/sort_bar"/>
 
     </com.google.android.material.appbar.AppBarLayout>
 
