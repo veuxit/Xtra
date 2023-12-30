@@ -1,8 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.PictureInPictureParams
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
@@ -10,7 +15,9 @@ import android.os.Bundle
 import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentTransaction
 import androidx.navigation.NavController
@@ -38,7 +45,14 @@ import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DisplayUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.applyTheme
+import com.github.andreyasadchy.xtra.util.isNetworkAvailable
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -64,11 +78,13 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         }
     }
     private lateinit var prefs: SharedPreferences
+    var orientation: Int = 1
 
     //Lifecycle methods
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        orientation = resources.configuration.orientation
         prefs = prefs()
         if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {
             PreferenceManager.setDefaultValues(this@MainActivity, R.xml.root_preferences, false)
@@ -103,6 +119,15 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     putString(C.PLAYER_BACKGROUND_PLAYBACK, "0")
                 }
                 putBoolean(C.FIRST_LAUNCH1, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH3, true)) {
+            prefs.edit {
+                val langPref = prefs.getString(C.UI_LANGUAGE, "")
+                if (!langPref.isNullOrBlank() && langPref != "auto") {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(langPref))
+                }
+                putBoolean(C.FIRST_LAUNCH3, false)
             }
         }
         if (prefs.getBoolean(C.FIRST_LAUNCH5, true)) {
@@ -151,6 +176,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         restorePlayerFragment()
         handleIntent(intent)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        orientation = newConfig.orientation
     }
 
     override fun onResume() {

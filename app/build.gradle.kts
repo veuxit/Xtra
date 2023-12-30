@@ -55,7 +55,6 @@ android {
     }
     configurations.all {
         resolutionStrategy {
-            force("androidx.appcompat:appcompat:1.1.0-rc01") // https://github.com/crackededed/Xtra/issues/3 https://stackoverflow.com/questions/41025200/android-view-inflateexception-error-inflating-class-android-webkit-webview
             force("androidx.webkit:webkit:1.9.0-alpha01")
             force("com.squareup.okhttp3:logging-interceptor:3.12.13")
             force("com.squareup.retrofit2:retrofit:2.6.4")
@@ -67,7 +66,7 @@ android {
 dependencies {
     implementation("org.conscrypt:conscrypt-android:2.5.2")
     implementation("androidx.multidex:multidex:2.0.1")
-    implementation("com.squareup.okio:okio:3.2.0")
+    implementation("com.squareup.okio:okio:3.7.0")
 
     //UI
     implementation(libs.material)

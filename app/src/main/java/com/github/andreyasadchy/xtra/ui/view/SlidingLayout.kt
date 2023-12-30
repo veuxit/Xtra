@@ -228,7 +228,7 @@ class SlidingLayout : LinearLayout {
         listeners.forEach { it.onMinimize() }
     }
 
-    private fun init() {
+    fun init() {
         debug = context.prefs().getBoolean(C.DEBUG_SECONDVIEW, false)
         dragView.post {
             topBound = paddingTop

@@ -115,7 +115,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             systemUiFlags = systemUiFlags or (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
-        isPortrait = activity.isInPortraitOrientation
+        isPortrait = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            (activity as? MainActivity)?.orientation == 1
+        } else {
+            activity.isInPortraitOrientation
+        }
         activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
     }
 
@@ -387,6 +391,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             initLayout()
         }
         (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.dismiss()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            slidingLayout.apply {
+                orientation = if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                init()
+            }
+        }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {

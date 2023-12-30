@@ -1,13 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.common
 
+import android.content.res.Configuration
+import android.os.Build
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.view.GridRecyclerView
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
@@ -17,6 +21,15 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 abstract class PagedListFragment : BaseNetworkFragment() {
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            view?.findViewById<GridRecyclerView>(R.id.recyclerView)?.apply {
+                gridLayoutManager.spanCount = getColumnsForConfiguration(newConfig)
+            }
+        }
+    }
 
     fun <T : Any, VH : RecyclerView.ViewHolder> setAdapter(recyclerView: RecyclerView, adapter: PagingDataAdapter<T, VH>) {
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {

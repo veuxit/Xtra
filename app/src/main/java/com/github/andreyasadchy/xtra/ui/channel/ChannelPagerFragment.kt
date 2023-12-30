@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -32,7 +33,17 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.isInLandscapeOrientation
+import com.github.andreyasadchy.xtra.util.loadImage
+import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
@@ -61,7 +72,12 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
         with(binding) {
             val activity = requireActivity() as MainActivity
             val account = Account.get(activity)
-            if (activity.isInLandscapeOrientation) {
+            val isInLandscapeOrientation = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                (activity as? MainActivity)?.orientation == 2
+            } else {
+                activity.isInLandscapeOrientation
+            }
+            if (isInLandscapeOrientation) {
                 appBar.setExpanded(false, false)
             }
             if (viewModel.stream.value == null) {

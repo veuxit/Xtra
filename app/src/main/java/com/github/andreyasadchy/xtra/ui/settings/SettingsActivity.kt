@@ -14,7 +14,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import androidx.core.os.LocaleListCompat
 import androidx.core.util.Pair
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
@@ -94,11 +96,39 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            findPreference<ListPreference>(C.UI_LANGUAGE)?.setOnPreferenceChangeListener { _, _ ->
-                (activity as? SettingsActivity)?.recreate = true
-                changed = true
-                activity.recreate()
-                true
+            findPreference<ListPreference>(C.UI_LANGUAGE)?.apply {
+                val lang = AppCompatDelegate.getApplicationLocales()
+                if (lang.isEmpty) {
+                    setValueIndex(findIndexOfValue("auto"))
+                } else {
+                    try {
+                        setValueIndex(findIndexOfValue(lang.toLanguageTags()))
+                    } catch (e: Exception) {
+                        try {
+                            setValueIndex(findIndexOfValue(
+                                lang.toLanguageTags().substringBefore("-").let {
+                                    when (it) {
+                                        "id" -> "in"
+                                        "pt" -> "pt-BR"
+                                        else -> it
+                                    }
+                                }
+                            ))
+                        } catch (e: Exception) {
+                            setValueIndex(findIndexOfValue("en"))
+                        }
+                    }
+                }
+                setOnPreferenceChangeListener { _, value ->
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(
+                        if (value.toString() == "auto") {
+                            null
+                        } else {
+                            value.toString()
+                        }
+                    ))
+                    true
+                }
             }
 
             findPreference<ListPreference>(C.UI_CUTOUTMODE)?.apply {

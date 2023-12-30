@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.util
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.net.ConnectivityManager
@@ -13,7 +14,6 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
-import java.util.Locale
 
 val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
     val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
@@ -32,22 +32,6 @@ val Context.displayDensity
     get() = this.resources.displayMetrics.density
 
 fun Activity.applyTheme(): String {
-    val lang = prefs().getString(C.UI_LANGUAGE, "auto") ?: "auto"
-    if (lang != "auto") {
-        val config = resources.configuration
-        val locale = Locale(lang)
-        Locale.setDefault(locale)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            config.setLocale(locale)
-        } else {
-            config.locale = locale
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            createConfigurationContext(config)
-        }
-        resources.updateConfiguration(config, resources.displayMetrics)
-        application.resources.updateConfiguration(config, resources.displayMetrics)
-    }
     val theme = if (prefs().getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
         when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
             Configuration.UI_MODE_NIGHT_YES -> prefs().getString(C.UI_THEME_DARK_ON, "0")!!
@@ -87,6 +71,14 @@ fun Activity.applyTheme(): String {
         }
     }
     return theme
+}
+
+fun Context.getActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is ContextWrapper -> this.baseContext.getActivity()
+        else -> null
+    }
 }
 
 val Context.isInPortraitOrientation
