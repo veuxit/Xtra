@@ -1,19 +1,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="BaseDarkTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/primaryBlue</item>
         <item name="chatStatus">@color/chatStatusDark</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
-        <item name="materialSwitchStyle">@style/Switch</item>
+        <item name="materialSwitchStyle">@style/SwitchBlue</item>
         <item name="preferenceTheme">@style/prefDark</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
     <style name="BaseLightTheme" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
         <item name="chatStatus">@color/chatStatusLight</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
+        <item name="materialSwitchStyle">@style/SwitchBlue</item>
         <item name="preferenceTheme">@style/prefLight</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@color/darkScrim</item>
@@ -23,25 +26,31 @@
 
     <style name="BaseAmoledTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@android:color/white</item>
-        <item name="colorSurface">@color/primaryAmoled</item>
-        <item name="android:colorBackground">@color/primaryAmoled</item>
+        <item name="colorSurface">@color/surfaceAmoled</item>
+        <item name="android:colorBackground">@color/surfaceAmoled</item>
         <item name="chatStatus">@color/chatStatusDark</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
-        <item name="materialSwitchStyle">@style/Switch</item>
+        <item name="materialSwitchStyle">@style/SwitchAmoled</item>
         <item name="preferenceTheme">@style/prefDark</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
     <style name="BaseBlueTheme" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/accent</item>
-        <item name="colorSurface">@color/primaryBlue</item>
-        <item name="android:colorBackground">@color/primaryBlue</item>
+        <item name="colorPrimary">@color/primaryBlue</item>
+        <item name="colorSurface">@color/surfaceBlue</item>
+        <item name="android:colorBackground">@color/surfaceBlue</item>
+        <item name="colorSurfaceContainerLowest">@color/surfaceContainerLowestBlue</item>
+        <item name="colorSurfaceContainerLow">@color/surfaceContainerLowBlue</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerBlue</item>
+        <item name="colorSurfaceContainerHigh">@color/surfaceContainerHighBlue</item>
+        <item name="colorSurfaceContainerHighest">@color/surfaceContainerHighestBlue</item>
         <item name="chatStatus">@color/chatStatusDark</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
-        <item name="materialSwitchStyle">@style/Switch</item>
+        <item name="materialSwitchStyle">@style/SwitchBlue</item>
+        <item name="bottomNavigationStyle">@style/BottomNavigationBlue</item>
         <item name="preferenceTheme">@style/prefDark</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -105,8 +114,8 @@
     <style name="BlueThemeNoCorners" parent="BaseBlueThemeNoCorners" />
 
     <style name="AmoledDynamicOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark">
-        <item name="colorSurface">@color/primaryAmoled</item>
-        <item name="android:colorBackground">@color/primaryAmoled</item>
+        <item name="colorSurface">@color/surfaceAmoled</item>
+        <item name="android:colorBackground">@color/surfaceAmoled</item>
     </style>
 
     <style name="Thumbnail">
@@ -153,12 +162,32 @@
         <item name="android:padding">10dp</item>
     </style>
 
-    <style name="Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
-        <item name="materialThemeOverlay">@style/SwitchTheme</item>
+    <style name="SwitchAmoled" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="materialThemeOverlay">@style/SwitchOverlayAmoled</item>
     </style>
 
-    <style name="SwitchTheme">
-        <item name="colorOnPrimary">?attr/colorPrimaryContainer</item>
+    <style name="SwitchOverlayAmoled">
+        <item name="colorPrimary">@color/switchTrackAmoled</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">@android:color/white</item>
+    </style>
+
+    <style name="SwitchBlue" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="materialThemeOverlay">@style/SwitchOverlayBlue</item>
+    </style>
+
+    <style name="SwitchOverlayBlue">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">@android:color/white</item>
+    </style>
+
+    <style name="BottomNavigationBlue" parent="Widget.Material3.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/BottomNavigationOverlayBlue</item>
+    </style>
+
+    <style name="BottomNavigationOverlayBlue">
+        <item name="colorSecondaryContainer">@color/secondaryContainerBlue</item>
     </style>
 
     <style name="PreferenceTheme" parent="@style/PreferenceThemeOverlay">
@@ -168,6 +197,7 @@
         <item name="android:progressTint">?attr/colorPrimary</item>
         <item name="android:thumbTint">?attr/colorPrimary</item>
 
+        <item name="preferenceCategoryTitleTextColor">?attr/colorPrimary</item>
         <item name="switchPreferenceCompatStyle">@style/SwitchPreference</item>
     </style>
 
