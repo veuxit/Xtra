@@ -606,4 +606,5 @@
     <string name="edge_to_edge">Edge-to-edge</string>
     <string name="appbar_lift">Lift app bar on scroll</string>
     <string name="bottom_nav_color">Bottom navigation color</string>
+    <string name="dynamic_amoled">Dynamic black</string>
 </resources>
