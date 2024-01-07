@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.DynamicColorsOptions
 
 val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
     val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
@@ -46,6 +47,7 @@ fun Activity.applyTheme(): String {
     if (prefs().getBoolean(C.UI_THEME_ROUNDED_CORNERS, true)) {
         setTheme(when(theme) {
             "4" -> R.style.DarkTheme
+            "6" -> R.style.AmoledTheme
             "5" -> R.style.LightTheme
             "1" -> R.style.AmoledTheme
             "2" -> R.style.LightTheme
@@ -55,6 +57,7 @@ fun Activity.applyTheme(): String {
     } else {
         setTheme(when(theme) {
             "4" -> R.style.DarkThemeNoCorners
+            "6" -> R.style.AmoledThemeNoCorners
             "5" -> R.style.LightThemeNoCorners
             "1" -> R.style.AmoledThemeNoCorners
             "2" -> R.style.LightThemeNoCorners
@@ -62,8 +65,14 @@ fun Activity.applyTheme(): String {
             else -> R.style.DarkThemeNoCorners
         })
     }
-    if (listOf("4", "5").contains(theme)) {
-        DynamicColors.applyToActivityIfAvailable(this)
+    if (listOf("4", "6", "5").contains(theme)) {
+        DynamicColors.applyToActivityIfAvailable(this,
+            DynamicColorsOptions.Builder().apply {
+                if (theme == "6") {
+                    setThemeOverlay(R.style.AmoledDynamicOverlay)
+                }
+            }.build()
+        )
     }
     val isLightTheme = theme.isLightTheme
     WindowInsetsControllerCompat(window, window.decorView).run {
