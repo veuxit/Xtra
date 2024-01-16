@@ -34,12 +34,12 @@ import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.shortToast
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -110,7 +110,7 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                         if (account is NotLoggedIn) {
                             activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
                         } else {
-                            MaterialAlertDialogBuilder(activity).apply {
+                            activity.getAlertDialogBuilder().apply {
                                 setTitle(getString(R.string.logout_title))
                                 account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
                                 setNegativeButton(getString(R.string.no), null)

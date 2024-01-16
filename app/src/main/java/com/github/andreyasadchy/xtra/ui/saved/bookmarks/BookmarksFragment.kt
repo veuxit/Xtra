@@ -17,8 +17,8 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -51,7 +51,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             viewModel.vodIgnoreUser(it)
         }, {
             val delete = getString(R.string.delete)
-            MaterialAlertDialogBuilder(requireActivity())
+            requireActivity().getAlertDialogBuilder()
                 .setTitle(delete)
                 .setMessage(getString(R.string.are_you_sure))
                 .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }

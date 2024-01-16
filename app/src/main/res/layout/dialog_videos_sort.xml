@@ -8,7 +8,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp">
+        android:padding="?attr/dialogPadding">
 
         <RadioGroup
             android:id="@+id/sort"
@@ -129,14 +129,14 @@
 
         <Button
             android:id="@+id/apply"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            style="?attr/bottomSheetButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/apply"/>
 
         <Button
             android:id="@+id/selectLang"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            style="?attr/bottomSheetButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/select_language"/>

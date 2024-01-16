@@ -58,4 +58,10 @@
         android:title="@string/bottom_nav_color"
         app:iconSpaceReserved="false"/>
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="ui_theme_material3"
+        android:title="@string/material_3"
+        app:iconSpaceReserved="false"/>
+
 </androidx.preference.PreferenceScreen>

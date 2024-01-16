@@ -18,8 +18,8 @@ import androidx.fragment.app.setFragmentResult
 import com.github.andreyasadchy.xtra.databinding.DialogIntegrityBinding
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.json.JSONObject
 
 class IntegrityDialog : DialogFragment() {
@@ -31,7 +31,7 @@ class IntegrityDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogIntegrityBinding.inflate(layoutInflater)
         val context = requireContext()
-        val builder = MaterialAlertDialogBuilder(context)
+        val builder = context.getAlertDialogBuilder()
                 .setView(binding.root)
         CookieManager.getInstance().removeAllCookies(null)
         val token = TwitchApiHelper.getGQLHeaders(context, true)[C.HEADER_TOKEN]?.removePrefix("OAuth ")

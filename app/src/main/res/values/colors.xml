@@ -14,6 +14,14 @@
     <color name="surfaceContainerBlue">#002063</color>
     <color name="surfaceContainerHighBlue">#032978</color>
     <color name="surfaceContainerHighestBlue">#163584</color>
+    <color name="surfaceDark">#272727</color>
+    <color name="secondaryDark">#FF424242</color>
+    <color name="secondaryTextColorDark">#FF878787</color>
+    <color name="secondaryAmoled">#353535</color>
+    <color name="secondaryLight">#CFCFCF</color>
+    <color name="secondaryTextColorLight">#464646</color>
+    <color name="secondaryBlue">#000F32</color>
+    <color name="secondaryTextColorBlue">#46649B</color>
     <color name="chatStatusDark">#99000000</color>
     <color name="chatStatusLight">#99FFFFFF</color>
     <color name="chatMessageFirst">#800a4028</color>

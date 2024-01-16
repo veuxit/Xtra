@@ -26,4 +26,17 @@
     <style name="BlueThemeNoCorners" parent="BaseBlueThemeNoCorners">
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+    <style name="AppCompatDarkTheme" parent="BaseAppCompatDarkTheme">
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="AppCompatLightTheme" parent="BaseAppCompatLightTheme">
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+    <style name="AppCompatAmoledTheme" parent="BaseAppCompatAmoledTheme">
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="AppCompatBlueTheme" parent="BaseAppCompatBlueTheme">
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>
