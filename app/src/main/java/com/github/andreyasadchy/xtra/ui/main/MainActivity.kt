@@ -89,7 +89,6 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         }
     }
     private lateinit var prefs: SharedPreferences
-    private var theme: String? = null
     var orientation: Int = 1
 
     //Lifecycle methods
@@ -167,7 +166,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 IntegrityDialog.show(supportFragmentManager)
             }
         }
-        theme = applyTheme()
+        applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setNavBarColor(isInPortraitOrientation)
@@ -214,17 +213,17 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     window.navigationBarColor = if (isPortrait) {
                         Color.TRANSPARENT
                     } else {
-                        ContextCompat.getColor(this, if (!theme.isLightTheme) R.color.darkScrim else R.color.lightScrim)
+                        ContextCompat.getColor(this, if (!isLightTheme) R.color.darkScrim else R.color.lightScrim)
                     }
                 }
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                    if (!theme.isLightTheme) {
+                    if (!isLightTheme) {
                         window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
                     }
                 }
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.M -> {
                     @Suppress("DEPRECATION")
-                    if (!theme.isLightTheme) {
+                    if (!isLightTheme) {
                         if (isPortrait) {
                             window.navigationBarColor = Color.TRANSPARENT
                             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
