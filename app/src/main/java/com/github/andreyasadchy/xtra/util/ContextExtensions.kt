@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.res.use
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
@@ -36,7 +37,7 @@ fun Context.convertPixelsToDp(pixels: Float) = TypedValue.applyDimension(TypedVa
 val Context.displayDensity
     get() = this.resources.displayMetrics.density
 
-fun Activity.applyTheme(): String {
+fun Activity.applyTheme() {
     val theme = if (prefs().getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
         when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
             Configuration.UI_MODE_NIGHT_YES -> prefs().getString(C.UI_THEME_DARK_ON, "0")!!
@@ -70,9 +71,11 @@ fun Activity.applyTheme(): String {
         if (listOf("4", "6", "5").contains(theme)) {
             DynamicColors.applyToActivityIfAvailable(this,
                 DynamicColorsOptions.Builder().apply {
-                    if (theme == "6") {
-                        setThemeOverlay(R.style.AmoledDynamicOverlay)
-                    }
+                    setThemeOverlay(when(theme) {
+                        "6" -> R.style.AmoledDynamicOverlay
+                        "5" -> R.style.LightDynamicOverlay
+                        else -> R.style.DarkDynamicOverlay
+                    })
                 }.build()
             )
         }
@@ -87,7 +90,7 @@ fun Activity.applyTheme(): String {
             else -> R.style.AppCompatDarkTheme
         })
     }
-    val isLightTheme = theme.isLightTheme
+    val isLightTheme = this.isLightTheme
     WindowInsetsControllerCompat(window, window.decorView).run {
         isAppearanceLightStatusBars = isLightTheme
         isAppearanceLightNavigationBars = isLightTheme
@@ -117,7 +120,6 @@ fun Activity.applyTheme(): String {
             else -> WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
         }
     }
-    return theme
 }
 
 fun Context.getAlertDialogBuilder(): AlertDialog.Builder {
@@ -127,6 +129,11 @@ fun Context.getAlertDialogBuilder(): AlertDialog.Builder {
         AlertDialog.Builder(this)
     }
 }
+
+val Context.isLightTheme
+    get() = obtainStyledAttributes(intArrayOf(androidx.appcompat.R.attr.isLightTheme)).use {
+        it.getBoolean(0, false)
+    }
 
 val Context.isInPortraitOrientation
     get() = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT

@@ -117,15 +117,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         isPortrait = activity.isInPortraitOrientation
         activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
         WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        val theme = if (prefs.getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
-            when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
-                Configuration.UI_MODE_NIGHT_YES -> prefs.getString(C.UI_THEME_DARK_ON, "0")!!
-                else -> prefs.getString(C.UI_THEME_DARK_OFF, "2")!!
-            }
-        } else {
-            prefs.getString(C.THEME, "0")!!
-        }
-        isLightTheme = theme.isLightTheme
+        isLightTheme = requireContext().isLightTheme
     }
 
     override fun onStart() {

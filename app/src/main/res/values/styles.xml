@@ -44,11 +44,13 @@
         <item name="colorPrimary">@android:color/white</item>
         <item name="colorSurface">@color/surfaceAmoled</item>
         <item name="android:colorBackground">@color/surfaceAmoled</item>
+        <item name="colorSurfaceContainerLow">@color/surfaceAmoled</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerAmoled</item>
         <item name="chatStatus">@color/chatStatusDark</item>
         <item name="sortBarTextColor">?android:textColorSecondary</item>
         <item name="dialogPadding">8dp</item>
         <item name="dialogLayoutPadding">8dp</item>
-        <item name="cardStyle">@style/Card</item>
+        <item name="cardStyle">@style/CardAmoled</item>
         <item name="bottomSheetButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
         <item name="elevatedButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
         <item name="dialogButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
@@ -56,6 +58,10 @@
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
         <item name="materialSwitchStyle">@style/SwitchAmoled</item>
+        <item name="linearProgressIndicatorStyle">@style/LinearProgressIndicatorAmoled</item>
+        <item name="bottomNavigationStyle">@style/BottomNavigationAmoled</item>
+        <item name="bottomSheetDialogTheme">@style/BottomSheet</item>
+        <item name="materialAlertDialogTheme">@style/Dialog</item>
         <item name="preferenceTheme">@style/PreferenceTheme</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -149,9 +155,25 @@
     <style name="AppCompatAmoledTheme" parent="BaseAppCompatAmoledTheme" />
     <style name="AppCompatBlueTheme" parent="BaseAppCompatBlueTheme" />
 
+    <style name="DarkDynamicOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark">
+        <item name="materialSwitchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
+    </style>
+
+    <style name="LightDynamicOverlay" parent="ThemeOverlay.Material3.DynamicColors.Light">
+        <item name="materialSwitchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
+    </style>
+
     <style name="AmoledDynamicOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark">
         <item name="colorSurface">@color/surfaceAmoled</item>
         <item name="android:colorBackground">@color/surfaceAmoled</item>
+        <item name="colorSurfaceContainerLow">@color/surfaceAmoled</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerAmoled</item>
+        <item name="cardStyle">@style/CardAmoled</item>
+        <item name="materialSwitchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
+        <item name="linearProgressIndicatorStyle">@style/LinearProgressIndicatorAmoled</item>
+        <item name="bottomNavigationStyle">@style/BottomNavigationAmoled</item>
+        <item name="bottomSheetDialogTheme">@style/BottomSheet</item>
+        <item name="materialAlertDialogTheme">@style/Dialog</item>
     </style>
 
     <style name="Thumbnail">
@@ -190,6 +212,15 @@
         <item name="android:layout_margin">8dp</item>
     </style>
 
+    <style name="CardAmoled" parent="Widget.Material3.CardView.Elevated">
+        <item name="materialThemeOverlay">@style/CardOverlayAmoled</item>
+        <item name="android:layout_margin">8dp</item>
+    </style>
+
+    <style name="CardOverlayAmoled">
+        <item name="colorPrimary">?attr/colorSurface</item>
+    </style>
+
     <style name="RadioButton" parent="Widget.Material3.CompoundButton.RadioButton">
         <item name="android:padding">10dp</item>
     </style>
@@ -218,12 +249,38 @@
         <item name="colorPrimaryContainer">@android:color/white</item>
     </style>
 
+    <style name="LinearProgressIndicatorAmoled" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="indicatorColor">@android:color/white</item>
+    </style>
+
+    <style name="BottomNavigationAmoled" parent="Widget.Material3.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/BottomNavigationOverlayAmoled</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="BottomNavigationOverlayAmoled">
+        <item name="colorSurfaceContainer">@android:color/black</item>
+        <item name="colorSecondaryContainer">@color/surfaceContainerAmoled</item>
+    </style>
+
     <style name="BottomNavigationBlue" parent="Widget.Material3.BottomNavigationView">
         <item name="materialThemeOverlay">@style/BottomNavigationOverlayBlue</item>
     </style>
 
     <style name="BottomNavigationOverlayBlue">
         <item name="colorSecondaryContainer">@color/secondaryContainerBlue</item>
+    </style>
+
+    <style name="BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/BottomSheetModal</item>
+    </style>
+
+    <style name="BottomSheetModal" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="android:elevation">0dp</item>
+    </style>
+
+    <style name="Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:background">?attr/colorSurface</item>
     </style>
 
     <style name="PreferenceTheme" parent="@style/PreferenceThemeOverlay">
@@ -363,6 +420,7 @@
         <item name="colorSurface">@android:color/black</item>
         <item name="android:windowBackground">?attr/colorSurface</item>
         <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerAmoled</item>
         <item name="colorControlNormal">@android:color/white</item>
         <item name="android:textColor">?attr/colorControlNormal</item>
         <item name="android:textColorSecondary">@color/secondaryTextColorDark</item>

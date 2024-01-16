@@ -5,6 +5,7 @@
     <color name="darkScrimOnLightSurface">#8D8B8D</color>
     <color name="accent">#007DCA</color>
     <color name="surfaceAmoled">#ff000000</color>
+    <color name="surfaceContainerAmoled">#0C0C0C</color>
     <color name="switchTrackAmoled">#4F5053</color>
     <color name="primaryBlue">#b5c4ff</color>
     <color name="secondaryContainerBlue">#254290</color>
