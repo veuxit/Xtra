@@ -4,6 +4,7 @@
     <Preference
         android:key="api_token_settings"
         android:title="@string/tokens"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
 </androidx.preference.PreferenceScreen>

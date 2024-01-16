@@ -7,8 +7,9 @@
         android:singleLine="true"
         android:title="@string/player_buffer_min"
         app:dialogMessage="@string/player_buffer_min_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue="50000"
@@ -16,8 +17,9 @@
         android:singleLine="true"
         android:title="@string/player_buffer_max"
         app:dialogMessage="@string/player_buffer_max_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue="2000"
@@ -25,8 +27,9 @@
         android:singleLine="true"
         android:title="@string/player_buffer_playback"
         app:dialogMessage="@string/player_buffer_playback_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue="5000"
@@ -34,8 +37,9 @@
         android:singleLine="true"
         android:title="@string/player_buffer_rebuffer"
         app:dialogMessage="@string/player_buffer_rebuffer_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue=""
@@ -43,8 +47,9 @@
         android:singleLine="true"
         android:title="@string/player_minspeedlive"
         app:dialogMessage="@string/player_minspeedlive_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue=""
@@ -52,8 +57,9 @@
         android:singleLine="true"
         android:title="@string/player_maxspeedlive"
         app:dialogMessage="@string/player_maxspeedlive_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
         android:defaultValue="5000"
@@ -61,7 +67,8 @@
         android:singleLine="true"
         android:title="@string/player_targetoffset"
         app:dialogMessage="@string/player_targetoffset_summary"
-        app:useSimpleSummaryProvider="true"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
 
 </androidx.preference.PreferenceScreen>
