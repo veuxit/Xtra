@@ -8,6 +8,7 @@
         android:key="token_xdeviceid"
         android:title="X-Device-Id"
         app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
@@ -15,13 +16,15 @@
         android:disableDependentsState="true"
         android:key="token_random_deviceid"
         android:title="@string/token_random_deviceid"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
     <EditTextPreference
         android:defaultValue="site"
         android:key="token_playertype"
         android:title="playerType"
         app:iconSpaceReserved="false"
+        app:singleLineTitle="false" 
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
@@ -29,7 +32,8 @@
         android:key="token_include_token_stream"
         android:summary="@string/sub_only_summary"
         android:title="@string/include_gql_token"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
     <PreferenceCategory android:title="@string/videos" app:iconSpaceReserved="false"/>
     <EditTextPreference
@@ -37,6 +41,7 @@
         android:key="token_playertype_video"
         android:title="playerType"
         app:iconSpaceReserved="false"
+        app:singleLineTitle="false" 
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
@@ -44,7 +49,8 @@
         android:key="token_include_token_video"
         android:summary="@string/sub_only_summary"
         android:title="@string/include_gql_token"
-        app:iconSpaceReserved="false" />
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
     <ListPreference
         android:defaultValue="2"
@@ -53,7 +59,8 @@
         android:key="token_skip_video_access_token"
         android:summary="%s"
         android:title="@string/skip_video_access_token"
-        app:iconSpaceReserved="false"/>
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
     <ListPreference
         android:defaultValue="2"
@@ -62,6 +69,7 @@
         android:key="token_skip_clip_access_token"
         android:summary="%s"
         android:title="@string/skip_clip_access_token"
-        app:iconSpaceReserved="false"/>
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
 
 </androidx.preference.PreferenceScreen>
