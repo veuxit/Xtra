@@ -30,7 +30,6 @@ import com.github.andreyasadchy.xtra.model.LoggedIn
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.*
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -141,7 +140,7 @@ class LoginActivity : AppCompatActivity() {
         with(binding) {
             webViewContainer.visible()
             havingTrouble.setOnClickListener {
-                MaterialAlertDialogBuilder(this@LoginActivity)
+                this@LoginActivity.getAlertDialogBuilder()
                     .setMessage(getString(R.string.login_problem_solution))
                     .setPositiveButton(R.string.log_in) { _, _ ->
                         val intent = Intent(Intent.ACTION_VIEW, helixAuthUrl.toUri())
@@ -159,7 +158,7 @@ class LoginActivity : AppCompatActivity() {
                                 setMargins(margin, 0, margin, 0)
                             }
                         }
-                        val dialog = MaterialAlertDialogBuilder(this@LoginActivity)
+                        val dialog = this@LoginActivity.getAlertDialogBuilder()
                             .setTitle(R.string.enter_url)
                             .setView(editText)
                             .setPositiveButton(R.string.log_in) { _, _ ->

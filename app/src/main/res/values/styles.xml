@@ -3,6 +3,14 @@
     <style name="BaseDarkTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primaryBlue</item>
         <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?android:textColorSecondary</item>
+        <item name="dialogPadding">8dp</item>
+        <item name="dialogLayoutPadding">8dp</item>
+        <item name="cardStyle">@style/Card</item>
+        <item name="bottomSheetButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="elevatedButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="dialogButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
+        <item name="tabStyle">@style/Widget.Material3.TabLayout.OnSurface</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
         <item name="materialSwitchStyle">@style/SwitchBlue</item>
@@ -14,6 +22,14 @@
     <style name="BaseLightTheme" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
         <item name="chatStatus">@color/chatStatusLight</item>
+        <item name="sortBarTextColor">?android:textColorSecondary</item>
+        <item name="dialogPadding">8dp</item>
+        <item name="dialogLayoutPadding">8dp</item>
+        <item name="cardStyle">@style/Card</item>
+        <item name="bottomSheetButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="elevatedButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="dialogButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
+        <item name="tabStyle">@style/Widget.Material3.TabLayout.OnSurface</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
         <item name="materialSwitchStyle">@style/SwitchBlue</item>
@@ -29,6 +45,14 @@
         <item name="colorSurface">@color/surfaceAmoled</item>
         <item name="android:colorBackground">@color/surfaceAmoled</item>
         <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?android:textColorSecondary</item>
+        <item name="dialogPadding">8dp</item>
+        <item name="dialogLayoutPadding">8dp</item>
+        <item name="cardStyle">@style/Card</item>
+        <item name="bottomSheetButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="elevatedButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="dialogButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
+        <item name="tabStyle">@style/Widget.Material3.TabLayout.OnSurface</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
         <item name="materialSwitchStyle">@style/SwitchAmoled</item>
@@ -47,6 +71,14 @@
         <item name="colorSurfaceContainerHigh">@color/surfaceContainerHighBlue</item>
         <item name="colorSurfaceContainerHighest">@color/surfaceContainerHighestBlue</item>
         <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?android:textColorSecondary</item>
+        <item name="dialogPadding">8dp</item>
+        <item name="dialogLayoutPadding">8dp</item>
+        <item name="cardStyle">@style/Card</item>
+        <item name="bottomSheetButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="elevatedButtonStyle">@style/Widget.Material3.Button.ElevatedButton</item>
+        <item name="dialogButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
+        <item name="tabStyle">@style/Widget.Material3.TabLayout.OnSurface</item>
         <item name="radioButtonStyle">@style/RadioButton</item>
         <item name="checkboxStyle">@style/CheckBox</item>
         <item name="materialSwitchStyle">@style/SwitchBlue</item>
@@ -112,6 +144,10 @@
     <style name="LightThemeNoCorners" parent="BaseLightThemeNoCorners" />
     <style name="AmoledThemeNoCorners" parent="BaseAmoledThemeNoCorners" />
     <style name="BlueThemeNoCorners" parent="BaseBlueThemeNoCorners" />
+    <style name="AppCompatDarkTheme" parent="BaseAppCompatDarkTheme" />
+    <style name="AppCompatLightTheme" parent="BaseAppCompatLightTheme" />
+    <style name="AppCompatAmoledTheme" parent="BaseAppCompatAmoledTheme" />
+    <style name="AppCompatBlueTheme" parent="BaseAppCompatBlueTheme" />
 
     <style name="AmoledDynamicOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark">
         <item name="colorSurface">@color/surfaceAmoled</item>
@@ -211,6 +247,387 @@
 
     <style name="prefLight" parent="PreferenceTheme">
         <item name="android:tint">@android:color/black</item>
+    </style>
+
+    <style name="BaseAppCompatDarkTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorAccent">@color/accent</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorSurface">@color/surfaceDark</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurfaceContainer">#303030</item>
+        <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:textColorSecondary">@color/secondaryTextColorDark</item>
+        <item name="colorButtonNormal">@color/secondaryDark</item>
+        <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?attr/colorControlNormal</item>
+        <item name="dialogPadding">5dp</item>
+        <item name="dialogLayoutPadding">0dp</item>
+        <item name="cardStyle">@style/MaterialCard</item>
+        <item name="bottomSheetButtonStyle">@style/MaterialButton</item>
+        <item name="elevatedButtonStyle">@style/MaterialElevatedButton</item>
+        <item name="dialogButtonStyle">@style/MaterialDialogButton</item>
+        <item name="tabStyle">@style/MaterialTabLayoutDark</item>
+        <item name="radioButtonStyle">@style/AppCompatRadioButton</item>
+        <item name="checkboxStyle">@style/MaterialCheckBox</item>
+        <item name="linearProgressIndicatorStyle">@style/MaterialLinearProgressIndicator</item>
+        <item name="floatingActionButtonSmallStyle">@style/MaterialFloatingActionButton</item>
+        <item name="materialDividerStyle">@style/MaterialDividerDark</item>
+        <item name="bottomNavigationStyle">@style/MaterialBottomNavigationDark</item>
+        <item name="bottomSheetDialogTheme">@style/MaterialBottomSheet</item>
+        <item name="alertDialogTheme">@style/MaterialDialog</item>
+        <item name="preferenceTheme">@style/MaterialPreferenceTheme</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.AppCompat.Display3</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.AppCompat.Display2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.AppCompat.Headline</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.AppCompat.Body2</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="android:navigationBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="BaseAppCompatLightTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorAccent">@color/accent</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorSurface">@android:color/white</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurfaceContainer">#fff3edf7</item>
+        <item name="colorControlNormal">@android:color/black</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:textColorSecondary">@color/secondaryTextColorLight</item>
+        <item name="colorButtonNormal">@color/secondaryLight</item>
+        <item name="chatStatus">@color/chatStatusLight</item>
+        <item name="sortBarTextColor">?attr/colorControlNormal</item>
+        <item name="dialogPadding">5dp</item>
+        <item name="dialogLayoutPadding">0dp</item>
+        <item name="cardStyle">@style/MaterialCard</item>
+        <item name="bottomSheetButtonStyle">@style/MaterialButton</item>
+        <item name="elevatedButtonStyle">@style/MaterialElevatedButton</item>
+        <item name="dialogButtonStyle">@style/MaterialDialogButton</item>
+        <item name="tabStyle">@style/MaterialTabLayoutLight</item>
+        <item name="radioButtonStyle">@style/AppCompatRadioButton</item>
+        <item name="checkboxStyle">@style/MaterialCheckBox</item>
+        <item name="linearProgressIndicatorStyle">@style/MaterialLinearProgressIndicator</item>
+        <item name="floatingActionButtonSmallStyle">@style/MaterialFloatingActionButton</item>
+        <item name="materialDividerStyle">@style/MaterialDividerLight</item>
+        <item name="bottomNavigationStyle">@style/MaterialBottomNavigationLight</item>
+        <item name="bottomSheetDialogTheme">@style/MaterialBottomSheet</item>
+        <item name="alertDialogTheme">@style/MaterialDialog</item>
+        <item name="preferenceTheme">@style/MaterialPreferenceTheme</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.AppCompat.Display3</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.AppCompat.Display2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.AppCompat.Headline</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.AppCompat.Body2</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="android:navigationBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@color/darkScrim</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+    </style>
+
+    <style name="BaseAppCompatAmoledTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorAccent">@android:color/white</item>
+        <item name="colorPrimary">@android:color/white</item>
+        <item name="colorSurface">@android:color/black</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:textColorSecondary">@color/secondaryTextColorDark</item>
+        <item name="colorButtonNormal">@color/secondaryAmoled</item>
+        <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?attr/colorControlNormal</item>
+        <item name="dialogPadding">5dp</item>
+        <item name="dialogLayoutPadding">0dp</item>
+        <item name="cardStyle">@style/MaterialCard</item>
+        <item name="bottomSheetButtonStyle">@style/MaterialButton</item>
+        <item name="elevatedButtonStyle">@style/MaterialElevatedButton</item>
+        <item name="dialogButtonStyle">@style/MaterialDialogButton</item>
+        <item name="tabStyle">@style/MaterialTabLayoutDark</item>
+        <item name="radioButtonStyle">@style/AppCompatRadioButton</item>
+        <item name="checkboxStyle">@style/MaterialCheckBox</item>
+        <item name="linearProgressIndicatorStyle">@style/MaterialLinearProgressIndicator</item>
+        <item name="floatingActionButtonSmallStyle">@style/MaterialFloatingActionButton</item>
+        <item name="materialDividerStyle">@style/MaterialDividerDark</item>
+        <item name="bottomNavigationStyle">@style/MaterialBottomNavigationDark</item>
+        <item name="bottomSheetDialogTheme">@style/MaterialBottomSheet</item>
+        <item name="alertDialogTheme">@style/MaterialDialog</item>
+        <item name="preferenceTheme">@style/MaterialPreferenceTheme</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.AppCompat.Display3</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.AppCompat.Display2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.AppCompat.Headline</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.AppCompat.Body2</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="android:navigationBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="BaseAppCompatBlueTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorAccent">@color/accent</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorSurface">@color/surfaceBlue</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerBlue</item>
+        <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:textColorSecondary">@color/secondaryTextColorBlue</item>
+        <item name="colorButtonNormal">@color/secondaryBlue</item>
+        <item name="chatStatus">@color/chatStatusDark</item>
+        <item name="sortBarTextColor">?attr/colorControlNormal</item>
+        <item name="dialogPadding">5dp</item>
+        <item name="dialogLayoutPadding">0dp</item>
+        <item name="cardStyle">@style/MaterialCard</item>
+        <item name="bottomSheetButtonStyle">@style/MaterialButton</item>
+        <item name="elevatedButtonStyle">@style/MaterialElevatedButton</item>
+        <item name="dialogButtonStyle">@style/MaterialDialogButton</item>
+        <item name="tabStyle">@style/MaterialTabLayoutDark</item>
+        <item name="radioButtonStyle">@style/AppCompatRadioButton</item>
+        <item name="checkboxStyle">@style/MaterialCheckBox</item>
+        <item name="linearProgressIndicatorStyle">@style/MaterialLinearProgressIndicatorBlue</item>
+        <item name="floatingActionButtonSmallStyle">@style/MaterialFloatingActionButton</item>
+        <item name="materialDividerStyle">@style/MaterialDividerBlue</item>
+        <item name="bottomNavigationStyle">@style/MaterialBottomNavigationBlue</item>
+        <item name="bottomSheetDialogTheme">@style/MaterialBottomSheet</item>
+        <item name="alertDialogTheme">@style/MaterialDialog</item>
+        <item name="preferenceTheme">@style/MaterialPreferenceTheme</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.AppCompat.Display3</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.AppCompat.Display2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.AppCompat.Display1</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.AppCompat.Headline</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.AppCompat.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.AppCompat.Subhead</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.AppCompat.Body2</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.AppCompat.Body1</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Material3.Corner.None</item>
+        <item name="android:navigationBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="MaterialCard" parent="Widget.MaterialComponents.CardView">
+        <item name="materialThemeOverlay">@style/MaterialCardOverlay</item>
+        <item name="cardCornerRadius">0dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="MaterialCardOverlay">
+        <item name="colorPrimary">?attr/colorSurface</item>
+    </style>
+
+    <style name="MaterialButton" parent="Widget.MaterialComponents.Button">
+        <item name="materialThemeOverlay">@style/MaterialButtonOverlay</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Button</item>
+    </style>
+
+    <style name="MaterialButtonOverlay">
+        <item name="colorPrimary">?attr/colorSurface</item>
+        <item name="colorOnPrimary">?attr/colorControlNormal</item>
+    </style>
+
+    <style name="MaterialElevatedButton" parent="Widget.MaterialComponents.Button">
+        <item name="materialThemeOverlay">@style/MaterialElevatedButtonOverlay</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Button</item>
+    </style>
+
+    <style name="MaterialElevatedButtonOverlay">
+        <item name="colorPrimary">?attr/colorButtonNormal</item>
+        <item name="colorOnPrimary">?attr/colorControlNormal</item>
+    </style>
+
+    <style name="MaterialDialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Button</item>
+    </style>
+
+    <style name="MaterialTabLayoutDark" parent="Widget.MaterialComponents.TabLayout">
+        <item name="materialThemeOverlay">@style/MaterialTabLayoutOverlayDark</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="tabIndicatorColor">?attr/colorAccent</item>
+        <item name="tabTextAppearance">@style/TextAppearance.Design.Tab</item>
+    </style>
+
+    <style name="MaterialTabLayoutOverlayDark">
+        <item name="colorPrimary">?attr/colorControlNormal</item>
+        <item name="colorOnSurface">#CCCCCC</item>
+    </style>
+
+    <style name="MaterialTabLayoutLight" parent="Widget.MaterialComponents.TabLayout">
+        <item name="materialThemeOverlay">@style/MaterialTabLayoutOverlayLight</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="tabIndicatorColor">?attr/colorAccent</item>
+        <item name="tabTextAppearance">@style/TextAppearance.Design.Tab</item>
+    </style>
+
+    <style name="MaterialTabLayoutOverlayLight">
+        <item name="colorPrimary">?attr/colorControlNormal</item>
+        <item name="colorOnSurface">@android:color/black</item>
+    </style>
+
+    <style name="AppCompatRadioButton" parent="Widget.AppCompat.CompoundButton.RadioButton">
+        <item name="android:padding">10dp</item>
+    </style>
+
+    <style name="MaterialCheckBox" parent="Widget.MaterialComponents.CompoundButton.CheckBox">
+        <item name="buttonIconTint">?attr/colorSurface</item>
+        <item name="buttonTint">@color/material_check_box</item>
+        <item name="android:padding">10dp</item>
+    </style>
+
+    <style name="MaterialLinearProgressIndicator" parent="Widget.MaterialComponents.LinearProgressIndicator">
+        <item name="indicatorColor">?attr/colorAccent</item>
+        <item name="trackColor">?attr/colorButtonNormal</item>
+        <item name="trackThickness">4.5dp</item>
+    </style>
+
+    <style name="MaterialLinearProgressIndicatorBlue" parent="Widget.MaterialComponents.LinearProgressIndicator">
+        <item name="indicatorColor">?attr/colorAccent</item>
+        <item name="trackThickness">4.5dp</item>
+    </style>
+
+    <style name="MaterialFloatingActionButton" parent="Widget.MaterialComponents.FloatingActionButton">
+        <item name="fabCustomSize">40dp</item>
+        <item name="tint">@android:color/black</item>
+        <item name="backgroundTint">#B3364f61</item>
+    </style>
+
+    <style name="MaterialDividerDark" parent="Widget.MaterialComponents.MaterialDivider">
+        <item name="dividerColor">@color/secondaryDark</item>
+    </style>
+
+    <style name="MaterialDividerLight" parent="Widget.MaterialComponents.MaterialDivider">
+        <item name="dividerColor">@color/secondaryLight</item>
+    </style>
+
+    <style name="MaterialDividerBlue" parent="Widget.MaterialComponents.MaterialDivider">
+        <item name="dividerColor">@color/secondaryTextColorBlue</item>
+    </style>
+
+    <style name="MaterialBottomNavigationDark" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/MaterialBottomNavigationOverlay</item>
+        <item name="itemTextAppearanceActive">@style/MaterialBottomNavigationText</item>
+        <item name="itemTextAppearanceInactive">@style/MaterialBottomNavigationText</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconTint">@color/nav_bar_dark</item>
+        <item name="itemTextColor">@color/nav_bar_dark</item>
+    </style>
+
+    <style name="MaterialBottomNavigationLight" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/MaterialBottomNavigationOverlay</item>
+        <item name="itemTextAppearanceActive">@style/MaterialBottomNavigationText</item>
+        <item name="itemTextAppearanceInactive">@style/MaterialBottomNavigationText</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconTint">@color/nav_bar_light</item>
+        <item name="itemTextColor">@color/nav_bar_light</item>
+    </style>
+
+    <style name="MaterialBottomNavigationBlue" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/MaterialBottomNavigationOverlay</item>
+        <item name="itemTextAppearanceActive">@style/MaterialBottomNavigationText</item>
+        <item name="itemTextAppearanceInactive">@style/MaterialBottomNavigationText</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconTint">@color/nav_bar_blue</item>
+        <item name="itemTextColor">@color/nav_bar_blue</item>
+    </style>
+
+    <style name="MaterialBottomNavigationOverlay">
+        <item name="colorPrimary">?attr/colorControlNormal</item>
+        <item name="colorOnSurface">?attr/colorControlNormal</item>
+    </style>
+
+    <style name="MaterialBottomNavigationText" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="MaterialBottomSheet" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/MaterialBottomSheetModal</item>
+    </style>
+
+    <style name="MaterialBottomSheetModal" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="backgroundTint">?attr/colorSurface</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+
+    <style name="MaterialDialog" parent="ThemeOverlay.MaterialComponents.Dialog">
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="buttonBarButtonStyle">@style/MaterialDialogButton</item>
+    </style>
+
+    <style name="MaterialPreferenceTheme" parent="@style/PreferenceThemeOverlay">
+        <item name="android:tint">?attr/colorControlNormal</item>
     </style>
 
 </resources>

@@ -12,12 +12,14 @@ import android.util.TypedValue
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.github.andreyasadchy.xtra.R
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
     val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
@@ -44,35 +46,47 @@ fun Activity.applyTheme(): String {
     } else {
         prefs().getString(C.THEME, "0")!!
     }
-    if (prefs().getBoolean(C.UI_THEME_ROUNDED_CORNERS, true)) {
-        setTheme(when(theme) {
-            "4" -> R.style.DarkTheme
-            "6" -> R.style.AmoledTheme
-            "5" -> R.style.LightTheme
-            "1" -> R.style.AmoledTheme
-            "2" -> R.style.LightTheme
-            "3" -> R.style.BlueTheme
-            else -> R.style.DarkTheme
-        })
+    if (prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
+        if (prefs().getBoolean(C.UI_THEME_ROUNDED_CORNERS, true)) {
+            setTheme(when(theme) {
+                "4" -> R.style.DarkTheme
+                "6" -> R.style.AmoledTheme
+                "5" -> R.style.LightTheme
+                "1" -> R.style.AmoledTheme
+                "2" -> R.style.LightTheme
+                "3" -> R.style.BlueTheme
+                else -> R.style.DarkTheme
+            })
+        } else {
+            setTheme(when(theme) {
+                "4" -> R.style.DarkThemeNoCorners
+                "6" -> R.style.AmoledThemeNoCorners
+                "5" -> R.style.LightThemeNoCorners
+                "1" -> R.style.AmoledThemeNoCorners
+                "2" -> R.style.LightThemeNoCorners
+                "3" -> R.style.BlueThemeNoCorners
+                else -> R.style.DarkThemeNoCorners
+            })
+        }
+        if (listOf("4", "6", "5").contains(theme)) {
+            DynamicColors.applyToActivityIfAvailable(this,
+                DynamicColorsOptions.Builder().apply {
+                    if (theme == "6") {
+                        setThemeOverlay(R.style.AmoledDynamicOverlay)
+                    }
+                }.build()
+            )
+        }
     } else {
         setTheme(when(theme) {
-            "4" -> R.style.DarkThemeNoCorners
-            "6" -> R.style.AmoledThemeNoCorners
-            "5" -> R.style.LightThemeNoCorners
-            "1" -> R.style.AmoledThemeNoCorners
-            "2" -> R.style.LightThemeNoCorners
-            "3" -> R.style.BlueThemeNoCorners
-            else -> R.style.DarkThemeNoCorners
+            "4" -> R.style.AppCompatDarkTheme
+            "6" -> R.style.AppCompatAmoledTheme
+            "5" -> R.style.AppCompatLightTheme
+            "1" -> R.style.AppCompatAmoledTheme
+            "2" -> R.style.AppCompatLightTheme
+            "3" -> R.style.AppCompatBlueTheme
+            else -> R.style.AppCompatDarkTheme
         })
-    }
-    if (listOf("4", "6", "5").contains(theme)) {
-        DynamicColors.applyToActivityIfAvailable(this,
-            DynamicColorsOptions.Builder().apply {
-                if (theme == "6") {
-                    setThemeOverlay(R.style.AmoledDynamicOverlay)
-                }
-            }.build()
-        )
     }
     val isLightTheme = theme.isLightTheme
     WindowInsetsControllerCompat(window, window.decorView).run {
@@ -107,6 +121,14 @@ fun Activity.applyTheme(): String {
         }
     }
     return theme
+}
+
+fun Context.getAlertDialogBuilder(): AlertDialog.Builder {
+    return if (prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
+        MaterialAlertDialogBuilder(this)
+    } else {
+        AlertDialog.Builder(this)
+    }
 }
 
 fun Context.getActivity(): Activity? {

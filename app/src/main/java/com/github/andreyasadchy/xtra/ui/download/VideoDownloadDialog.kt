@@ -21,9 +21,9 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -49,7 +49,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogVideoDownloadBinding.inflate(layoutInflater)
-        val builder = MaterialAlertDialogBuilder(requireContext())
+        val builder = requireContext().getAlertDialogBuilder()
             .setView(binding.root)
         viewModel.integrity.observe(this) {
             if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {

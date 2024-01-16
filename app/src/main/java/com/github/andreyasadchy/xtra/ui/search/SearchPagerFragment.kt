@@ -27,11 +27,11 @@ import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.showKeyboard
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
@@ -116,7 +116,7 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                 when (menuItem.itemId) {
                     R.id.searchUser -> {
                         val binding = DialogUserResultBinding.inflate(layoutInflater)
-                        MaterialAlertDialogBuilder(requireContext()).apply {
+                        requireContext().getAlertDialogBuilder().apply {
                             setView(binding.root)
                             setNegativeButton(getString(android.R.string.cancel), null)
                             setPositiveButton(getString(android.R.string.ok)) { _, _ ->
@@ -128,7 +128,7 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                                     viewModel.userResult.observe(viewLifecycleOwner) {
                                         if (it != null) {
                                             if (!it.first.isNullOrBlank()) {
-                                                MaterialAlertDialogBuilder(requireContext()).apply {
+                                                requireContext().getAlertDialogBuilder().apply {
                                                     setTitle(it.first)
                                                     setMessage(it.second)
                                                     setNegativeButton(getString(android.R.string.cancel), null)

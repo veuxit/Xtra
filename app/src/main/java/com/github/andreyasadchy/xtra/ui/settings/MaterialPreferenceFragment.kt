@@ -6,14 +6,20 @@ import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.prefs
 
 abstract class MaterialPreferenceFragment : PreferenceFragmentCompat() {
 
     override fun onDisplayPreferenceDialog(preference: Preference) {
-        when (preference) {
-            is ListPreference -> showPreferenceDialog(preference, MaterialListPreference())
-            is EditTextPreference -> showPreferenceDialog(preference, MaterialEditTextPreference())
-            else -> super.onDisplayPreferenceDialog(preference)
+        if (requireContext().prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
+            when (preference) {
+                is ListPreference -> showPreferenceDialog(preference, MaterialListPreference())
+                is EditTextPreference -> showPreferenceDialog(preference, MaterialEditTextPreference())
+                else -> super.onDisplayPreferenceDialog(preference)
+            }
+        } else {
+            super.onDisplayPreferenceDialog(preference)
         }
     }
 

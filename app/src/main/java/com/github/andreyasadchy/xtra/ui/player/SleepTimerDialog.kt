@@ -14,8 +14,8 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogSleepTimerBinding
 import com.github.andreyasadchy.xtra.util.AdminReceiver
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class SleepTimerDialog : DialogFragment() {
 
@@ -35,7 +35,7 @@ class SleepTimerDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogSleepTimerBinding.inflate(layoutInflater)
         val context = requireContext()
-        val builder = MaterialAlertDialogBuilder(context)
+        val builder = context.getAlertDialogBuilder()
                 .setTitle(getString(R.string.sleep_timer))
                 .setView(binding.root)
         with(binding) {

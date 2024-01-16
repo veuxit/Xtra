@@ -64,7 +64,7 @@
 
         <Button
             android:id="@+id/cancel"
-            style="?android:buttonBarButtonStyle"
+            style="?attr/dialogButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@android:string/cancel"
@@ -77,7 +77,7 @@
 
         <Button
             android:id="@+id/download"
-            style="?android:buttonBarButtonStyle"
+            style="?attr/dialogButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/download"

@@ -67,6 +67,7 @@ object C {
     const val UI_THEME_EDGE_TO_EDGE = "ui_theme_edge_to_edge"
     const val UI_THEME_APPBAR_LIFT = "ui_theme_appbar_lift"
     const val UI_THEME_BOTTOM_NAV_COLOR = "ui_theme_bottom_nav_color"
+    const val UI_THEME_MATERIAL3 = "ui_theme_material3"
     const val PLAYER_DOUBLETAP = "player_doubletap"
     const val PLAYER_PAUSE = "player_pause"
     const val PLAYER_MINIMIZE = "player_minimize"

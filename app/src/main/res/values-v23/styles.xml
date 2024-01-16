@@ -6,4 +6,7 @@
     <style name="LightThemeNoCorners" parent="BaseLightThemeNoCorners">
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
+    <style name="AppCompatLightTheme" parent="BaseAppCompatLightTheme">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>

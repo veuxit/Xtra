@@ -395,6 +395,11 @@ class SettingsActivity : AppCompatActivity() {
                 activity.recreate()
                 true
             }
+            findPreference<SwitchPreferenceCompat>(C.UI_THEME_MATERIAL3)?.setOnPreferenceChangeListener { _, _ ->
+                changed = true
+                activity.recreate()
+                true
+            }
         }
 
         override fun onSaveInstanceState(outState: Bundle) {
