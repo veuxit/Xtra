@@ -594,4 +594,5 @@
     <string name="appbar_lift">Поднять панель приложения при прокрутке</string>
     <string name="bottom_nav_color">Цвет нижней навигации</string>
     <string name="dynamic_amoled">Динамическая чёрная</string>
+    <string name="material_3">Material 3 theme</string>
 </resources>

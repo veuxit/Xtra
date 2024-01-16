@@ -25,10 +25,14 @@
 
             <Button
                 android:id="@+id/btnDown"
-                style="@style/Widget.Material3.Button.ElevatedButton"
+                style="?attr/elevatedButtonStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
+                android:layout_marginStart="4dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginEnd="4dp"
+                android:layout_marginRight="4dp"
                 android:text="@string/scroll_down"
                 android:visibility="gone"
                 tools:visibility="visible" />
@@ -96,7 +100,6 @@
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tabLayout"
-                style="@style/Widget.Material3.TabLayout.OnSurface"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:tabGravity="fill"

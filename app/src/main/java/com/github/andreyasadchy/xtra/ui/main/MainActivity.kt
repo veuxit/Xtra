@@ -496,7 +496,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             }
         }, null)
         binding.navBar.apply {
-            if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true)) {
+            if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true) && prefs.getBoolean(C.UI_THEME_MATERIAL3, true)) {
                 itemBackground = ColorDrawable(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             }
             menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)

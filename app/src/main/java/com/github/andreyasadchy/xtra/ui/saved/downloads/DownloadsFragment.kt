@@ -18,7 +18,7 @@ import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.DownloadWorker
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -49,7 +49,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
             )
         }, {
             val delete = getString(R.string.delete)
-            MaterialAlertDialogBuilder(requireActivity())
+            requireActivity().getAlertDialogBuilder()
                 .setTitle(delete)
                 .setMessage(getString(R.string.are_you_sure))
                 .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }

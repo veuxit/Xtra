@@ -42,12 +42,12 @@ import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -467,7 +467,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val tags = result.get().extras.getString(PlaybackService.RESULT)
                     if (!tags.isNullOrBlank()) {
-                        MaterialAlertDialogBuilder(requireContext()).apply {
+                        requireContext().getAlertDialogBuilder().apply {
                             setView(NestedScrollView(context).apply {
                                 addView(HorizontalScrollView(context).apply {
                                     addView(TextView(context).apply {

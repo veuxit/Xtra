@@ -8,4 +8,8 @@
         <item name="android:navigationBarColor">@color/lightScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
+    <style name="AppCompatLightTheme" parent="BaseAppCompatLightTheme">
+        <item name="android:navigationBarColor">@color/lightScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>

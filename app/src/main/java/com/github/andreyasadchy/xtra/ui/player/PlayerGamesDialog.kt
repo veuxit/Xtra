@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.core.content.res.use
 import androidx.core.view.setPadding
 import androidx.core.widget.NestedScrollView
 import com.github.andreyasadchy.xtra.R
@@ -13,7 +14,6 @@ import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.view.GridRecyclerView
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.convertDpToPixels
 
 
 class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
@@ -46,7 +46,9 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
         val recycleView = GridRecyclerView(context).apply {
             id = R.id.recyclerView
             layoutParams = params
-            setPadding(context.convertDpToPixels(8F))
+            context.obtainStyledAttributes(intArrayOf(R.attr.dialogLayoutPadding)).use {
+                setPadding(it.getDimensionPixelSize(0, 0))
+            }
             adapter = PlayerGamesDialogAdapter(this@PlayerGamesDialog).also {
                 it.submitList(arguments?.getParcelableArrayList<Game>(C.GAMES_LIST)?.toList())
             }
