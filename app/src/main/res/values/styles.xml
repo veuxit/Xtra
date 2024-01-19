@@ -666,12 +666,14 @@
         <item name="colorOnSurface">?attr/colorControlNormal</item>
     </style>
 
-    <style name="MaterialBottomNavigationText" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">10sp</item>
+    <style name="MaterialBottomNavigationText" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:textSize">11sp</item>
     </style>
 
     <style name="MaterialBottomSheet" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/MaterialBottomSheetModal</item>
+        <item name="paddingLeftSystemWindowInsets">false</item>
+        <item name="paddingRightSystemWindowInsets">false</item>
     </style>
 
     <style name="MaterialBottomSheetModal" parent="Widget.MaterialComponents.BottomSheet.Modal">
