@@ -132,6 +132,8 @@
         <item name="android:id">@id/exo_rew_with_amount</item>
         <item name="android:foreground">@drawable/exo_styled_controls_rewind</item>
         <item name="android:gravity">center|bottom</item>
+        <item name="android:paddingRight">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
         <item name="android:paddingBottom">20dp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">10sp</item>
@@ -144,6 +146,8 @@
         <item name="android:id">@id/exo_ffwd_with_amount</item>
         <item name="android:foreground">@drawable/exo_styled_controls_fastforward</item>
         <item name="android:gravity">center|bottom</item>
+        <item name="android:paddingRight">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
         <item name="android:paddingBottom">20dp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">10sp</item>
