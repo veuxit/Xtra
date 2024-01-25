@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Filter
 import android.widget.ImageView
 import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
@@ -33,6 +34,7 @@ import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.extensions.LayoutContainer
+import java.util.regex.Pattern
 import kotlin.math.max
 
 class ChatView : ConstraintLayout {
@@ -500,11 +502,55 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    class AutoCompleteAdapter(
+    inner class AutoCompleteAdapter(
             context: Context,
             private val fragment: Fragment,
             list: List<Any>,
             private val emoteQuality: String) : ArrayAdapter<Any>(context, 0, list) {
+
+        private var mFilter: ArrayFilter? = null
+
+        override fun getFilter(): Filter = mFilter ?: ArrayFilter().also { mFilter = it }
+
+        private inner class ArrayFilter : Filter() {
+            override fun performFiltering(prefix: CharSequence?): FilterResults {
+                val results = FilterResults()
+                val list = autoCompleteList.toList()
+                val originalValuesField = ArrayAdapter::class.java.getDeclaredField("mOriginalValues")
+                originalValuesField.isAccessible = true
+                val originalValues = originalValuesField.get(this@AutoCompleteAdapter) as List<*>?
+                if (originalValues == null) {
+                    originalValuesField.set(this@AutoCompleteAdapter, list)
+                }
+                if (prefix.isNullOrEmpty()) {
+                    results.values = list
+                    results.count = list.size
+                } else {
+                    var regexString = ""
+                    prefix.toString().lowercase().forEach {
+                        regexString += "${Pattern.quote(it.toString())}\\S*?"
+                    }
+                    val regex = Regex(regexString)
+                    val newList = list.filter {
+                        regex.matches(it.toString().lowercase())
+                    }
+                    results.values = newList
+                    results.count = newList.size
+                }
+                return results
+            }
+
+            override fun publishResults(constraint: CharSequence?, results: FilterResults) {
+                val objectsField = ArrayAdapter::class.java.getDeclaredField("mObjects")
+                objectsField.isAccessible = true
+                objectsField.set(this@AutoCompleteAdapter, results.values as? List<*> ?: emptyList<Any>())
+                if (results.count > 0) {
+                    notifyDataSetChanged()
+                } else {
+                    notifyDataSetInvalidated()
+                }
+            }
+        }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val viewHolder: ViewHolder
@@ -552,11 +598,11 @@ class ChatView : ConstraintLayout {
 
         override fun getViewTypeCount(): Int = 2
 
-        class ViewHolder(override val containerView: View) : LayoutContainer
+        inner class ViewHolder(override val containerView: View) : LayoutContainer
+    }
 
-        private companion object {
-            const val TYPE_EMOTE = 0
-            const val TYPE_USERNAME = 1
-        }
+    private companion object {
+        const val TYPE_EMOTE = 0
+        const val TYPE_USERNAME = 1
     }
 }
