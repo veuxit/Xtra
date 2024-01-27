@@ -28,6 +28,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentTransaction
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
@@ -157,6 +159,19 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     putBoolean(C.PLAYER_STREAM_PROXY, true)
                 }
                 putBoolean(C.FIRST_LAUNCH6, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH7, true)) {
+            prefs.edit {
+                when {
+                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_H265, false, false).none { it.hardwareAccelerated } -> {
+                        putString(C.TOKEN_SUPPORTED_CODECS, "h264")
+                    }
+                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_AV1, false, false).none { it.hardwareAccelerated } -> {
+                        putString(C.TOKEN_SUPPORTED_CODECS, "h265,h264")
+                    }
+                }
+                putBoolean(C.FIRST_LAUNCH7, false)
             }
         }
         viewModel.integrity.observe(this) {
