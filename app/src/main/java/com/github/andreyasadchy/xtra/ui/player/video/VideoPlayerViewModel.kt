@@ -42,10 +42,10 @@ class VideoPlayerViewModel @Inject constructor(
     val gamesList = MutableLiveData<List<Game>>()
     var shouldRetry = true
 
-    fun load(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?) {
+    fun load(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?) {
         viewModelScope.launch {
             try {
-                playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType)
+                playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs)
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     _integrity.postValue(true)
