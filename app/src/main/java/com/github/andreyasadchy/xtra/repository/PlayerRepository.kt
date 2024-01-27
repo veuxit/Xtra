@@ -37,6 +37,7 @@ import org.json.JSONObject
 import retrofit2.Response
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.net.URLEncoder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,7 +73,7 @@ class PlayerRepository @Inject constructor(
         }.build()).execute().use { it.body()?.string() ?: "" }
     }
 
-    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
+    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId)
         val accessToken = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
             val json = JsonObject().apply {
@@ -119,8 +120,10 @@ class PlayerRepository @Inject constructor(
             "allow_audio_only", "true",
             "fast_bread", "true", //low latency
             "p", Random.nextInt(9999999).toString(),
-            "sig", accessToken?.signature ?: "",
-            "token", accessToken?.token ?: ""
+            "platform", if (supportedCodecs?.contains("av1", true) == true) "web" else null,
+            "sig", accessToken?.signature,
+            "supported_codecs", supportedCodecs,
+            "token", accessToken?.token
         ).toString()
         if (proxyMultivariantPlaylist) {
             val response = getResponse(
@@ -134,15 +137,17 @@ class PlayerRepository @Inject constructor(
         } else url
     }
 
-    suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?): Uri = withContext(Dispatchers.IO) {
+    suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?): Uri = withContext(Dispatchers.IO) {
         val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType)
         buildUrl(
             "https://usher.ttvnw.net/vod/$videoId.m3u8?",
             "allow_source", "true",
             "allow_audio_only", "true",
             "p", Random.nextInt(9999999).toString(),
-            "sig", accessToken?.signature ?: "",
-            "token", accessToken?.token ?: "",
+            "platform", if (supportedCodecs?.contains("av1", true) == true) "web" else null,
+            "sig", accessToken?.signature,
+            "supported_codecs", supportedCodecs,
+            "token", accessToken?.token,
         )
     }
 
@@ -182,16 +187,19 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    private fun buildUrl(url: String, vararg queryParams: String): Uri {
+    private fun buildUrl(url: String, vararg queryParams: String?): Uri {
         val stringBuilder = StringBuilder(url)
         stringBuilder.append(queryParams[0])
             .append("=")
-            .append(queryParams[1])
+            .append(URLEncoder.encode(queryParams[1], Charsets.UTF_8.name()))
         for (i in 2 until queryParams.size step 2) {
-            stringBuilder.append("&")
-                .append(queryParams[i])
-                .append("=")
-                .append(queryParams[i + 1])
+            val value = queryParams[i + 1]
+            if (!value.isNullOrBlank()) {
+                stringBuilder.append("&")
+                    .append(queryParams[i])
+                    .append("=")
+                    .append(URLEncoder.encode(value, Charsets.UTF_8.name()))
+            }
         }
         return stringBuilder.toString().toUri()
     }

@@ -242,7 +242,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             viewModel.load(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                 videoId = video.id,
-                playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
+                playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264")
             )
             viewModel.result.observe(viewLifecycleOwner) { url ->
                 player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(

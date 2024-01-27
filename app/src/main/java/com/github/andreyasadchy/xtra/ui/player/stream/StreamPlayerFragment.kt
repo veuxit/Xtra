@@ -261,6 +261,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
                         randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
                         xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
                         playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
+                        supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                         proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
                         proxyMultivariantPlaylist = proxyMultivariantPlaylist,
                         proxyHost = proxyHost,

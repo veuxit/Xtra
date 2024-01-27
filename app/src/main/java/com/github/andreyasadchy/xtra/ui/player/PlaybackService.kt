@@ -205,22 +205,49 @@ class PlaybackService : MediaSessionService() {
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                     val manifest = mediaSession?.player?.currentManifest as? HlsManifest
                     if (urls.isEmpty() && manifest is HlsManifest) {
-                        manifest.multivariantPlaylist.let {
-                            val tags = it.tags
+                        manifest.multivariantPlaylist.let { playlist ->
+                            val tags = playlist.tags
+                            val qualityNames = mutableListOf<String>()
+                            val codecs = mutableListOf<String>()
                             val map = mutableMapOf<String, String>()
                             val appContext = XtraApp.INSTANCE.applicationContext
                             val audioOnly = ContextCompat.getString(appContext, R.string.audio_only)
-                            val pattern = Pattern.compile("NAME=\"(.+?)\"")
+                            val qualityPattern = Pattern.compile("NAME=\"(.+?)\"")
+                            val codecPattern = Pattern.compile("CODECS=\"(.+?)\\.")
                             var trackIndex = 0
                             tags.forEach { tag ->
                                 if (tag.startsWith("#EXT-X-MEDIA")) {
-                                    val matcher = pattern.matcher(tag)
+                                    val matcher = qualityPattern.matcher(tag)
                                     if (matcher.find()) {
                                         val quality = matcher.group(1)!!
-                                        val url = it.variants[trackIndex++].url.toString()
-                                        map[if (!quality.startsWith("audio", true)) quality else audioOnly] = url
+                                        qualityNames.add(quality)
                                     }
                                 }
+                                if (tag.startsWith("#EXT-X-STREAM-INF")) {
+                                    val matcher = codecPattern.matcher(tag)
+                                    if (matcher.find()) {
+                                        val codec = matcher.group(1)!!
+                                        codecs.add(when(codec) {
+                                            "av01" -> "AV1"
+                                            "hvc1" -> "H.265"
+                                            "avc1" -> "H.264"
+                                            else -> codec
+                                        })
+                                    }
+                                }
+                            }
+                            if (codecs.all { it == "H.264" || it == "mp4a" }) {
+                                codecs.clear()
+                            }
+                            qualityNames.forEachIndexed { index, quality ->
+                                val url = playlist.variants[trackIndex++].url.toString()
+                                map[if (!quality.startsWith("audio", true)) {
+                                    codecs.getOrNull(index)?.let { codec ->
+                                        "$quality $codec"
+                                    } ?: quality
+                                } else {
+                                    audioOnly
+                                }] = url
                             }
                             urls = map.apply {
                                 if (containsKey(audioOnly)) {
@@ -745,8 +772,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun setQualityIndex() {
-        val defaultQuality = prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved")
-        val savedQuality = prefs().getString(C.PLAYER_QUALITY, "720p60")
+        val defaultQuality = prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved")?.substringBefore(" ")
+        val savedQuality = prefs().getString(C.PLAYER_QUALITY, "720p60")?.substringBefore(" ")
         val index = when (defaultQuality) {
             "Source" -> {
                 if (usingAutoQuality) {
