@@ -30,7 +30,7 @@ android {
         targetSdk = 34
         versionCode = 223
         versionName = "2.28.0"
-        resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW")
+        resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
     buildTypes {
