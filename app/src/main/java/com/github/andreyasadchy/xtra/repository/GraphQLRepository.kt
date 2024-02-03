@@ -54,7 +54,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "f51c71103d886ee77e4ff84bfc92352acf66a120413f8e99cfcea092e600936f")
+                    addProperty("sha256Hash", "3093517e37e4f4cb48906155bcd894150aef92617939236d2508f3375ab732ce")
                     addProperty("version", 1)
                 })
             })
@@ -166,7 +166,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "19cd6b171185fa3937c4fd6f80363a7a38a7dc269c43eb205732159bc932cb01")
+                    addProperty("sha256Hash", "8ee167e2915b2a005921862a6a133f0ba71d2b7d5f804fc885883ad9eed2ffd3")
                     addProperty("version", 1)
                 })
             })
@@ -218,7 +218,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "e7db9e6e9ca5ab518adcfe6813b236e9cd9c3a9a70663e698c909ca173ecf1f1")
+                    addProperty("sha256Hash", "6eb19a6010483bc418d3818fb4f9169979cd3bf89abbb3edca96a528e5c3dd84")
                     addProperty("version", 1)
                 })
             })
@@ -240,7 +240,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "1dd78a0ab0008cb6907046c71d94b6798d59d3828c2720a55fc3f16785ff9769")
+                    addProperty("sha256Hash", "ed57101f7f38b69456f50413b05e044e505a0bdcad819ad5ee734b9c3b74cf8c")
                     addProperty("version", 1)
                 })
             })
@@ -261,7 +261,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "a937f1d22e269e39a03b509f65a7490f9fc247d7f83d6ac1421523e3b68042cb")
+                    addProperty("sha256Hash", "072ae0f19038145cdf1bbe51c83be73fa15ab553483509a8bb65589f6b9ca279")
                     addProperty("version", 1)
                 })
             })
@@ -302,7 +302,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "6ea6e6f66006485e41dbe3ebd69d5674c5b22896ce7b595d7fce6411a3790138")
+                    addProperty("sha256Hash", "f4964f83289fa2d6b6454e7d765e32a1f2d1d2b63884ff919c96a3d597a35518")
                     addProperty("version", 1)
                 })
             })
@@ -326,7 +326,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "6ea6e6f66006485e41dbe3ebd69d5674c5b22896ce7b595d7fce6411a3790138")
+                    addProperty("sha256Hash", "f4964f83289fa2d6b6454e7d765e32a1f2d1d2b63884ff919c96a3d597a35518")
                     addProperty("version", 1)
                 })
             })
@@ -350,7 +350,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "6ea6e6f66006485e41dbe3ebd69d5674c5b22896ce7b595d7fce6411a3790138")
+                    addProperty("sha256Hash", "f4964f83289fa2d6b6454e7d765e32a1f2d1d2b63884ff919c96a3d597a35518")
                     addProperty("version", 1)
                 })
             })
@@ -437,7 +437,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val channel = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "368aaf9c04d3876cdd0076c105af2cd44b3bfd51a688462152ed4d3a5657e2b9")
+                    addProperty("sha256Hash", "b15a28e254a3f8b97f4ebe9c6c023fecb35e0c52db698d0ae7343c1182a073cd")
                     addProperty("version", 1)
                 })
             })
@@ -502,7 +502,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "8d2793384aac3773beab5e59bd5d6f585aedb923d292800119e03d40cd0f9b41")
+                    addProperty("sha256Hash", "71835d5ef425e154bf282453a926d99b328cdc5e32f36d3a209d0f4778b41203")
                     addProperty("version", 1)
                 })
             })
@@ -584,7 +584,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "556e6457d0347d3f831b0560fabc126860ce47f14bd7ed13432bc43548e2b459")
+                    addProperty("sha256Hash", "bcd7302425eb539b7f13af50f47b300355f011f20b6e202f09ee989083ae9257")
                     addProperty("version", 1)
                 })
             })
@@ -807,17 +807,19 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getJoinRaid(headers, json)
     }
 
-    suspend fun loadUserEmotes(headers: Map<String, String>, channelId: String?): UserEmotesDataResponse {
+    suspend fun loadUserEmotes(headers: Map<String, String>, channelId: String?, cursor: String?): UserEmotesDataResponse {
         val json = JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "b9ce64d02e26c6fe9adbfb3991284224498b295542f9c5a51eacd3610e659cfb")
+                    addProperty("sha256Hash", "cdf1fab775369d49d4bb5342a138e7b080e1d85d7dcaac7369d84de9321f57b3")
                     addProperty("version", 1)
                 })
             })
-            addProperty("operationName", "AvailableEmotesForChannel")
+            addProperty("operationName", "AvailableEmotesForChannelPaginated")
             add("variables", JsonObject().apply {
+                addProperty("cursor", cursor)
                 addProperty("channelID", channelId)
+                addProperty("pageLimit", 350)
                 addProperty("withOwner", true)
             })
         }

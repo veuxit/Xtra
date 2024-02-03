@@ -15,9 +15,11 @@ class UserEmotesDataDeserializer : JsonDeserializer<UserEmotesDataResponse> {
             item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
         }
         val data = mutableListOf<TwitchEmote>()
-        val dataJson = json.asJsonObject.get("data").asJsonObject.get("channel").asJsonObject.get("self").asJsonObject.get("availableEmoteSets").asJsonArray
+        val dataJson = json.asJsonObject.get("data").asJsonObject.get("channel").asJsonObject.get("self").asJsonObject.get("availableEmoteSetsPaginated").asJsonObject.get("edges").asJsonArray
+        val cursor = dataJson?.lastOrNull()?.takeIf { it.isJsonObject }?.asJsonObject?.get("cursor")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+        val hasNextPage = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("channel")?.takeIf { it.isJsonObject }?.asJsonObject?.get("self")?.takeIf { it.isJsonObject }?.asJsonObject?.get("availableEmoteSetsPaginated")?.takeIf { it.isJsonObject }?.asJsonObject?.get("pageInfo")?.takeIf { it.isJsonObject }?.asJsonObject?.get("hasNextPage")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean
         dataJson?.forEach { setElement ->
-            setElement.takeIf { it.isJsonObject }?.asJsonObject?.let { set ->
+            setElement.takeIf { it.isJsonObject }?.asJsonObject?.get("node")?.takeIf { it.isJsonObject }?.asJsonObject?.let { set ->
                 set.get("emotes")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { emote ->
                     emote.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                         obj.get("token")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
@@ -32,6 +34,6 @@ class UserEmotesDataDeserializer : JsonDeserializer<UserEmotesDataResponse> {
                 }
             }
         }
-        return UserEmotesDataResponse(data)
+        return UserEmotesDataResponse(data, cursor, hasNextPage)
     }
 }
