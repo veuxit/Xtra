@@ -8,18 +8,6 @@ import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.util.chat.ChatCallback
-import com.github.andreyasadchy.xtra.util.chat.ChatListenerImpl
-import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
-import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
-import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
-import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
-import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
-import com.github.andreyasadchy.xtra.util.chat.PubSubCallback
-import com.github.andreyasadchy.xtra.util.chat.PubSubListenerImpl
-import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
-import kotlinx.coroutines.CoroutineScope
-import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.lang.Integer.parseInt
 import java.lang.Long.parseLong
@@ -220,26 +208,6 @@ object TwitchApiHelper {
             DateUtils.FORMAT_SHOW_DATE
         }
         return DateUtils.formatDateTime(context, date, format)
-    }
-
-    fun startChatReadIRC(useSSL: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: ChatCallback): ChatReadIRC {
-        return ChatReadIRC(useSSL, loggedIn, channelName, ChatListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
-    }
-
-    fun startChatWriteIRC(useSSL: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: ChatCallback): ChatWriteIRC {
-        return ChatWriteIRC(useSSL, userName, userToken, channelName, ChatListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
-    }
-
-    fun startChatReadWebSocket(loggedIn: Boolean, channelName: String, client: OkHttpClient, coroutineScope: CoroutineScope, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: ChatCallback): ChatReadWebSocket {
-        return ChatReadWebSocket(loggedIn, channelName, client, coroutineScope, ChatListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
-    }
-
-    fun startChatWriteWebSocket(userName: String?, userToken: String?, channelName: String, client: OkHttpClient, coroutineScope: CoroutineScope, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: ChatCallback): ChatWriteWebSocket {
-        return ChatWriteWebSocket(userName, userToken, channelName, client, coroutineScope, ChatListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
-    }
-
-    fun startPubSub(channelId: String, userId: String?, gqlToken: String?, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, client: OkHttpClient, coroutineScope: CoroutineScope, newMessageListener: OnChatMessageReceivedListener, callback: PubSubCallback): PubSubWebSocket {
-        return PubSubWebSocket(channelId, userId, gqlToken, collectPoints, notifyPoints, showRaids, client, coroutineScope, PubSubListenerImpl(newMessageListener, callback)).apply { connect() }
     }
 
     fun parseClipOffset(url: String): Double {

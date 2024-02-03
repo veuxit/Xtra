@@ -25,18 +25,22 @@ import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.SingleLiveEvent
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.BroadcastSettings
 import com.github.andreyasadchy.xtra.util.chat.ChatCallback
+import com.github.andreyasadchy.xtra.util.chat.ChatListenerImpl
 import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Command
+import com.github.andreyasadchy.xtra.util.chat.EventSubCallback
+import com.github.andreyasadchy.xtra.util.chat.EventSubListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
 import com.github.andreyasadchy.xtra.util.chat.PlaybackMessage
 import com.github.andreyasadchy.xtra.util.chat.PointsEarned
 import com.github.andreyasadchy.xtra.util.chat.PubSubCallback
+import com.github.andreyasadchy.xtra.util.chat.PubSubListenerImpl
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
@@ -131,7 +135,7 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean, useApiCommands: Boolean) {
+    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
         if (chat == null && channelLogin != null) {
             this.messageLimit = messageLimit
             this.streamId = streamId
@@ -155,6 +159,8 @@ class ChatViewModel @Inject constructor(
                 collectPoints = collectPoints,
                 notifyPoints = notifyPoints,
                 useApiCommands = useApiCommands,
+                useApiChatMessages = useApiChatMessages,
+                useEventSubChat = useEventSubChat,
                 checkIntegrity = checkIntegrity
             )
             chat?.start()
@@ -469,12 +475,15 @@ class ChatViewModel @Inject constructor(
         private val collectPoints: Boolean,
         private val notifyPoints: Boolean,
         private val useApiCommands: Boolean,
-        private val checkIntegrity: Boolean) : ChatController(), ChatCallback, PubSubCallback {
+        private val useApiChatMessages: Boolean,
+        private val useEventSubChat: Boolean,
+        private val checkIntegrity: Boolean) : ChatController(), ChatCallback, PubSubCallback, EventSubCallback {
 
         private var chatReadIRC: ChatReadIRC? = null
         private var chatWriteIRC: ChatWriteIRC? = null
         private var chatReadWebSocket: ChatReadWebSocket? = null
         private var chatWriteWebSocket: ChatWriteWebSocket? = null
+        private var eventSub: EventSubWebSocket? = null
         private var pubSub: PubSubWebSocket? = null
         private val allEmotes = mutableListOf<Emote>()
         private var usedRaidId: String? = null
@@ -508,43 +517,41 @@ class ChatViewModel @Inject constructor(
                 }
             } else {
                 if (message.toString() == "/dc" || message.toString() == "/disconnect") {
-                    if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive) == true) {
+                    if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive) == true) {
                         disconnect()
                     }
                 } else {
-                    chatWriteIRC?.send(message) ?: chatWriteWebSocket?.send(message)
-                    val usedEmotes = hashSetOf<RecentEmote>()
-                    val currentTime = System.currentTimeMillis()
-                    message.split(' ').forEach { word ->
-                        allEmotes.find { it.name == word }?.let { usedEmotes.add(RecentEmote(word, currentTime)) }
-                    }
-                    if (usedEmotes.isNotEmpty()) {
-                        playerRepository.insertRecentEmotes(usedEmotes)
-                    }
+                    sendMessage(message)
                 }
             }
         }
 
         override fun start() {
             pause()
-            if (useChatWebSocket) {
-                chatReadWebSocket = TwitchApiHelper.startChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
-                if (isLoggedIn) {
-                    chatWriteWebSocket = TwitchApiHelper.startChatWriteWebSocket(account.login, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, okHttpClient, viewModelScope, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
-                }
+            val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+            val helixToken = account.helixToken
+            if (useEventSubChat && !account.helixToken.isNullOrBlank()) {
+                eventSub = EventSubWebSocket(channelLogin, okHttpClient, viewModelScope, EventSubListenerImpl(this, this, this, usePubSub)).apply { connect() }
             } else {
-                chatReadIRC = TwitchApiHelper.startChatReadIRC(useSSL, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
-                if (isLoggedIn) {
-                    chatWriteIRC = TwitchApiHelper.startChatWriteIRC(useSSL, account.login, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")?.takeIf { it.isNotBlank() } ?: account.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
+                if (useChatWebSocket) {
+                    chatReadWebSocket = ChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
+                    if (isLoggedIn && (!gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank() && !useApiChatMessages)) {
+                        chatWriteWebSocket = ChatWriteWebSocket(account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, okHttpClient, viewModelScope, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
+                    }
+                } else {
+                    chatReadIRC = ChatReadIRC(useSSL, isLoggedIn, channelLogin, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+                    if (isLoggedIn && (!gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank() && !useApiChatMessages)) {
+                        chatWriteIRC = ChatWriteIRC(useSSL, account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+                    }
                 }
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
-                pubSub = TwitchApiHelper.startPubSub(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this)
+                pubSub = PubSubWebSocket(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, PubSubListenerImpl(this, this)).apply { connect() }
             }
         }
 
         override fun pause() {
-            chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect()
+            chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
             chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect()
             pubSub?.disconnect()
         }
@@ -713,18 +720,26 @@ class ChatViewModel @Inject constructor(
             }
         }
 
+        override fun onWelcomeMessage(sessionId: String) {
+            viewModelScope.launch {
+                repository.createChatEventSubSubscription(helixClientId, account.helixToken, account.id, channelId, sessionId)?.let {
+                    onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+                }
+            }
+        }
+
         fun addEmotes(list: List<Emote>) {
             allEmotes.addAll(list.filter { it !in allEmotes })
         }
 
         fun isActive(): Boolean? {
-            return chatReadIRC?.isActive ?: chatReadWebSocket?.isActive
+            return chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive
         }
 
         fun disconnect() {
-            if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive) == true) {
-                chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect()
-                chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect()
+            if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive) == true) {
+                chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
+                chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect() ?: eventSub?.disconnect()
                 pubSub?.disconnect()
                 usedRaidId = null
                 onRaidClose()
@@ -734,7 +749,15 @@ class ChatViewModel @Inject constructor(
         }
 
         private fun sendMessage(message: CharSequence) {
-            chatWriteIRC?.send(message) ?: chatWriteWebSocket?.send(message)
+            if (useApiChatMessages && !account.helixToken.isNullOrBlank()) {
+                viewModelScope.launch {
+                    repository.sendMessage(helixClientId, account.helixToken, account.id, channelId, message.toString())?.let {
+                        onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+                    }
+                }
+            } else {
+                chatWriteIRC?.send(message) ?: chatWriteWebSocket?.send(message)
+            }
             val usedEmotes = hashSetOf<RecentEmote>()
             val currentTime = System.currentTimeMillis()
             message.split(' ').forEach { word ->

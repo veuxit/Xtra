@@ -595,4 +595,6 @@
     <string name="bottom_nav_color">底部導覽列顏色</string>
     <string name="dynamic_amoled">動態黑色</string>
     <string name="material_3">Material 3 theme</string>
+    <string name="use_api_chat_messages">Send chat messages using api</string>
+    <string name="use_eventsub_chat">EventSub chat</string>
 </resources>

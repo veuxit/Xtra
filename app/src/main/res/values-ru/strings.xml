@@ -595,4 +595,6 @@
     <string name="bottom_nav_color">Цвет нижней навигации</string>
     <string name="dynamic_amoled">Динамическая чёрная</string>
     <string name="material_3">Тема Material 3</string>
+    <string name="use_api_chat_messages">Send chat messages using api</string>
+    <string name="use_eventsub_chat">EventSub chat</string>
 </resources>

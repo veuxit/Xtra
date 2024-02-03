@@ -122,8 +122,8 @@ class LoginActivity : AppCompatActivity() {
             "channel:manage:raids", // raids
             "channel:manage:vips", // channels/vips
             "channel:moderate",
-            "chat:edit",
-            "chat:read",
+            "chat:edit", // TODO remove
+            "chat:read", // TODO remove
             "moderator:manage:announcements", // chat/announcements
             "moderator:manage:banned_users", // moderation/bans
             "moderator:manage:chat_messages", // moderation/chat
@@ -132,7 +132,9 @@ class LoginActivity : AppCompatActivity() {
             "moderator:read:followers", // channels/followers
             "user:manage:chat_color", // chat/color
             "user:manage:whispers", // whispers
+            "user:read:chat",
             "user:read:follows", // streams/followed, channels/followed
+            "user:write:chat", // chat/messages
         )
         val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
         val gqlRedirect = prefs().getString(C.GQL_REDIRECT2, "https://www.twitch.tv/")

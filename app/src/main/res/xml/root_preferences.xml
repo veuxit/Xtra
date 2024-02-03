@@ -584,6 +584,20 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="debug_api_chat_messages"
+        android:title="@string/use_api_chat_messages"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="debug_eventsub_chat"
+        android:title="@string/use_eventsub_chat"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:key="debug_player_menu_playlist_tags"
         android:title="@string/show_playlist_tags"
         app:iconSpaceReserved="false"
