@@ -345,7 +345,14 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserEmotes(gqlHeaders: Map<String, String>, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
-            gql.loadUserEmotes(gqlHeaders, channelId).data
+            val emotes = mutableListOf<TwitchEmote>()
+            var offset: String? = null
+            do {
+                val get = gql.loadUserEmotes(gqlHeaders, channelId, offset)
+                offset = get.cursor
+                get.data.let { emotes.addAll(it) }
+            } while (!get.cursor.isNullOrBlank() && get.hasNextPage == true)
+            emotes
         } catch (e: Exception) {
             if (e.message == "failed integrity check") throw e
             val context = XtraApp.INSTANCE.applicationContext
