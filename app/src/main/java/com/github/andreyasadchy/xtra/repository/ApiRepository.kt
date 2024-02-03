@@ -645,6 +645,41 @@ class ApiRepository @Inject constructor(
         gql.loadUnfollowGame(gqlHeaders, gameId).error
     }
 
+    suspend fun createChatEventSubSubscription(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, sessionId: String?): String? = withContext(Dispatchers.IO) {
+        val json = JsonObject().apply {
+            addProperty("type", "channel.chat.message")
+            addProperty("version", "1")
+            add("condition", JsonObject().apply {
+                addProperty("broadcaster_user_id", channelId)
+                addProperty("user_id", userId)
+            })
+            add("transport", JsonObject().apply {
+                addProperty("method", "websocket")
+                addProperty("session_id", sessionId)
+            })
+        }
+        val response = helix.createEventSubSubscription(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
+    suspend fun sendMessage(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, message: String?): String? = withContext(Dispatchers.IO) {
+        val json = JsonObject().apply {
+            addProperty("broadcaster_id", channelId)
+            addProperty("sender_id", userId)
+            addProperty("message", message)
+        }
+        val response = helix.sendMessage(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        if (response.isSuccessful) {
+            null
+        } else {
+            response.errorBody()?.string()
+        }
+    }
+
     suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.sendAnnouncement(gqlHeaders, channelId, message, color).also { response ->
