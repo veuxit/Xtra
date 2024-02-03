@@ -167,6 +167,20 @@ interface HelixApi {
         @Query("after") offset: String?
     ): Response<ModeratorsResponse>
 
+    @POST("eventsub/subscriptions")
+    suspend fun createEventSubSubscription(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
+    @POST("chat/messages")
+    suspend fun sendMessage(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Body json: JsonObject
+    ): Response<JsonElement>
+
     @POST("chat/announcements")
     suspend fun sendAnnouncement(
         @Header("Client-ID") clientId: String?,

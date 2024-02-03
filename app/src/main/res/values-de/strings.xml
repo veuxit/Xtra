@@ -595,4 +595,6 @@
     <string name="bottom_nav_color">Bottom navigation color</string>
     <string name="dynamic_amoled">Dynamic black</string>
     <string name="material_3">Material 3 theme</string>
+    <string name="use_api_chat_messages">Send chat messages using api</string>
+    <string name="use_eventsub_chat">EventSub chat</string>
 </resources>
