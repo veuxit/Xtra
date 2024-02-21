@@ -29,7 +29,7 @@ android {
         minSdk = 21
         targetSdk = 34
         versionCode = 121
-        versionName = "2.29.0"
+        versionName = "2.29.1"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -83,10 +83,11 @@ dependencies {
     implementation(libs.webkit)
 
     //Misc
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    implementation(libs.okhttp.logging.interceptor)
-
+    implementation(libs.gson)
     implementation(libs.apollo.runtime)
 
     implementation(libs.fetch)
