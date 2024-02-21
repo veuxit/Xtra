@@ -28,7 +28,6 @@ import com.github.andreyasadchy.xtra.util.chat.Command
 import com.github.andreyasadchy.xtra.util.chat.PointsEarned
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
-import com.github.andreyasadchy.xtra.util.hideKeyboard
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
@@ -261,11 +260,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 profileImageUrl = it.targetProfileImage,
             ))
         }
-    }
-
-    fun hideKeyboard() {
-        binding.chatView.hideKeyboard()
-        binding.chatView.clearFocus()
     }
 
     fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()
