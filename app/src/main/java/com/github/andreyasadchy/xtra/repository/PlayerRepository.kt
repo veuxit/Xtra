@@ -79,7 +79,7 @@ class PlayerRepository @Inject constructor(
             val json = JsonObject().apply {
                 add("extensions", JsonObject().apply {
                     add("persistedQuery", JsonObject().apply {
-                        addProperty("sha256Hash", "f51c71103d886ee77e4ff84bfc92352acf66a120413f8e99cfcea092e600936f")
+                        addProperty("sha256Hash", "3093517e37e4f4cb48906155bcd894150aef92617939236d2508f3375ab732ce")
                         addProperty("version", 1)
                     })
                 })
@@ -102,7 +102,7 @@ class PlayerRepository @Inject constructor(
                 proxyPassword = proxyPassword
             )
             val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-            val message = data?.optString("streamPlaybackAccessToken")?.let { if (it.isNotBlank() && !data.isNull("streamPlaybackAccessToken")) JSONObject(it) else null }
+            val message = data?.optJSONObject("streamPlaybackAccessToken")
             PlaybackAccessToken(
                 token = message?.optString("value"),
                 signature = message?.optString("signature"),

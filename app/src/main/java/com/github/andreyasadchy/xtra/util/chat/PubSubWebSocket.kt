@@ -147,30 +147,32 @@ class PubSubWebSocket(
                 val json = if (text.isNotBlank()) JSONObject(text) else null
                 when (json?.optString("type")) {
                     "MESSAGE" -> {
-                        val data = json.optString("data").let { if (it.isNotBlank()) JSONObject(it) else null }
+                        val data = json.optJSONObject("data")
                         val topic = data?.optString("topic")
                         val message = data?.optString("message")?.let { if (it.isNotBlank()) JSONObject(it) else null }
                         val messageType = message?.optString("type")
-                        when {
-                            (topic?.startsWith("video-playback-by-id") == true) -> listener.onPlaybackMessage(text)
-                            (topic?.startsWith("broadcast-settings-update") == true) && (messageType?.startsWith("broadcast_settings_update") == true) -> listener.onTitleUpdate(text)
-                            (topic?.startsWith("community-points-channel") == true) && (messageType?.startsWith("reward-redeemed") == true) -> listener.onRewardMessage(text)
-                            topic?.startsWith("community-points-user") == true -> {
-                                when {
-                                    messageType?.startsWith("points-earned") == true && notifyPoints -> {
-                                        val messageData = message.optString("data").let { if (it.isNotBlank()) JSONObject(it) else null }
-                                        val messageChannelId = messageData?.optString("channel_id")
-                                        if (channelId == messageChannelId) {
-                                            listener.onPointsEarned(text)
+                        if (topic != null && messageType != null) {
+                            when {
+                                topic.startsWith("video-playback-by-id") -> listener.onPlaybackMessage(message)
+                                topic.startsWith("broadcast-settings-update") && messageType.startsWith("broadcast_settings_update") -> listener.onTitleUpdate(message)
+                                topic.startsWith("community-points-channel") && messageType.startsWith("reward-redeemed") -> listener.onRewardMessage(message)
+                                topic.startsWith("community-points-user") -> {
+                                    when {
+                                        messageType.startsWith("points-earned") && notifyPoints -> {
+                                            val messageData = message.optJSONObject("data")
+                                            val messageChannelId = messageData?.optString("channel_id")
+                                            if (channelId == messageChannelId) {
+                                                listener.onPointsEarned(message)
+                                            }
                                         }
+                                        messageType.startsWith("claim-available") && collectPoints -> listener.onClaimAvailable()
                                     }
-                                    messageType?.startsWith("claim-available") == true && collectPoints -> listener.onClaimAvailable()
                                 }
-                            }
-                            topic?.startsWith("raid") == true && showRaids -> {
-                                when {
-                                    messageType?.startsWith("raid_update") == true -> listener.onRaidUpdate(text, false)
-                                    messageType?.startsWith("raid_go") == true -> listener.onRaidUpdate(text, true)
+                                topic.startsWith("raid") && showRaids -> {
+                                    when {
+                                        messageType.startsWith("raid_update") -> listener.onRaidUpdate(message, false)
+                                        messageType.startsWith("raid_go") -> listener.onRaidUpdate(message, true)
+                                    }
                                 }
                             }
                         }
@@ -185,12 +187,12 @@ class PubSubWebSocket(
     }
 
     interface OnMessageReceivedListener {
-        fun onPlaybackMessage(text: String)
-        fun onTitleUpdate(text: String)
-        fun onRewardMessage(text: String)
-        fun onPointsEarned(text: String)
+        fun onPlaybackMessage(message: JSONObject)
+        fun onTitleUpdate(message: JSONObject)
+        fun onRewardMessage(message: JSONObject)
+        fun onPointsEarned(message: JSONObject)
         fun onClaimAvailable()
         fun onMinuteWatched()
-        fun onRaidUpdate(text: String, openStream: Boolean)
+        fun onRaidUpdate(message: JSONObject, openStream: Boolean)
     }
 }

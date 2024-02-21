@@ -8,54 +8,49 @@ class PubSubListenerImpl(
     private val callbackMessage: OnChatMessageReceivedListener,
     private val callback: PubSubCallback) : PubSubWebSocket.OnMessageReceivedListener {
 
-    override fun onPlaybackMessage(text: String) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        val messageType = message?.optString("type")
+    override fun onPlaybackMessage(message: JSONObject) {
+        val messageType = message.optString("type")
         when {
-            messageType?.startsWith("viewcount") == true -> callback.onPlaybackMessage(PlaybackMessage(viewers = if (!message.isNull("viewers")) message.optInt("viewers") else null))
-            messageType?.startsWith("stream-up") == true -> callback.onPlaybackMessage(PlaybackMessage(true, if (!message.isNull("server_time")) message.optLong("server_time") else null))
-            messageType?.startsWith("stream-down") == true -> callback.onPlaybackMessage(PlaybackMessage(false))
+            messageType.startsWith("viewcount") -> callback.onPlaybackMessage(PlaybackMessage(viewers = if (!message.isNull("viewers")) message.optInt("viewers") else null))
+            messageType.startsWith("stream-up") -> callback.onPlaybackMessage(PlaybackMessage(true, if (!message.isNull("server_time")) message.optLong("server_time").takeIf { it > 0 } else null))
+            messageType.startsWith("stream-down") -> callback.onPlaybackMessage(PlaybackMessage(false))
         }
     }
 
-    override fun onTitleUpdate(text: String) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        if (message != null) {
-            callback.onTitleUpdate(BroadcastSettings(
-                title = message.optString("status"),
-                gameId = message.optInt("game_id").toString(),
-                gameName = message.optString("game"),
-            ))
-        }
+    override fun onTitleUpdate(message: JSONObject) {
+        callback.onTitleUpdate(BroadcastSettings(
+            title = if (!message.isNull("status")) message.optString("status").takeIf { it.isNotBlank() } else null,
+            gameId = if (!message.isNull("game_id")) message.optInt("game_id").takeIf { it > 0 }?.toString() else null,
+            gameName = if (!message.isNull("game")) message.optString("game").takeIf { it.isNotBlank() } else null,
+        ))
     }
 
-    override fun onRewardMessage(text: String) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        val messageData = message?.optString("data")?.let { if (it.isNotBlank() && !message.isNull("data")) JSONObject(it) else null }
-        val redemption = messageData?.optString("redemption")?.let { if (it.isNotBlank() && !messageData.isNull("redemption")) JSONObject(it) else null }
-        val user = redemption?.optString("user")?.let { if (it.isNotBlank() && !redemption.isNull("user")) JSONObject(it) else null }
-        val reward = redemption?.optString("reward")?.let { if (it.isNotBlank() && !redemption.isNull("reward")) JSONObject(it) else null }
-        val rewardImage = reward?.optString("image")?.let { if (it.isNotBlank() && !reward.isNull("image")) JSONObject(it) else null }
-        val defaultImage = reward?.optString("default_image")?.let { if (it.isNotBlank() && !reward.isNull("default_image")) JSONObject(it) else null }
-        val input = redemption?.optString("user_input")
+    override fun onRewardMessage(message: JSONObject) {
+        val messageData = message.optJSONObject("data")
+        val redemption = messageData?.optJSONObject("redemption")
+        val user = redemption?.optJSONObject("user")
+        val reward = redemption?.optJSONObject("reward")
+        val rewardImage = reward?.optJSONObject("image")
+        val defaultImage = reward?.optJSONObject("default_image")
+        val input = if (redemption?.isNull("user_input") == false) redemption.optString("user_input").takeIf { it.isNotBlank() } else null
         val pointReward = PubSubPointReward(
-            id = reward?.optString("id"),
-            userId = user?.optString("id"),
-            userLogin = user?.optString("login"),
-            userName = user?.optString("display_name"),
+            id = if (reward?.isNull("id") == false) reward.optString("id").takeIf { it.isNotBlank() } else null,
+            userId = if (user?.isNull("id") == false) user.optString("id").takeIf { it.isNotBlank() } else null,
+            userLogin = if (user?.isNull("login") == false) user.optString("login").takeIf { it.isNotBlank() } else null,
+            userName = if (user?.isNull("display_name") == false) user.optString("display_name").takeIf { it.isNotBlank() } else null,
             message = input,
-            fullMsg = text,
-            rewardTitle = reward?.optString("title"),
-            rewardCost = reward?.optInt("cost"),
+            fullMsg = message.toString(),
+            rewardTitle = if (reward?.isNull("title") == false) reward.optString("title").takeIf { it.isNotBlank() } else null,
+            rewardCost = if (reward?.isNull("cost") == false) reward.optInt("cost") else null,
             rewardImage = PubSubPointReward.RewardImage(
-                url1 = rewardImage?.optString("url_1x") ?: defaultImage?.optString("url_1x"),
-                url2 = rewardImage?.optString("url_2x") ?: defaultImage?.optString("url_2x"),
-                url4 = rewardImage?.optString("url_4x") ?: defaultImage?.optString("url_4x"),
+                url1 = if (rewardImage?.isNull("url_1x") == false) rewardImage.optString("url_1x").takeIf { it.isNotBlank() } else null
+                    ?: if (defaultImage?.isNull("url_1x") == false) defaultImage.optString("url_1x").takeIf { it.isNotBlank() } else null,
+                url2 = if (rewardImage?.isNull("url_2x") == false) rewardImage.optString("url_2x").takeIf { it.isNotBlank() } else null
+                    ?: if (defaultImage?.isNull("url_2x") == false) defaultImage.optString("url_2x").takeIf { it.isNotBlank() } else null,
+                url4 = if (rewardImage?.isNull("url_4x") == false) rewardImage.optString("url_4x").takeIf { it.isNotBlank() } else null
+                    ?: if (defaultImage?.isNull("url_4x") == false) defaultImage.optString("url_4x").takeIf { it.isNotBlank() } else null,
             ),
-            timestamp = messageData?.optString("timestamp")?.let { TwitchApiHelper.parseIso8601Date(it) }
+            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601Date(it) } else null,
         )
         if (input.isNullOrBlank()) {
             callbackMessage.onMessage(pointReward)
@@ -64,15 +59,13 @@ class PubSubListenerImpl(
         }
     }
 
-    override fun onPointsEarned(text: String) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        val messageData = message?.optString("data")?.let { if (it.isNotBlank() && !message.isNull("data")) JSONObject(it) else null }
-        val pointGain = messageData?.optString("point_gain")?.let { if (it.isNotBlank() && !messageData.isNull("point_gain")) JSONObject(it) else null }
+    override fun onPointsEarned(message: JSONObject) {
+        val messageData = message.optJSONObject("data")
+        val pointGain = messageData?.optJSONObject("point_gain")
         callback.onPointsEarned(PointsEarned(
             pointsGained = pointGain?.optInt("total_points"),
-            timestamp = messageData?.optString("timestamp")?.let { TwitchApiHelper.parseIso8601Date(it) },
-            fullMsg = text
+            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601Date(it) } else null,
+            fullMsg = message.toString()
         ))
     }
 
@@ -84,18 +77,18 @@ class PubSubListenerImpl(
         callback.onMinuteWatched()
     }
 
-    override fun onRaidUpdate(text: String, openStream: Boolean) {
-        val data = if (text.isNotBlank()) JSONObject(text).optJSONObject("data") else null
-        val message = data?.optString("message")?.let { if (it.isNotBlank() && !data.isNull("message")) JSONObject(it) else null }
-        val raid = message?.optString("raid")?.let { if (it.isNotBlank() && !message.isNull("raid")) JSONObject(it) else null }
-        callback.onRaidUpdate(Raid(
-            raidId = raid?.optString("id"),
-            targetId = raid?.optString("target_id"),
-            targetLogin = raid?.optString("target_login"),
-            targetName = raid?.optString("target_display_name"),
-            targetProfileImage = raid?.optString("target_profile_image")?.replace("profile_image-%s", "profile_image-300x300"),
-            viewerCount = raid?.optInt("viewer_count"),
-            openStream = openStream
-        ))
+    override fun onRaidUpdate(message: JSONObject, openStream: Boolean) {
+        val raid = message.optJSONObject("raid")
+        if (raid != null) {
+            callback.onRaidUpdate(Raid(
+                raidId = if (!raid.isNull("id")) raid.optString("id").takeIf { it.isNotBlank() } else null,
+                targetId = if (!raid.isNull("target_id")) raid.optString("target_id").takeIf { it.isNotBlank() } else null,
+                targetLogin = if (!raid.isNull("target_login")) raid.optString("target_login").takeIf { it.isNotBlank() } else null,
+                targetName = if (!raid.isNull("target_display_name")) raid.optString("target_display_name").takeIf { it.isNotBlank() } else null,
+                targetProfileImage = if (!raid.isNull("target_profile_image")) raid.optString("target_profile_image").takeIf { it.isNotBlank() }?.replace("profile_image-%s", "profile_image-300x300") else null,
+                viewerCount = raid.optInt("viewer_count"),
+                openStream = openStream
+            ))
+        }
     }
 }
