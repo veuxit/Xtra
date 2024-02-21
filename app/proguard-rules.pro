@@ -20,65 +20,41 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--dontwarn com.github.andreyasadchy.xtra.ui.**
--keep class com.iheartradio.m3u8.** { *; }
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+}
 
+-keep class com.woxthebox.draglistview.** { *; }
+
+# https://github.com/google/conscrypt/blob/master/android/proguard-rules.pro
 -dontwarn com.android.org.conscrypt.SSLParametersImpl
 -dontwarn org.apache.harmony.xnet.provider.jsse.SSLParametersImpl
 
--dontwarn okhttp3.internal.Util
--dontwarn okhttp3.internal.annotations.EverythingIsNonNull
+# https://github.com/square/retrofit/blob/trunk/retrofit/src/main/resources/META-INF/proguard/retrofit2.pro
+# Keep annotation default values (e.g., retrofit2.http.Field.encoded).
+-keepattributes AnnotationDefault
 
-# https://github.com/square/retrofit/issues/3751
-# Keep generic signature of Call, Response (R8 full mode strips signatures from non-kept items).
--keep,allowobfuscation,allowshrinking interface retrofit2.Call
--keep,allowobfuscation,allowshrinking class retrofit2.Response
+# Keep inherited services.
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface * extends <1>
 
 # With R8 full mode generic signatures are stripped for classes that are not
 # kept. Suspend functions are wrapped in continuations where the type argument
 # is used.
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
--keep class com.woxthebox.draglistview.** { *; }
+# R8 full mode strips generic signatures from return types if not kept.
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowoptimization,allowshrinking,allowobfuscation class <3>
 
--keep public class com.bumptech.glide.integration.webp.WebpImage { *; }
--keep public class com.bumptech.glide.integration.webp.WebpFrame { *; }
--keep public class com.bumptech.glide.integration.webp.WebpBitmapFactory { *; }
+# With R8 full mode generic signatures are stripped for classes that are not kept.
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
 
--keep public class * implements com.bumptech.glide.module.GlideModule
--keep class * extends com.bumptech.glide.module.AppGlideModule {
- <init>(...);
-}
--keep public enum com.bumptech.glide.load.ImageHeaderParser$** {
-  **[] $VALUES;
-  public *;
-}
--keep class com.bumptech.glide.load.data.ParcelFileDescriptorRewinder$InternalRewinder {
-  *** rewind();
-}
-
--keepclassmembernames class kotlinx.** {
-    volatile <fields>;
-}
-
--keepclassmembers class com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker {
-    <methods>;
-}
-
--keepclassmembers enum com.iheartradio.m3u8.data.** {
-    *;
-}
-
--forceprocessing
-
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-}
-
+# https://github.com/google/gson/blob/main/examples/android-proguard-example/proguard.cfg
 ##---------------Begin: proguard configuration for Gson  ----------
 # Gson uses generic type information stored in a class file when working with fields. Proguard
-# removes such information by get, so configure it to keep all of it.
+# removes such information by default, so configure it to keep all of it.
 -keepattributes Signature
 
 # For using GSON @Expose annotation
@@ -92,66 +68,20 @@
 # Application classes that will be serialized/deserialized over Gson
 -keep class com.github.andreyasadchy.xtra.model.** { *; }
 
-# Prevent proguard from stripping interface information from TypeAdapterFactory,
+# Prevent proguard from stripping interface information from TypeAdapter, TypeAdapterFactory,
 # JsonSerializer, JsonDeserializer instances (so they can be used in @JsonAdapter)
+-keep class * extends com.google.gson.TypeAdapter
 -keep class * implements com.google.gson.TypeAdapterFactory
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-##---------------End: proguard configuration for Gson  ----------
-
-##OkHttp
-# JSR 305 annotations are for embedding nullability information.
--dontwarn javax.annotation.**
-# A resource is loaded with a relative path so the package of this class must be preserved.
--keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
-# Animal Sniffer compileOnly dependency to ensure APIs are compatible with older versions of Java.
--dontwarn org.codehaus.mojo.animal_sniffer.*
-# OkHttp platform used only on JVM and when Conscrypt dependency is available.
--dontwarn okhttp3.internal.platform.ConscryptPlatform
-
-# http://stackoverflow.com/questions/29679177/cardview-shadow-not-appearing-in-lollipop-after-obfuscate-with-proguard/29698051
--keep class androidx.cardview.widget.RoundRectDrawable { *; }
-
-# Retrofit 2.X
-## https://square.github.io/retrofit/ ##
--dontwarn retrofit2.**
--keep class retrofit2.** { *; }
--keepattributes Signature
--keepattributes Exceptions
--keepclasseswithmembers class * {
-    @retrofit2.http.* <methods>;
-}
-
-# Dagger ProGuard rules.
-# https://github.com/square/dagger
--dontwarn dagger.internal.codegen.**
+# Prevent R8 from leaving Data object members always null
 -keepclassmembers,allowobfuscation class * {
-    @javax.inject.* *;
-    @dagger.* *;
-    <init>();
-}
--keep class dagger.* { *; }
--keep class javax.inject.* { *; }
--keep class * extends dagger.internal.Binding
--keep class * extends dagger.internal.ModuleAdapter
--keep class * extends dagger.internal.StaticInjection
-
--keep public class androidx.appcompat.widget.widget.** { *; }
--keep public class androidx.preference.internal.** { *; }
--keep public class * extends androidx.core.view.ActionProvider {
-    public <init>(android.content.Context);
+  @com.google.gson.annotations.SerializedName <fields>;
 }
 
--keepclasseswithmembernames class * {
-    native <methods>;
-}
+# Retain generic signatures of TypeToken and its subclasses with R8 version 3.0 and higher.
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 
-#Kotlin coroutines
--keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
--keepnames class kotlinx.coroutines.android.AndroidExceptionPreHandler {}
--keepnames class kotlinx.coroutines.android.AndroidDispatcherFactory {}
--keepclassmembernames class kotlinx.** {
-    volatile <fields>;
-}
+##---------------End: proguard configuration for Gson  ----------

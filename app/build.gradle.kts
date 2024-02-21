@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.29.0"
+        versionName = "2.29.1"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -61,9 +61,11 @@ android {
             "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0-alpha03",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "com.google.android.material:material:1.11.0",
+            "com.squareup.okhttp3:okhttp:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
             "com.squareup.retrofit2:retrofit:2.6.4",
             "com.squareup.retrofit2:converter-gson:2.6.4",
+            "com.google.code.gson:gson:2.9.1",
         ))
     }
 }
@@ -100,9 +102,11 @@ dependencies {
     implementation(libs.webkit)
 
     //Misc
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.gson)
 
     implementation(libs.fetch)
     implementation(libs.fetch.okhttp)
