@@ -31,7 +31,6 @@ import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
-import com.github.andreyasadchy.xtra.util.showKeyboard
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
@@ -155,7 +154,9 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                     else -> false
                 }
             }
-            searchView.showKeyboard()
+            searchView.post {
+                searchView.isIconified = false
+            }
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
                 toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {

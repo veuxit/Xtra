@@ -9,11 +9,9 @@ import android.os.Build
 import android.util.AttributeSet
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
 import android.widget.ImageView
 import androidx.annotation.ColorRes
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.isVisible
@@ -76,22 +74,6 @@ fun ImageView.loadBitmap(url: String) {
         } catch (e: IllegalArgumentException) {
         }
     }
-}
-
-fun EditText.showKeyboard() {
-    requestFocus()
-    val imm: InputMethodManager? = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-    this.postDelayed({
-        imm?.showSoftInput(this, 0)
-    }, 100)
-}
-
-fun SearchView.showKeyboard() {
-    val imm: InputMethodManager? = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-    this.postDelayed({
-        this.isIconified = false
-        imm?.showSoftInput(this, 0)
-    }, 100)
 }
 
 fun View.hideKeyboard() {

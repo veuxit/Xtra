@@ -496,11 +496,6 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     fun toggleBackPressedCallback(enable: Boolean) = chatFragment.toggleBackPressedCallback(enable)
 
-    override fun onMinimize() {
-        super.onMinimize()
-        chatFragment.hideKeyboard()
-    }
-
 //    override fun play(obj: Parcelable) {
 //        val stream = obj as Stream
 //        if (viewModel.stream != stream) {

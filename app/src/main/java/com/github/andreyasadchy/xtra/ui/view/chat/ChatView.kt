@@ -15,6 +15,8 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.use
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
@@ -337,7 +339,8 @@ class ChatView : ConstraintLayout {
         binding.editText.apply {
             setText(text)
             setSelection(text.length)
-            showKeyboard()
+            requestFocus()
+            WindowCompat.getInsetsController(fragment.requireActivity().window, this).show(WindowInsetsCompat.Type.ime())
         }
     }
 
@@ -543,7 +546,7 @@ class ChatView : ConstraintLayout {
             override fun publishResults(constraint: CharSequence?, results: FilterResults) {
                 val objectsField = ArrayAdapter::class.java.getDeclaredField("mObjects")
                 objectsField.isAccessible = true
-                objectsField.set(this@AutoCompleteAdapter, results.values as? List<*> ?: emptyList<Any>())
+                objectsField.set(this@AutoCompleteAdapter, results.values as? List<*> ?: mutableListOf<Any>())
                 if (results.count > 0) {
                     notifyDataSetChanged()
                 } else {
