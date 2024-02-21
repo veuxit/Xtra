@@ -430,6 +430,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     override fun onMinimize() {
+        chatLayout.hideKeyboard()
+        chatLayout.clearFocus()
         if (this@BasePlayerFragment is StreamPlayerFragment && emoteMenuIsVisible()) {
             toggleBackPressedCallback(false)
         }
