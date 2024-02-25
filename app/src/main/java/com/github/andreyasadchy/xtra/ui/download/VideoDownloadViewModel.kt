@@ -34,7 +34,6 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
 import javax.inject.Inject
 
 @HiltViewModel
@@ -78,22 +77,7 @@ class VideoDownloadViewModel @Inject constructor(
                             put(ContextCompat.getString(getApplication(), R.string.audio_only), it.value)
                         }
                     }
-                    val mediaPlaylist = URL(map.values.elementAt(0)).openStream().use {
-                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
-                    }
-                    var totalDuration = 0L
-                    val size = mediaPlaylist.tracks.size
-                    val relativeTimes = ArrayList<Long>(size)
-                    val durations = ArrayList<Long>(size)
-                    var time = 0L
-                    mediaPlaylist.tracks.forEach {
-                        val duration = (it.trackInfo.duration * 1000f).toLong()
-                        durations.add(duration)
-                        totalDuration += duration
-                        relativeTimes.add(time)
-                        time += duration
-                    }
-                    _videoInfo.postValue(VideoDownloadInfo(video, map, relativeTimes, durations, totalDuration, mediaPlaylist.targetDuration * 1000L, 0))
+                    _videoInfo.postValue(VideoDownloadInfo(video, map, video.duration?.let { TwitchApiHelper.getDuration(it)?.times(1000) } ?: 0, 0))
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") {
                         _integrity.postValue(true)
@@ -116,53 +100,86 @@ class VideoDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String, fromIndex: Int, toIndex: Int, useWorkManager: Boolean) {
+    fun download(url: String, path: String, quality: String, from: Long, to: Long, useWorkManager: Boolean) {
         GlobalScope.launch {
-            with(_videoInfo.value!!) {
-                val context = getApplication<Application>()
+            val context = getApplication<Application>()
+            val video = _videoInfo.value!!.video
+            val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
+                PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+            }
+            val targetDuration = playlist.targetDuration * 1000L
+            var totalDuration = 0L
+            val size = playlist.tracks.size
+            val relativeStartTimes = ArrayList<Long>(size)
+            val durations = ArrayList<Long>(size)
+            var relativeTime = 0L
+            playlist.tracks.forEach {
+                val duration = (it.trackInfo.duration * 1000f).toLong()
+                durations.add(duration)
+                totalDuration += duration
+                relativeStartTimes.add(relativeTime)
+                relativeTime += duration
+            }
+            val fromIndex = if (from == 0L) {
+                0
+            } else {
+                val min = from - targetDuration
+                relativeStartTimes.binarySearch(comparison = { time ->
+                    when {
+                        time > from -> 1
+                        time < min -> -1
+                        else -> 0
+                    }
+                }).let { if (it < 0) -it else it }
+            }
+            val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
+                relativeStartTimes.lastIndex
+            } else {
+                val max = to + targetDuration
+                relativeStartTimes.binarySearch(comparison = { time ->
+                    when {
+                        time > max -> 1
+                        time < to -> -1
+                        else -> 0
+                    }
+                }).let { if (it < 0) -it else it }
+            }
+            val tracks = ArrayList<TrackData>()
+            for (i in fromIndex..toIndex) {
+                val track = playlist.tracks[i]
+                tracks.add(
+                    track.buildUpon()
+                        .withUri(track.uri.replace("-unmuted", "-muted"))
+                        .build()
+                )
+            }
+            val startPosition = relativeStartTimes[fromIndex]
+            val duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
+            val directory = "$path${File.separator}" + if (!video.id.isNullOrBlank()) {
+                "${video.id}${if (!quality.contains("Audio", true)) quality else "audio"}"
+            } else {
+                System.currentTimeMillis()
+            } + File.separator
+            val urlPath = url.substringBeforeLast('/') + "/"
+            val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, directory, duration, startPosition, fromIndex, toIndex)
+            File(directory).mkdir()
+            FileOutputStream(offlineVideo.url).use {
+                PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+            }
+            val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
+            if (useWorkManager) {
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    videoId.toString(),
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<DownloadWorker>()
+                        .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                        .build()
+                )
+            } else {
+                val request = Request(videoId, urlPath, directory)
+                offlineRepository.saveRequest(request)
 
-                val startPosition = relativeStartTimes[fromIndex]
-                val duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
-                val directory = "$path${File.separator}" +
-                        if (!video.id.isNullOrBlank()) {
-                            "${video.id}${if (!quality.contains("Audio", true)) quality else "audio"}"
-                        } else {
-                            System.currentTimeMillis()
-                        } + File.separator
-
-                val urlPath = url.substringBeforeLast('/') + "/"
-                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, directory, duration, startPosition, fromIndex, toIndex)
-                val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
-                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
-                }
-                val tracks = ArrayList<TrackData>()
-                for (i in fromIndex..toIndex) {
-                    val track = playlist.tracks[i]
-                    tracks.add(
-                        track.buildUpon()
-                            .withUri(track.uri.replace("-unmuted", "-muted"))
-                            .build()
-                    )
-                }
-                File(directory).mkdir()
-                FileOutputStream(offlineVideo.url).use {
-                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
-                }
-                val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                if (useWorkManager) {
-                    WorkManager.getInstance(context).enqueueUniqueWork(
-                        videoId.toString(),
-                        ExistingWorkPolicy.KEEP,
-                        OneTimeWorkRequestBuilder<DownloadWorker>()
-                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
-                            .build()
-                    )
-                } else {
-                    val request = Request(videoId, urlPath, directory)
-                    offlineRepository.saveRequest(request)
-
-                    DownloadUtils.download(context, request)
-                }
+                DownloadUtils.download(context, request)
             }
         }
     }
