@@ -205,7 +205,9 @@ class ChatAdapter(
                 userNameWithPostfixLength = 0
             }
         }
-        builder.append(chatMessage.message)
+        if (chatMessage.message != null) {
+            builder.append(chatMessage.message)
+        }
         val color = if (chatMessage is PubSubPointReward) null else
             chatMessage.color.let { userColor ->
                 if (userColor == null) {
