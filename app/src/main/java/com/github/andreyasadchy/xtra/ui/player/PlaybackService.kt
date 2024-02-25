@@ -619,22 +619,10 @@ class PlaybackService : MediaSessionService() {
                         }
                         GET_VIDEO_DOWNLOAD_INFO -> {
                             val info = (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.let { playlist ->
-                                val segments = playlist.segments
-                                val size = segments.size
-                                val relativeTimes = ArrayList<Long>(size)
-                                val durations = ArrayList<Long>(size)
-                                for (i in 0 until size) {
-                                    val segment = segments[i]
-                                    relativeTimes.add(segment.relativeStartTimeUs / 1000L)
-                                    durations.add(segment.durationUs / 1000L)
-                                }
                                 VideoDownloadInfo(
                                     video = Video(),
                                     qualities = urls,
-                                    relativeStartTimes = relativeTimes,
-                                    durations = durations,
                                     totalDuration = playlist.durationUs / 1000L,
-                                    targetDuration = playlist.targetDurationUs / 1000L,
                                     currentPosition = session.player.currentPosition
                                 )
                             }
