@@ -8,8 +8,5 @@ import kotlinx.parcelize.Parcelize
 data class VideoDownloadInfo(
     val video: Video,
     val qualities: Map<String, String>,
-    val relativeStartTimes: List<Long>,
-    val durations: List<Long>,
     val totalDuration: Long,
-    val targetDuration: Long,
     val currentPosition: Long) : Parcelable

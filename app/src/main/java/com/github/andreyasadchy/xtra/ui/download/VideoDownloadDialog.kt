@@ -106,46 +106,10 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             timeTo.editText?.error = getString(R.string.to_is_longer)
                         }
                         from < to -> {
-                            val fromIndex = if (from == 0L) {
-                                0
-                            } else {
-                                val min = from - targetDuration
-                                val tmpIndex = relativeStartTimes.binarySearch(comparison = { time ->
-                                    when {
-                                        time > from -> 1
-                                        time < min -> -1
-                                        else -> 0
-                                    }
-                                })
-                                /***
-                                 * If the item is not found by the binarySearch method, it will return a
-                                 * negative value and the app will crash. On that case, the function
-                                 * returns the inverted insertion point (-insertion point - 1).
-                                 * */
-                                if (tmpIndex < 0) -tmpIndex else tmpIndex
-
-                            }
-                            val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
-                                relativeStartTimes.lastIndex
-                            } else {
-                                val max = to + targetDuration
-                                val tmpIndex= relativeStartTimes.binarySearch(comparison = { time ->
-                                    when {
-                                        time > max -> 1
-                                        time < to -> -1
-                                        else -> 0
-                                    }
-                                })
-                                //Apply the same check to the toIndex result
-                                if (tmpIndex < 0) -tmpIndex else tmpIndex
-                            }
-                            fun startDownload() {
-                                val quality = spinner.editText?.text.toString()
-                                val url = videoInfo.qualities.getValue(quality)
-                                viewModel.download(url, downloadPath, quality, fromIndex, toIndex, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
-                                dismiss()
-                            }
-                            startDownload()
+                            val quality = spinner.editText?.text.toString()
+                            val url = videoInfo.qualities.getValue(quality)
+                            viewModel.download(url, downloadPath, quality, from, to, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                            dismiss()
                         }
                         from >= to -> {
                             timeFrom.requestFocus()
