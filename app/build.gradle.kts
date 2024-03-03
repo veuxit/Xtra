@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.29.2"
+        versionName = "2.30.0"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -55,6 +55,8 @@ android {
     }
     configurations.all {
         resolutionStrategy.force(listOf(
+            "androidx.hilt:hilt-compiler:1.1.0",
+            "androidx.hilt:hilt-work:1.1.0",
             "androidx.lifecycle:lifecycle-common-java8:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-livedata-ktx:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-process:2.7.0-alpha03",

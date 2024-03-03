@@ -1,7 +1,10 @@
 package com.github.andreyasadchy.xtra.ui.download
 
 import android.app.Application
+import android.content.ContentResolver
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -144,42 +147,78 @@ class VideoDownloadViewModel @Inject constructor(
                     }
                 }).let { if (it < 0) -it else it }
             }
-            val tracks = ArrayList<TrackData>()
-            for (i in fromIndex..toIndex) {
-                val track = playlist.tracks[i]
-                tracks.add(
-                    track.buildUpon()
-                        .withUri(track.uri.replace("-unmuted", "-muted"))
-                        .build()
-                )
-            }
             val startPosition = relativeStartTimes[fromIndex]
             val duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
-            val directory = "$path${File.separator}" + if (!video.id.isNullOrBlank()) {
+            val urlPath = url.substringBeforeLast('/') + "/"
+            val videoDirectoryName = if (!video.id.isNullOrBlank()) {
                 "${video.id}${if (!quality.contains("Audio", true)) quality else "audio"}"
             } else {
-                System.currentTimeMillis()
-            } + File.separator
-            val urlPath = url.substringBeforeLast('/') + "/"
-            val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, directory, duration, startPosition, fromIndex, toIndex)
-            File(directory).mkdir()
-            FileOutputStream(offlineVideo.url).use {
-                PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                "${System.currentTimeMillis()}"
             }
-            val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-            if (useWorkManager) {
-                WorkManager.getInstance(context).enqueueUniqueWork(
-                    videoId.toString(),
-                    ExistingWorkPolicy.KEEP,
-                    OneTimeWorkRequestBuilder<DownloadWorker>()
-                        .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
-                        .build()
-                )
-            } else {
-                val request = Request(videoId, urlPath, directory)
-                offlineRepository.saveRequest(request)
+            if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                val directory = DocumentFile.fromTreeUri(context, path.toUri())
+                val videoDirectory = directory?.findFile(videoDirectoryName) ?: directory?.createDirectory(videoDirectoryName)
+                val tracks = ArrayList<TrackData>()
+                for (i in fromIndex..toIndex) {
+                    val track = playlist.tracks[i]
+                    tracks.add(
+                        track.buildUpon()
+                            .withUri(videoDirectory?.uri.toString() + "%2F" + track.uri.replace("-unmuted", "-muted"))
+                            .build()
+                    )
+                }
+                val playlistFile = videoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")!!
+                context.contentResolver.openOutputStream(playlistFile.uri).use {
+                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                }
+                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex)
+                val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
+                if (useWorkManager) {
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        videoId.toString(),
+                        ExistingWorkPolicy.KEEP,
+                        OneTimeWorkRequestBuilder<DownloadWorker>()
+                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                            .build()
+                    )
+                } else {
+                    val request = Request(videoId, urlPath, path)
+                    offlineRepository.saveRequest(request)
 
-                DownloadUtils.download(context, request)
+                    DownloadUtils.download(context, request)
+                }
+            } else {
+                val tracks = ArrayList<TrackData>()
+                for (i in fromIndex..toIndex) {
+                    val track = playlist.tracks[i]
+                    tracks.add(
+                        track.buildUpon()
+                            .withUri(track.uri.replace("-unmuted", "-muted"))
+                            .build()
+                    )
+                }
+                val directory = "$path${File.separator}$videoDirectoryName${File.separator}"
+                File(directory).mkdir()
+                val playlistUri = "$directory${System.currentTimeMillis()}.m3u8"
+                FileOutputStream(playlistUri).use {
+                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                }
+                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex)
+                val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
+                if (useWorkManager) {
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        videoId.toString(),
+                        ExistingWorkPolicy.KEEP,
+                        OneTimeWorkRequestBuilder<DownloadWorker>()
+                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                            .build()
+                    )
+                } else {
+                    val request = Request(videoId, urlPath, directory)
+                    offlineRepository.saveRequest(request)
+
+                    DownloadUtils.download(context, request)
+                }
             }
         }
     }

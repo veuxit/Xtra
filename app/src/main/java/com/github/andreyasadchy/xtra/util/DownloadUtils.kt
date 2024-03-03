@@ -19,7 +19,6 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.offline.Request
-import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
 import com.github.andreyasadchy.xtra.ui.download.DownloadService
 import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_REQUEST
@@ -39,11 +38,6 @@ object DownloadUtils {
     }
 
     fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long?, startPosition: Long?, segmentFrom: Int? = null, segmentTo: Int? = null): OfflineVideo {
-        val offlinePath = if (downloadable is Video) {
-            "$path${System.currentTimeMillis()}.m3u8"
-        } else {
-            "$path.mp4"
-        }
         return with(downloadable) {
             if (!id.isNullOrBlank()) {
                 try {
@@ -84,7 +78,7 @@ object DownloadUtils {
             val downloadedThumbnail = id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
             val downloadedLogo = channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
             OfflineVideo(
-                url = offlinePath,
+                url = path,
                 sourceUrl = url,
                 sourceStartPosition = startPosition,
                 name = title,

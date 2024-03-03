@@ -1,9 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.download
 
+import android.app.Activity
 import android.app.Dialog
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.core.view.children
 import androidx.core.view.isVisible
@@ -17,6 +21,7 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
@@ -57,8 +62,33 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             )
         }
         viewModel.qualities.observe(this) {
-            binding.layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
+            binding.layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
             init(it)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            with(binding.storageSelectionContainer) {
+                val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        result.data?.data?.let {
+                            requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            sharedPath = it.toString()
+                            directory.visible()
+                            directory.text = it.path?.substringAfter("/document/")
+                        }
+                    }
+                }
+                selectDirectory.setOnClickListener {
+                    resultLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        putExtra(Intent.EXTRA_TITLE, if (!viewModel.clip.id.isNullOrBlank()) {
+                            "${viewModel.clip.id}${binding.spinner.editText?.text.toString()}.mp4"
+                        } else {
+                            "${System.currentTimeMillis()}.mp4"
+                        })
+                    })
+                }
+            }
         }
         return builder.create()
     }
@@ -81,8 +111,15 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             cancel.setOnClickListener { dismiss() }
             download.setOnClickListener {
                 val quality = spinner.editText?.text.toString()
-                viewModel.download(qualities.getValue(quality), downloadPath, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
-                DownloadUtils.requestNotificationPermission(requireActivity())
+                val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
+                val path = if (location == 0) sharedPath else downloadPath
+                if (!path.isNullOrBlank()) {
+                    viewModel.download(qualities.getValue(quality), path, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                    requireContext().prefs().edit {
+                        putInt(C.DOWNLOAD_LOCATION, location)
+                    }
+                    DownloadUtils.requestNotificationPermission(requireActivity())
+                }
                 dismiss()
             }
         }

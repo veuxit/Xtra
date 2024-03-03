@@ -1,8 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.download
 
 import android.annotation.SuppressLint
-import android.app.*
+import android.app.IntentService
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.BroadcastReceiver
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -11,6 +16,8 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.offline.Request
@@ -18,7 +25,10 @@ import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.FetchProvider
-import com.iheartradio.m3u8.*
+import com.iheartradio.m3u8.Encoding
+import com.iheartradio.m3u8.Format
+import com.iheartradio.m3u8.ParsingMode
+import com.iheartradio.m3u8.PlaylistParser
 import com.iheartradio.m3u8.data.MediaPlaylist
 import com.iheartradio.m3u8.data.TrackData
 import com.tonyodev.fetch2.AbstractFetchListener
@@ -29,6 +39,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.use
 import java.io.File
 import java.io.FileInputStream
 import java.util.concurrent.CountDownLatch
@@ -156,9 +167,17 @@ class DownloadService : IntentService(TAG) {
                     if (--activeDownloadsCount == 0) {
                         offlineRepository.deleteVideo(applicationContext, offlineVideo)
                         stopForegroundInternal(true)
-                        val directory = File(request.path)
-                        if (directory.exists() && directory.list().isEmpty()) {
-                            directory.deleteRecursively()
+                        if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                            val directory = DocumentFile.fromTreeUri(applicationContext, request.path.toUri())
+                            val videoDirectory = directory?.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))
+                            if (videoDirectory != null && videoDirectory.listFiles().isEmpty()) {
+                                directory.delete()
+                            }
+                        } else {
+                            val directory = File(request.path)
+                            if (directory.exists() && directory.list().isEmpty()) {
+                                directory.deleteRecursively()
+                            }
                         }
                         countDownLatch.countDown()
                     }
@@ -166,8 +185,14 @@ class DownloadService : IntentService(TAG) {
             })
             GlobalScope.launch {
                 try {
-                    playlist = FileInputStream(File(offlineVideo.url)).use {
-                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                    playlist = if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                        applicationContext.contentResolver.openInputStream(offlineVideo.url.toUri()).use {
+                            PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                        }
+                    } else {
+                        FileInputStream(File(offlineVideo.url)).use {
+                            PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                        }
                     }
                     enqueueNext()
                 } catch (e: Exception) {
@@ -221,12 +246,25 @@ class DownloadService : IntentService(TAG) {
         }
         with(request) {
             val current = offlineVideo.progress
-            try {
-                for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
-                    val track = tracks[i]
-                    requests.add(FetchRequest(url + track.uri, path + track.uri).apply { groupId = offlineVideoId })
+            if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
+                val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))!!
+                try {
+                    for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
+                        val track = tracks[i]
+                        val trackUri = track.uri.substringAfterLast("%2F")
+                        requests.add(FetchRequest(url + trackUri, videoDirectory.createFile("", trackUri)!!.uri.toString()).apply { groupId = offlineVideoId })
+                    }
+                } catch (e: IndexOutOfBoundsException) {
                 }
-            } catch (e: IndexOutOfBoundsException) {
+            } else {
+                try {
+                    for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
+                        val track = tracks[i]
+                        requests.add(FetchRequest(url + track.uri, path + track.uri).apply { groupId = offlineVideoId })
+                    }
+                } catch (e: IndexOutOfBoundsException) {
+                }
             }
         }
         fetch.enqueue(requests)

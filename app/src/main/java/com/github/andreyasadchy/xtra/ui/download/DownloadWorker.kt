@@ -3,11 +3,14 @@ package com.github.andreyasadchy.xtra.ui.download
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentResolver.SCHEME_CONTENT
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -35,6 +38,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.buffer
 import okio.sink
+import okio.use
 import java.io.File
 import java.io.FileInputStream
 import javax.inject.Inject
@@ -57,21 +61,43 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
         offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADING })
         setForeground(createForegroundInfo())
         return withContext(Dispatchers.IO) {
+            val isShared = offlineVideo.url.toUri().scheme == SCHEME_CONTENT
             if (offlineVideo.vod) {
-                val playlist = FileInputStream(File(offlineVideo.url)).use {
-                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
-                }
                 val requestSemaphore = Semaphore(applicationContext.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
-                val jobs = playlist.tracks.map {
-                    async {
-                        requestSemaphore.withPermit {
-                            val output = File(offlineVideo.url).parent!! + "/" + it.uri
-                            if (!File(output).exists()) {
-                                download(offlineVideo.sourceUrl + it.uri, output)
+                val jobs = if (isShared) {
+                    val playlist = applicationContext.contentResolver.openInputStream(offlineVideo.url.toUri()).use {
+                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                    }
+                    val directory = DocumentFile.fromTreeUri(applicationContext, offlineVideo.url.substringBefore("/document/").toUri())!!
+                    val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))!!
+                    playlist.tracks.map {
+                        async {
+                            requestSemaphore.withPermit {
+                                val uri = it.uri.substringAfterLast("%2F")
+                                if (videoDirectory.findFile(uri) == null) {
+                                    downloadShared(offlineVideo.sourceUrl + uri, videoDirectory.createFile("", uri)!!.uri.toString())
+                                }
+                                progress += 1
+                                offlineRepository.updateVideo(offlineVideo.apply { progress = this@DownloadWorker.progress })
+                                setForeground(createForegroundInfo())
                             }
-                            progress += 1
-                            offlineRepository.updateVideo(offlineVideo.apply { progress = this@DownloadWorker.progress })
-                            setForeground(createForegroundInfo())
+                        }
+                    }
+                } else {
+                    val playlist = FileInputStream(File(offlineVideo.url)).use {
+                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                    }
+                    playlist.tracks.map {
+                        async {
+                            requestSemaphore.withPermit {
+                                val output = File(offlineVideo.url).parent!! + "/" + it.uri
+                                if (!File(output).exists()) {
+                                    download(offlineVideo.sourceUrl + it.uri, output)
+                                }
+                                progress += 1
+                                offlineRepository.updateVideo(offlineVideo.apply { progress = this@DownloadWorker.progress })
+                                setForeground(createForegroundInfo())
+                            }
                         }
                     }
                 }
@@ -82,12 +108,24 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
                     offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADED })
                 }
             } else {
-                if (!File(offlineVideo.url).exists()) {
-                    download(offlineVideo.sourceUrl!!, offlineVideo.url)
+                if (isShared) {
+                    downloadShared(offlineVideo.sourceUrl!!, offlineVideo.url)
+                } else {
+                    if (!File(offlineVideo.url).exists()) {
+                        download(offlineVideo.sourceUrl!!, offlineVideo.url)
+                    }
                 }
                 offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADED })
             }
             Result.success()
+        }
+    }
+
+    private fun downloadShared(url: String, output: String) {
+        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+            applicationContext.contentResolver.openOutputStream(output.toUri())!!.sink().buffer().use { sink ->
+                response.body()?.source()?.let { sink.writeAll(it) }
+            }
         }
     }
 
