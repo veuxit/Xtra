@@ -13,6 +13,7 @@ import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
@@ -81,6 +82,7 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             download.setOnClickListener {
                 val quality = spinner.editText?.text.toString()
                 viewModel.download(qualities.getValue(quality), downloadPath, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                DownloadUtils.requestNotificationPermission(requireActivity())
                 dismiss()
             }
         }
