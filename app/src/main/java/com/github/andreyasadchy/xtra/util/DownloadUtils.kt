@@ -1,11 +1,17 @@
 package com.github.andreyasadchy.xtra.util
 
+import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Environment
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -101,6 +107,19 @@ object DownloadUtils {
         }
     }
 
+    fun requestNotificationPermission(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            !activity.prefs().getBoolean(C.DOWNLOAD_NOTIFICATION_REQUESTED, false)) {
+            activity.prefs().edit { putBoolean(C.DOWNLOAD_NOTIFICATION_REQUESTED, true) }
+            activity.getAlertDialogBuilder()
+                .setMessage(R.string.notification_permission_message)
+                .setTitle(R.string.notification_permission_title)
+                .setPositiveButton(android.R.string.ok) { _, _ -> ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
 
     fun getAvailableStorage(context: Context): List<Storage> {
         val storage = ContextCompat.getExternalFilesDirs(context, ".downloads")

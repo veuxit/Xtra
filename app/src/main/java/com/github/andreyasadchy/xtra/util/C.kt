@@ -22,6 +22,7 @@ object C {
     const val USER_ID = "user_id"
     const val DOWNLOAD_CONCURRENT_LIMIT = "download_concurrent_limit"
     const val DOWNLOAD_STORAGE = "downloadStorage"
+    const val DOWNLOAD_NOTIFICATION_REQUESTED = "download_notification_requested"
     const val ASPECT_RATIO_LANDSCAPE = "aspectRatioLandscape"
     const val FIRST_LAUNCH = "first_launch"
     const val FIRST_LAUNCH1 = "first_launch1"
