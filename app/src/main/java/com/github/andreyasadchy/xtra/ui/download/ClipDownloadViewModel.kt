@@ -1,6 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.download
 
 import android.app.Application
+import android.content.ContentResolver
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -37,7 +39,7 @@ class ClipDownloadViewModel @Inject constructor(
     val qualities: LiveData<Map<String, String>>
         get() = _qualities
 
-    private lateinit var clip: Clip
+    lateinit var clip: Clip
 
     fun init(gqlHeaders: Map<String, String>, clip: Clip, qualities: Map<String, String>?, skipAccessToken: Int) {
         if (!this::clip.isInitialized) {
@@ -71,16 +73,17 @@ class ClipDownloadViewModel @Inject constructor(
     fun download(url: String, path: String, quality: String, useWorkManager: Boolean) {
         GlobalScope.launch {
             val context = getApplication<Application>()
-
-            val filePath = "$path${File.separator}" +
-                    if (!clip.id.isNullOrBlank()) {
-                        "${clip.id}$quality"
-                    } else {
-                        System.currentTimeMillis()
-                    }
-            val startPosition = clip.vodOffset?.toLong()?.times(1000)
-
-            val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, filePath, clip.duration?.toLong()?.times(1000L), startPosition)
+            val fileUri = if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                path
+            } else {
+                val fileName = if (!clip.id.isNullOrBlank()) {
+                    "${clip.id}$quality"
+                } else {
+                    System.currentTimeMillis()
+                }
+                "$path${File.separator}$fileName.mp4"
+            }
+            val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, fileUri, clip.duration?.toLong()?.times(1000L), clip.vodOffset?.toLong()?.times(1000L))
             val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
             if (useWorkManager) {
                 WorkManager.getInstance(context).enqueueUniqueWork(
