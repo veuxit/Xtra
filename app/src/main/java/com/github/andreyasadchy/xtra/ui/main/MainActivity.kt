@@ -44,10 +44,10 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GamePagerFragment
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
@@ -300,10 +300,10 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         when (requestCode) {
             0 -> {
                 if (grantResults.isNotEmpty() && grantResults.indexOf(PackageManager.PERMISSION_DENIED) == -1) {
-                    val fragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)?.childFragmentManager?.findFragmentById(R.id.fragmentContainer)
+                    val fragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
                     if (fragment is HasDownloadDialog) {
                         fragment.showDownloadDialog()
-                    } else if (fragment is GamePagerFragment && fragment.currentFragment is HasDownloadDialog) {
+                    } else if (fragment is FragmentHost && fragment.currentFragment is HasDownloadDialog) {
                         (fragment.currentFragment as HasDownloadDialog).showDownloadDialog()
                     }
                 } else {

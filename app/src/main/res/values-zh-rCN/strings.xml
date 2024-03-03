@@ -599,4 +599,7 @@
     <string name="use_eventsub_chat">EventSub chat</string>
     <string name="notification_permission_title">The app needs notification permission</string>
     <string name="notification_permission_message">Notification permission is required to show download progress.</string>
+    <string name="select_directory">Select directory</string>
+    <string name="shared_storage">Shared storage</string>
+    <string name="app_storage">App storage</string>
 </resources>
