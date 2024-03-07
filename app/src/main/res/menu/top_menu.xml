@@ -22,4 +22,12 @@
     <item
         android:id="@+id/login"
         android:title="@string/log_in" />
+    <item
+        android:id="@+id/importFolders"
+        android:title="@string/import_folders"
+        android:visible="false" />
+    <item
+        android:id="@+id/importFiles"
+        android:title="@string/import_files"
+        android:visible="false" />
 </menu>

@@ -93,7 +93,7 @@ object DownloadUtils {
                 duration = duration,
                 uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601Date(it) },
                 downloadDate = System.currentTimeMillis(),
-                progress = OfflineVideo.STATUS_PENDING,
+                progress = 0,
                 maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,
                 type = type,
                 videoId = id
