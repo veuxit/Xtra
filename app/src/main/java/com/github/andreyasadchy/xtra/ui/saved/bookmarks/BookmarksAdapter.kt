@@ -203,7 +203,7 @@ class BookmarksAdapter(
                     }
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
-                            inflate(R.menu.offline_item)
+                            inflate(R.menu.bookmark_item)
                             if (!item.videoId.isNullOrBlank()) {
                                 menu.findItem(R.id.refresh).isVisible = true
                                 menu.findItem(R.id.download).isVisible = true

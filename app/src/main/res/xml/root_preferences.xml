@@ -560,6 +560,12 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <Preference
+        android:key="import_app_downloads"
+        android:title="@string/import_app_downloads"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <SeekBarPreference
         android:defaultValue="10"
         android:key="download_concurrent_limit"

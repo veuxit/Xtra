@@ -265,6 +265,11 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
+                viewModel.importDownloads(requireContext())
+                true
+            }
+
             findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
                 IntegrityDialog.show(childFragmentManager)
                 true

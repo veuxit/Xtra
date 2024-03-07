@@ -6,11 +6,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
@@ -25,6 +28,7 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
@@ -41,7 +45,10 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
 
     private var _binding: FragmentMediaPagerBinding? = null
     private val binding get() = _binding!!
+    private val viewModel: SavedPagerViewModel by viewModels()
     private var firstLaunch = true
+    private var folderResultLauncher: ActivityResultLauncher<Intent>? = null
+    private var fileResultLauncher: ActivityResultLauncher<Intent>? = null
 
     override val currentFragment: Fragment?
         get() = childFragmentManager.findFragmentByTag("f${binding.viewPager.currentItem}")
@@ -49,6 +56,30 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         firstLaunch = savedInstanceState == null
+        folderResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.data?.let {
+                    requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    viewModel.saveFolders(requireContext(), it.toString())
+                }
+            }
+        }
+        fileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.clipData?.let { clipData ->
+                    for (i in 0 until clipData.itemCount) {
+                        val item = clipData.getItemAt(i)
+                        item.uri?.let {
+                            requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            viewModel.saveVideo(it.toString())
+                        }
+                    }
+                } ?: result.data?.data?.let {
+                    requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    viewModel.saveVideo(it.toString())
+                }
+            }
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -88,6 +119,18 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
                         }
                         true
                     }
+                    R.id.importFolders -> {
+                        folderResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                        true
+                    }
+                    R.id.importFiles -> {
+                        fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        })
+                        true
+                    }
                     else -> false
                 }
             }
@@ -115,6 +158,8 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
                                 appBar.background = null
                             }
                             (fragment as? Sortable)?.setupSortBar(sortBar) ?: sortBar.root.gone()
+                            toolbar.menu.findItem(R.id.importFolders).isVisible = fragment is DownloadsFragment
+                            toolbar.menu.findItem(R.id.importFiles).isVisible = fragment is DownloadsFragment
                         }
                     }
                 }

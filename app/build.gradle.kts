@@ -92,6 +92,7 @@ dependencies {
 
     implementation(libs.fetch)
     implementation(libs.fetch.okhttp)
+    implementation(libs.okio)
     implementation(libs.open.m3u8)
 
     implementation(libs.media3.exoplayer)

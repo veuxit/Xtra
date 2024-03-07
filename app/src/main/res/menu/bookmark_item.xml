@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/stopDownload"
-        android:title="@string/stop_download"
+        android:id="@+id/refresh"
+        android:title="@string/refresh"
         android:visible="false" />
     <item
-        android:id="@+id/resumeDownload"
-        android:title="@string/resume_download"
+        android:id="@+id/download"
+        android:title="@string/download"
         android:visible="false" />
     <item
-        android:id="@+id/moveVideo"
-        android:title="@string/move_to_shared_storage"
+        android:id="@+id/vodIgnore"
+        android:title="@string/vod_ignore_user"
         android:visible="false" />
     <item
         android:id="@+id/delete"
