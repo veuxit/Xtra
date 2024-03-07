@@ -50,7 +50,7 @@ class PubSubListenerImpl(
                 url4 = if (rewardImage?.isNull("url_4x") == false) rewardImage.optString("url_4x").takeIf { it.isNotBlank() } else null
                     ?: if (defaultImage?.isNull("url_4x") == false) defaultImage.optString("url_4x").takeIf { it.isNotBlank() } else null,
             ),
-            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601Date(it) } else null,
+            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) } else null,
         )
         if (input.isNullOrBlank()) {
             callbackMessage.onMessage(pointReward)
@@ -64,7 +64,7 @@ class PubSubListenerImpl(
         val pointGain = messageData?.optJSONObject("point_gain")
         callback.onPointsEarned(PointsEarned(
             pointsGained = pointGain?.optInt("total_points"),
-            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601Date(it) } else null,
+            timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) } else null,
             fullMsg = message.toString()
         ))
     }

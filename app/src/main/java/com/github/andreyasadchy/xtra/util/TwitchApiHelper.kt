@@ -193,6 +193,22 @@ object TwitchApiHelper {
         }
     }
 
+    fun parseIso8601DateUTC(date: String): Long? {
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            format.timeZone = TimeZone.getTimeZone("UTC")
+            format.parse(date)?.time?.takeIf { it > 0 }
+        } catch (e: ParseException) {
+            try {
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
+                format.timeZone = TimeZone.getTimeZone("UTC")
+                format.parse(date)?.time?.takeIf { it > 0 }
+            } catch (e: ParseException) {
+                null
+            }
+        }
+    }
+
     fun formatTimeString(context: Context, iso8601date: String): String? {
         return parseIso8601Date(iso8601date)?.let { formatTime(context, it) }
     }
