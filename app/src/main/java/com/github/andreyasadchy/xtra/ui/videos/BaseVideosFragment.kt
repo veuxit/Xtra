@@ -6,6 +6,7 @@ import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.prefs
 
 abstract class BaseVideosFragment : PagedListFragment(), HasDownloadDialog {
@@ -24,8 +25,10 @@ abstract class BaseVideosFragment : PagedListFragment(), HasDownloadDialog {
     }
 
     override fun showDownloadDialog() {
-        lastSelectedItem?.let {
-            VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+        if (DownloadUtils.hasStoragePermission(requireActivity())) {
+            lastSelectedItem?.let {
+                VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+            }
         }
     }
 }

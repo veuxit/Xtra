@@ -616,4 +616,11 @@
     <string name="select_directory">Select directory</string>
     <string name="shared_storage">Shared storage</string>
     <string name="app_storage">App storage</string>
+    <string name="no_file_manager_found">No file manager app found</string>
+    <string name="import_folders">Import folders</string>
+    <string name="import_files">Import files</string>
+    <string name="keep_files">Keep files</string>
+    <string name="import_app_downloads">Import downloads from app storage</string>
+    <string name="move_to_shared_storage">Move to shared storage</string>
+    <string name="move_to_app_storage">Move to app storage</string>
 </resources>

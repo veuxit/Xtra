@@ -10,30 +10,32 @@
     android:paddingRight="10dp">
 
     <TextView
-        android:id="@+id/saveTo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/save_to"
         android:layout_gravity="center"
+        android:layout_marginTop="15dp"
+        android:text="@string/save_to"
         android:textAppearance="?attr/textAppearanceTitleSmall"
-        android:textStyle="bold"/>
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/noStorageDetected"
         android:layout_width="250dp"
         android:layout_height="wrap_content"
-        android:text="@string/no_storage_detected"
+        android:layout_marginTop="10dp"
         android:gravity="center"
+        android:text="@string/no_storage_detected"
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="@android:color/holo_red_light"
-        android:visibility="gone"/>
+        android:visibility="gone" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/storageSpinner"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center">
+        android:layout_gravity="center"
+        android:layout_marginTop="10dp">
 
         <AutoCompleteTextView
             android:layout_width="wrap_content"
@@ -46,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="15dp"
         android:orientation="vertical"
         android:visibility="gone"
         tools:visibility="visible">
@@ -78,7 +80,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="15dp"
         android:orientation="vertical"
         android:visibility="gone">
 

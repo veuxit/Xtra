@@ -2,15 +2,19 @@ package com.github.andreyasadchy.xtra.ui.saved
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
@@ -33,13 +37,19 @@ import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
 
     private var _binding: FragmentMediaBinding? = null
     private val binding get() = _binding!!
+    private val viewModel: SavedPagerViewModel by viewModels()
+    private var folderResultLauncher: ActivityResultLauncher<Intent>? = null
+    private var fileResultLauncher: ActivityResultLauncher<Intent>? = null
 
     private var previousItem = -1
 
@@ -49,6 +59,57 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         previousItem = savedInstanceState?.getInt("previousItem", -1) ?: -1
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            folderResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.let {
+                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        viewModel.saveFolders(requireContext(), it.toString())
+                    }
+                }
+            }
+        } else {
+            folderResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.path?.let {
+                        viewModel.saveFolders(requireContext(), it.substringBeforeLast("/"))
+                    }
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            fileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.clipData?.let { clipData ->
+                        for (i in 0 until clipData.itemCount) {
+                            val item = clipData.getItemAt(i)
+                            item.uri?.let {
+                                requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                                viewModel.saveVideo(it.toString())
+                            }
+                        }
+                    } ?: result.data?.data?.let {
+                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        viewModel.saveVideo(it.toString())
+                    }
+                }
+            }
+        } else {
+            fileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.clipData?.let { clipData ->
+                        for (i in 0 until clipData.itemCount) {
+                            val item = clipData.getItemAt(i)
+                            item.uri?.path?.let {
+                                viewModel.saveVideo(it)
+                            }
+                        }
+                    } ?: result.data?.data?.path?.let {
+                        viewModel.saveVideo(it)
+                    }
+                }
+            }
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -85,6 +146,45 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
                                 setNegativeButton(getString(R.string.no), null)
                                 setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
                             }.show()
+                        }
+                        true
+                    }
+                    R.id.importFolders -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            folderResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                        } else {
+                            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                            }
+                            if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                                folderResultLauncher?.launch(intent)
+                            } else {
+                                requireContext().toast(R.string.no_file_manager_found)
+                            }
+                        }
+                        true
+                    }
+                    R.id.importFiles -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                            fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                            })
+                        } else {
+                            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                                }
+                            }
+                            if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                                fileResultLauncher?.launch(intent)
+                            } else {
+                                requireContext().toast(R.string.no_file_manager_found)
+                            }
                         }
                         true
                     }
@@ -127,6 +227,8 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
                         appBar.background = null
                     }
                     (f as? Sortable)?.setupSortBar(sortBar) ?: sortBar.root.gone()
+                    toolbar.menu.findItem(R.id.importFolders).isVisible = f is DownloadsFragment
+                    toolbar.menu.findItem(R.id.importFiles).isVisible = f is DownloadsFragment
                 }
             }, false)
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->

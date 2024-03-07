@@ -1,7 +1,11 @@
 package com.github.andreyasadchy.xtra.db
 
 import androidx.paging.PagingSource
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 
 @Dao
@@ -12,6 +16,9 @@ interface VideosDao {
 
     @Query("SELECT * FROM videos WHERE id = :id")
     fun getById(id: Int): OfflineVideo?
+
+    @Query("SELECT * FROM videos WHERE url = :url")
+    fun getByUrl(url: String): OfflineVideo?
 
     @Query("SELECT * FROM videos WHERE channel_id = :id")
     fun getByUserId(id: Int): List<OfflineVideo>

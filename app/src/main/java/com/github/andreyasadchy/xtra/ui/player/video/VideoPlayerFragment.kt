@@ -34,6 +34,7 @@ import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.ui.player.PlayerGamesDialog
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
@@ -310,19 +311,21 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     override fun showDownloadDialog() {
-        if (viewModel.loaded.value == true) {
-            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_VIDEO_DOWNLOAD_INFO, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
-                result.addListener({
-                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            result.get().extras.getParcelable(PlaybackService.RESULT, VideoDownloadInfo::class.java)
-                        } else {
-                            @Suppress("DEPRECATION") result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
-                        }?.let {
-                            VideoDownloadDialog.newInstance(it.copy(video = video)).show(childFragmentManager, null)
+        if (DownloadUtils.hasStoragePermission(requireActivity())) {
+            if (viewModel.loaded.value == true) {
+                player?.sendCustomCommand(SessionCommand(PlaybackService.GET_VIDEO_DOWNLOAD_INFO, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                    result.addListener({
+                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                result.get().extras.getParcelable(PlaybackService.RESULT, VideoDownloadInfo::class.java)
+                            } else {
+                                @Suppress("DEPRECATION") result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
+                            }?.let {
+                                VideoDownloadDialog.newInstance(it.copy(video = video)).show(childFragmentManager, null)
+                            }
                         }
-                    }
-                }, MoreExecutors.directExecutor())
+                    }, MoreExecutors.directExecutor())
+                }
             }
         }
     }

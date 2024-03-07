@@ -253,7 +253,8 @@ class DownloadService : IntentService(TAG) {
                     for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
                         val track = tracks[i]
                         val trackUri = track.uri.substringAfterLast("%2F")
-                        requests.add(FetchRequest(url + trackUri, videoDirectory.createFile("", trackUri)!!.uri.toString()).apply { groupId = offlineVideoId })
+                        val trackFile = videoDirectory.findFile(trackUri) ?: videoDirectory.createFile("", trackUri)
+                        requests.add(FetchRequest(url + trackUri, trackFile!!.uri.toString()).apply { groupId = offlineVideoId })
                     }
                 } catch (e: IndexOutOfBoundsException) {
                 }

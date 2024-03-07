@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
@@ -46,7 +47,9 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                 videoId = it
             )
         }, {
-            VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+            if (DownloadUtils.hasStoragePermission(requireActivity())) {
+                VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+            }
         }, {
             viewModel.vodIgnoreUser(it)
         }, {

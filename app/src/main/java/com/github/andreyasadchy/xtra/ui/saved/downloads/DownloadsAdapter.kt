@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
+import android.content.ContentResolver
 import android.graphics.Color
 import android.os.Build
 import android.text.format.DateUtils
@@ -8,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -34,6 +36,7 @@ class DownloadsAdapter(
     private val fragment: Fragment,
     private val stopDownload: (Int) -> Unit,
     private val resumeDownload: (Int) -> Unit,
+    private val moveVideo: (OfflineVideo) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
@@ -183,14 +186,28 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)) && item.status != OfflineVideo.STATUS_DOWNLOADED) {
-                                menu.findItem(R.id.stopDownload).isVisible = true
-                                menu.findItem(R.id.resumeDownload).isVisible = true
+                            if (item.status == OfflineVideo.STATUS_DOWNLOADED) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP || Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !item.url.endsWith(".m3u8")) {
+                                    menu.findItem(R.id.moveVideo).apply {
+                                        isVisible = true
+                                        title = context.getString(if (item.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                                            R.string.move_to_app_storage
+                                        } else {
+                                            R.string.move_to_shared_storage
+                                        })
+                                    }
+                                }
+                            } else {
+                                if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
+                                    menu.findItem(R.id.stopDownload).isVisible = true
+                                    menu.findItem(R.id.resumeDownload).isVisible = true
+                                }
                             }
                             setOnMenuItemClickListener {
                                 when(it.itemId) {
                                     R.id.stopDownload -> stopDownload(item.id)
                                     R.id.resumeDownload -> resumeDownload(item.id)
+                                    R.id.moveVideo -> moveVideo(item)
                                     R.id.delete -> deleteVideo(item)
                                     else -> menu.close()
                                 }

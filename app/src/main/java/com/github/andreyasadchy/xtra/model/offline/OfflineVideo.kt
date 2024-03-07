@@ -10,7 +10,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 @Entity(tableName = "videos")
 data class OfflineVideo(
-    val url: String,
+    var url: String,
     @ColumnInfo(name = "source_url")
     val sourceUrl: String? = null,
     @ColumnInfo(name = "source_start_position")
@@ -24,7 +24,7 @@ data class OfflineVideo(
     var channelName: String? = null,
     @ColumnInfo(name = "channel_logo")
     var channelLogo: String? = null,
-    val thumbnail: String? = null,
+    var thumbnail: String? = null,
     val gameId: String? = null,
     val gameSlug: String? = null,
     val gameName: String? = null,

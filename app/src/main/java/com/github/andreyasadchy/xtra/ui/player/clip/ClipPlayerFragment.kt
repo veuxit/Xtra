@@ -31,6 +31,7 @@ import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlaybackService
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
@@ -241,18 +242,20 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     }
 
     override fun showDownloadDialog() {
-        if (viewModel.loaded.value == true) {
-            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
-                result.addListener({
-                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                        result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
-                            result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                val urls = keys.zip(values).toMap(mutableMapOf())
-                                ClipDownloadDialog.newInstance(clip, urls).show(childFragmentManager, null)
+        if (DownloadUtils.hasStoragePermission(requireActivity())) {
+            if (viewModel.loaded.value == true) {
+                player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                    result.addListener({
+                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                            result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
+                                result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
+                                    val urls = keys.zip(values).toMap(mutableMapOf())
+                                    ClipDownloadDialog.newInstance(clip, urls).show(childFragmentManager, null)
+                                }
                             }
                         }
-                    }
-                }, MoreExecutors.directExecutor())
+                    }, MoreExecutors.directExecutor())
+                }
             }
         }
     }

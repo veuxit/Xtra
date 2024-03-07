@@ -75,7 +75,6 @@ android {
 dependencies {
     implementation("org.conscrypt:conscrypt-android:2.5.2")
     implementation("androidx.multidex:multidex:2.0.1")
-    implementation("com.squareup.okio:okio:3.7.0")
 
     //UI
     implementation(libs.material)
@@ -112,6 +111,7 @@ dependencies {
 
     implementation(libs.fetch)
     implementation(libs.fetch.okhttp)
+    implementation(libs.okio)
     implementation(libs.open.m3u8)
 
     implementation(libs.media3.exoplayer)

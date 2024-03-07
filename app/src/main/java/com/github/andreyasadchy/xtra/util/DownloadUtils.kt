@@ -93,7 +93,7 @@ object DownloadUtils {
                 duration = duration,
                 uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601Date(it) },
                 downloadDate = System.currentTimeMillis(),
-                progress = OfflineVideo.STATUS_PENDING,
+                progress = 0,
                 maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,
                 type = type,
                 videoId = id
@@ -112,6 +112,33 @@ object DownloadUtils {
                 .setPositiveButton(android.R.string.ok) { _, _ -> ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1) }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
+        }
+    }
+
+    fun hasStoragePermission(activity: Activity): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return true
+        } else {
+            fun requestPermissions() {
+                ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), 0)
+            }
+
+            if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                return true
+            }
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                activity.getAlertDialogBuilder()
+                    .setMessage(R.string.storage_permission_message)
+                    .setTitle(R.string.storage_permission_title)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> requestPermissions() }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> activity.toast(R.string.permission_denied) }
+                    .show()
+            } else {
+                requestPermissions()
+            }
+            return false
         }
     }
 

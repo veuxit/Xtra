@@ -30,6 +30,7 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -102,6 +103,29 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             putExtra(DocumentsContract.EXTRA_INITIAL_URI, sharedPath)
                         }
                     })
+                }
+            }
+        } else {
+            with(binding.storageSelectionContainer) {
+                val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        result.data?.data?.let {
+                            sharedPath = it.path?.substringBeforeLast("/")
+                            directory.visible()
+                            directory.text = it.path?.substringBeforeLast("/")
+                        }
+                    }
+                }
+                selectDirectory.setOnClickListener {
+                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                        resultLauncher.launch(intent)
+                    } else {
+                        requireContext().toast(R.string.no_file_manager_found)
+                    }
                 }
             }
         }
