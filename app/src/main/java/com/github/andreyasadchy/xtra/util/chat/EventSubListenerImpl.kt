@@ -71,7 +71,7 @@ class EventSubListenerImpl(
             msgId = if (!json.isNull("message_type")) json.optString("message_type").takeIf { it.isNotBlank() && !it.equals("text", true) } else null,
             emotes = emotesList,
             badges = badgesList,
-            timestamp = timestamp?.let { TwitchApiHelper.parseIso8601Date(it) },
+            timestamp = timestamp?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
             fullMsg = json.toString()
         )
         if (rewardId.isNullOrBlank() || !usePubSub) {
