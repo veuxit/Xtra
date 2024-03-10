@@ -186,7 +186,7 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if (item.status == OfflineVideo.STATUS_DOWNLOADED) {
+                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING) {
                                 menu.findItem(R.id.moveVideo).apply {
                                     isVisible = true
                                     title = context.getString(if (item.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
@@ -218,10 +218,10 @@ class DownloadsAdapter(
                         if (item.status == OfflineVideo.STATUS_DOWNLOADED) {
                             gone()
                         } else {
-                            text = if (item.status == OfflineVideo.STATUS_DOWNLOADING) {
-                                context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
-                            } else {
-                                context.getString(R.string.download_pending)
+                            text = when (item.status) {
+                                OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                                OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
+                                else -> context.getString(R.string.download_pending)
                             }
                             visible()
                             if (item.vod) {

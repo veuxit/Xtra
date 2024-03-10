@@ -54,5 +54,6 @@ data class OfflineVideo(
         const val STATUS_PENDING = 0
         const val STATUS_DOWNLOADING = 1
         const val STATUS_DOWNLOADED = 2
+        const val STATUS_MOVING = 3
     }
 }
