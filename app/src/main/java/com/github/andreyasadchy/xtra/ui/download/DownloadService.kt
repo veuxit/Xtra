@@ -169,7 +169,7 @@ class DownloadService : IntentService(TAG) {
                         stopForegroundInternal(true)
                         if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                             val directory = DocumentFile.fromTreeUri(applicationContext, request.path.toUri())
-                            val videoDirectory = directory?.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))
+                            val videoDirectory = directory?.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                             if (videoDirectory != null && videoDirectory.listFiles().isEmpty()) {
                                 directory.delete()
                             }
@@ -248,7 +248,7 @@ class DownloadService : IntentService(TAG) {
             val current = offlineVideo.progress
             if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                 val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
-                val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))!!
+                val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))!!
                 try {
                     for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
                         val track = tracks[i]

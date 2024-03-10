@@ -28,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 34
-        versionCode = 228
-        versionName = "2.30.1"
+        versionCode = 229
+        versionName = "2.30.2"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -101,10 +101,6 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
     implementation(libs.checker.qual)
-
-    constraints {
-        implementation("androidx.media:media:1.7.0") // https://github.com/androidx/media/blob/release/constants.gradle#L47
-    }
 
     implementation(libs.coil)
     implementation(libs.coil.gif)
