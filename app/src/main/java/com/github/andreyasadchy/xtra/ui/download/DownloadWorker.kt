@@ -69,7 +69,7 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                     }
                     val directory = DocumentFile.fromTreeUri(applicationContext, offlineVideo.url.substringBefore("/document/").toUri())!!
-                    val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F"))!!
+                    val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))!!
                     playlist.tracks.map {
                         async {
                             requestSemaphore.withPermit {

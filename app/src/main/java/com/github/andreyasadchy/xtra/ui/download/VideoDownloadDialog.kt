@@ -93,7 +93,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             sharedPath = it.toString()
                             directory.visible()
-                            directory.text = it.path?.substringAfter("/tree/")
+                            directory.text = it.path?.substringAfter("/tree/")?.removeSuffix(":")
                         }
                     }
                 }
