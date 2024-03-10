@@ -160,7 +160,7 @@ class DownloadsViewModel @Inject internal constructor(
                     val oldPlaylistFile = DocumentFile.fromSingleUri(context, video.url.toUri())
                     if (oldPlaylistFile != null) {
                         val oldDirectory = DocumentFile.fromTreeUri(context, video.url.substringBefore("/document/").toUri())
-                        val oldVideoDirectory = oldDirectory?.findFile(video.url.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F"))
+                        val oldVideoDirectory = oldDirectory?.findFile(video.url.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                         if (oldVideoDirectory != null) {
                             val newVideoDirectoryUri = "$path${File.separator}${oldVideoDirectory.name}${File.separator}"
                             File(newVideoDirectoryUri).mkdir()
@@ -254,7 +254,7 @@ class DownloadsViewModel @Inject internal constructor(
                     if (video.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                         if (video.vod) {
                             val directory = DocumentFile.fromTreeUri(context, video.url.substringBefore("/document/").toUri()) ?: return@launch
-                            val videoDirectory = directory.findFile(video.url.substringBeforeLast("%2F").substringAfterLast("%2F")) ?: return@launch
+                            val videoDirectory = directory.findFile(video.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
                             val playlistFile = videoDirectory.findFile(video.url.substringAfterLast("%2F")) ?: return@launch
                             val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
                             if (playlists.isEmpty()) {
