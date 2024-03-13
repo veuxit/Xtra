@@ -186,7 +186,7 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING) {
+                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING || item.status == OfflineVideo.STATUS_DELETING) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP || Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !item.url.endsWith(".m3u8")) {
                                     menu.findItem(R.id.moveVideo).apply {
                                         isVisible = true
@@ -223,6 +223,7 @@ class DownloadsAdapter(
                             text = when (item.status) {
                                 OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
                                 OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
+                                OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
                                 else -> context.getString(R.string.download_pending)
                             }
                             visible()
