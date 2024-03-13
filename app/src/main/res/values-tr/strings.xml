@@ -611,4 +611,5 @@
     <string name="move_to_app_storage">Uygulama depolama alanına taşı</string>
     <string name="download_moving">Taşınma</string>
     <string name="theme_adapted_username_color">Readable colors based on the app theme</string>
+    <string name="download_deleting">Deleting</string>
 </resources>

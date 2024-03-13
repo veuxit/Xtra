@@ -611,4 +611,5 @@
     <string name="move_to_app_storage">Move to app storage</string>
     <string name="download_moving">Moving</string>
     <string name="theme_adapted_username_color">Адаптировать цвета в зависимости от темы</string>
+    <string name="download_deleting">Deleting</string>
 </resources>
