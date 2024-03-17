@@ -99,6 +99,9 @@ class EventSubWebSocket(
                             if (event != null) {
                                 when (metadata.optString("subscription_type")) {
                                     "channel.chat.message" -> listener.onMessage(event, timestamp)
+                                    "channel.chat.notification" -> listener.onUserNotice(event, timestamp)
+                                    "channel.chat.clear" -> listener.onClearChat(event, timestamp)
+                                    "channel.chat_settings.update" -> listener.onRoomState(event, timestamp)
                                 }
                             }
                         }
@@ -135,6 +138,9 @@ class EventSubWebSocket(
     interface OnMessageReceivedListener {
         fun onWelcomeMessage(sessionId: String)
         fun onMessage(json: JSONObject, timestamp: String?)
+        fun onUserNotice(json: JSONObject, timestamp: String?)
+        fun onClearChat(json: JSONObject, timestamp: String?)
+        fun onRoomState(json: JSONObject, timestamp: String?)
         fun onCommand(message: String, duration: String?, type: String?, fullMsg: String?)
     }
 }
