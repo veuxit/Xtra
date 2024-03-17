@@ -531,7 +531,7 @@ class ChatViewModel @Inject constructor(
             val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
             val helixToken = account.helixToken
             if (useEventSubChat && !account.helixToken.isNullOrBlank()) {
-                eventSub = EventSubWebSocket(channelLogin, okHttpClient, viewModelScope, EventSubListenerImpl(this, this, this, usePubSub)).apply { connect() }
+                eventSub = EventSubWebSocket(channelLogin, okHttpClient, viewModelScope, EventSubListenerImpl(this, this, this, showUserNotice, showClearChat, usePubSub)).apply { connect() }
             } else {
                 if (useChatWebSocket) {
                     chatReadWebSocket = ChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
@@ -721,9 +721,16 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onWelcomeMessage(sessionId: String) {
-            viewModelScope.launch {
-                repository.createChatEventSubSubscription(helixClientId, account.helixToken, account.id, channelId, sessionId)?.let {
-                    onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+            listOf(
+                "channel.chat.clear",
+                "channel.chat.message",
+                "channel.chat.notification",
+                "channel.chat_settings.update",
+            ).forEach {
+                viewModelScope.launch {
+                    repository.createChatEventSubSubscription(helixClientId, account.helixToken, account.id, channelId, it, sessionId)?.let {
+                        onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+                    }
                 }
             }
         }
