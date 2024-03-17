@@ -652,9 +652,9 @@ class ApiRepository @Inject constructor(
         gql.loadUnfollowGame(gqlHeaders, gameId).error
     }
 
-    suspend fun createChatEventSubSubscription(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, sessionId: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun createChatEventSubSubscription(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, type: String?, sessionId: String?): String? = withContext(Dispatchers.IO) {
         val json = JsonObject().apply {
-            addProperty("type", "channel.chat.message")
+            addProperty("type", type)
             addProperty("version", "1")
             add("condition", JsonObject().apply {
                 addProperty("broadcaster_user_id", channelId)
