@@ -1,7 +1,11 @@
 package com.github.andreyasadchy.xtra.api
 
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchResponse
-import com.github.andreyasadchy.xtra.model.helix.chat.*
+import com.github.andreyasadchy.xtra.model.helix.chat.ChatBadgesResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.CheerEmotesResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.EmoteSetResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.ModeratorsResponse
+import com.github.andreyasadchy.xtra.model.helix.chat.UserEmotesResponse
 import com.github.andreyasadchy.xtra.model.helix.clip.ClipsResponse
 import com.github.andreyasadchy.xtra.model.helix.follows.FollowResponse
 import com.github.andreyasadchy.xtra.model.helix.game.GamesResponse
@@ -14,7 +18,14 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import retrofit2.Response
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Query
 
 interface HelixApi {
 
@@ -129,6 +140,15 @@ interface HelixApi {
         @Query("first") limit: Int? = null,
         @Query("after") offset: String? = null
     ): FollowResponse
+
+    @GET("chat/emotes/user")
+    suspend fun getUserEmotes(
+        @Header("Client-ID") clientId: String?,
+        @Header("Authorization") token: String?,
+        @Query("user_id") userId: String?,
+        @Query("broadcaster_id") channelId: String? = null,
+        @Query("after") offset: String? = null
+    ): UserEmotesResponse
 
     @GET("chat/emotes/set")
     suspend fun getEmotesFromSet(

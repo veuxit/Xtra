@@ -579,10 +579,10 @@ class ChatViewModel @Inject constructor(
                     addEmotes(saved)
                     userEmotes.postValue(saved.sortedByDescending { it.ownerId == channelId })
                 } else {
-                    if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                    if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank()) {
                         viewModelScope.launch {
                             try {
-                                repository.loadUserEmotes(gqlHeaders, channelId).let { emotes ->
+                                repository.loadUserEmotes(helixClientId, account.helixToken, gqlHeaders, channelId, account.id, animateGifs, checkIntegrity).let { emotes ->
                                     if (emotes.isNotEmpty()) {
                                         val sorted = emotes.sortedByDescending { it.setId }
                                         addEmotes(sorted)
