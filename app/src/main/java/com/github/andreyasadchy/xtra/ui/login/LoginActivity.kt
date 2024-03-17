@@ -27,7 +27,17 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.LoggedIn
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.repository.AuthRepository
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.applyTheme
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.isLightTheme
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -131,6 +141,7 @@ class LoginActivity : AppCompatActivity() {
             "user:manage:chat_color", // chat/color
             "user:manage:whispers", // whispers
             "user:read:chat",
+            "user:read:emotes", // chat/emotes/user
             "user:read:follows", // streams/followed, channels/followed
             "user:write:chat", // chat/messages
         )

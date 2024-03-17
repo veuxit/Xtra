@@ -498,8 +498,9 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserEmotes(gqlHeaders: Map<String, String>, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadUserEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, userId: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
+            if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
             val emotes = mutableListOf<TwitchEmote>()
             var offset: String? = null
             do {
@@ -509,23 +510,63 @@ class ApiRepository @Inject constructor(
             } while (!get.cursor.isNullOrBlank() && get.hasNextPage == true)
             emotes
         } catch (e: Exception) {
-            if (e.message == "failed integrity check") throw e
-            val emotes = mutableListOf<TwitchEmote>()
-            val get = getApolloClient(gqlHeaders).query(UserEmotesQuery()).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.user?.emoteSets?.forEach { set ->
-                set.emotes?.forEach { emote ->
-                    if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
-                        emotes.add(TwitchEmote(
-                            id = emote.id,
-                            name = emote.token.removePrefix("\\").replace("?\\", ""),
-                            setId = emote.setID,
-                            ownerId = emote.owner?.id
-                        ))
+            if (checkIntegrity && e.message == "failed integrity check") throw e
+            try {
+                if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                val emotes = mutableListOf<TwitchEmote>()
+                val get = getApolloClient(gqlHeaders).query(UserEmotesQuery()).execute()
+                get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                get.data?.user?.emoteSets?.forEach { set ->
+                    set.emotes?.forEach { emote ->
+                        if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
+                            emotes.add(TwitchEmote(
+                                id = emote.id,
+                                name = emote.token.removePrefix("\\").replace("?\\", ""),
+                                setId = emote.setID,
+                                ownerId = emote.owner?.id
+                            ))
+                        }
                     }
                 }
+                emotes
+            } catch (e: Exception) {
+                if (checkIntegrity && e.message == "failed integrity check") throw e
+                val emotes = mutableListOf<TwitchEmote>()
+                var offset: String? = null
+                do {
+                    val get = helix.getUserEmotes(
+                        clientId = helixClientId,
+                        token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                        userId = userId,
+                        channelId = channelId,
+                        offset = offset
+                    )
+                    offset = get.cursor
+                    get.data.forEach { emote ->
+                        val format = (if (animateGifs) {
+                            emote.formats.find { it == "animated" } ?: emote.formats.find { it == "static" }
+                        } else {
+                            emote.formats.find { it == "static" }
+                        } ?: emote.formats.first())
+                        val theme = (emote.themes.find { it == "dark" } ?: emote.themes.last())
+                        val url = emote.template
+                            .replaceFirst("{{id}}", emote.id)
+                            .replaceFirst("{{format}}", format)
+                            .replaceFirst("{{theme_mode}}", theme)
+                        emotes.add(TwitchEmote(
+                            name = emote.name,
+                            url1x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                            url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                            url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                            url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
+                            type = if (format == "animated") "gif" else null,
+                            setId = emote.setId,
+                            ownerId = emote.ownerId
+                        ))
+                    }
+                } while (!get.cursor.isNullOrBlank())
+                emotes
             }
-            emotes
         }
     }
 
