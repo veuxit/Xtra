@@ -104,18 +104,18 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
                         true
                     }
                     R.id.settings -> {
-                        activity.startActivityFromFragment(this@SavedMediaFragment, Intent(activity, SettingsActivity::class.java), 3)
+                        activity.settingsResultLauncher?.launch(Intent(activity, SettingsActivity::class.java))
                         true
                     }
                     R.id.login -> {
                         if (account is NotLoggedIn) {
-                            activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
+                            activity.loginResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                         } else {
                             activity.getAlertDialogBuilder().apply {
                                 setTitle(getString(R.string.logout_title))
                                 account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
                                 setNegativeButton(getString(R.string.no), null)
-                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
+                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java)) }
                             }.show()
                         }
                         true
@@ -195,14 +195,6 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt("previousItem", previousItem)
         super.onSaveInstanceState(outState)
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
-            requireActivity().recreate()
-        }
     }
 
     override fun scrollToTop() {

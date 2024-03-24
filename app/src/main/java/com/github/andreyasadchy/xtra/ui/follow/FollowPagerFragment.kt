@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.follow
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -73,18 +72,18 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
                         true
                     }
                     R.id.settings -> {
-                        activity.startActivityFromFragment(this@FollowPagerFragment, Intent(activity, SettingsActivity::class.java), 3)
+                        activity.settingsResultLauncher?.launch(Intent(activity, SettingsActivity::class.java))
                         true
                     }
                     R.id.login -> {
                         if (account is NotLoggedIn) {
-                            activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 1)
+                            activity.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                         } else {
                             activity.getAlertDialogBuilder().apply {
                                 setTitle(getString(R.string.logout_title))
                                 account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
                                 setNegativeButton(getString(R.string.no), null)
-                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2) }
+                                setPositiveButton(getString(R.string.yes)) { _, _ -> activity.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java)) }
                             }.show()
                         }
                         true
@@ -164,14 +163,6 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
                 }
                 WindowInsetsCompat.CONSUMED
             }
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
-            requireActivity().recreate()
         }
     }
 
