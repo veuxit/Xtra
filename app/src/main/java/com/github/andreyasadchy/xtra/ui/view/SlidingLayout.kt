@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -185,7 +186,12 @@ class SlidingLayout : LinearLayout {
             if (it is Bundle) {
                 isMaximized = it.getBoolean("isMaximized")
                 maximizedSecondViewVisibility = it.getInt("secondViewVisibility")
-                it.getParcelable("superState")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    it.getParcelable("superState", Parcelable::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.getParcelable("superState")
+                }
             } else {
                 it
             }

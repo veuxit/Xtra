@@ -987,9 +987,6 @@ class ChatViewModel @Inject constructor(
                 command.equals("/mods", true) -> {
                     viewModelScope.launch {
                         repository.getModerators(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
                         )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
@@ -1163,9 +1160,6 @@ class ChatViewModel @Inject constructor(
                 command.equals("/vips", true) -> {
                     viewModelScope.launch {
                         repository.getVips(
-                            helixClientId = helixClientId,
-                            helixToken = account.helixToken,
-                            channelId = channelId,
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
                         )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }

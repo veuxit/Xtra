@@ -287,18 +287,22 @@ class DownloadsViewModel @Inject internal constructor(
                             }
                             if (video.vod) {
                                 val directory = playlistFile.parentFile
-                                val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
-                                if (playlists.isEmpty()) {
-                                    directory.deleteRecursively()
-                                } else {
-                                    val playlist = PlaylistParser(playlistFile.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                                    val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
-                                    playlists.forEach {
-                                        val p = PlaylistParser(it.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                                        tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
+                                if (directory != null) {
+                                    val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
+                                    if (playlists != null) {
+                                        if (playlists.isEmpty()) {
+                                            directory.deleteRecursively()
+                                        } else {
+                                            val playlist = PlaylistParser(playlistFile.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                                            val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
+                                            playlists.forEach {
+                                                val p = PlaylistParser(it.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                                                tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
+                                            }
+                                            tracksToDelete.forEach { File(it.uri).delete() }
+                                            playlistFile.delete()
+                                        }
                                     }
-                                    tracksToDelete.forEach { File(it.uri).delete() }
-                                    playlistFile.delete()
                                 }
                             } else {
                                 playlistFile.delete()

@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.follow.channels
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -55,12 +56,24 @@ class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
             val args = requireArguments()
-            val originalSortId = when (args.getSerializable(SORT) as FollowSortEnum) {
+            val originalSortId = when (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(SORT, FollowSortEnum::class.java)!!
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(SORT) as FollowSortEnum
+                }) {
                 FOLLOWED_AT -> R.id.time_followed
                 ALPHABETICALLY -> R.id.alphabetically
                 LAST_BROADCAST -> R.id.last_broadcast
             }
-            val originalOrderId = if (args.getSerializable(ORDER) as FollowOrderEnum == DESC) R.id.newest_first else R.id.oldest_first
+            val originalOrderId = if (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(ORDER, FollowOrderEnum::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(ORDER) as? FollowOrderEnum
+                } == DESC) R.id.newest_first else R.id.oldest_first
             val originalSaveDefault = args.getBoolean(SAVE_DEFAULT)
             sort.check(originalSortId)
             order.check(originalOrderId)

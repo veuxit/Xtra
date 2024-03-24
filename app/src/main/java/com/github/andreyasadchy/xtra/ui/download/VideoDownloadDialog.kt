@@ -70,11 +70,21 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                 dismiss()
             }
         }
-        requireArguments().getParcelable<VideoDownloadInfo?>(KEY_VIDEO_INFO).let {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable(KEY_VIDEO_INFO, VideoDownloadInfo::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            requireArguments().getParcelable(KEY_VIDEO_INFO)
+        }.let {
             if (it == null) {
                 viewModel.setVideo(
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                    video = requireArguments().getParcelable(KEY_VIDEO)!!,
+                    video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requireArguments().getParcelable(KEY_VIDEO, Video::class.java)!!
+                    } else {
+                        @Suppress("DEPRECATION")
+                        requireArguments().getParcelable(KEY_VIDEO)!!
+                    },
                     playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                     skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
                 )
@@ -182,7 +192,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
 
     private fun parseTime(textView: TextView, default: String): Long? {
         with(textView) {
-            val value = if (text.isEmpty()) default else text
+            val value = text.ifEmpty { default }
             val time = value.split(':')
             try {
                 if (time.size != 3) throw IllegalArgumentException()

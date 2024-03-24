@@ -23,6 +23,7 @@ abstract class MaterialPreferenceFragment : PreferenceFragmentCompat() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun showPreferenceDialog(preference: Preference, fragment: DialogFragment) {
         fragment.arguments = bundleOf("key" to preference.key)
         fragment.setTargetFragment(this, 0)

@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.player
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -50,7 +51,14 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
                 setPadding(it.getDimensionPixelSize(0, 0))
             }
             adapter = PlayerGamesDialogAdapter(this@PlayerGamesDialog).also {
-                it.submitList(arguments?.getParcelableArrayList<Game>(C.GAMES_LIST)?.toList())
+                it.submitList(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        arguments?.getParcelableArrayList(C.GAMES_LIST, Game::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        arguments?.getParcelableArrayList(C.GAMES_LIST)
+                    }?.toList()
+                )
             }
         }
         return NestedScrollView(context).apply { addView(recycleView) }

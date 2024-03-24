@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.videos
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -109,26 +110,44 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
                     saveSort.isVisible = parentFragment?.arguments?.getString(C.GAME_ID).isNullOrBlank() == false
                 }
             }
-            val originalSortId = if (args.getSerializable(SORT) as VideoSortEnum == TIME) R.id.time else R.id.views
-            val originalPeriodId = when (args.getSerializable(PERIOD) as VideoPeriodEnum) {
+            val originalSortId = if (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(SORT, VideoSortEnum::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(SORT) as? VideoSortEnum
+                } == TIME) R.id.time else R.id.views
+            val originalPeriodId = when (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(PERIOD, VideoPeriodEnum::class.java)!!
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(PERIOD) as VideoPeriodEnum
+                }) {
                 DAY -> R.id.today
                 WEEK -> R.id.week
                 MONTH -> R.id.month
                 ALL -> R.id.all
             }
-            val originalTypeId = when (args.getSerializable(TYPE) as BroadcastTypeEnum) {
+            val originalTypeId = when (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(TYPE, BroadcastTypeEnum::class.java)!!
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(TYPE) as BroadcastTypeEnum
+                }) {
                 BroadcastTypeEnum.ARCHIVE -> R.id.typeArchive
                 BroadcastTypeEnum.HIGHLIGHT -> R.id.typeHighlight
                 BroadcastTypeEnum.UPLOAD -> R.id.typeUpload
                 BroadcastTypeEnum.ALL -> R.id.typeAll
             }
-            val originalLanguageIndex = args.getSerializable(LANGUAGE)
+            val originalLanguageIndex = args.getInt(LANGUAGE)
             val originalSaveSort = args.getBoolean(SAVE_SORT)
             val originalSaveDefault = args.getBoolean(SAVE_DEFAULT)
             sort.check(originalSortId)
             period.check(originalPeriodId)
             sortType.check(originalTypeId)
-            langIndex = args.getInt(LANGUAGE)
+            langIndex = originalLanguageIndex
             saveSort.isChecked = originalSaveSort
             saveDefault.isChecked = originalSaveDefault
             apply.setOnClickListener {
