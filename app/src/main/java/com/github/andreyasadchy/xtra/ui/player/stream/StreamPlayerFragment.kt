@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
@@ -68,7 +69,12 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        stream = requireArguments().getParcelable(KEY_STREAM)!!
+        stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable(KEY_STREAM, Stream::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            requireArguments().getParcelable(KEY_STREAM)!!
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

@@ -98,7 +98,7 @@ class VideoPlayerViewModel @Inject constructor(
                                 }
 
                                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "thumbnails", video.id!!, resource)
+                                    DownloadUtils.savePng(context, "thumbnails", video.id, resource)
                                 }
                             })
                     } catch (e: Exception) {
@@ -116,7 +116,7 @@ class VideoPlayerViewModel @Inject constructor(
                                 }
 
                                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "profile_pics", video.channelId!!, resource)
+                                    DownloadUtils.savePng(context, "profile_pics", video.channelId, resource)
                                 }
                             })
                     } catch (e: Exception) {

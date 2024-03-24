@@ -330,7 +330,8 @@ class PlaybackService : MediaSessionService() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 customCommand.customExtras.getParcelable(ITEM, Stream::class.java)
                             } else {
-                                @Suppress("DEPRECATION") customCommand.customExtras.getParcelable(ITEM)
+                                @Suppress("DEPRECATION")
+                                customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
                                 playingAds = false
                                 usingProxy = false
@@ -342,7 +343,8 @@ class PlaybackService : MediaSessionService() {
                                 val headers = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     customCommand.customExtras.getSerializable(HEADERS, HashMap::class.java) as? HashMap<String, String>
                                 } else {
-                                    @Suppress("DEPRECATION") customCommand.customExtras.getSerializable(HEADERS) as? HashMap<String, String>
+                                    @Suppress("DEPRECATION")
+                                    customCommand.customExtras.getSerializable(HEADERS) as? HashMap<String, String>
                                 }
                                 val playlistAsData = customCommand.customExtras.getBoolean(PLAYLIST_AS_DATA)
                                 Companion.item = item
@@ -387,7 +389,8 @@ class PlaybackService : MediaSessionService() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 customCommand.customExtras.getParcelable(ITEM, Video::class.java)
                             } else {
-                                @Suppress("DEPRECATION") customCommand.customExtras.getParcelable(ITEM)
+                                @Suppress("DEPRECATION")
+                                customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
                                 val usingPlaylist = customCommand.customExtras.getBoolean(USING_PLAYLIST)
                                 if (usingPlaylist) {
@@ -446,7 +449,8 @@ class PlaybackService : MediaSessionService() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 customCommand.customExtras.getParcelable(ITEM, Clip::class.java)
                             } else {
-                                @Suppress("DEPRECATION") customCommand.customExtras.getParcelable(ITEM)
+                                @Suppress("DEPRECATION")
+                                customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
                                 customCommand.customExtras.getStringArray(URLS_KEYS)?.let { keys ->
                                     customCommand.customExtras.getStringArray(URLS_VALUES)?.let { values ->
@@ -481,7 +485,8 @@ class PlaybackService : MediaSessionService() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 customCommand.customExtras.getParcelable(ITEM, OfflineVideo::class.java)
                             } else {
-                                @Suppress("DEPRECATION") customCommand.customExtras.getParcelable(ITEM)
+                                @Suppress("DEPRECATION")
+                                customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
                                 Companion.item = item
                                 val appContext = XtraApp.INSTANCE.applicationContext

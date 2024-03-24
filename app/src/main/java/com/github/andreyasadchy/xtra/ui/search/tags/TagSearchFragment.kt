@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.AppBarConfiguration
@@ -105,9 +106,11 @@ class TagSearchFragment : PagedListFragment() {
                 override fun onQueryTextChange(newText: String): Boolean {
                     job?.cancel()
                     if (newText.isNotEmpty()) {
-                        job = lifecycleScope.launchWhenResumed {
+                        job = lifecycleScope.launch {
                             delay(750)
-                            search(newText)
+                            withResumed {
+                                search(newText)
+                            }
                         }
                     } else {
                         search(newText) //might be null on rotation, so as?

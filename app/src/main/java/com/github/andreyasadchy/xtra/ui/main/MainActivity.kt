@@ -422,7 +422,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         } else {
             when (intent?.getIntExtra(KEY_CODE, -1)) {
                 INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
-                INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(intent.getParcelableExtra(KEY_VIDEO)!!)
+                INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(KEY_VIDEO)!!
+                    }
+                )
                 INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
             }
         }
