@@ -160,7 +160,7 @@ class MainViewModel @Inject constructor(
                     if ((e is IllegalStateException && e.message == "401") || (e is HttpException && e.code() == 401)) {
                         Account.set(activity, null)
                         activity.toast(R.string.token_expired)
-                        activity.startActivityForResult(Intent(activity, LoginActivity::class.java), 2)
+                        (activity as? MainActivity)?.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                     }
                 }
             }
