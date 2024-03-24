@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.main
 
+import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -17,6 +18,8 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.ViewGroup
 import android.view.WindowManager
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -91,6 +94,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         }
     }
     private lateinit var prefs: SharedPreferences
+    var settingsResultLauncher: ActivityResultLauncher<Intent>? = null
+    var loginResultLauncher: ActivityResultLauncher<Intent>? = null
+    var logoutResultLauncher: ActivityResultLauncher<Intent>? = null
     var orientation: Int = 1
 
     //Lifecycle methods
@@ -197,6 +203,19 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             }
             windowInsets
         }
+        settingsResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                recreate()
+            }
+        }
+        loginResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                restartActivity()
+            }
+        }
+        logoutResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            restartActivity()
+        }
 
         val notInitialized = savedInstanceState == null
         initNavigation()
@@ -276,26 +295,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         handleIntent(intent)
     }
 
-    /**
-     * Result of LoginActivity
-     */
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        fun restartActivity() {
-            finish()
-            overridePendingTransition(0, 0)
-            startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
-            overridePendingTransition(0, 0)
-        }
-        when (requestCode) {
-            1 -> { //Was not logged in
-                when (resultCode) {//Logged in
-                    RESULT_OK -> restartActivity()
-                }
-            }
-            2 -> restartActivity() //Was logged in
-        }
+    private fun restartActivity() {
+        finish()
+        overridePendingTransition(0, 0)
+        startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+        overridePendingTransition(0, 0)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
