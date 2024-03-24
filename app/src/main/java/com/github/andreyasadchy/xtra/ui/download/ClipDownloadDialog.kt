@@ -26,6 +26,7 @@ import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
+import java.io.Serializable
 
 @AndroidEntryPoint
 class ClipDownloadDialog : BaseDownloadDialog() {
@@ -57,8 +58,18 @@ class ClipDownloadDialog : BaseDownloadDialog() {
         with(requireArguments()) {
             viewModel.init(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                clip = getParcelable(KEY_CLIP)!!,
-                qualities = getSerializable(KEY_QUALITIES) as Map<String, String>?,
+                clip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    getParcelable(KEY_CLIP, Clip::class.java)!!
+                } else {
+                    @Suppress("DEPRECATION")
+                    getParcelable(KEY_CLIP)!!
+                },
+                qualities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    getSerializable(KEY_QUALITIES, Serializable::class.java) as? Map<String, String>
+                } else {
+                    @Suppress("DEPRECATION")
+                    getSerializable(KEY_QUALITIES) as? Map<String, String>
+                },
                 skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
             )
         }

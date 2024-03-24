@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player.offline
 
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -40,7 +41,12 @@ class OfflinePlayerFragment : BasePlayerFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableNetworkCheck = false
         super.onCreate(savedInstanceState)
-        video = requireArguments().getParcelable(KEY_VIDEO)!!
+        video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable(KEY_VIDEO, OfflineVideo::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            requireArguments().getParcelable(KEY_VIDEO)!!
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

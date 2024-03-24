@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -191,6 +192,7 @@ class LoginActivity : AppCompatActivity() {
             clearCookies()
         }
         with(binding.webView) {
+            @Suppress("DEPRECATION")
             if (!isLightTheme) {
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
                     WebSettingsCompat.setForceDark(this.settings, WebSettingsCompat.FORCE_DARK_ON)
@@ -221,24 +223,41 @@ class LoginActivity : AppCompatActivity() {
                     return super.shouldInterceptRequest(view, webViewRequest)
                 }
 
-                @Deprecated("Deprecated in Java")
-                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     if (!readHeaders) {
-                        loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                        loginIfValidUrl(request?.url.toString(), helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
                     }
-                    return false
+                    return super.shouldOverrideUrlLoading(view, request)
+                }
+
+                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                    super.onReceivedError(view, request, error)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (request?.isForMainFrame == true) {
+                            val errorMessage = if (error?.errorCode == ERROR_FAILED_SSL_HANDSHAKE) {
+                                getString(R.string.browser_workaround)
+                            } else {
+                                getString(R.string.error, "${error?.errorCode} ${error?.description}")
+                            }
+                            val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
+                            loadUrl("about:blank")
+                            loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                        }
+                    }
                 }
 
                 @Deprecated("Deprecated in Java")
-                override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
-                    val errorMessage = if (errorCode == -11) {
-                        getString(R.string.browser_workaround)
-                    } else {
-                        getString(R.string.error, "$errorCode $description")
+                override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                        val errorMessage = if (errorCode == ERROR_FAILED_SSL_HANDSHAKE) {
+                            getString(R.string.browser_workaround)
+                        } else {
+                            getString(R.string.error, "$errorCode $description")
+                        }
+                        val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
+                        loadUrl("about:blank")
+                        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     }
-                    val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
-                    loadUrl("about:blank")
-                    loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                 }
             }
             if (apiSetting == 1) {

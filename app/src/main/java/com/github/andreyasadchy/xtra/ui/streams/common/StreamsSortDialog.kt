@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -49,7 +50,13 @@ class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
             val args = requireArguments()
-            val originalSortId = if (args.getSerializable(SORT) as StreamSortEnum == StreamSortEnum.VIEWERS_HIGH) R.id.viewers_high else R.id.viewers_low
+            val originalSortId = if (
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getSerializable(SORT, StreamSortEnum::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getSerializable(SORT) as? StreamSortEnum
+                } == StreamSortEnum.VIEWERS_HIGH) R.id.viewers_high else R.id.viewers_low
             sort.check(originalSortId)
             apply.setOnClickListener {
                 val checkedSortId = sort.checkedRadioButtonId

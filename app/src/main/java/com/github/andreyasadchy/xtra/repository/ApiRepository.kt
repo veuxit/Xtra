@@ -722,9 +722,8 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun getModerators(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun getModerators(gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = gql.getModerators(gqlHeaders, channelLogin)
-        //val response = helix.getModerators(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
             response.body()?.data?.map { it.channelLogin }.toString()
         } else {
@@ -822,9 +821,8 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun getVips(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun getVips(gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = gql.getVips(gqlHeaders, channelLogin)
-        //val response = helix.getVips(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, null, null)
         if (response.isSuccessful) {
             response.body()?.data?.map { it.channelLogin }.toString()
         } else {

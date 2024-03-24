@@ -12,6 +12,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
@@ -35,6 +36,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
@@ -179,9 +181,11 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
             override fun onQueryTextChange(newText: String): Boolean {
                 job?.cancel()
                 if (newText.isNotEmpty()) {
-                    job = lifecycleScope.launchWhenResumed {
+                    job = lifecycleScope.launch {
                         delay(750)
-                        (currentFragment as? Searchable)?.search(newText)
+                        withResumed {
+                            (currentFragment as? Searchable)?.search(newText)
+                        }
                     }
                 } else {
                     (currentFragment as? Searchable)?.search(newText) //might be null on rotation, so as?

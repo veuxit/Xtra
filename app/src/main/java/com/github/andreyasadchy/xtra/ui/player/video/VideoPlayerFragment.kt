@@ -66,7 +66,12 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        video = requireArguments().getParcelable(KEY_VIDEO)!!
+        video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable(KEY_VIDEO, Video::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            requireArguments().getParcelable(KEY_VIDEO)!!
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -319,7 +324,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 result.get().extras.getParcelable(PlaybackService.RESULT, VideoDownloadInfo::class.java)
                             } else {
-                                @Suppress("DEPRECATION") result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
+                                @Suppress("DEPRECATION")
+                                result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
                             }?.let {
                                 VideoDownloadDialog.newInstance(it.copy(video = video)).show(childFragmentManager, null)
                             }

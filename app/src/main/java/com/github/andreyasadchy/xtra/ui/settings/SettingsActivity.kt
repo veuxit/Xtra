@@ -593,7 +593,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class DragListFragment : Fragment() {
-        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
             var newId = 1000
             val view = LinearLayout(requireContext()).apply {
                 id = R.id.layout

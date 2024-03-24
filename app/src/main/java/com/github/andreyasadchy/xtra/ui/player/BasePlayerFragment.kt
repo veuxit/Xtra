@@ -77,7 +77,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-@Suppress("PLUGIN_WARNING")
 abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener {
 
     private lateinit var controllerFuture: ListenableFuture<MediaController>
@@ -110,6 +109,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
+    @Suppress("DEPRECATION")
     private var systemUiFlags = (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -193,7 +193,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
                             } else {
-                                @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                                @Suppress("DEPRECATION")
+                                result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
                             }?.let {
                                 changePlayerMode(it)
                             }
@@ -320,7 +321,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
                                 } else {
-                                    @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                                    @Suppress("DEPRECATION")
+                                    result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
                                 }?.let {
                                     changePlayerMode(it)
                                 }
@@ -457,8 +459,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         playerView.useController = false
         if (isPortrait) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-                @Suppress("DEPRECATION")
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 }
                 requireActivity().window.statusBarColor = Color.TRANSPARENT
@@ -484,8 +486,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
         if (isPortrait) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-                @Suppress("DEPRECATION")
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                     requireActivity().window.statusBarColor = if (!isLightTheme) {
                         MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
@@ -533,7 +535,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
                             } else {
-                                @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                                @Suppress("DEPRECATION")
+                                result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
                             }?.let {
                                 changePlayerMode(it)
                                 (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
@@ -642,8 +645,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && slidingLayout.isMaximized && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-                @Suppress("DEPRECATION")
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                     requireActivity().window.statusBarColor = if (!isLightTheme) {
                         MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)
@@ -700,8 +703,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && slidingLayout.isMaximized && prefs.getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-                @Suppress("DEPRECATION")
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 }
                 requireActivity().window.statusBarColor = Color.TRANSPARENT
@@ -782,6 +785,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 if (isAdded) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.decorView.systemUiVisibility = 0
                 }
             }
@@ -797,6 +801,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 if (isAdded) {
+                    @Suppress("DEPRECATION")
                     requireActivity().window.decorView.systemUiVisibility = systemUiFlags
                 }
             }
@@ -881,7 +886,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
                     } else {
-                        @Suppress("DEPRECATION") result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
+                        @Suppress("DEPRECATION")
+                        result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
                     }?.let {
                         changePlayerMode(it)
                         releaseController()

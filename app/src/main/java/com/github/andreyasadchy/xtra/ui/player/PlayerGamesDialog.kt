@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player
 
 import android.content.Context
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -52,18 +51,16 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
                 setPadding(it.getDimensionPixelSize(0, 0))
             }
             adapter = PlayerGamesDialogAdapter(this@PlayerGamesDialog).also {
-                it.submitList(arguments?.getParcelableArrayList<Game>(C.GAMES_LIST)?.toList())
+                it.submitList(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        arguments?.getParcelableArrayList(C.GAMES_LIST, Game::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        arguments?.getParcelableArrayList(C.GAMES_LIST)
+                    }?.toList()
+                )
             }
         }
         return NestedScrollView(context).apply { addView(recycleView) }
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            view?.findViewById<GridRecyclerView>(R.id.recyclerView)?.apply {
-                gridLayoutManager.spanCount = getColumnsForConfiguration(newConfig)
-            }
-        }
     }
 }

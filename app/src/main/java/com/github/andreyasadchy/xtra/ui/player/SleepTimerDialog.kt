@@ -39,29 +39,6 @@ class SleepTimerDialog : DialogFragment() {
                 .setTitle(getString(R.string.sleep_timer))
                 .setView(binding.root)
         with(binding) {
-            val positiveListener: (dialog: DialogInterface, which: Int) -> Unit = { _, _ ->
-                listener.onSleepTimerChanged(hours.value * 3600_000L + minutes.value * 60_000L,  hours.value, minutes.value, lockCheckbox.isChecked)
-                dismiss()
-            }
-            if (requireArguments().getLong(KEY_TIME_LEFT) < 0L) {
-                builder.setPositiveButton(getString(R.string.start), positiveListener)
-                builder.setNegativeButton(android.R.string.cancel) { _, _ -> dismiss() }
-            } else {
-                builder.setPositiveButton(getString(R.string.set), positiveListener)
-                builder.setNegativeButton(getString(R.string.stop)) { _, _ ->
-                    listener.onSleepTimerChanged(-1L, 0, 0, lockCheckbox.isChecked)
-                    dismiss()
-                }
-                builder.setNeutralButton(android.R.string.cancel) { _, _ -> dismiss() }
-            }
-        }
-        return builder.create()
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        with(binding) {
             hours.apply {
                 minValue = 0
                 maxValue = 23
@@ -70,14 +47,25 @@ class SleepTimerDialog : DialogFragment() {
                 minValue = 0
                 maxValue = 59
             }
-            requireArguments().getLong(KEY_TIME_LEFT).let {
-                if (it < 0L) {
-                    minutes.value = 15
-                } else {
-                    val hours = it / 3600_000L
-                    binding.hours.value = hours.toInt()
-                    minutes.value = ((it - hours * 3600_000L) / 60_000L).toInt()
+            val positiveListener: (dialog: DialogInterface, which: Int) -> Unit = { _, _ ->
+                listener.onSleepTimerChanged(hours.value * 3600_000L + minutes.value * 60_000L,  hours.value, minutes.value, lockCheckbox.isChecked)
+                dismiss()
+            }
+            val timeLeft = requireArguments().getLong(KEY_TIME_LEFT)
+            if (timeLeft < 0L) {
+                minutes.value = 15
+                builder.setPositiveButton(getString(R.string.start), positiveListener)
+                builder.setNegativeButton(android.R.string.cancel) { _, _ -> dismiss() }
+            } else {
+                val hours = timeLeft / 3600_000L
+                binding.hours.value = hours.toInt()
+                minutes.value = ((timeLeft - hours * 3600_000L) / 60_000L).toInt()
+                builder.setPositiveButton(getString(R.string.set), positiveListener)
+                builder.setNegativeButton(getString(R.string.stop)) { _, _ ->
+                    listener.onSleepTimerChanged(-1L, 0, 0, lockCheckbox.isChecked)
+                    dismiss()
                 }
+                builder.setNeutralButton(android.R.string.cancel) { _, _ -> dismiss() }
             }
             val admin = ComponentName(requireContext(), AdminReceiver::class.java)
             if ((requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).isAdminActive(admin)) {
@@ -101,6 +89,7 @@ class SleepTimerDialog : DialogFragment() {
                 }
             }
         }
+        return builder.create()
     }
 
     override fun onDestroyView() {

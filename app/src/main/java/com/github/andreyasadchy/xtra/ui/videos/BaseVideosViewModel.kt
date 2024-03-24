@@ -64,7 +64,7 @@ abstract class BaseVideosViewModel(
                                 }
 
                                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "profile_pics", video.channelId!!, resource)
+                                    DownloadUtils.savePng(context, "profile_pics", video.channelId, resource)
                                 }
                             })
                     } catch (e: Exception) {

@@ -108,7 +108,12 @@ class DownloadService : IntentService(TAG) {
     @Deprecated("Deprecated in Java")
     @SuppressLint("CheckResult")
     override fun onHandleIntent(intent: Intent?) {
-        request = intent!!.getParcelableExtra(KEY_REQUEST)!!
+        request = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent!!.getParcelableExtra(KEY_REQUEST, Request::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            intent!!.getParcelableExtra(KEY_REQUEST)!!
+        }
         offlineVideo = runBlocking { offlineRepository.getVideoById(request.offlineVideoId) }
             ?: return //Download was canceled
         Log.d(TAG, "Starting download. Id: ${offlineVideo.id}")
@@ -175,7 +180,7 @@ class DownloadService : IntentService(TAG) {
                             }
                         } else {
                             val directory = File(request.path)
-                            if (directory.exists() && directory.list().isEmpty()) {
+                            if (directory.exists() && directory.list()?.isEmpty() == true) {
                                 directory.deleteRecursively()
                             }
                         }
@@ -275,6 +280,7 @@ class DownloadService : IntentService(TAG) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             stopForeground(if (removeNotification) Service.STOP_FOREGROUND_REMOVE else Service.STOP_FOREGROUND_DETACH)
         } else {
+            @Suppress("DEPRECATION")
             stopForeground(removeNotification)
         }
     }
