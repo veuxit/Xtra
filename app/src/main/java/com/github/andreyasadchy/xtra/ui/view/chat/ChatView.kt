@@ -28,12 +28,26 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ViewChatBinding
-import com.github.andreyasadchy.xtra.model.chat.*
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
+import com.github.andreyasadchy.xtra.model.chat.Chatter
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
+import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.ui.common.ChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.hideKeyboard
+import com.github.andreyasadchy.xtra.util.isLightTheme
+import com.github.andreyasadchy.xtra.util.loadImage
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
+import com.github.andreyasadchy.xtra.util.toggleVisibility
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.extensions.LayoutContainer
 import java.util.regex.Pattern
@@ -520,13 +534,13 @@ class ChatView : ConstraintLayout {
         private inner class ArrayFilter : Filter() {
             override fun performFiltering(prefix: CharSequence?): FilterResults {
                 val results = FilterResults()
-                val list = autoCompleteList.toList()
                 val originalValuesField = ArrayAdapter::class.java.getDeclaredField("mOriginalValues")
                 originalValuesField.isAccessible = true
                 val originalValues = originalValuesField.get(this@AutoCompleteAdapter) as List<*>?
                 if (originalValues == null) {
-                    originalValuesField.set(this@AutoCompleteAdapter, list)
+                    originalValuesField.set(this@AutoCompleteAdapter, autoCompleteList.toList())
                 }
+                val list = originalValues ?: autoCompleteList.toList()
                 if (prefix.isNullOrEmpty()) {
                     results.values = list
                     results.count = list.size

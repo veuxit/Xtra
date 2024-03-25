@@ -28,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 34
-        versionCode = 232
-        versionName = "2.30.5"
+        versionCode = 233
+        versionName = "2.30.6"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "it", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
