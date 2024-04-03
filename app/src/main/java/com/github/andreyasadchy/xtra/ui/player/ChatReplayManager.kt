@@ -9,108 +9,109 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.LinkedList
-import java.util.Timer
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
-import kotlin.concurrent.fixedRateTimer
 import kotlin.math.max
 
 class ChatReplayManager @Inject constructor(
     private val gqlHeaders: Map<String, String>,
     private val repository: ApiRepository,
     private val videoId: String,
-    private val startTime: Double,
-    private val currentPosition: () -> Double,
+    private val startTimeSeconds: Int,
+    private val getCurrentPosition: () -> Long?,
+    private val getCurrentSpeed: () -> Float?,
     private val messageListener: OnChatMessageReceivedListener,
     private val clearMessages: () -> Unit,
     private val getIntegrityToken: () -> Unit,
     private val coroutineScope: CoroutineScope) {
 
-    private val timer: Timer
     private var cursor: String? = null
-    private val list = LinkedList<VideoChatMessage>()
+    private val list = mutableListOf<VideoChatMessage>()
     private var isLoading = false
-    private lateinit var offsetJob: Job
-    private var nextJob: Job? = null
+    private var loadJob: Job? = null
+    private var messageJob: Job? = null
+    private var startTime = 0
+    private var lastCheckedPosition = 0L
+    private var playbackSpeed: Float? = null
 
-    init {
-        load(startTime)
-        var lastCheckedPosition = 0.0
-        timer = fixedRateTimer(period = 1000L, action = {
-            val position = currentPosition()
-            if (position - lastCheckedPosition !in 0.0..20.0) {
-                offsetJob.cancel()
-                list.clear()
-                clearMessages()
-                load(startTime + position)
-            }
-            lastCheckedPosition = position
-        })
+    fun start() {
+        startTime = startTimeSeconds.times(1000)
+        val currentPosition = getCurrentPosition() ?: 0
+        lastCheckedPosition = currentPosition
+        playbackSpeed = getCurrentSpeed()
+        list.clear()
+        clearMessages()
+        load(currentPosition.div(1000).toInt() + startTimeSeconds)
     }
 
     fun stop() {
-        offsetJob.cancel()
-        nextJob?.cancel()
-        timer.cancel()
+        loadJob?.cancel()
+        messageJob?.cancel()
     }
 
-    private fun load(offset: Double) {
-        offsetJob = coroutineScope.launch(Dispatchers.IO) {
+    private fun load(offsetSeconds: Int? = null) {
+        isLoading = true
+        loadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
-                isLoading = true
-                val log = repository.loadVideoMessages(gqlHeaders = gqlHeaders, videoId = videoId, offset = offset.toInt())
-                isLoading = false
-                list.addAll(log.data)
-                cursor = if (log.hasNextPage != false) log.cursor else null
-                while (isActive) {
-                    val message: VideoChatMessage? = try {
-                        list.poll()
-                    } catch (e: NoSuchElementException) { //wtf?
-                        null
-                    }
-                    if (message?.offsetSeconds != null) {
-                        val messageOffset = message.offsetSeconds.toDouble()
-                        var position: Double
-                        while ((currentPosition() + startTime).also { p -> position = p } < messageOffset) {
-                            delay(max((messageOffset - position) * 1000.0, 0.0).toLong())
-                        }
-                        if (position - messageOffset < 20.0) {
-                            messageListener.onMessage(message)
-                            if (list.size == 25) {
-                                loadNext()
-                            }
-                        }
-                    } else if (isLoading) {
-                        delay(1000L)
-                    } else if (cursor == null) {
-                        break
-                    }
+                val response = if (offsetSeconds != null) {
+                    repository.loadVideoMessages(gqlHeaders, videoId, offset = offsetSeconds)
+                } else {
+                    repository.loadVideoMessages(gqlHeaders, videoId, cursor = cursor)
                 }
+                messageJob?.cancel()
+                list.addAll(response.data)
+                cursor = if (response.hasNextPage != false) response.cursor else null
+                isLoading = false
+                startJob()
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     getIntegrityToken()
                 }
-                isLoading = false
             }
         }
     }
 
-    private fun loadNext() {
-        cursor?.let { c ->
-            nextJob = coroutineScope.launch(Dispatchers.IO) {
-                try {
-                    isLoading = true
-                    val log = repository.loadVideoMessages(gqlHeaders = gqlHeaders, videoId = videoId, cursor = c)
-                    list.addAll(log.data)
-                    cursor = if (log.hasNextPage != false) log.cursor else null
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check") {
-                        getIntegrityToken()
+    private fun startJob() {
+        messageJob = coroutineScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val message = list.firstOrNull() ?: break
+                if (message.offsetSeconds != null) {
+                    var currentPosition: Long
+                    val messageOffset = message.offsetSeconds.times(1000)
+                    while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
+                        delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
                     }
-                } finally {
-                    isLoading = false
+                    messageListener.onMessage(message)
+                    if (list.size <= 25 && !cursor.isNullOrBlank() && !isLoading) {
+                        load()
+                    }
                 }
+                list.remove(message)
             }
+        }
+    }
+
+    fun updatePosition(position: Long) {
+        if (lastCheckedPosition != position) {
+            if (position - lastCheckedPosition !in 0..20000) {
+                loadJob?.cancel()
+                messageJob?.cancel()
+                list.clear()
+                clearMessages()
+                load(position.div(1000).toInt() + startTimeSeconds)
+            } else {
+                messageJob?.cancel()
+                startJob()
+            }
+            lastCheckedPosition = position
+        }
+    }
+
+    fun updateSpeed(speed: Float) {
+        if (playbackSpeed != speed) {
+            playbackSpeed = speed
+            messageJob?.cancel()
+            startJob()
         }
     }
 }
