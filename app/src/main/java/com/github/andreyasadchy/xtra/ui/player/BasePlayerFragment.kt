@@ -119,7 +119,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         super.onCreate(savedInstanceState)
         val activity = requireActivity()
         prefs = activity.prefs()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            @Suppress("DEPRECATION")
             systemUiFlags = systemUiFlags or (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
         isPortrait = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {

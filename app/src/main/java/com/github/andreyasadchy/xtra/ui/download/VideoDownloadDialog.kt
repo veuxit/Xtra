@@ -89,7 +89,8 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                         requireArguments().getParcelable(KEY_VIDEO)!!
                     },
                     playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
-                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
                 )
             } else {
                 viewModel.setVideoInfo(it)

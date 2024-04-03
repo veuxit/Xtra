@@ -22,6 +22,8 @@ import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
 import com.github.andreyasadchy.xtra.ui.download.DownloadService
 import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_REQUEST
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -37,46 +39,14 @@ object DownloadUtils {
         DownloadService.activeRequests.add(request.offlineVideoId)
     }
 
-    fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long?, startPosition: Long?, segmentFrom: Int? = null, segmentTo: Int? = null): OfflineVideo {
+    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long?, startPosition: Long?, segmentFrom: Int? = null, segmentTo: Int? = null): OfflineVideo {
         return with(downloadable) {
-            if (!id.isNullOrBlank()) {
-                try {
-                    Glide.with(context)
-                        .asBitmap()
-                        .load(thumbnail)
-                        .into(object: CustomTarget<Bitmap>() {
-                            override fun onLoadCleared(placeholder: Drawable?) {
-
-                            }
-
-                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                savePng(context, "thumbnails", id!!, resource)
-                            }
-                        })
-                } catch (e: Exception) {
-
-                }
+            val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
+                savePng(context, thumbnail, "thumbnails", it)
             }
-            if (!channelId.isNullOrBlank()) {
-                try {
-                    Glide.with(context)
-                        .asBitmap()
-                        .load(channelLogo)
-                        .into(object: CustomTarget<Bitmap>() {
-                            override fun onLoadCleared(placeholder: Drawable?) {
-
-                            }
-
-                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                savePng(context, "profile_pics", channelId!!, resource)
-                            }
-                        })
-                } catch (e: Exception) {
-
-                }
+            val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
+                savePng(context, channelLogo, "profile_pics", it)
             }
-            val downloadedThumbnail = id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
-            val downloadedLogo = channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
             OfflineVideo(
                 url = path,
                 sourceUrl = url,
@@ -160,16 +130,26 @@ object DownloadUtils {
         return list
     }
 
-    fun savePng(context: Context, folder: String, fileName: String, bitmap: Bitmap) {
-        val outputStream: FileOutputStream
-        try {
-            val path = context.filesDir.toString() + File.separator + folder + File.separator + "$fileName.png"
-            File(context.filesDir, folder).mkdir()
-            outputStream = FileOutputStream(File(path))
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-            outputStream.close()
-        } catch (e: Exception) {
+    suspend fun savePng(context: Context, url: String?, folder: String, fileName: String): String {
+        withContext(Dispatchers.IO) {
+            try {
+                Glide.with(context)
+                    .asBitmap()
+                    .load(url)
+                    .into(object: CustomTarget<Bitmap>() {
+                        override fun onLoadCleared(placeholder: Drawable?) {}
 
+                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                            File(context.filesDir, folder).mkdir()
+                            FileOutputStream(context.filesDir.path + File.separator + folder + File.separator + "$fileName.png").use {
+                                resource.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            }
+                        }
+                    })
+            } catch (e: Exception) {
+
+            }
         }
+        return File(context.filesDir.path + File.separator + folder + File.separator + "$fileName.png").absolutePath
     }
 }

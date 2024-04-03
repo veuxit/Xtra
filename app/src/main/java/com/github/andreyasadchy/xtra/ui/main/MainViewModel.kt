@@ -61,7 +61,9 @@ class MainViewModel @Inject constructor(
         get() = _user
 
     init {
-        offlineRepository.resumeDownloads(application)
+        viewModelScope.launch {
+            offlineRepository.resumeDownloads(application)
+        }
     }
 
     fun onMaximize() {

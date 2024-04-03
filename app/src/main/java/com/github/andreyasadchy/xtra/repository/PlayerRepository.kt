@@ -5,7 +5,6 @@ import android.util.Base64
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.api.UsherApi
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
@@ -21,7 +20,6 @@ import com.github.andreyasadchy.xtra.model.chat.RecentMessagesResponse
 import com.github.andreyasadchy.xtra.model.chat.StvChannelResponse
 import com.github.andreyasadchy.xtra.model.chat.StvGlobalResponse
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.prefs
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -73,8 +71,8 @@ class PlayerRepository @Inject constructor(
         }.build()).execute().use { it.body()?.string() ?: "" }
     }
 
-    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
-        val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId)
+    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
+        val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId, enableIntegrity)
         val accessToken = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
             val json = JsonObject().apply {
                 add("extensions", JsonObject().apply {
@@ -137,8 +135,8 @@ class PlayerRepository @Inject constructor(
         } else url
     }
 
-    suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?): Uri = withContext(Dispatchers.IO) {
-        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType)
+    suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): Uri = withContext(Dispatchers.IO) {
+        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType, enableIntegrity)
         buildUrl(
             "https://usher.ttvnw.net/vod/$videoId.m3u8?",
             "allow_source", "true",
@@ -151,8 +149,8 @@ class PlayerRepository @Inject constructor(
         )
     }
 
-    suspend fun loadVideoPlaylist(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?): Response<ResponseBody> = withContext(Dispatchers.IO) {
-        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType)
+    suspend fun loadVideoPlaylist(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, enableIntegrity: Boolean): Response<ResponseBody> = withContext(Dispatchers.IO) {
+        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType, enableIntegrity)
         val playlistQueryOptions = HashMap<String, String>().apply {
             put("allow_source", "true")
             put("allow_audio_only", "true")
@@ -163,8 +161,8 @@ class PlayerRepository @Inject constructor(
         usher.getVideoPlaylist(videoId, playlistQueryOptions)
     }
 
-    private suspend fun loadVideoPlaybackAccessToken(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?): PlaybackAccessToken? {
-        val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders = gqlHeaders, randomDeviceId = true)
+    private suspend fun loadVideoPlaybackAccessToken(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, enableIntegrity: Boolean): PlaybackAccessToken? {
+        val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders = gqlHeaders, randomDeviceId = true, enableIntegrity = enableIntegrity)
         return graphQL.loadPlaybackAccessToken(
             headers = accessTokenHeaders,
             vodId = videoId,
@@ -172,8 +170,8 @@ class PlayerRepository @Inject constructor(
         ).videoToken
     }
 
-    private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null): Map<String, String> {
-        return if (XtraApp.INSTANCE.applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
+    private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null, enableIntegrity: Boolean): Map<String, String> {
+        return if (enableIntegrity) {
             gqlHeaders
         } else {
             gqlHeaders.toMutableMap().apply {
@@ -234,16 +232,14 @@ class PlayerRepository @Inject constructor(
 
     fun loadRecentEmotes() = recentEmotes.getAll()
 
-    fun insertRecentEmotes(emotes: Collection<RecentEmote>) {
-        GlobalScope.launch {
-            val listSize = emotes.size
-            val list = if (listSize <= RecentEmote.MAX_SIZE) {
-                emotes
-            } else {
-                emotes.toList().subList(listSize - RecentEmote.MAX_SIZE, listSize)
-            }
-            recentEmotes.ensureMaxSizeAndInsert(list)
+    suspend fun insertRecentEmotes(emotes: Collection<RecentEmote>) = withContext(Dispatchers.IO) {
+        val listSize = emotes.size
+        val list = if (listSize <= RecentEmote.MAX_SIZE) {
+            emotes
+        } else {
+            emotes.toList().subList(listSize - RecentEmote.MAX_SIZE, listSize)
         }
+        recentEmotes.ensureMaxSizeAndInsert(list)
     }
 
     fun loadVideoPositions(): LiveData<Map<Long, Long>> = videoPositions.getAll().map { list ->
@@ -251,11 +247,12 @@ class PlayerRepository @Inject constructor(
     }
 
     fun saveVideoPosition(position: VideoPosition) {
-        val appContext = XtraApp.INSTANCE.applicationContext
-        if (appContext.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-            GlobalScope.launch {
-                videoPositions.insert(position)
-            }
+        GlobalScope.launch {
+            videoPositions.insert(position)
         }
+    }
+
+    suspend fun deleteVideoPositions() = withContext(Dispatchers.IO) {
+        videoPositions.deleteAll()
     }
 }

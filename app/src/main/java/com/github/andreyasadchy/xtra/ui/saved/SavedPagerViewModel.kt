@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.iheartradio.m3u8.Encoding
@@ -15,7 +16,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okio.use
 import java.io.File
@@ -29,11 +30,11 @@ class SavedPagerViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository) : ViewModel() {
 
     fun saveFolders(context: Context, url: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val directory = DocumentFile.fromTreeUri(context, url.substringBefore("/document/").toUri())
-            directory?.listFiles()?.filter { it.isDirectory }?.forEach { videoDirectory ->
-                videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true }.forEach { playlistFile ->
-                    GlobalScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val directory = DocumentFile.fromTreeUri(context, url.substringBefore("/document/").toUri())
+                directory?.listFiles()?.filter { it.isDirectory }?.forEach { videoDirectory ->
+                    videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true }.forEach { playlistFile ->
                         val existingVideo = offlineRepository.getVideoByUrl(playlistFile.uri.toString())
                         if (existingVideo == null) {
                             val playlist = context.contentResolver.openInputStream(playlistFile.uri).use {
@@ -64,13 +65,11 @@ class SavedPagerViewModel @Inject constructor(
                         }
                     }
                 }
-            }
-        } else {
-            File(url).listFiles()?.let { files ->
-                files.forEach { file ->
-                    if (file.isDirectory) {
-                        file.listFiles()?.filter { it.name.endsWith(".m3u8") }?.forEach { playlistFile ->
-                            GlobalScope.launch {
+            } else {
+                File(url).listFiles()?.let { files ->
+                    files.forEach { file ->
+                        if (file.isDirectory) {
+                            file.listFiles()?.filter { it.name.endsWith(".m3u8") }?.forEach { playlistFile ->
                                 val existingVideo = offlineRepository.getVideoByUrl(playlistFile.path)
                                 if (existingVideo == null) {
                                     val playlist = FileInputStream(playlistFile).use {
@@ -108,7 +107,7 @@ class SavedPagerViewModel @Inject constructor(
     }
 
     fun saveVideo(url: String) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val existingVideo = offlineRepository.getVideoByUrl(url)
             if (existingVideo == null) {
                 offlineRepository.saveVideo(OfflineVideo(

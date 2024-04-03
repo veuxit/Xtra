@@ -1,16 +1,11 @@
 package com.github.andreyasadchy.xtra.ui.channel
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -25,9 +20,7 @@ import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -116,7 +109,7 @@ class ChannelPagerViewModel @Inject constructor(
     }
 
     fun saveFollowChannel(context: Context, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             try {
@@ -125,23 +118,7 @@ class ChannelPagerViewModel @Inject constructor(
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (userId != null) {
-                        try {
-                            Glide.with(context)
-                                .asBitmap()
-                                .load(channelLogo)
-                                .into(object: CustomTarget<Bitmap>() {
-                                    override fun onLoadCleared(placeholder: Drawable?) {
-
-                                    }
-
-                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                        DownloadUtils.savePng(context, "profile_pics", userId, resource)
-                                    }
-                                })
-                        } catch (e: Exception) {
-
-                        }
-                        val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${userId}.png").absolutePath
+                        val downloadedLogo = DownloadUtils.savePng(context, channelLogo, "profile_pics", userId)
                         localFollowsChannel.saveFollow(LocalFollowChannel(userId, userLogin, userName, downloadedLogo))
                         follow.postValue(Pair(true, null))
                     }
@@ -155,7 +132,7 @@ class ChannelPagerViewModel @Inject constructor(
     }
 
     fun deleteFollowChannel(context: Context, userId: String?) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             try {
@@ -179,26 +156,10 @@ class ChannelPagerViewModel @Inject constructor(
     fun updateLocalUser(context: Context, user: User) {
         if (!updatedLocalUser) {
             updatedLocalUser = true
-            GlobalScope.launch {
+            viewModelScope.launch {
                 try {
                     if (user.channelId != null) {
-                        try {
-                            Glide.with(context)
-                                .asBitmap()
-                                .load(user.channelLogo)
-                                .into(object: CustomTarget<Bitmap>() {
-                                    override fun onLoadCleared(placeholder: Drawable?) {
-
-                                    }
-
-                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                        DownloadUtils.savePng(context, "profile_pics", user.channelId, resource)
-                                    }
-                                })
-                        } catch (e: Exception) {
-
-                        }
-                        val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${user.channelId}.png").absolutePath
+                        val downloadedLogo = DownloadUtils.savePng(context, user.channelLogo, "profile_pics", user.channelId)
                         localFollowsChannel.getFollowByUserId(user.channelId)?.let { localFollowsChannel.updateFollow(it.apply {
                             userLogin = user.channelLogin
                             userName = user.channelName

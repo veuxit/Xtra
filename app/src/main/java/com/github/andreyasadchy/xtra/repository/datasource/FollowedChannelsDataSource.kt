@@ -1,14 +1,9 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import androidx.core.util.Pair
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
@@ -24,14 +19,14 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.io.File
 
 class FollowedChannelsDataSource(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
+    private val coroutineScope: CoroutineScope,
     private val userId: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -252,25 +247,9 @@ class FollowedChannelsDataSource(
     }
 
     private fun updateLocalUser(context: Context, userId: String, profileImageURL: String) {
-        GlobalScope.launch {
+        coroutineScope.launch {
             try {
-                try {
-                    Glide.with(context)
-                        .asBitmap()
-                        .load(TwitchApiHelper.getTemplateUrl(profileImageURL, "profileimage"))
-                        .into(object: CustomTarget<Bitmap>() {
-                            override fun onLoadCleared(placeholder: Drawable?) {
-
-                            }
-
-                            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                DownloadUtils.savePng(context, "profile_pics", userId, resource)
-                            }
-                        })
-                } catch (e: Exception) {
-
-                }
-                val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${userId}.png").absolutePath
+                val downloadedLogo = DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(profileImageURL, "profileimage"), "profile_pics", userId)
                 localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.updateFollow(it.apply {
                     channelLogo = downloadedLogo }) }
                 for (i in offlineRepository.getVideosByUserId(userId.toInt())) {
