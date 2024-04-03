@@ -186,14 +186,15 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(account: Account, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
+    fun startReplay(account: Account, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, videoId: String, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
         if (chat == null) {
             this.messageLimit = messageLimit
             chat = VideoChatController(
                 gqlHeaders = gqlHeaders,
                 videoId = videoId,
                 startTime = startTime,
-                getCurrentPosition = getCurrentPosition
+                getCurrentPosition = getCurrentPosition,
+                getCurrentSpeed = getCurrentSpeed
             )
             chat?.start()
             loadEmotes(
@@ -1186,21 +1187,20 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private inner class VideoChatController(
-            private val gqlHeaders: Map<String, String>,
-            private val videoId: String,
-            private val startTime: Double,
-            private val getCurrentPosition: () -> Double) : ChatController() {
+    inner class VideoChatController(
+        private val gqlHeaders: Map<String, String>,
+        private val videoId: String,
+        private val startTime: Int,
+        private val getCurrentPosition: () -> Long?,
+        private val getCurrentSpeed: () -> Float?) : ChatController() {
 
         private var chatReplayManager: ChatReplayManager? = null
 
-        override fun send(message: CharSequence) {
-
-        }
+        override fun send(message: CharSequence) {}
 
         override fun start() {
-            stop()
-            chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, this, { _chatMessages.postValue(ArrayList()) }, { _integrity.postValue(true) }, viewModelScope)
+            pause()
+            chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, getCurrentSpeed, this, { _chatMessages.postValue(ArrayList()) }, { _integrity.postValue(true) }, viewModelScope).apply { start() }
         }
 
         override fun pause() {
@@ -1208,7 +1208,15 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun stop() {
-            chatReplayManager?.stop()
+            pause()
+        }
+
+        fun updatePosition(position: Long) {
+            chatReplayManager?.updatePosition(position)
+        }
+
+        fun updateSpeed(speed: Float) {
+            chatReplayManager?.updateSpeed(speed)
         }
     }
 

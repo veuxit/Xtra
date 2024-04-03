@@ -34,6 +34,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
@@ -46,6 +47,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
@@ -83,14 +85,15 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     protected val player: MediaController?
         get() = if (controllerFuture.isDone) controllerFuture.get() else null
 
-    lateinit var slidingLayout: SlidingLayout
+    protected lateinit var slidingLayout: SlidingLayout
     private lateinit var playerView: CustomPlayerView
     private lateinit var aspectRatioFrameLayout: AspectRatioFrameLayout
     private lateinit var chatLayout: ViewGroup
+    protected var chatFragment: ChatFragment? = null
 
     protected abstract val viewModel: PlayerViewModel
 
-    var isPortrait = false
+    protected var isPortrait = false
         private set
     private var isKeyboardShown = false
 
@@ -140,6 +143,20 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             val player = controllerFuture.get()
             requireView().findViewById<CustomPlayerView>(R.id.playerView)?.player = player
             player.addListener(object : Player.Listener {
+
+                override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                    if (view != null) {
+                        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                            chatFragment?.updatePosition(newPosition.positionMs)
+                        }
+                    }
+                }
+
+                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+                    if (view != null) {
+                        chatFragment?.updateSpeed(playbackParameters.speed)
+                    }
+                }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (view != null) {
@@ -436,9 +453,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             playerView.useController = false
             chatLayout.gone()
             // player dialog
-            (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
+            (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
             // player chat message dialog
-            (childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
+            (chatFragment?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
         } else {
             playerView.useController = true
         }
@@ -868,6 +885,16 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
     }
+
+    fun getCurrentSpeed() = player?.playbackParameters?.speed
+
+    fun getCurrentPosition() = player?.currentPosition
+
+    fun getIsPortrait() = isPortrait
+
+    fun secondViewIsHidden() = slidingLayout.secondView?.isVisible == false
+
+    fun reloadEmotes() = chatFragment?.reloadEmotes()
 
     override fun onResume() {
         super.onResume()

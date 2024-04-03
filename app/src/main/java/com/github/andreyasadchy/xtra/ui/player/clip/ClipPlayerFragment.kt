@@ -22,7 +22,6 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
-import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
@@ -41,11 +40,9 @@ import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
-class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPlayerFragment {
+class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 //    override fun play(obj: Parcelable) {
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
@@ -203,8 +200,14 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 }
             }
         }
-        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
-            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(clip.channelId, clip.channelLogin, clip.videoId, clip.vodOffset?.toDouble())).commit()
+        chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
+            if (it != null) {
+                it as ChatFragment
+            } else {
+                val fragment = ChatFragment.newInstance(clip.channelId, clip.channelLogin, clip.videoId, clip.vodOffset)
+                childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
+                fragment
+            }
         }
     }
 
@@ -276,10 +279,6 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         if (isResumed) {
             player?.stop()
         }
-    }
-
-    override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { (player?.currentPosition ?: 0) / 1000.0 }
     }
 
     override fun onDestroyView() {

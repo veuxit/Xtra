@@ -23,7 +23,6 @@ import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
-import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
@@ -46,13 +45,11 @@ import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
-class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPlayerFragment, PlayerGamesDialog.PlayerSeekListener {
+class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGamesDialog.PlayerSeekListener {
 //    override fun play(obj: Parcelable) {
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
@@ -213,8 +210,14 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 }
             }
         }
-        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
-            childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(video.channelId, video.channelLogin, video.id, 0.0)).commit()
+        chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
+            if (it != null) {
+                it as ChatFragment
+            } else {
+                val fragment = ChatFragment.newInstance(video.channelId, video.channelLogin, video.id, 0)
+                childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
+                fragment
+            }
         }
     }
 
@@ -347,10 +350,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         if (isResumed) {
             player?.stop()
         }
-    }
-
-    override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { (player?.currentPosition ?: 0) / 1000.0 }
     }
 
     override fun onClose() {

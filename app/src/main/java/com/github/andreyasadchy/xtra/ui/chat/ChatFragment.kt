@@ -147,8 +147,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             } else {
                 args.getString(KEY_VIDEO_ID).let {
                     if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
-                        val getCurrentPosition = (parentFragment as ChatReplayPlayerFragment)::getCurrentPosition
-                        viewModel.startReplay(account, helixClientId, gqlHeaders, channelId, channelLogin, it, args.getDouble(KEY_START_TIME), getCurrentPosition, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+                        val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
+                        val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                        viewModel.startReplay(account, helixClientId, gqlHeaders, channelId, channelLogin, it, args.getInt(KEY_START_TIME), getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
                     }
                 }
             }
@@ -219,6 +220,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
         val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         viewModel.reloadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+    }
+
+    fun updatePosition(position: Long) {
+        (viewModel.chat as? ChatViewModel.VideoChatController)?.updatePosition(position)
+    }
+
+    fun updateSpeed(speed: Float) {
+        (viewModel.chat as? ChatViewModel.VideoChatController)?.updateSpeed(speed)
     }
 
     fun updateStreamId(id: String?) {
@@ -333,7 +342,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             }
         }
 
-        fun newInstance(channelId: String?, channelLogin: String?, videoId: String?, startTime: Double?) = ChatFragment().apply {
+        fun newInstance(channelId: String?, channelLogin: String?, videoId: String?, startTime: Int?) = ChatFragment().apply {
             arguments = Bundle().apply {
                 putBoolean(KEY_IS_LIVE, false)
                 putString(KEY_CHANNEL_ID, channelId)
@@ -341,7 +350,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 putString(KEY_VIDEO_ID, videoId)
                 if (startTime != null) {
                     putBoolean(KEY_START_TIME_EMPTY, false)
-                    putDouble(KEY_START_TIME, startTime)
+                    putInt(KEY_START_TIME, startTime)
                 } else {
                     putBoolean(KEY_START_TIME_EMPTY, true)
                 }
