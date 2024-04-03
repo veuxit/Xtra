@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.github.andreyasadchy.xtra.R
@@ -24,7 +25,9 @@ import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FetchProvider
+import com.github.andreyasadchy.xtra.util.prefs
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
@@ -117,20 +120,20 @@ class DownloadService : IntentService(TAG) {
         offlineVideo = runBlocking { offlineRepository.getVideoById(request.offlineVideoId) }
             ?: return //Download was canceled
         Log.d(TAG, "Starting download. Id: ${offlineVideo.id}")
-        fetch = fetchProvider.get(offlineVideo.id)
+        fetch = fetchProvider.get(offlineVideo.id, prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
         val countDownLatch = CountDownLatch(1)
         val channelId = getString(R.string.notification_downloads_channel_id)
         notificationBuilder = NotificationCompat.Builder(this, channelId).apply {
             setSmallIcon(android.R.drawable.stat_sys_download)
             setGroup(GROUP_KEY)
-            setContentTitle(getString(R.string.downloading))
+            setContentTitle(ContextCompat.getString(this@DownloadService, R.string.downloading))
             setOngoing(true)
             setContentText(offlineVideo.name)
             val clickIntent = Intent(this@DownloadService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(MainActivity.KEY_CODE, MainActivity.INTENT_OPEN_DOWNLOADS_TAB)
             }
-            setContentIntent(PendingIntent.getActivity(this@DownloadService, REQUEST_CODE_DOWNLOAD, clickIntent, if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
+            setContentIntent(PendingIntent.getActivity(this@DownloadService, REQUEST_CODE_DOWNLOAD, clickIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             addAction(pauseAction)
         }
 
@@ -138,7 +141,7 @@ class DownloadService : IntentService(TAG) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (manager.getNotificationChannel(channelId) == null) {
-                NotificationChannel(channelId, getString(R.string.notification_downloads_channel_title), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                NotificationChannel(channelId, ContextCompat.getString(this, R.string.notification_downloads_channel_title), NotificationManager.IMPORTANCE_DEFAULT).apply {
                     setSound(null, null)
                     manager.createNotificationChannel(this)
                 }
@@ -171,11 +174,11 @@ class DownloadService : IntentService(TAG) {
                 override fun onDeleted(download: Download) {
                     if (--activeDownloadsCount == 0) {
                         GlobalScope.launch {
-                            offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                            offlineRepository.deleteVideo(this@DownloadService, offlineVideo)
                         }
                         stopForegroundInternal(true)
                         if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                            val directory = DocumentFile.fromTreeUri(applicationContext, request.path.toUri())
+                            val directory = DocumentFile.fromTreeUri(this@DownloadService, request.path.toUri())
                             val videoDirectory = directory?.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                             if (videoDirectory != null && videoDirectory.listFiles().isEmpty()) {
                                 directory.delete()
@@ -193,7 +196,7 @@ class DownloadService : IntentService(TAG) {
             GlobalScope.launch {
                 try {
                     playlist = if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                        applicationContext.contentResolver.openInputStream(offlineVideo.url.toUri()).use {
+                        contentResolver.openInputStream(offlineVideo.url.toUri()).use {
                             PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                         }
                     } else {
@@ -220,7 +223,7 @@ class DownloadService : IntentService(TAG) {
 
                 override fun onDeleted(download: Download) {
                     GlobalScope.launch {
-                        offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                        offlineRepository.deleteVideo(this@DownloadService, offlineVideo)
                     }
                     stopForegroundInternal(true)
                     countDownLatch.countDown()
@@ -258,7 +261,7 @@ class DownloadService : IntentService(TAG) {
         with(request) {
             val current = offlineVideo.progress
             if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
+                val directory = DocumentFile.fromTreeUri(this@DownloadService, path.toUri())!!
                 val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))!!
                 try {
                     for (i in current..min(current + ENQUEUE_SIZE, tracks.lastIndex)) {
@@ -304,11 +307,11 @@ class DownloadService : IntentService(TAG) {
         }
         notificationBuilder.apply {
             setAutoCancel(true)
-            setContentTitle(getString(R.string.downloaded))
+            setContentTitle(ContextCompat.getString(this@DownloadService, R.string.downloaded))
             setProgress(0, 0, false)
             setOngoing(false)
             setSmallIcon(android.R.drawable.stat_sys_download_done)
-            setContentIntent(PendingIntent.getActivity(this@DownloadService, REQUEST_CODE_PLAY, intent, if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
+            setContentIntent(PendingIntent.getActivity(this@DownloadService, REQUEST_CODE_PLAY, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             mActions.clear()
         }
         notificationManager.notify(offlineVideo.id, notificationBuilder.build())
@@ -322,7 +325,7 @@ class DownloadService : IntentService(TAG) {
         }
     }
 
-    private fun createAction(@StringRes title: Int, action: String, requestCode: Int) = NotificationCompat.Action(0, getString(title), PendingIntent.getBroadcast(this, requestCode, Intent(action), if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
+    private fun createAction(@StringRes title: Int, action: String, requestCode: Int) = NotificationCompat.Action(0, ContextCompat.getString(this, title), PendingIntent.getBroadcast(this, requestCode, Intent(action), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
 
     inner class NotificationActionReceiver : BroadcastReceiver() {
 

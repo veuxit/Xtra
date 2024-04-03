@@ -22,7 +22,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StreamSearchViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val helix: HelixApi,
     private val graphQLRepository: GraphQLRepository) : ViewModel() {
 
@@ -31,7 +31,7 @@ class StreamSearchViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->
         Pager(
-            if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+            if (applicationContext.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
                 PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
             } else {
                 PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
@@ -39,19 +39,19 @@ class StreamSearchViewModel @Inject constructor(
         ) {
             SearchStreamsDataSource(
                 query = query,
-                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(context).helixToken,
+                helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                helixToken = Account.get(applicationContext).helixToken,
                 helixApi = helix,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlApi = graphQLRepository,
-                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults))
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults))
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun setQuery(query: String) {
-        if (this.query.value != query) {
-            this.query.value = query
+    fun setQuery(newQuery: String) {
+        if (query.value != newQuery) {
+            query.value = newQuery
         }
     }
 }

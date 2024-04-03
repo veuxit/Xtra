@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.videos.channel
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -10,14 +11,17 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.datasource.ChannelVideosDataSource
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
@@ -37,21 +41,21 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChannelVideosViewModel @Inject constructor(
-    @ApplicationContext context: Context,
-    private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
-    private val sortChannelRepository: SortChannelRepository,
+    @ApplicationContext applicationContext: Context,
     repository: ApiRepository,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
-    savedStateHandle: SavedStateHandle) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
+    savedStateHandle: SavedStateHandle,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(applicationContext, playerRepository, bookmarksRepository, repository) {
 
     private val _sortText = MutableLiveData<CharSequence>()
     val sortText: LiveData<CharSequence>
         get() = _sortText
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val filter = MutableStateFlow(setChannelId(context))
+    private val filter = MutableStateFlow(setChannelId())
 
     val sort: VideoSortEnum
         get() = filter.value.sort
@@ -71,13 +75,13 @@ class ChannelVideosViewModel @Inject constructor(
                 ChannelVideosDataSource(
                     channelId = args.channelId,
                     channelLogin = args.channelLogin,
-                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(context).helixToken,
+                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(applicationContext).helixToken,
                     helixPeriod = period,
                     helixBroadcastTypes = broadcastType,
                     helixSort = sort,
                     helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryType = when (broadcastType) {
                         BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
                         BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
@@ -88,22 +92,22 @@ class ChannelVideosViewModel @Inject constructor(
                     else { broadcastType.value.uppercase() },
                     gqlSort = sort.value.uppercase(),
                     gqlApi = graphQLRepository,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_CHANNEL_VIDEOS, ""), TwitchApiHelper.channelVideosApiDefaults))
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_CHANNEL_VIDEOS, ""), TwitchApiHelper.channelVideosApiDefaults))
             }
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun setChannelId(context: Context): Filter {
+    private fun setChannelId(): Filter {
         var sortValues = args.channelId?.let { runBlocking { sortChannelRepository.getById(it) } }
         if (sortValues?.saveSort != true) {
             sortValues = runBlocking { sortChannelRepository.getById("default") }
         }
-        _sortText.value = context.getString(R.string.sort_and_period,
+        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
             when (sortValues?.videoSort) {
-                VideoSortEnum.VIEWS.value -> context.getString(R.string.view_count)
-                else -> context.getString(R.string.upload_date)
-            }, context.getString(R.string.all_time)
+                VideoSortEnum.VIEWS.value -> ContextCompat.getString(applicationContext, R.string.view_count)
+                else -> ContextCompat.getString(applicationContext, R.string.upload_date)
+            }, ContextCompat.getString(applicationContext, R.string.all_time)
         )
         return Filter(
             saveSort = sortValues?.saveSort,
@@ -159,9 +163,8 @@ class ChannelVideosViewModel @Inject constructor(
                 )).let { sortChannelRepository.save(it) }
             }
         }
-        val appContext = XtraApp.INSTANCE.applicationContext
-        if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_VIDEOS, false)) {
-            appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_VIDEOS, saveDefault) }
+        if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_VIDEOS, false)) {
+            applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_VIDEOS, saveDefault) }
         }
     }
 

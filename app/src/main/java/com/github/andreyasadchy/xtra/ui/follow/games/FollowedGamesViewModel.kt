@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedGamesViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val localFollowsGame: LocalFollowGameRepository) : ViewModel() {
 
@@ -27,9 +27,9 @@ class FollowedGamesViewModel @Inject constructor(
     ) {
         FollowedGamesDataSource(
             localFollowsGame = localFollowsGame,
-            gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
             gqlApi = graphQLRepository,
-            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults))
+            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+            apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

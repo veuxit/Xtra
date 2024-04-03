@@ -266,7 +266,7 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
-                viewModel.importDownloads(requireContext())
+                viewModel.importDownloads()
                 true
             }
 

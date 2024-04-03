@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.follow.channels
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -10,7 +11,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
@@ -36,7 +36,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedChannelsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     private val sortChannelRepository: SortChannelRepository,
@@ -48,7 +48,7 @@ class FollowedChannelsViewModel @Inject constructor(
     val sortText: LiveData<CharSequence>
         get() = _sortText
 
-    private val filter = MutableStateFlow(setUser(context))
+    private val filter = MutableStateFlow(setUser())
 
     val sort: FollowSortEnum
         get() = filter.value.sort
@@ -65,31 +65,31 @@ class FollowedChannelsViewModel @Inject constructor(
                 offlineRepository = offlineRepository,
                 bookmarksRepository = bookmarksRepository,
                 coroutineScope = viewModelScope,
-                userId = Account.get(context).id,
-                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(context).helixToken,
+                userId = Account.get(applicationContext).id,
+                helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                helixToken = Account.get(applicationContext).helixToken,
                 helixApi = helix,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
                 gqlApi = graphQLRepository,
-                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_CHANNELS, ""), TwitchApiHelper.followedChannelsApiDefaults),
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_FOLLOWED_CHANNELS, ""), TwitchApiHelper.followedChannelsApiDefaults),
                 sort = filter.sort,
                 order = filter.order
             )
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun setUser(context: Context): Filter {
+    private fun setUser(): Filter {
         val sortValues = runBlocking { sortChannelRepository.getById("followed_channels") }
-        _sortText.value = context.getString(R.string.sort_and_order,
+        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_order).format(
             when (sortValues?.videoSort) {
-                FollowSortEnum.FOLLOWED_AT.value -> context.getString(R.string.time_followed)
-                FollowSortEnum.ALPHABETICALLY.value -> context.getString(R.string.alphabetically)
-                else -> context.getString(R.string.last_broadcast)
+                FollowSortEnum.FOLLOWED_AT.value -> ContextCompat.getString(applicationContext, R.string.time_followed)
+                FollowSortEnum.ALPHABETICALLY.value -> ContextCompat.getString(applicationContext, R.string.alphabetically)
+                else -> ContextCompat.getString(applicationContext, R.string.last_broadcast)
             },
             when (sortValues?.videoType) {
-                FollowOrderEnum.ASC.value -> context.getString(R.string.ascending)
-                else -> context.getString(R.string.descending)
+                FollowOrderEnum.ASC.value -> ContextCompat.getString(applicationContext, R.string.ascending)
+                else -> ContextCompat.getString(applicationContext, R.string.descending)
             }
         )
         return Filter(
@@ -121,9 +121,8 @@ class FollowedChannelsViewModel @Inject constructor(
                 )).let { sortChannelRepository.save(it) }
             }
         }
-        val appContext = XtraApp.INSTANCE.applicationContext
-        if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, false)) {
-            appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, saveDefault) }
+        if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, false)) {
+            applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, saveDefault) }
         }
     }
 

@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.work.HiltWorker
@@ -44,7 +45,9 @@ import java.io.FileInputStream
 import javax.inject.Inject
 
 @HiltWorker
-class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @Assisted parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
+class DownloadWorker @AssistedInject constructor(
+    @Assisted private val context: Context,
+    @Assisted parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
 
     @Inject
     lateinit var offlineRepository: OfflineRepository
@@ -63,12 +66,12 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
         return withContext(Dispatchers.IO) {
             val isShared = offlineVideo.url.toUri().scheme == SCHEME_CONTENT
             if (offlineVideo.vod) {
-                val requestSemaphore = Semaphore(applicationContext.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
+                val requestSemaphore = Semaphore(context.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
                 val jobs = if (isShared) {
-                    val playlist = applicationContext.contentResolver.openInputStream(offlineVideo.url.toUri()).use {
+                    val playlist = context.contentResolver.openInputStream(offlineVideo.url.toUri()).use {
                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                     }
-                    val directory = DocumentFile.fromTreeUri(applicationContext, offlineVideo.url.substringBefore("/document/").toUri())!!
+                    val directory = DocumentFile.fromTreeUri(context, offlineVideo.url.substringBefore("/document/").toUri())!!
                     val videoDirectory = directory.findFile(offlineVideo.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))!!
                     playlist.tracks.map {
                         async {
@@ -123,7 +126,7 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
 
     private fun downloadShared(url: String, output: String) {
         okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            applicationContext.contentResolver.openOutputStream(output.toUri())!!.sink().buffer().use { sink ->
+            context.contentResolver.openOutputStream(output.toUri())!!.sink().buffer().use { sink ->
                 response.body()?.source()?.let { sink.writeAll(it) }
             }
         }
@@ -138,28 +141,28 @@ class DownloadWorker @AssistedInject constructor(@Assisted context: Context, @As
     }
 
     private fun createForegroundInfo(): ForegroundInfo {
-        val channelId = applicationContext.getString(R.string.notification_downloads_channel_id)
+        val channelId = context.getString(R.string.notification_downloads_channel_id)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (notificationManager.getNotificationChannel(channelId) == null) {
-                NotificationChannel(channelId, applicationContext.getString(R.string.notification_downloads_channel_title), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                NotificationChannel(channelId, ContextCompat.getString(context, R.string.notification_downloads_channel_title), NotificationManager.IMPORTANCE_DEFAULT).apply {
                     setSound(null, null)
                     notificationManager.createNotificationChannel(this)
                 }
             }
         }
-        val notification = NotificationCompat.Builder(applicationContext, channelId).apply {
+        val notification = NotificationCompat.Builder(context, channelId).apply {
             setGroup(GROUP_KEY)
-            setContentTitle(applicationContext.getString(R.string.downloading))
+            setContentTitle(ContextCompat.getString(context, R.string.downloading))
             setContentText(offlineVideo.name)
             setSmallIcon(android.R.drawable.stat_sys_download)
             setProgress(offlineVideo.maxProgress, offlineVideo.progress, false)
             setOngoing(true)
-            setContentIntent(PendingIntent.getActivity(applicationContext, REQUEST_CODE_DOWNLOAD,
-                Intent(applicationContext, MainActivity::class.java).apply {
+            setContentIntent(PendingIntent.getActivity(context, REQUEST_CODE_DOWNLOAD,
+                Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
                     putExtra(MainActivity.KEY_CODE, MainActivity.INTENT_OPEN_DOWNLOADS_TAB)
-                }, if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
-            addAction(android.R.drawable.ic_delete, applicationContext.getString(R.string.stop), WorkManager.getInstance(applicationContext).createCancelPendingIntent(id))
+                }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+            addAction(android.R.drawable.ic_delete, ContextCompat.getString(context, R.string.stop), WorkManager.getInstance(context).createCancelPendingIntent(id))
         }.build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(offlineVideo.id, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC)

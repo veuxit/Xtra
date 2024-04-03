@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player.clip
 
+import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -7,14 +8,16 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ClipPlayerViewModel @Inject constructor(
-    private val graphQLRepository: GraphQLRepository,
+    @ApplicationContext applicationContext: Context,
     repository: ApiRepository,
-    localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(repository, localFollowsChannel) {
+    localFollowsChannel: LocalFollowChannelRepository,
+    private val graphQLRepository: GraphQLRepository) : PlayerViewModel(applicationContext, repository, localFollowsChannel) {
 
     var result = MutableLiveData<Map<String, String>>()
 

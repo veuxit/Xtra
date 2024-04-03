@@ -188,10 +188,10 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 if (errorMessage.isNullOrBlank()) {
                     followButton?.setOnClickListener {
                         if (!following) {
-                            viewModel.saveFollowChannel(requireContext(), stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo)
+                            viewModel.saveFollowChannel(stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo)
                         } else {
                             FragmentUtils.showUnfollowDialog(requireContext(), stream.channelName) {
-                                viewModel.deleteFollowChannel(requireContext(), stream.channelId)
+                                viewModel.deleteFollowChannel(stream.channelId)
                             }
                         }
                     }
@@ -216,7 +216,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(requireContext(), stream.channelId, stream.channelLogin)
+            viewModel.isFollowingChannel(stream.channelId, stream.channelLogin)
         }
     }
 
@@ -226,7 +226,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
         if (viewModel._stream.value == null) {
             viewModel._stream.value = stream
             loadStream(stream)
-            viewModel.loadStream(requireContext(), stream)
+            viewModel.loadStream(stream)
         }
     }
 

@@ -1,7 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.content.Context
-import androidx.lifecycle.*
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
@@ -25,7 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StreamsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     savedStateHandle: SavedStateHandle) : ViewModel() {
@@ -39,7 +41,7 @@ class StreamsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
-            if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+            if (applicationContext.prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
                 PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
             } else {
                 PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
@@ -47,24 +49,24 @@ class StreamsViewModel @Inject constructor(
         ) {
             if (args.gameId == null && args.gameSlug == null && args.gameName == null) {
                 StreamsDataSource(
-                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(context).helixToken,
+                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(applicationContext).helixToken,
                     helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     tags = args.tags?.toList(),
                     gqlApi = graphQLRepository,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults)
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults)
                 )
             } else {
                 GameStreamsDataSource(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(context).helixToken,
+                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(applicationContext).helixToken,
                     helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQuerySort = when (filter.sort) {
                         StreamSortEnum.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
                         StreamSortEnum.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
@@ -72,8 +74,8 @@ class StreamsViewModel @Inject constructor(
                     gqlSort = filter.sort,
                     tags = args.tags?.toList(),
                     gqlApi = graphQLRepository,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults)
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults)
                 )
             }
         }.flow

@@ -44,7 +44,7 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext(), it)
+            viewModel.saveBookmark(it)
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }

@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.datasource.SearchVideosDataSource
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
 import com.github.andreyasadchy.xtra.util.C
@@ -20,11 +23,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoSearchViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
     repository: ApiRepository,
-    private val graphQLRepository: GraphQLRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
+    private val graphQLRepository: GraphQLRepository, ) : BaseVideosViewModel(applicationContext, playerRepository, bookmarksRepository, repository) {
 
     val query = MutableStateFlow("")
 
@@ -35,16 +38,16 @@ class VideoSearchViewModel @Inject constructor(
         ) {
             SearchVideosDataSource(
                 query = query,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlApi = graphQLRepository,
-                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults))
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults))
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun setQuery(query: String) {
-        if (this.query.value != query) {
-            this.query.value = query
+    fun setQuery(newQuery: String) {
+        if (query.value != newQuery) {
+            query.value = newQuery
         }
     }
 }

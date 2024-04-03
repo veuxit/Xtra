@@ -20,7 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GamesViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     savedStateHandle: SavedStateHandle) : ViewModel() {
@@ -30,13 +30,13 @@ class GamesViewModel @Inject constructor(
         PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
     ) {
         GamesDataSource(
-            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-            helixToken = Account.get(context).helixToken,
+            helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixToken = Account.get(applicationContext).helixToken,
             helixApi = helix,
-            gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
             tags = args.tags?.toList(),
             gqlApi = graphQLRepository,
-            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAMES, ""), TwitchApiHelper.gamesApiDefaults))
+            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+            apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAMES, ""), TwitchApiHelper.gamesApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

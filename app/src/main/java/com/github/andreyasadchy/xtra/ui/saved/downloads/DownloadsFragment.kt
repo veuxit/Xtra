@@ -57,7 +57,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     result.data?.data?.let {
                         viewModel.selectedVideo?.let { video ->
                             requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                            viewModel.moveToSharedStorage(requireContext(), it, video)
+                            viewModel.moveToSharedStorage(it, video)
                         }
                     }
                 }
@@ -111,7 +111,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                         val checked = binding.radioGroup.checkedRadioButtonId
                         storage.getOrNull(checked)?.let { storage ->
                             requireContext().prefs().edit { putInt(C.DOWNLOAD_STORAGE, checked) }
-                            viewModel.moveToAppStorage(requireContext(), storage.path, it)
+                            viewModel.moveToAppStorage(storage.path, it)
                         }
                     }
                     .setNegativeButton(getString(android.R.string.cancel), null)
@@ -143,7 +143,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                 .setTitle(delete)
                 .setMessage(getString(R.string.are_you_sure))
                 .setView(checkBoxView)
-                .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it, checkBox.isChecked) }
+                .setPositiveButton(delete) { _, _ -> viewModel.delete(it, checkBox.isChecked) }
                 .setNegativeButton(getString(android.R.string.cancel), null)
                 .show()
         })

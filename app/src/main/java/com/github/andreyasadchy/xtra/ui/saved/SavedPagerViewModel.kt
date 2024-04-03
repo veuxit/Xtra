@@ -16,6 +16,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okio.use
@@ -27,17 +28,18 @@ import kotlin.math.max
 
 @HiltViewModel
 class SavedPagerViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val offlineRepository: OfflineRepository) : ViewModel() {
 
-    fun saveFolders(context: Context, url: String) {
+    fun saveFolders(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val directory = DocumentFile.fromTreeUri(context, url.substringBefore("/document/").toUri())
+                val directory = DocumentFile.fromTreeUri(applicationContext, url.substringBefore("/document/").toUri())
                 directory?.listFiles()?.filter { it.isDirectory }?.forEach { videoDirectory ->
                     videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true }.forEach { playlistFile ->
                         val existingVideo = offlineRepository.getVideoByUrl(playlistFile.uri.toString())
                         if (existingVideo == null) {
-                            val playlist = context.contentResolver.openInputStream(playlistFile.uri).use {
+                            val playlist = applicationContext.contentResolver.openInputStream(playlistFile.uri).use {
                                 PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                             }
                             var totalDuration = 0L
@@ -50,7 +52,7 @@ class SavedPagerViewModel @Inject constructor(
                                         .build()
                                 )
                             }
-                            context.contentResolver.openOutputStream(playlistFile.uri).use {
+                            applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
                                 PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                             }
                             offlineRepository.saveVideo(OfflineVideo(

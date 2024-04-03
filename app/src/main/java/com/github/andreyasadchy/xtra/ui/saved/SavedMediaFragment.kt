@@ -64,7 +64,7 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
                 if (result.resultCode == Activity.RESULT_OK) {
                     result.data?.data?.let {
                         requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        viewModel.saveFolders(requireContext(), it.toString())
+                        viewModel.saveFolders(it.toString())
                     }
                 }
             }
@@ -72,7 +72,7 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
             folderResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     result.data?.data?.path?.let {
-                        viewModel.saveFolders(requireContext(), it.substringBeforeLast("/"))
+                        viewModel.saveFolders(it.substringBeforeLast("/"))
                     }
                 }
             }

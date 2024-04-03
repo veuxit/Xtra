@@ -87,10 +87,10 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                             val errorMessage = it.second
                             if (errorMessage.isNullOrBlank()) {
                                 if (!following) {
-                                    viewModel.saveFollowGame(requireContext(), args.gameId, args.gameSlug, args.gameName)
+                                    viewModel.saveFollowGame(args.gameId, args.gameSlug, args.gameName)
                                 } else {
                                     FragmentUtils.showUnfollowDialog(requireContext(), args.gameName) {
-                                        viewModel.deleteFollowGame(requireContext(), args.gameId)
+                                        viewModel.deleteFollowGame(args.gameId)
                                     }
                                 }
                             }
@@ -196,10 +196,10 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
 
     override fun initialize() {
         if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-            viewModel.isFollowingGame(requireContext(), args.gameId, args.gameName)
+            viewModel.isFollowingGame(args.gameId, args.gameName)
         }
         if (args.updateLocal) {
-            viewModel.updateLocalGame(requireContext(), args.gameId, args.gameName)
+            viewModel.updateLocalGame(args.gameId, args.gameName)
         }
     }
 
