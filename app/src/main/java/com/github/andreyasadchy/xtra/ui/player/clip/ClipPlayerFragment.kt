@@ -191,10 +191,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 if (errorMessage.isNullOrBlank()) {
                     followButton?.setOnClickListener {
                         if (!following) {
-                            viewModel.saveFollowChannel(requireContext(), clip.channelId, clip.channelLogin, clip.channelName, clip.channelLogo)
+                            viewModel.saveFollowChannel(clip.channelId, clip.channelLogin, clip.channelName, clip.channelLogo)
                         } else {
                             FragmentUtils.showUnfollowDialog(requireContext(), clip.channelName) {
-                                viewModel.deleteFollowChannel(requireContext(), clip.channelId)
+                                viewModel.deleteFollowChannel(clip.channelId)
                             }
                         }
                     }
@@ -213,7 +213,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != clip.channelId || account.login != clip.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(requireContext(), clip.channelId, clip.channelLogin)
+            viewModel.isFollowingChannel(clip.channelId, clip.channelLogin)
         }
     }
 
@@ -224,7 +224,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
             if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
                 viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
                 viewModel.result.observe(viewLifecycleOwner) { map ->
-                    val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl) } else mapOf()
+                    val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(requireContext(), clip.thumbnailUrl) } else mapOf()
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
                         PlaybackService.ITEM to clip,
                         PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
@@ -232,7 +232,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                     )), Bundle.EMPTY)
                 }
             } else {
-                val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
+                val urls = TwitchApiHelper.getClipUrlMapFromPreview(requireContext(), clip.thumbnailUrl)
                 player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
                     PlaybackService.ITEM to clip,
                     PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),

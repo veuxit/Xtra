@@ -21,14 +21,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedStreamsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     private val apolloClient: ApolloClient,
     private val localFollowsChannel: LocalFollowChannelRepository) : ViewModel() {
 
     val flow = Pager(
-        if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") != "disabled") {
+        if (applicationContext.prefs().getString(C.COMPACT_STREAMS, "disabled") != "disabled") {
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         } else {
             PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
@@ -36,14 +36,14 @@ class FollowedStreamsViewModel @Inject constructor(
     ) {
         FollowedStreamsDataSource(
             localFollowsChannel = localFollowsChannel,
-            userId = Account.get(context).id,
-            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-            helixToken = Account.get(context).helixToken,
+            userId = Account.get(applicationContext).id,
+            helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixToken = Account.get(applicationContext).helixToken,
             helixApi = helix,
-            gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
             gqlApi = graphQLRepository,
             apolloClient = apolloClient,
-            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults))
+            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+            apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults))
     }.flow.cachedIn(viewModelScope)
 }

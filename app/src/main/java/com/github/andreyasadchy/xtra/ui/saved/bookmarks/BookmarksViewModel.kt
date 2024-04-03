@@ -14,11 +14,13 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.VodBookmarkIgnoredUsersRepository
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class BookmarksViewModel @Inject internal constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
     private val bookmarksRepository: BookmarksRepository,
     playerRepository: PlayerRepository,
@@ -35,9 +37,9 @@ class BookmarksViewModel @Inject internal constructor(
         bookmarksRepository.loadBookmarksPagingSource()
     }.flow.cachedIn(viewModelScope)
 
-    fun delete(context: Context, bookmark: Bookmark) {
+    fun delete(bookmark: Bookmark) {
         viewModelScope.launch {
-            bookmarksRepository.deleteBookmark(context, bookmark)
+            bookmarksRepository.deleteBookmark(applicationContext, bookmark)
         }
     }
 
@@ -83,14 +85,14 @@ class BookmarksViewModel @Inject internal constructor(
         }
     }
 
-    fun updateVideo(context: Context, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, videoId: String? = null) {
+    fun updateVideo(helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, videoId: String? = null) {
         viewModelScope.launch {
             try {
                 val video = videoId?.let { repository.loadVideo(it, helixClientId, helixToken, gqlHeaders) }
                 val bookmark = videoId?.let { bookmarksRepository.getBookmarkByVideoId(it) }
                 if (video != null && bookmark != null) {
                     val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                        DownloadUtils.savePng(context, video.thumbnail, "thumbnails", it)
+                        DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
                     }
                     bookmarksRepository.updateBookmark(Bookmark(
                         videoId = bookmark.videoId,
@@ -117,7 +119,7 @@ class BookmarksViewModel @Inject internal constructor(
         }
     }
 
-    fun updateVideos(context: Context, helixClientId: String? = null, helixToken: String? = null) {
+    fun updateVideos(helixClientId: String? = null, helixToken: String? = null) {
         if (!updatedVideos) {
             updatedVideos = true
             viewModelScope.launch {
@@ -136,7 +138,7 @@ class BookmarksViewModel @Inject internal constructor(
                                                 bookmark.createdAt != video.uploadDate ||
                                                 bookmark.type != video.type ||
                                                 bookmark.duration != video.duration)) {
-                                        val downloadedThumbnail = DownloadUtils.savePng(context, video.thumbnail, "thumbnails", video.id)
+                                        val downloadedThumbnail = DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", video.id)
                                         bookmarksRepository.updateBookmark(Bookmark(
                                             videoId = bookmark.videoId,
                                             userId = video.channelId ?: bookmark.userId,

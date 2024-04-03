@@ -18,6 +18,7 @@ import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
 import com.iheartradio.m3u8.PlaylistParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -27,9 +28,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StreamPlayerViewModel @Inject constructor(
-    private val playerRepository: PlayerRepository,
+    @ApplicationContext applicationContext: Context,
     repository: ApiRepository,
-    localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(repository, localFollowsChannel) {
+    localFollowsChannel: LocalFollowChannelRepository,
+    private val playerRepository: PlayerRepository) : PlayerViewModel(applicationContext, repository, localFollowsChannel) {
 
     val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>
@@ -83,14 +85,14 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadStream(context: Context, stream: Stream) {
-        val account = Account.get(context)
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
-        if (context.prefs().getBoolean(C.CHAT_DISABLE, false) || !context.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (context.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank())) {
+    fun loadStream(stream: Stream) {
+        val account = Account.get(applicationContext)
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
+        if (applicationContext.prefs().getBoolean(C.CHAT_DISABLE, false) || !applicationContext.prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) || (applicationContext.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank())) {
             viewModelScope.launch {
                 while (isActive) {
                     try {
-                        updateStream(context, stream)
+                        updateStream(stream)
                         delay(300000L)
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check") {
@@ -103,7 +105,7 @@ class StreamPlayerViewModel @Inject constructor(
         } else if (stream.viewerCount == null) {
             viewModelScope.launch {
                 try {
-                    updateStream(context, stream)
+                    updateStream(stream)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") {
                         _integrity.postValue(true)
@@ -113,16 +115,16 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateStream(context: Context, stream: Stream) {
-        val account = Account.get(context)
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+    private suspend fun updateStream(stream: Stream) {
+        val account = Account.get(applicationContext)
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
         val s = repository.loadStream(
             channelId = stream.channelId,
             channelLogin = stream.channelLogin,
-            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+            helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
             helixToken = account.helixToken,
             gqlHeaders = gqlHeaders,
-            checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         ).let {
             _stream.value?.apply {
                 if (!it?.id.isNullOrBlank()) {

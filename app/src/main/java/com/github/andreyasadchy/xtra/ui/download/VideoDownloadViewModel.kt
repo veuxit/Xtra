@@ -1,13 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.download
 
-import android.app.Application
 import android.content.ContentResolver
+import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -31,7 +31,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
@@ -41,10 +41,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoDownloadViewModel @Inject constructor(
-    application: Application,
+    @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
-    private val offlineRepository: OfflineRepository
-) : AndroidViewModel(application) {
+    private val offlineRepository: OfflineRepository) : ViewModel() {
 
     private val _integrity by lazy { SingleLiveEvent<Boolean>() }
     val integrity: LiveData<Boolean>
@@ -56,7 +55,7 @@ class VideoDownloadViewModel @Inject constructor(
 
     fun setVideo(gqlHeaders: Map<String, String>, video: Video, playerType: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
         if (_videoInfo.value == null) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 try {
                     val map = if (skipAccessToken <= 1 && !video.animatedPreviewURL.isNullOrBlank()) {
                         TwitchApiHelper.getVideoUrlMapFromPreview(video.animatedPreviewURL, video.type)
@@ -77,7 +76,7 @@ class VideoDownloadViewModel @Inject constructor(
                     }.apply {
                         entries.find { it.key.startsWith("audio", true) }?.let {
                             remove(it.key)
-                            put(ContextCompat.getString(getApplication(), R.string.audio_only), it.value)
+                            put(ContextCompat.getString(applicationContext, R.string.audio_only), it.value)
                         }
                     }
                     _videoInfo.postValue(VideoDownloadInfo(video, map, video.duration?.let { TwitchApiHelper.getDuration(it)?.times(1000) } ?: 0, 0))
@@ -86,11 +85,8 @@ class VideoDownloadViewModel @Inject constructor(
                         _integrity.postValue(true)
                     }
                     if (e is IllegalAccessException) {
-                        launch(Dispatchers.Main) {
-                            val context = getApplication<Application>()
-                            context.toast(R.string.video_subscribers_only)
-                            _videoInfo.value = null
-                        }
+                        applicationContext.toast(ContextCompat.getString(applicationContext, R.string.video_subscribers_only))
+                        _videoInfo.value = null
                     }
                 }
             }
@@ -105,7 +101,6 @@ class VideoDownloadViewModel @Inject constructor(
 
     fun download(url: String, path: String, quality: String, from: Long, to: Long, useWorkManager: Boolean) {
         GlobalScope.launch {
-            val context = getApplication<Application>()
             val video = _videoInfo.value!!.video
             val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
                 PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
@@ -156,7 +151,7 @@ class VideoDownloadViewModel @Inject constructor(
                 "${System.currentTimeMillis()}"
             }
             if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                val directory = DocumentFile.fromTreeUri(context, path.toUri())
+                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
                 val videoDirectory = directory?.findFile(videoDirectoryName) ?: directory?.createDirectory(videoDirectoryName)
                 val tracks = ArrayList<TrackData>()
                 for (i in fromIndex..toIndex) {
@@ -168,13 +163,13 @@ class VideoDownloadViewModel @Inject constructor(
                     )
                 }
                 val playlistFile = videoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")!!
-                context.contentResolver.openOutputStream(playlistFile.uri).use {
+                applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
                     PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                 }
-                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex)
+                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex)
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
                 if (useWorkManager) {
-                    WorkManager.getInstance(context).enqueueUniqueWork(
+                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                         videoId.toString(),
                         ExistingWorkPolicy.KEEP,
                         OneTimeWorkRequestBuilder<DownloadWorker>()
@@ -185,7 +180,7 @@ class VideoDownloadViewModel @Inject constructor(
                     val request = Request(videoId, urlPath, path)
                     offlineRepository.saveRequest(request)
 
-                    DownloadUtils.download(context, request)
+                    DownloadUtils.download(applicationContext, request)
                 }
             } else {
                 val tracks = ArrayList<TrackData>()
@@ -203,10 +198,10 @@ class VideoDownloadViewModel @Inject constructor(
                 FileOutputStream(playlistUri).use {
                     PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                 }
-                val offlineVideo = DownloadUtils.prepareDownload(context, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex)
+                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex)
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
                 if (useWorkManager) {
-                    WorkManager.getInstance(context).enqueueUniqueWork(
+                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                         videoId.toString(),
                         ExistingWorkPolicy.KEEP,
                         OneTimeWorkRequestBuilder<DownloadWorker>()
@@ -217,7 +212,7 @@ class VideoDownloadViewModel @Inject constructor(
                     val request = Request(videoId, urlPath, directory)
                     offlineRepository.saveRequest(request)
 
-                    DownloadUtils.download(context, request)
+                    DownloadUtils.download(applicationContext, request)
                 }
             }
         }

@@ -39,7 +39,6 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = BookmarksAdapter(this, {
             viewModel.updateVideo(
-                context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = Account.get(requireContext()).helixToken,
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
@@ -54,7 +53,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             requireActivity().getAlertDialogBuilder()
                 .setTitle(delete)
                 .setMessage(getString(R.string.are_you_sure))
-                .setPositiveButton(delete) { _, _ -> viewModel.delete(requireContext(), it) }
+                .setPositiveButton(delete) { _, _ -> viewModel.delete(it) }
                 .setNegativeButton(getString(android.R.string.cancel), null)
                 .show()
         })
@@ -95,7 +94,6 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
         }
         if (!Account.get(requireContext()).helixToken.isNullOrBlank()) {
             viewModel.updateVideos(
-                context = requireContext(),
                 helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = Account.get(requireContext()).helixToken,
             )

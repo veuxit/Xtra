@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.model.chat
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.util.C
@@ -125,7 +126,7 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
             val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
             val msg = messageInfo.substring(if (msgIndex != -1) msgIndex + 1 else index2 + 1)
             return LiveChatMessage(
-                message = context.getString(R.string.chat_clearmsg, user, msg),
+                message = ContextCompat.getString(context, R.string.chat_clearmsg).format(user, msg),
                 color = "#999999",
                 isAction = true,
                 timestamp = prefixes["tmi-sent-ts"]?.toLong(),
@@ -148,9 +149,9 @@ class RecentMessagesDeserializer : JsonDeserializer<RecentMessagesResponse> {
             val type = if (user == null) { "clearchat" } else { if (duration != null) { "timeout" } else { "ban" } }
             return LiveChatMessage(
                 message = when (type) {
-                    "clearchat" -> context.getString(R.string.chat_clear)
-                    "timeout" -> context.getString(R.string.chat_timeout, user, TwitchApiHelper.getDurationFromSeconds(context, duration))
-                    "ban" -> context.getString(R.string.chat_ban, user)
+                    "clearchat" -> ContextCompat.getString(context, R.string.chat_clear)
+                    "timeout" -> ContextCompat.getString(context, R.string.chat_timeout).format(user, TwitchApiHelper.getDurationFromSeconds(context, duration))
+                    "ban" -> ContextCompat.getString(context, R.string.chat_ban).format(user)
                     else -> return null
                 },
                 color = "#999999",

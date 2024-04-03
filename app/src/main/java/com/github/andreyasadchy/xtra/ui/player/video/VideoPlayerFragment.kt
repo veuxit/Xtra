@@ -201,10 +201,10 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 if (errorMessage.isNullOrBlank()) {
                     followButton?.setOnClickListener {
                         if (!following) {
-                            viewModel.saveFollowChannel(requireContext(), video.channelId, video.channelLogin, video.channelName, video.channelLogo)
+                            viewModel.saveFollowChannel(video.channelId, video.channelLogin, video.channelName, video.channelLogo)
                         } else {
                             FragmentUtils.showUnfollowDialog(requireContext(), video.channelName) {
-                                viewModel.deleteFollowChannel(requireContext(), video.channelId)
+                                viewModel.deleteFollowChannel(video.channelId)
                             }
                         }
                     }
@@ -223,7 +223,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(requireContext(), video.channelId, video.channelLogin)
+            viewModel.isFollowingChannel(video.channelId, video.channelLogin)
         }
         if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
             viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), video.id)
@@ -308,7 +308,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     fun saveBookmark() {
-        viewModel.saveBookmark(requireContext(), video)
+        viewModel.saveBookmark(video)
     }
 
     override fun seek(position: Long) {

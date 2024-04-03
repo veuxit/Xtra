@@ -394,9 +394,8 @@ object TwitchApiHelper {
         return map
     }
 
-    fun getClipUrlMapFromPreview(url: String): Map<String, String> {
-        val appContext = XtraApp.INSTANCE.applicationContext
-        return mapOf(kotlin.Pair(ContextCompat.getString(appContext, R.string.source), url.substringBefore("-preview") + ".mp4"))
+    fun getClipUrlMapFromPreview(context: Context, url: String): Map<String, String> {
+        return mapOf(kotlin.Pair(ContextCompat.getString(context, R.string.source), url.substringBefore("-preview") + ".mp4"))
     }
 
     fun getMessageIdString(msgId: String?): String? {

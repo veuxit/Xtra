@@ -15,11 +15,13 @@ import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class GamePagerViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
     private val localFollowsGame: LocalFollowGameRepository) : ViewModel() {
 
@@ -30,12 +32,12 @@ class GamePagerViewModel @Inject constructor(
     val follow = MutableLiveData<Pair<Boolean, String?>>()
     private var updatedLocalGame = false
 
-    fun isFollowingGame(context: Context, gameId: String?, gameName: String?) {
+    fun isFollowingGame(gameId: String?, gameName: String?) {
         if (!follow.isInitialized) {
             viewModelScope.launch {
                 try {
-                    val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+                    val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
                     val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         gameName?.let {
                             repository.loadGameFollowing(gqlHeaders, gameName)
@@ -55,19 +57,19 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowGame(context: Context, gameId: String?, gameSlug: String?, gameName: String?) {
+    fun saveFollowGame(gameId: String?, gameSlug: String?, gameName: String?) {
         viewModelScope.launch {
-            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val account = Account.get(context)
-            val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val account = Account.get(applicationContext)
+            val helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.followGame(gqlHeaders, gameId)
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (gameId != null) {
-                        val downloadedLogo = DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(repository.loadGameBoxArt(gameId, helixClientId, account.helixToken, gqlHeaders), "game"), "box_art", gameId)
+                        val downloadedLogo = DownloadUtils.savePng(applicationContext, TwitchApiHelper.getTemplateUrl(repository.loadGameBoxArt(gameId, helixClientId, account.helixToken, gqlHeaders), "game"), "box_art", gameId)
                         localFollowsGame.saveFollow(LocalFollowGame(gameId, gameSlug, gameName, downloadedLogo))
                         follow.postValue(Pair(true, null))
                     }
@@ -80,17 +82,17 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowGame(context: Context, gameId: String?) {
+    fun deleteFollowGame(gameId: String?) {
         viewModelScope.launch {
-            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.unfollowGame(gqlHeaders, gameId)
                     follow.postValue(Pair(false, errorMessage))
                 } else {
                     if (gameId != null) {
-                        localFollowsGame.getFollowByGameId(gameId)?.let { localFollowsGame.deleteFollow(context, it) }
+                        localFollowsGame.getFollowByGameId(gameId)?.let { localFollowsGame.deleteFollow(applicationContext, it) }
                         follow.postValue(Pair(false, null))
                     }
                 }
@@ -102,7 +104,7 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalGame(context: Context, gameId: String?, gameName: String?) {
+    fun updateLocalGame(gameId: String?, gameName: String?) {
         if (!updatedLocalGame) {
             updatedLocalGame = true
             viewModelScope.launch {
@@ -110,11 +112,11 @@ class GamePagerViewModel @Inject constructor(
                     val downloadedLogo = try {
                         val get = repository.loadGameBoxArt(
                             gameId = gameId,
-                            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                            helixToken = Account.get(context).helixToken,
-                            gqlHeaders = TwitchApiHelper.getGQLHeaders(context)
+                            helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                            helixToken = Account.get(applicationContext).helixToken,
+                            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext)
                         )
-                        DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(get, "game"), "box_art", gameId)
+                        DownloadUtils.savePng(applicationContext, TwitchApiHelper.getTemplateUrl(get, "game"), "box_art", gameId)
                     } catch (e: Exception) {
                         null
                     }

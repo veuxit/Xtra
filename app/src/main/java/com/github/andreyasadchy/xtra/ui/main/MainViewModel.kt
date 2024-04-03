@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
-import android.app.Application
+import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -25,13 +25,14 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    application: Application,
+    @ApplicationContext applicationContext: Context,
     private val repository: ApiRepository,
     private val authRepository: AuthRepository,
     private val offlineRepository: OfflineRepository) : ViewModel() {
@@ -62,7 +63,7 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            offlineRepository.resumeDownloads(application)
+            offlineRepository.resumeDownloads(applicationContext)
         }
     }
 

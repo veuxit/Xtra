@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.videos.followed
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -10,12 +11,15 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.datasource.FollowedVideosDataSource
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
@@ -34,19 +38,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedVideosViewModel @Inject constructor(
-    @ApplicationContext context: Context,
-    private val graphQLRepository: GraphQLRepository,
-    private val apolloClient: ApolloClient,
-    private val sortChannelRepository: SortChannelRepository,
+    @ApplicationContext applicationContext: Context,
     repository: ApiRepository,
     playerRepository: PlayerRepository,
-    bookmarksRepository: BookmarksRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
+    bookmarksRepository: BookmarksRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val apolloClient: ApolloClient,
+    private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(applicationContext, playerRepository, bookmarksRepository, repository) {
 
     private val _sortText = MutableLiveData<CharSequence>()
     val sortText: LiveData<CharSequence>
         get() = _sortText
 
-    private val filter = MutableStateFlow(setUser(context))
+    private val filter = MutableStateFlow(setUser())
 
     val sort: VideoSortEnum
         get() = filter.value.sort
@@ -62,7 +66,7 @@ class FollowedVideosViewModel @Inject constructor(
         ) {
             with(filter) {
                 FollowedVideosDataSource(
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
                     gqlQueryType = when (broadcastType) {
                         BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
                         BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
@@ -71,19 +75,19 @@ class FollowedVideosViewModel @Inject constructor(
                     gqlQuerySort = when (sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_VIDEOS, ""), TwitchApiHelper.followedVideosApiDefaults))
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_FOLLOWED_VIDEOS, ""), TwitchApiHelper.followedVideosApiDefaults))
             }
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun setUser(context: Context): Filter {
+    private fun setUser(): Filter {
         val sortValues = runBlocking { sortChannelRepository.getById("followed_videos") }
-        _sortText.value = context.getString(R.string.sort_and_period,
+        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
             when (sortValues?.videoSort) {
-                VideoSortEnum.VIEWS.value -> context.getString(R.string.view_count)
-                else -> context.getString(R.string.upload_date)
-            }, context.getString(R.string.all_time)
+                VideoSortEnum.VIEWS.value -> ContextCompat.getString(applicationContext, R.string.view_count)
+                else -> ContextCompat.getString(applicationContext, R.string.upload_date)
+            }, ContextCompat.getString(applicationContext, R.string.all_time)
         )
         return Filter(
             sort = when (sortValues?.videoSort) {
@@ -115,9 +119,8 @@ class FollowedVideosViewModel @Inject constructor(
                 )).let { sortChannelRepository.save(it) }
             }
         }
-        val appContext = XtraApp.INSTANCE.applicationContext
-        if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)) {
-            appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, saveDefault) }
+        if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)) {
+            applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, saveDefault) }
         }
     }
 

@@ -15,6 +15,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
@@ -25,6 +26,7 @@ import kotlin.math.max
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository) : ViewModel() {
 
@@ -35,9 +37,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun importDownloads(context: Context) {
+    fun importDownloads() {
         viewModelScope.launch(Dispatchers.IO) {
-            ContextCompat.getExternalFilesDirs(context, ".downloads").forEach { storage ->
+            ContextCompat.getExternalFilesDirs(applicationContext, ".downloads").forEach { storage ->
                 storage?.absolutePath?.let { directory ->
                     File(directory).listFiles()?.let { files ->
                         files.forEach { file ->

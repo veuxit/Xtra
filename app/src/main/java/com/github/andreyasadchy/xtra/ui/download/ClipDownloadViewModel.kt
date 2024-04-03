@@ -1,11 +1,11 @@
 package com.github.andreyasadchy.xtra.ui.download
 
-import android.app.Application
 import android.content.ContentResolver
+import android.content.Context
 import androidx.core.net.toUri
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -19,6 +19,7 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -26,10 +27,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ClipDownloadViewModel @Inject constructor(
-    application: Application,
+    @ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
-    private val offlineRepository: OfflineRepository
-) : AndroidViewModel(application) {
+    private val offlineRepository: OfflineRepository) : ViewModel() {
 
     private val _integrity by lazy { SingleLiveEvent<Boolean>() }
     val integrity: LiveData<Boolean>
@@ -48,13 +48,13 @@ class ClipDownloadViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val urls = if (skipAccessToken <= 1 && !clip.thumbnailUrl.isNullOrBlank()) {
-                            TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
+                            TwitchApiHelper.getClipUrlMapFromPreview(applicationContext, clip.thumbnailUrl)
                         } else {
                             graphQLRepository.loadClipUrls(
                                 headers = gqlHeaders,
                                 slug = clip.id
                             ) ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) {
-                                TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
+                                TwitchApiHelper.getClipUrlMapFromPreview(applicationContext, clip.thumbnailUrl)
                             } else mapOf()
                         }
                         _qualities.postValue(urls)
@@ -72,7 +72,6 @@ class ClipDownloadViewModel @Inject constructor(
 
     fun download(url: String, path: String, quality: String, useWorkManager: Boolean) {
         GlobalScope.launch {
-            val context = getApplication<Application>()
             val fileUri = if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                 path
             } else {
@@ -83,10 +82,10 @@ class ClipDownloadViewModel @Inject constructor(
                 }
                 "$path${File.separator}$fileName.mp4"
             }
-            val offlineVideo = DownloadUtils.prepareDownload(context, clip, url, fileUri, clip.duration?.toLong()?.times(1000L), clip.vodOffset?.toLong()?.times(1000L))
+            val offlineVideo = DownloadUtils.prepareDownload(applicationContext, clip, url, fileUri, clip.duration?.toLong()?.times(1000L), clip.vodOffset?.toLong()?.times(1000L))
             val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
             if (useWorkManager) {
-                WorkManager.getInstance(context).enqueueUniqueWork(
+                WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                     videoId.toString(),
                     ExistingWorkPolicy.KEEP,
                     OneTimeWorkRequestBuilder<DownloadWorker>()
@@ -97,7 +96,7 @@ class ClipDownloadViewModel @Inject constructor(
                 val request = Request(videoId, url, offlineVideo.url)
                 offlineRepository.saveRequest(request)
 
-                DownloadUtils.download(context, request)
+                DownloadUtils.download(applicationContext, request)
             }
         }
     }

@@ -126,10 +126,10 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                             val errorMessage = it.second
                             if (errorMessage.isNullOrBlank()) {
                                 if (!following) {
-                                    viewModel.saveFollowChannel(requireContext(), args.channelId, args.channelLogin, args.channelName, args.channelLogo)
+                                    viewModel.saveFollowChannel(args.channelId, args.channelLogin, args.channelName, args.channelLogo)
                                 } else {
                                     FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
-                                        viewModel.deleteFollowChannel(requireContext(), args.channelId)
+                                        viewModel.deleteFollowChannel(args.channelId)
                                     }
                                 }
                             }
@@ -263,7 +263,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
         val account = Account.get(activity)
         val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
         if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
-            viewModel.isFollowingChannel(requireContext(), args.channelId, args.channelLogin)
+            viewModel.isFollowingChannel(args.channelId, args.channelLogin)
         }
     }
 
@@ -424,7 +424,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                 userType.gone()
             }
             if (args.updateLocal) {
-                viewModel.updateLocalUser(requireContext(), user)
+                viewModel.updateLocalUser(user)
             }
         }
     }

@@ -1,7 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.search.tags
 
 import android.content.Context
-import androidx.lifecycle.*
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
@@ -17,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TagSearchViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
@@ -30,16 +32,16 @@ class TagSearchViewModel @Inject constructor(
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
             TagsDataSourceGQL(
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 getGameTags = args.getGameTags,
                 query = query,
                 api = graphQLRepository)
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun setQuery(query: String) {
-        if (this.query.value != query) {
-            this.query.value = query
+    fun setQuery(newQuery: String) {
+        if (query.value != newQuery) {
+            query.value = newQuery
         }
     }
 }
