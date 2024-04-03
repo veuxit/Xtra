@@ -9,7 +9,6 @@ import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.PlayerSettingsBinding
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
@@ -89,7 +88,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
                             dismiss()
                         }
                     }
-                    if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_TOGGLE, false)) {
+                    if ((parentFragment as? BasePlayerFragment)?.getIsPortrait() == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_TOGGLE, false)) {
                         menuChatToggle.visible()
                         if (requireContext().prefs().getBoolean(C.KEY_CHAT_OPENED, true)) {
                             menuChatToggle.text = requireContext().getString(R.string.hide_chat)
@@ -107,16 +106,16 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
                     }
                     if (requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_DISCONNECT, true)) {
                         menuChatDisconnect.visible()
-                        if ((parentFragment as? StreamPlayerFragment)?.chatFragment?.isActive() == false) {
+                        if ((parentFragment as? StreamPlayerFragment)?.isActive() == false) {
                             menuChatDisconnect.text = requireContext().getString(R.string.connect_chat)
                             menuChatDisconnect.setOnClickListener {
-                                (parentFragment as? StreamPlayerFragment)?.chatFragment?.reconnect()
+                                (parentFragment as? StreamPlayerFragment)?.reconnect()
                                 dismiss()
                             }
                         } else {
                             menuChatDisconnect.text = requireContext().getString(R.string.disconnect_chat)
                             menuChatDisconnect.setOnClickListener {
-                                (parentFragment as? StreamPlayerFragment)?.chatFragment?.disconnect()
+                                (parentFragment as? StreamPlayerFragment)?.disconnect()
                                 dismiss()
                             }
                         }
@@ -157,7 +156,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
                     dismiss()
                 }
             }
-            if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_ASPECT, false)) {
+            if ((parentFragment as? BasePlayerFragment)?.getIsPortrait() == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_ASPECT, false)) {
                 menuRatio.visible()
                 menuRatio.setOnClickListener {
                     (parentFragment as? BasePlayerFragment)?.setResizeMode()
@@ -175,8 +174,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
             if ((parentFragment is StreamPlayerFragment || parentFragment is VideoPlayerFragment) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) && requireContext().prefs().getBoolean(C.PLAYER_MENU_RELOAD_EMOTES, true)) {
                 menuReloadEmotes.visible()
                 menuReloadEmotes.setOnClickListener {
-                    (parentFragment as? StreamPlayerFragment)?.chatFragment?.reloadEmotes() ?:
-                    ((parentFragment as? VideoPlayerFragment)?.childFragmentManager?.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment)?.reloadEmotes()
+                    (parentFragment as? BasePlayerFragment)?.reloadEmotes()
                     dismiss()
                 }
             }

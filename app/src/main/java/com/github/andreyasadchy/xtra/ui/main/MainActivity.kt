@@ -28,7 +28,6 @@ import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentTransaction
 import androidx.media3.common.MimeTypes
@@ -498,7 +497,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             if (playerFragment == null) {
                 playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
             } else {
-                if (playerFragment?.slidingLayout?.secondView?.isVisible == false && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+                if (playerFragment?.secondViewIsHidden() == true && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
                     playerFragment?.maximize()
                 }
             }

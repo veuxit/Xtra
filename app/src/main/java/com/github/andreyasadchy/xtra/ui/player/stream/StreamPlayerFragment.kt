@@ -62,7 +62,6 @@ class StreamPlayerFragment : BasePlayerFragment() {
     private var _binding: FragmentPlayerStreamBinding? = null
     private val binding get() = _binding!!
     override val viewModel: StreamPlayerViewModel by viewModels()
-    lateinit var chatFragment: ChatFragment
     private lateinit var stream: Stream
 
     override val controllerAutoShow: Boolean = false
@@ -99,7 +98,7 @@ class StreamPlayerFragment : BasePlayerFragment() {
             }
         }
         viewModel.stream.observe(viewLifecycleOwner) {
-            chatFragment.updateStreamId(it?.id)
+            chatFragment?.updateStreamId(it?.id)
             if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()) {
                 updateViewerCount(it?.viewerCount)
             }
@@ -497,11 +496,17 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
     }
 
-    fun emoteMenuIsVisible() = chatFragment.emoteMenuIsVisible()
+    fun isActive() = chatFragment?.isActive()
 
-    fun toggleEmoteMenu(enable: Boolean) = chatFragment.toggleEmoteMenu(enable)
+    fun disconnect() = chatFragment?.disconnect()
 
-    fun toggleBackPressedCallback(enable: Boolean) = chatFragment.toggleBackPressedCallback(enable)
+    fun reconnect() = chatFragment?.reconnect()
+
+    fun emoteMenuIsVisible() = chatFragment?.emoteMenuIsVisible() == true
+
+    fun toggleEmoteMenu(enable: Boolean) = chatFragment?.toggleEmoteMenu(enable)
+
+    fun toggleBackPressedCallback(enable: Boolean) = chatFragment?.toggleBackPressedCallback(enable)
 
 //    override fun play(obj: Parcelable) {
 //        val stream = obj as Stream
