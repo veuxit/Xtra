@@ -771,7 +771,9 @@ class ChatViewModel @Inject constructor(
                 allEmotes.find { it.name == word }?.let { usedEmotes.add(RecentEmote(word, currentTime)) }
             }
             if (usedEmotes.isNotEmpty()) {
-                playerRepository.insertRecentEmotes(usedEmotes)
+                viewModelScope.launch {
+                    playerRepository.insertRecentEmotes(usedEmotes)
+                }
             }
         }
 

@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.repository
 
 import android.content.Context
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.RequestsDao
@@ -9,9 +8,7 @@ import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.ui.download.DownloadService
-import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -45,44 +42,43 @@ class OfflineRepository @Inject constructor(
         videosDao.insert(video)
     }
 
-    fun deleteVideo(context: Context, video: OfflineVideo) {
-        GlobalScope.launch {
-            if (!video.videoId.isNullOrBlank() && bookmarksDao.getByVideoId(video.videoId) == null) {
-                File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.videoId}.png").delete()
-            }
-            if (!video.channelId.isNullOrBlank() && localFollowsChannelDao.getByUserId(video.channelId) == null && bookmarksDao.getByUserId(video.channelId).isEmpty()) {
-                File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").delete()
-            }
-            videosDao.delete(video)
+    suspend fun deleteVideo(context: Context, video: OfflineVideo) = withContext(Dispatchers.IO) {
+        if (!video.videoId.isNullOrBlank() && bookmarksDao.getByVideoId(video.videoId) == null) {
+            File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${video.videoId}.png").delete()
         }
+        if (!video.channelId.isNullOrBlank() && localFollowsChannelDao.getByUserId(video.channelId) == null && bookmarksDao.getByUserId(video.channelId).isEmpty()) {
+            File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").delete()
+        }
+        videosDao.delete(video)
     }
 
-    fun updateVideo(video: OfflineVideo) {
-        GlobalScope.launch { videosDao.update(video) }
+    suspend fun updateVideo(video: OfflineVideo) = withContext(Dispatchers.IO) {
+        videosDao.update(video)
     }
 
     fun updateVideoPosition(id: Int, position: Long) {
-        val appContext = XtraApp.INSTANCE.applicationContext
-        if (appContext.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-            GlobalScope.launch { videosDao.updatePosition(id, position) }
+        GlobalScope.launch {
+            videosDao.updatePosition(id, position)
         }
     }
 
-    fun resumeDownloads(context: Context) {
-        GlobalScope.launch {
-            requestsDao.getAll().forEach {
-                if (DownloadService.activeRequests.add(it.offlineVideoId)) {
-                    DownloadUtils.download(context, it)
-                }
+    suspend fun deletePositions() = withContext(Dispatchers.IO) {
+        videosDao.deletePositions()
+    }
+
+    suspend fun resumeDownloads(context: Context) = withContext(Dispatchers.IO) {
+        requestsDao.getAll().forEach {
+            if (DownloadService.activeRequests.add(it.offlineVideoId)) {
+                DownloadUtils.download(context, it)
             }
         }
     }
 
-    fun saveRequest(request: Request) {
-        GlobalScope.launch { requestsDao.insert(request) }
+    suspend fun saveRequest(request: Request) = withContext(Dispatchers.IO) {
+        requestsDao.insert(request)
     }
 
-    fun deleteRequest(request: Request) {
-        GlobalScope.launch { requestsDao.delete(request) }
+    suspend fun deleteRequest(request: Request) = withContext(Dispatchers.IO) {
+        requestsDao.delete(request)
     }
 }

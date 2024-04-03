@@ -3,8 +3,6 @@ package com.github.andreyasadchy.xtra.repository
 import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
 import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +21,7 @@ class VodBookmarkIgnoredUsersRepository @Inject constructor(
         vodBookmarkIgnoredUsersDao.insert(item)
     }
 
-    fun deleteUser(item: VodBookmarkIgnoredUser) {
-        GlobalScope.launch { vodBookmarkIgnoredUsersDao.delete(item) }
+    suspend fun deleteUser(item: VodBookmarkIgnoredUser) = withContext(Dispatchers.IO) {
+        vodBookmarkIgnoredUsersDao.delete(item)
     }
 }

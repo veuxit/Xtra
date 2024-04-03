@@ -1,12 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.videos
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import androidx.lifecycle.ViewModel
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
+import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -17,9 +13,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
 
 abstract class BaseVideosViewModel(
     playerRepository: PlayerRepository,
@@ -30,54 +24,22 @@ abstract class BaseVideosViewModel(
     val bookmarks = bookmarksRepository.loadBookmarksLiveData()
 
     fun saveBookmark(context: Context, video: Video) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
                 bookmarksRepository.deleteBookmark(context, item)
             } else {
-                if (!video.id.isNullOrBlank()) {
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(video.thumbnail)
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "thumbnails", video.id, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
-
-                    }
+                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(context, video.thumbnail, "thumbnails", it)
                 }
-                if (!video.channelId.isNullOrBlank()) {
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(video.channelLogo)
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "profile_pics", video.channelId, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
-
-                    }
+                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(context, video.channelLogo, "profile_pics", it)
                 }
                 val userTypes = try {
                     video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }
-                val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
-                val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
                 bookmarksRepository.saveBookmark(Bookmark(
                     videoId = video.id,
                     userId = video.channelId,

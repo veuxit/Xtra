@@ -170,7 +170,9 @@ class DownloadService : IntentService(TAG) {
 
                 override fun onDeleted(download: Download) {
                     if (--activeDownloadsCount == 0) {
-                        offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                        GlobalScope.launch {
+                            offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                        }
                         stopForegroundInternal(true)
                         if (offlineVideo.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                             val directory = DocumentFile.fromTreeUri(applicationContext, request.path.toUri())
@@ -217,14 +219,18 @@ class DownloadService : IntentService(TAG) {
                 }
 
                 override fun onDeleted(download: Download) {
-                    offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                    GlobalScope.launch {
+                        offlineRepository.deleteVideo(applicationContext, offlineVideo)
+                    }
                     stopForegroundInternal(true)
                     countDownLatch.countDown()
                 }
             })
             fetch.enqueue(FetchRequest(request.url, request.path).apply { groupId = request.offlineVideoId })
         }
-        offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADING })
+        GlobalScope.launch {
+            offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADING })
+        }
         startForeground(offlineVideo.id, notificationBuilder.build())
         countDownLatch.await()
         activeRequests.remove(request.offlineVideoId)
@@ -287,8 +293,10 @@ class DownloadService : IntentService(TAG) {
 
     @SuppressLint("RestrictedApi")
     private fun onDownloadCompleted() {
-        offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADED })
-        offlineRepository.deleteRequest(request)
+        GlobalScope.launch {
+            offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADED })
+            offlineRepository.deleteRequest(request)
+        }
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(MainActivity.KEY_VIDEO, offlineVideo)
@@ -309,7 +317,9 @@ class DownloadService : IntentService(TAG) {
 
     private fun updateProgress(maxProgress: Int, progress: Int) {
         notificationManager.notify(offlineVideo.id, notificationBuilder.setProgress(maxProgress, progress, false).build())
-        offlineRepository.updateVideo(offlineVideo)
+        GlobalScope.launch {
+            offlineRepository.updateVideo(offlineVideo)
+        }
     }
 
     private fun createAction(@StringRes title: Int, action: String, requestCode: Int) = NotificationCompat.Action(0, getString(title), PendingIntent.getBroadcast(this, requestCode, Intent(action), if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))

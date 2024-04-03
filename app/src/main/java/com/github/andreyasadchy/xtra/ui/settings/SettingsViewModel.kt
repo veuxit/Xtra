@@ -3,10 +3,10 @@ package com.github.andreyasadchy.xtra.ui.settings
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
-import com.github.andreyasadchy.xtra.db.VideoPositionsDao
-import com.github.andreyasadchy.xtra.db.VideosDao
+import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
@@ -15,7 +15,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -25,25 +25,24 @@ import kotlin.math.max
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val videoPositions: VideoPositionsDao,
-    private val videos: VideosDao,
+    private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository) : ViewModel() {
 
     fun deletePositions() {
-        GlobalScope.launch {
-            videoPositions.deleteAll()
-            videos.deletePositions()
+        viewModelScope.launch {
+            playerRepository.deleteVideoPositions()
+            offlineRepository.deletePositions()
         }
     }
 
     fun importDownloads(context: Context) {
-        ContextCompat.getExternalFilesDirs(context, ".downloads").forEach { storage ->
-            storage?.absolutePath?.let { directory ->
-                File(directory).listFiles()?.let { files ->
-                    files.forEach { file ->
-                        if (file.isDirectory) {
-                            file.listFiles()?.filter { it.name.endsWith(".m3u8") }?.forEach { playlistFile ->
-                                GlobalScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            ContextCompat.getExternalFilesDirs(context, ".downloads").forEach { storage ->
+                storage?.absolutePath?.let { directory ->
+                    File(directory).listFiles()?.let { files ->
+                        files.forEach { file ->
+                            if (file.isDirectory) {
+                                file.listFiles()?.filter { it.name.endsWith(".m3u8") }?.forEach { playlistFile ->
                                     val existingVideo = offlineRepository.getVideoByUrl(playlistFile.path)
                                     if (existingVideo == null) {
                                         val playlist = FileInputStream(playlistFile).use {
@@ -73,9 +72,7 @@ class SettingsViewModel @Inject constructor(
                                         ))
                                     }
                                 }
-                            }
-                        } else if (file.isFile && file.name.endsWith(".mp4")) {
-                            GlobalScope.launch {
+                            } else if (file.isFile && file.name.endsWith(".mp4")) {
                                 val existingVideo = offlineRepository.getVideoByUrl(file.path)
                                 if (existingVideo == null) {
                                     offlineRepository.saveVideo(OfflineVideo(

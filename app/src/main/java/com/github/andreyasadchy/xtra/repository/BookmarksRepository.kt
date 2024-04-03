@@ -6,8 +6,6 @@ import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -39,19 +37,17 @@ class BookmarksRepository @Inject constructor(
         bookmarksDao.insert(item)
     }
 
-    fun deleteBookmark(context: Context, item: Bookmark) {
-        GlobalScope.launch {
-            if (!item.videoId.isNullOrBlank() && videosDao.getById(item.videoId.toInt()) == null) {
-                File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
-            }
-            if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
-                File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
-            }
-            bookmarksDao.delete(item)
+    suspend fun deleteBookmark(context: Context, item: Bookmark) = withContext(Dispatchers.IO) {
+        if (!item.videoId.isNullOrBlank() && videosDao.getById(item.videoId.toInt()) == null) {
+            File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
         }
+        if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
+            File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
+        }
+        bookmarksDao.delete(item)
     }
 
-    fun updateBookmark(item: Bookmark) {
-        GlobalScope.launch { bookmarksDao.update(item) }
+    suspend fun updateBookmark(item: Bookmark) = withContext(Dispatchers.IO) {
+        bookmarksDao.update(item)
     }
 }
