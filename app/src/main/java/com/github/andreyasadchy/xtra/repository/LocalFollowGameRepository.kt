@@ -4,8 +4,6 @@ import android.content.Context
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -27,16 +25,14 @@ class LocalFollowGameRepository @Inject constructor(
         localFollowsGameDao.insert(item)
     }
 
-    fun deleteFollow(context: Context, item: LocalFollowGame) {
-        GlobalScope.launch {
-            if (!item.gameId.isNullOrBlank()) {
-                File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${item.gameId}.png").delete()
-            }
-            localFollowsGameDao.delete(item)
+    suspend fun deleteFollow(context: Context, item: LocalFollowGame) = withContext(Dispatchers.IO) {
+        if (!item.gameId.isNullOrBlank()) {
+            File(context.filesDir.path + File.separator + "box_art" + File.separator + "${item.gameId}.png").delete()
         }
+        localFollowsGameDao.delete(item)
     }
 
-    fun updateFollow(item: LocalFollowGame) {
-        GlobalScope.launch { localFollowsGameDao.update(item) }
+    suspend fun updateFollow(item: LocalFollowGame) = withContext(Dispatchers.IO) {
+        localFollowsGameDao.update(item)
     }
 }

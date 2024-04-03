@@ -70,10 +70,10 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    fun load(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?) {
+    fun load(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
-                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, proxyPlaybackAccessToken, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword)
+                playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, proxyPlaybackAccessToken, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     _integrity.postValue(true)

@@ -6,8 +6,6 @@ import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -31,16 +29,14 @@ class LocalFollowChannelRepository @Inject constructor(
         localFollowsChannelDao.insert(item)
     }
 
-    fun deleteFollow(context: Context, item: LocalFollowChannel) {
-        GlobalScope.launch {
-            if (!item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
-                File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
-            }
-            localFollowsChannelDao.delete(item)
+    suspend fun deleteFollow(context: Context, item: LocalFollowChannel) = withContext(Dispatchers.IO) {
+        if (!item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
+            File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
         }
+        localFollowsChannelDao.delete(item)
     }
 
-    fun updateFollow(item: LocalFollowChannel) {
-        GlobalScope.launch { localFollowsChannelDao.update(item) }
+    suspend fun updateFollow(item: LocalFollowChannel) = withContext(Dispatchers.IO) {
+        localFollowsChannelDao.update(item)
     }
 }

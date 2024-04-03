@@ -1,14 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.player.video
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
@@ -24,9 +19,7 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,10 +35,10 @@ class VideoPlayerViewModel @Inject constructor(
     val gamesList = MutableLiveData<List<Game>>()
     var shouldRetry = true
 
-    fun load(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?) {
+    fun load(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
-                playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs)
+                playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") {
                     _integrity.postValue(true)
@@ -83,53 +76,21 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun saveBookmark(context: Context, video: Video) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             if (bookmarkItem.value != null) {
                 bookmarksRepository.deleteBookmark(context, bookmarkItem.value!!)
             } else {
-                if (!video.id.isNullOrBlank()) {
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(video.thumbnail)
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "thumbnails", video.id, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
-
-                    }
+                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(context, video.thumbnail, "thumbnails", it)
                 }
-                if (!video.channelId.isNullOrBlank()) {
-                    try {
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(video.channelLogo)
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "profile_pics", video.channelId, resource)
-                                }
-                            })
-                    } catch (e: Exception) {
-
-                    }
+                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(context, video.channelLogo, "profile_pics", it)
                 }
                 val userTypes = try {
                     video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }
-                val downloadedThumbnail = video.id?.let { File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${it}.png").absolutePath }
-                val downloadedLogo = video.channelId?.let { File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${it}.png").absolutePath }
                 bookmarksRepository.saveBookmark(Bookmark(
                     videoId = video.id,
                     userId = video.channelId,

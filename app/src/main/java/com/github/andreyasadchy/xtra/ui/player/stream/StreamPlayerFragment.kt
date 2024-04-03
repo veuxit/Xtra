@@ -273,7 +273,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
                         proxyHost = proxyHost,
                         proxyPort = proxyPort,
                         proxyUser = prefs.getString(C.PROXY_USER, null),
-                        proxyPassword = prefs.getString(C.PROXY_PASSWORD, null)
+                        proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
+                        enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
                     )
                     viewModel.result.observe(viewLifecycleOwner) { result ->
                         if (result != null) {

@@ -41,7 +41,6 @@ import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
@@ -95,7 +94,7 @@ class LoginActivity : AppCompatActivity() {
                 putLong(C.INTEGRITY_EXPIRATION, 0)
                 putString(C.GQL_TOKEN2, null)
             }
-            GlobalScope.launch {
+            lifecycleScope.launch {
                 if (!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank()) {
                     try {
                         repository.revoke(helixClientId, account.helixToken)

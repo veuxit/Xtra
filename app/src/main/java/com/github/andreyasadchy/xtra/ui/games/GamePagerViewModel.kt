@@ -1,15 +1,10 @@
 package com.github.andreyasadchy.xtra.ui.games
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -20,9 +15,7 @@ import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -63,7 +56,7 @@ class GamePagerViewModel @Inject constructor(
     }
 
     fun saveFollowGame(context: Context, gameId: String?, gameSlug: String?, gameName: String?) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val account = Account.get(context)
             val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
@@ -74,23 +67,7 @@ class GamePagerViewModel @Inject constructor(
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (gameId != null) {
-                        try {
-                            Glide.with(context)
-                                .asBitmap()
-                                .load(TwitchApiHelper.getTemplateUrl(repository.loadGameBoxArt(gameId, helixClientId, account.helixToken, gqlHeaders), "game"))
-                                .into(object: CustomTarget<Bitmap>() {
-                                    override fun onLoadCleared(placeholder: Drawable?) {
-
-                                    }
-
-                                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                        DownloadUtils.savePng(context, "box_art", gameId, resource)
-                                    }
-                                })
-                        } catch (e: Exception) {
-
-                        }
-                        val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${gameId}.png").absolutePath
+                        val downloadedLogo = DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(repository.loadGameBoxArt(gameId, helixClientId, account.helixToken, gqlHeaders), "game"), "box_art", gameId)
                         localFollowsGame.saveFollow(LocalFollowGame(gameId, gameSlug, gameName, downloadedLogo))
                         follow.postValue(Pair(true, null))
                     }
@@ -104,7 +81,7 @@ class GamePagerViewModel @Inject constructor(
     }
 
     fun deleteFollowGame(context: Context, gameId: String?) {
-        GlobalScope.launch {
+        viewModelScope.launch {
             val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             try {
@@ -128,31 +105,19 @@ class GamePagerViewModel @Inject constructor(
     fun updateLocalGame(context: Context, gameId: String?, gameName: String?) {
         if (!updatedLocalGame) {
             updatedLocalGame = true
-            GlobalScope.launch {
+            viewModelScope.launch {
                 if (gameId != null) {
-                    try {
+                    val downloadedLogo = try {
                         val get = repository.loadGameBoxArt(
                             gameId = gameId,
                             helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                             helixToken = Account.get(context).helixToken,
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(context)
                         )
-                        Glide.with(context)
-                            .asBitmap()
-                            .load(TwitchApiHelper.getTemplateUrl(get, "game"))
-                            .into(object: CustomTarget<Bitmap>() {
-                                override fun onLoadCleared(placeholder: Drawable?) {
-
-                                }
-
-                                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                                    DownloadUtils.savePng(context, "box_art", gameId, resource)
-                                }
-                            })
+                        DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(get, "game"), "box_art", gameId)
                     } catch (e: Exception) {
-
+                        null
                     }
-                    val downloadedLogo = File(context.filesDir.toString() + File.separator + "box_art" + File.separator + "${gameId}.png").absolutePath
                     localFollowsGame.getFollowByGameId(gameId)?.let { localFollowsGame.updateFollow(it.apply {
                         this.gameName = gameName
                         boxArt = downloadedLogo }) }

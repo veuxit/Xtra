@@ -25,7 +25,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okio.buffer
 import okio.sink
@@ -55,7 +55,7 @@ class DownloadsViewModel @Inject internal constructor(
     fun moveToSharedStorage(context: Context, newUri: Uri, video: OfflineVideo) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
-            GlobalScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_MOVING
                 })
@@ -142,9 +142,11 @@ class DownloadsViewModel @Inject internal constructor(
                 }
             }.invokeOnCompletion {
                 movingVideos.remove(video)
-                repository.updateVideo(video.apply {
-                    status = OfflineVideo.STATUS_DOWNLOADED
-                })
+                viewModelScope.launch(Dispatchers.IO) {
+                    repository.updateVideo(video.apply {
+                        status = OfflineVideo.STATUS_DOWNLOADED
+                    })
+                }
             }
         }
     }
@@ -152,7 +154,7 @@ class DownloadsViewModel @Inject internal constructor(
     fun moveToAppStorage(context: Context, path: String, video: OfflineVideo) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
-            GlobalScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_MOVING
                 })
@@ -235,9 +237,11 @@ class DownloadsViewModel @Inject internal constructor(
                 }
             }.invokeOnCompletion {
                 movingVideos.remove(video)
-                repository.updateVideo(video.apply {
-                    status = OfflineVideo.STATUS_DOWNLOADED
-                })
+                viewModelScope.launch(Dispatchers.IO) {
+                    repository.updateVideo(video.apply {
+                        status = OfflineVideo.STATUS_DOWNLOADED
+                    })
+                }
             }
         }
     }
@@ -245,7 +249,7 @@ class DownloadsViewModel @Inject internal constructor(
     fun delete(context: Context, video: OfflineVideo, keepFiles: Boolean) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
-            GlobalScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_DELETING
                 })
@@ -314,7 +318,9 @@ class DownloadsViewModel @Inject internal constructor(
                 }
             }.invokeOnCompletion {
                 movingVideos.remove(video)
-                repository.deleteVideo(context, video)
+                viewModelScope.launch(Dispatchers.IO) {
+                    repository.deleteVideo(context, video)
+                }
             }
         }
     }

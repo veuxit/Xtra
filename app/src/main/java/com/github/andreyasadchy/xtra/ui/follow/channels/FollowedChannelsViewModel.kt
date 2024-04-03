@@ -17,7 +17,11 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
 import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.datasource.FollowedChannelsDataSource
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -62,6 +66,7 @@ class FollowedChannelsViewModel @Inject constructor(
                 localFollowsChannel = localFollowsChannel,
                 offlineRepository = offlineRepository,
                 bookmarksRepository = bookmarksRepository,
+                coroutineScope = viewModelScope,
                 userId = Account.get(context).id,
                 helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = Account.get(context).helixToken,
