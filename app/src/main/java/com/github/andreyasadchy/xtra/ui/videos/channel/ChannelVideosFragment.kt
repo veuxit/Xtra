@@ -49,7 +49,7 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext(), it)
+            viewModel.saveBookmark(it)
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }

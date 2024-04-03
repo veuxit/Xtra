@@ -50,7 +50,7 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext(), it)
+            viewModel.saveBookmark(it)
         }, true)
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -91,7 +91,6 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
                 binding.scrollTop.gone()
                 pagingAdapter.submitData(PagingData.empty())
                 viewModel.filter(
-                    context = requireContext(),
                     sort = sort,
                     period = period,
                     type = type,

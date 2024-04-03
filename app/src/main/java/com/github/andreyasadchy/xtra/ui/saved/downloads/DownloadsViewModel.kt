@@ -25,6 +25,7 @@ import com.iheartradio.m3u8.PlaylistWriter
 import com.iheartradio.m3u8.data.Playlist
 import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okio.buffer
@@ -40,6 +41,7 @@ import kotlin.math.max
 
 @HiltViewModel
 class DownloadsViewModel @Inject internal constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: OfflineRepository,
     private val fetchProvider: FetchProvider) : ViewModel() {
 
@@ -52,7 +54,7 @@ class DownloadsViewModel @Inject internal constructor(
         repository.loadAllVideos()
     }.flow.cachedIn(viewModelScope)
 
-    fun moveToSharedStorage(context: Context, newUri: Uri, video: OfflineVideo) {
+    fun moveToSharedStorage(newUri: Uri, video: OfflineVideo) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
             viewModelScope.launch(Dispatchers.IO) {
@@ -64,7 +66,7 @@ class DownloadsViewModel @Inject internal constructor(
                     if (oldPlaylistFile.exists()) {
                         val oldVideoDirectory = oldPlaylistFile.parentFile
                         if (oldVideoDirectory != null) {
-                            val newDirectory = DocumentFile.fromTreeUri(context, newUri)
+                            val newDirectory = DocumentFile.fromTreeUri(applicationContext, newUri)
                             val newVideoDirectory = newDirectory?.findFile(oldVideoDirectory.name) ?: newDirectory?.createDirectory(oldVideoDirectory.name)
                             val newPlaylistFile = newVideoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")
                             if (newPlaylistFile != null) {
@@ -79,7 +81,7 @@ class DownloadsViewModel @Inject internal constructor(
                                             .build()
                                     )
                                 }
-                                context.contentResolver.openOutputStream(newPlaylistFile.uri).use {
+                                applicationContext.contentResolver.openOutputStream(newPlaylistFile.uri).use {
                                     PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(oldPlaylist.buildUpon().withTracks(tracks).build()).build())
                                 }
                                 val tracksToDelete = mutableListOf<String>()
@@ -94,7 +96,7 @@ class DownloadsViewModel @Inject internal constructor(
                                     if (oldFile.exists()) {
                                         val newFile = newVideoDirectory.findFile(oldFile.name) ?: newVideoDirectory.createFile("", oldFile.name)
                                         if (newFile != null) {
-                                            context.contentResolver.openOutputStream(newFile.uri)!!.sink().buffer().use { sink ->
+                                            applicationContext.contentResolver.openOutputStream(newFile.uri)!!.sink().buffer().use { sink ->
                                                 sink.writeAll(oldFile.source().buffer())
                                             }
                                             if (tracksToDelete.contains(oldFile.name)) {
@@ -126,7 +128,7 @@ class DownloadsViewModel @Inject internal constructor(
                 } else {
                     val oldFile = File(video.url)
                     if (oldFile.exists()) {
-                        context.contentResolver.openOutputStream(newUri)!!.sink().buffer().use { sink ->
+                        applicationContext.contentResolver.openOutputStream(newUri)!!.sink().buffer().use { sink ->
                             sink.writeAll(oldFile.source().buffer())
                         }
                         repository.updateVideo(video.apply {
@@ -151,7 +153,7 @@ class DownloadsViewModel @Inject internal constructor(
         }
     }
 
-    fun moveToAppStorage(context: Context, path: String, video: OfflineVideo) {
+    fun moveToAppStorage(path: String, video: OfflineVideo) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
             viewModelScope.launch(Dispatchers.IO) {
@@ -159,15 +161,15 @@ class DownloadsViewModel @Inject internal constructor(
                     status = OfflineVideo.STATUS_MOVING
                 })
                 if (video.vod) {
-                    val oldPlaylistFile = DocumentFile.fromSingleUri(context, video.url.toUri())
+                    val oldPlaylistFile = DocumentFile.fromSingleUri(applicationContext, video.url.toUri())
                     if (oldPlaylistFile != null) {
-                        val oldDirectory = DocumentFile.fromTreeUri(context, video.url.substringBefore("/document/").toUri())
+                        val oldDirectory = DocumentFile.fromTreeUri(applicationContext, video.url.substringBefore("/document/").toUri())
                         val oldVideoDirectory = oldDirectory?.findFile(video.url.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                         if (oldVideoDirectory != null) {
                             val newVideoDirectoryUri = "$path${File.separator}${oldVideoDirectory.name}${File.separator}"
                             File(newVideoDirectoryUri).mkdir()
                             val newPlaylistFileUri = "$newVideoDirectoryUri${System.currentTimeMillis()}.m3u8"
-                            val oldPlaylist = context.contentResolver.openInputStream(oldPlaylistFile.uri).use {
+                            val oldPlaylist = applicationContext.contentResolver.openInputStream(oldPlaylistFile.uri).use {
                                 PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                             }
                             val tracks = ArrayList<TrackData>()
@@ -185,7 +187,7 @@ class DownloadsViewModel @Inject internal constructor(
                             oldPlaylist.tracks.forEach { tracksToDelete.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                             val playlists = oldVideoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != oldPlaylistFile.uri }
                             playlists.forEach { file ->
-                                val p = context.contentResolver.openInputStream(file.uri).use {
+                                val p = applicationContext.contentResolver.openInputStream(file.uri).use {
                                     PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
                                 }
                                 p.mediaPlaylist.tracks.forEach { tracksToDelete.remove(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
@@ -195,7 +197,7 @@ class DownloadsViewModel @Inject internal constructor(
                                 if (oldFile != null) {
                                     val newFileUri = "$newVideoDirectoryUri${oldFile.name}"
                                     File(newFileUri).sink().buffer().use { sink ->
-                                        sink.writeAll(context.contentResolver.openInputStream(oldFile.uri)!!.source().buffer())
+                                        sink.writeAll(applicationContext.contentResolver.openInputStream(oldFile.uri)!!.source().buffer())
                                     }
                                     if (tracksToDelete.contains(oldFile.name)) {
                                         oldFile.delete()
@@ -218,11 +220,11 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                 } else {
-                    val oldFile = DocumentFile.fromSingleUri(context, video.url.toUri())
+                    val oldFile = DocumentFile.fromSingleUri(applicationContext, video.url.toUri())
                     if (oldFile != null) {
                         val newFileUri = "$path${File.separator}${oldFile.name}"
                         File(newFileUri).sink().buffer().use { sink ->
-                            sink.writeAll(context.contentResolver.openInputStream(oldFile.uri)!!.source().buffer())
+                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldFile.uri)!!.source().buffer())
                         }
                         repository.updateVideo(video.apply {
                             thumbnail.let {
@@ -246,34 +248,34 @@ class DownloadsViewModel @Inject internal constructor(
         }
     }
 
-    fun delete(context: Context, video: OfflineVideo, keepFiles: Boolean) {
+    fun delete(video: OfflineVideo, keepFiles: Boolean) {
         if (!movingVideos.contains(video)) {
             movingVideos.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_DELETING
                 })
-                val useWorkManager = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
+                val useWorkManager = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || applicationContext.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
                 if (video.status == OfflineVideo.STATUS_DOWNLOADED || video.status == OfflineVideo.STATUS_MOVING || video.status == OfflineVideo.STATUS_DELETING || useWorkManager) {
                     if (useWorkManager) {
-                        WorkManager.getInstance(context).cancelUniqueWork(video.id.toString())
+                        WorkManager.getInstance(applicationContext).cancelUniqueWork(video.id.toString())
                     }
                     if (!keepFiles) {
                         if (video.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                             if (video.vod) {
-                                val directory = DocumentFile.fromTreeUri(context, video.url.substringBefore("/document/").toUri()) ?: return@launch
+                                val directory = DocumentFile.fromTreeUri(applicationContext, video.url.substringBefore("/document/").toUri()) ?: return@launch
                                 val videoDirectory = directory.findFile(video.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
                                 val playlistFile = videoDirectory.findFile(video.url.substringAfterLast("%2F")) ?: return@launch
                                 val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
                                 if (playlists.isEmpty()) {
                                     videoDirectory.delete()
                                 } else {
-                                    val playlist = context.contentResolver.openInputStream(video.url.toUri()).use {
+                                    val playlist = applicationContext.contentResolver.openInputStream(video.url.toUri()).use {
                                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
                                     }
                                     val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
                                     playlists.forEach { file ->
-                                        val p = context.contentResolver.openInputStream(file.uri).use {
+                                        val p = applicationContext.contentResolver.openInputStream(file.uri).use {
                                             PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
                                         }
                                         tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
@@ -282,7 +284,7 @@ class DownloadsViewModel @Inject internal constructor(
                                     playlistFile.delete()
                                 }
                             } else {
-                                DocumentFile.fromSingleUri(context, video.url.toUri())?.delete()
+                                DocumentFile.fromSingleUri(applicationContext, video.url.toUri())?.delete()
                             }
                         } else {
                             val playlistFile = File(video.url)
@@ -319,7 +321,7 @@ class DownloadsViewModel @Inject internal constructor(
             }.invokeOnCompletion {
                 movingVideos.remove(video)
                 viewModelScope.launch(Dispatchers.IO) {
-                    repository.deleteVideo(context, video)
+                    repository.deleteVideo(applicationContext, video)
                 }
             }
         }

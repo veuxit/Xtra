@@ -20,11 +20,13 @@ import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ChannelPagerViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
@@ -80,14 +82,14 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun isFollowingChannel(context: Context, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(channelId: String?, channelLogin: String?) {
         if (!follow.isInitialized) {
             viewModelScope.launch {
                 try {
-                    val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-                    val account = Account.get(context)
-                    val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+                    val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+                    val account = Account.get(applicationContext)
+                    val helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
+                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
                     val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
                             (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
@@ -108,17 +110,17 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowChannel(context: Context, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
+    fun saveFollowChannel(userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
         viewModelScope.launch {
-            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.followUser(gqlHeaders, userId)
                     follow.postValue(Pair(true, errorMessage))
                 } else {
                     if (userId != null) {
-                        val downloadedLogo = DownloadUtils.savePng(context, channelLogo, "profile_pics", userId)
+                        val downloadedLogo = DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", userId)
                         localFollowsChannel.saveFollow(LocalFollowChannel(userId, userLogin, userName, downloadedLogo))
                         follow.postValue(Pair(true, null))
                     }
@@ -131,17 +133,17 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowChannel(context: Context, userId: String?) {
+    fun deleteFollowChannel(userId: String?) {
         viewModelScope.launch {
-            val setting = context.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
+            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.unfollowUser(gqlHeaders, userId)
                     follow.postValue(Pair(false, errorMessage))
                 } else {
                     if (userId != null) {
-                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(context, it) }
+                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(applicationContext, it) }
                         follow.postValue(Pair(false, null))
                     }
                 }
@@ -153,13 +155,13 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalUser(context: Context, user: User) {
+    fun updateLocalUser(user: User) {
         if (!updatedLocalUser) {
             updatedLocalUser = true
             viewModelScope.launch {
                 try {
                     if (user.channelId != null) {
-                        val downloadedLogo = DownloadUtils.savePng(context, user.channelLogo, "profile_pics", user.channelId)
+                        val downloadedLogo = DownloadUtils.savePng(applicationContext, user.channelLogo, "profile_pics", user.channelId)
                         localFollowsChannel.getFollowByUserId(user.channelId)?.let { localFollowsChannel.updateFollow(it.apply {
                             userLogin = user.channelLogin
                             userName = user.channelName

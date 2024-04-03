@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.search.games
 
 import android.content.Context
-import androidx.lifecycle.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
@@ -22,7 +23,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GameSearchViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     private val apolloClient: ApolloClient) : ViewModel() {
@@ -36,20 +37,20 @@ class GameSearchViewModel @Inject constructor(
         ) {
             SearchGamesDataSource(
                 query = query,
-                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(context).helixToken,
+                helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                helixToken = Account.get(applicationContext).helixToken,
                 helixApi = helix,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlApi = graphQLRepository,
                 apolloClient = apolloClient,
-                checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_GAMES, ""), TwitchApiHelper.searchGamesApiDefaults))
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_SEARCH_GAMES, ""), TwitchApiHelper.searchGamesApiDefaults))
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun setQuery(query: String) {
-        if (this.query.value != query) {
-            this.query.value = query
+    fun setQuery(newQuery: String) {
+        if (query.value != newQuery) {
+            query.value = newQuery
         }
     }
 }

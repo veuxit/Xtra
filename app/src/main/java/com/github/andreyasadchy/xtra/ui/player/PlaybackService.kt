@@ -34,7 +34,6 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
@@ -217,8 +216,7 @@ class PlaybackService : MediaSessionService() {
                             val qualityNames = mutableListOf<String>()
                             val codecs = mutableListOf<String>()
                             val map = mutableMapOf<String, String>()
-                            val appContext = XtraApp.INSTANCE.applicationContext
-                            val audioOnly = ContextCompat.getString(appContext, R.string.audio_only)
+                            val audioOnly = ContextCompat.getString(this@PlaybackService, R.string.audio_only)
                             val qualityPattern = Pattern.compile("NAME=\"(.+?)\"")
                             val codecPattern = Pattern.compile("CODECS=\"(.+?)\\.")
                             var trackIndex = 0
@@ -267,10 +265,10 @@ class PlaybackService : MediaSessionService() {
                             }
                             qualities = LinkedList(map.keys).apply {
                                 if (usingAutoQuality) {
-                                    addFirst(ContextCompat.getString(appContext, R.string.auto))
+                                    addFirst(ContextCompat.getString(this@PlaybackService, R.string.auto))
                                 }
                                 if (usingChatOnlyQuality) {
-                                    add(ContextCompat.getString(appContext, R.string.chat_only))
+                                    add(ContextCompat.getString(this@PlaybackService, R.string.chat_only))
                                 }
                             }
                             setQualityIndex()
@@ -294,7 +292,7 @@ class PlaybackService : MediaSessionService() {
                 Intent(this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
                     putExtra(MainActivity.KEY_CODE, MainActivity.INTENT_OPEN_PLAYER)
-                }, if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT)
+                }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             )
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
@@ -398,18 +396,17 @@ class PlaybackService : MediaSessionService() {
                                 } else {
                                     item.animatedPreviewURL?.let { preview ->
                                         val map = TwitchApiHelper.getVideoUrlMapFromPreview(preview, item.type)
-                                        val appContext = XtraApp.INSTANCE.applicationContext
                                         urls = map.apply {
                                             if (containsKey("audio_only")) {
                                                 remove("audio_only")?.let { url ->
-                                                    put(ContextCompat.getString(appContext, R.string.audio_only), url) //move audio option to bottom
+                                                    put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), url) //move audio option to bottom
                                                 }
                                             } else {
-                                                put(ContextCompat.getString(appContext, R.string.audio_only), "")
+                                                put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), "")
                                             }
                                         }
                                         qualities = LinkedList(urls.keys).apply {
-                                            addFirst(ContextCompat.getString(appContext, R.string.auto))
+                                            addFirst(ContextCompat.getString(this@PlaybackService, R.string.auto))
                                         }
                                         qualityIndex = 1
                                         urls.values.first().toUri()
@@ -455,10 +452,9 @@ class PlaybackService : MediaSessionService() {
                                 customCommand.customExtras.getStringArray(URLS_KEYS)?.let { keys ->
                                     customCommand.customExtras.getStringArray(URLS_VALUES)?.let { values ->
                                         val map = keys.zip(values).toMap(mutableMapOf())
-                                        val appContext = XtraApp.INSTANCE.applicationContext
                                         Companion.item = item
                                         urls = map.apply {
-                                            put(ContextCompat.getString(appContext, R.string.audio_only), "")
+                                            put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), "")
                                         }
                                         qualities = LinkedList(urls.keys)
                                         setQualityIndex()
@@ -489,10 +485,9 @@ class PlaybackService : MediaSessionService() {
                                 customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
                                 Companion.item = item
-                                val appContext = XtraApp.INSTANCE.applicationContext
                                 urls = mapOf(
-                                    ContextCompat.getString(appContext, R.string.source) to item.url,
-                                    ContextCompat.getString(appContext, R.string.audio_only) to ""
+                                    ContextCompat.getString(this@PlaybackService, R.string.source) to item.url,
+                                    ContextCompat.getString(this@PlaybackService, R.string.audio_only) to ""
                                 )
                                 qualities = LinkedList(urls.keys)
                                 session.player.setMediaItem(MediaItem.Builder()

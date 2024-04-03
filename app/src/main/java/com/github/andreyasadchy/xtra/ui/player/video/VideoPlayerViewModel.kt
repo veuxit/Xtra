@@ -19,15 +19,17 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoPlayerViewModel @Inject constructor(
-    private val playerRepository: PlayerRepository,
+    @ApplicationContext applicationContext: Context,
     repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
-    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel) {
+    private val playerRepository: PlayerRepository,
+    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(applicationContext, repository, localFollowsChannel) {
 
     var result = MutableLiveData<Uri>()
 
@@ -75,19 +77,19 @@ class VideoPlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveBookmark(context: Context, video: Video) {
+    fun saveBookmark(video: Video) {
         viewModelScope.launch {
             if (bookmarkItem.value != null) {
-                bookmarksRepository.deleteBookmark(context, bookmarkItem.value!!)
+                bookmarksRepository.deleteBookmark(applicationContext, bookmarkItem.value!!)
             } else {
                 val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(context, video.thumbnail, "thumbnails", it)
+                    DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
                 }
                 val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(context, video.channelLogo, "profile_pics", it)
+                    DownloadUtils.savePng(applicationContext, video.channelLogo, "profile_pics", it)
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.firstOrNull()
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(applicationContext).helixToken, TwitchApiHelper.getGQLHeaders(applicationContext)) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }

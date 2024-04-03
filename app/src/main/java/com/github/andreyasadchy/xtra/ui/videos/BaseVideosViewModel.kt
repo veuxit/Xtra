@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.util.prefs
 import kotlinx.coroutines.launch
 
 abstract class BaseVideosViewModel(
+    protected val applicationContext: Context,
     playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
     private val repository: ApiRepository) : ViewModel() {
@@ -23,20 +24,20 @@ abstract class BaseVideosViewModel(
     val positions = playerRepository.loadVideoPositions()
     val bookmarks = bookmarksRepository.loadBookmarksLiveData()
 
-    fun saveBookmark(context: Context, video: Video) {
+    fun saveBookmark(video: Video) {
         viewModelScope.launch {
             val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
-                bookmarksRepository.deleteBookmark(context, item)
+                bookmarksRepository.deleteBookmark(applicationContext, item)
             } else {
                 val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(context, video.thumbnail, "thumbnails", it)
+                    DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
                 }
                 val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(context, video.channelLogo, "profile_pics", it)
+                    DownloadUtils.savePng(applicationContext, video.channelLogo, "profile_pics", it)
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(context).helixToken, TwitchApiHelper.getGQLHeaders(context)) }?.firstOrNull()
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(applicationContext).helixToken, TwitchApiHelper.getGQLHeaders(applicationContext)) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }

@@ -1,20 +1,26 @@
 package com.github.andreyasadchy.xtra.ui.clips.common
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.offline.SortGame
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.SortChannelRepository
+import com.github.andreyasadchy.xtra.repository.SortGameRepository
 import com.github.andreyasadchy.xtra.repository.datasource.ChannelClipsDataSource
 import com.github.andreyasadchy.xtra.repository.datasource.GameClipsDataSource
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
@@ -34,7 +40,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ClipsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     private val apolloClient: ApolloClient,
@@ -47,7 +53,7 @@ class ClipsViewModel @Inject constructor(
         get() = _sortText
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val filter = MutableStateFlow(loadClips(context))
+    private val filter = MutableStateFlow(loadClips())
 
     val period: VideoPeriodEnum
         get() = filter.value.period
@@ -83,21 +89,21 @@ class ClipsViewModel @Inject constructor(
                 ChannelClipsDataSource(
                     channelId = args.channelId,
                     channelLogin = args.channelLogin,
-                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(context).helixToken,
+                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(applicationContext).helixToken,
                     started_at = started,
                     ended_at = ended,
                     helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             } else {
                 val langList = mutableListOf<Language>()
-                val langValues = context.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
+                val langValues = applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
                 if (filter.languageIndex != 0) {
                     val item = Language.values().find { lang -> lang.rawValue == langValues.elementAt(filter.languageIndex) }
                     if (item != null) {
@@ -108,24 +114,24 @@ class ClipsViewModel @Inject constructor(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(context).helixToken,
+                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                    helixToken = Account.get(applicationContext).helixToken,
                     started_at = started,
                     ended_at = ended,
                     helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryLanguages = langList.ifEmpty { null },
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
-                    checkIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && context.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
+                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
             }
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun loadClips(context: Context): Filter {
+    private fun loadClips(): Filter {
         var sortValuesGame: SortGame? = null
         var sortValuesChannel: SortChannel? = null
         if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
@@ -141,12 +147,13 @@ class ClipsViewModel @Inject constructor(
                 }
             }
         }
-        _sortText.value = context.getString(R.string.sort_and_period, context.getString(R.string.view_count),
+        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
+            ContextCompat.getString(applicationContext, R.string.view_count),
             when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                VideoPeriodEnum.DAY.value -> context.getString(R.string.today)
-                VideoPeriodEnum.MONTH.value -> context.getString(R.string.this_month)
-                VideoPeriodEnum.ALL.value -> context.getString(R.string.all_time)
-                else -> context.getString(R.string.this_week)
+                VideoPeriodEnum.DAY.value -> ContextCompat.getString(applicationContext, R.string.today)
+                VideoPeriodEnum.MONTH.value -> ContextCompat.getString(applicationContext, R.string.this_month)
+                VideoPeriodEnum.ALL.value -> ContextCompat.getString(applicationContext, R.string.all_time)
+                else -> ContextCompat.getString(applicationContext, R.string.this_week)
             }
         )
         return Filter(
@@ -200,9 +207,8 @@ class ClipsViewModel @Inject constructor(
                         clipLanguageIndex = languageIndex
                     )).let { sortGameRepository.save(it) }
                 }
-                val appContext = XtraApp.INSTANCE.applicationContext
-                if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false)) {
-                    appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_CLIPS, saveDefault) }
+                if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false)) {
+                    applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_CLIPS, saveDefault) }
                 }
             } else {
                 if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
@@ -236,9 +242,8 @@ class ClipsViewModel @Inject constructor(
                             clipPeriod = period.value
                         )).let { sortChannelRepository.save(it) }
                     }
-                    val appContext = XtraApp.INSTANCE.applicationContext
-                    if (saveDefault != appContext.prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)) {
-                        appContext.prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, saveDefault) }
+                    if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)) {
+                        applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, saveDefault) }
                     }
                 }
             }
