@@ -157,7 +157,7 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                             val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
                             val path = if (location == 0) sharedPath else downloadPath
                             if (!path.isNullOrBlank()) {
-                                viewModel.download(url, path, quality, from, to, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                                viewModel.download(url, path, quality, from, to, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
                                 requireContext().prefs().edit {
                                     putInt(C.DOWNLOAD_LOCATION, location)
                                     if (location == 0) {

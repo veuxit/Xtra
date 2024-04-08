@@ -80,6 +80,14 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     .build()
             )
         }, {
+            val convert = getString(R.string.convert)
+            requireActivity().getAlertDialogBuilder()
+                .setTitle(convert)
+                .setMessage(getString(R.string.convert_message))
+                .setPositiveButton(convert) { _, _ -> viewModel.convertToFile(it) }
+                .setNegativeButton(getString(android.R.string.cancel), null)
+                .show()
+        }, {
             if (it.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                 val storage = DownloadUtils.getAvailableStorage(requireContext())
                 val binding = StorageSelectionBinding.inflate(layoutInflater).apply {

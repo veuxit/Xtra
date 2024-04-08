@@ -14,7 +14,7 @@ data class OfflineVideo(
     @ColumnInfo(name = "source_url")
     val sourceUrl: String? = null,
     @ColumnInfo(name = "source_start_position")
-    val sourceStartPosition: Long? = null,
+    var sourceStartPosition: Long? = null,
     val name: String? = null,
     @ColumnInfo(name = "channel_id")
     val channelId: String? = null,
@@ -28,7 +28,7 @@ data class OfflineVideo(
     val gameId: String? = null,
     val gameSlug: String? = null,
     val gameName: String? = null,
-    val duration: Long? = null,
+    var duration: Long? = null,
     @ColumnInfo(name = "upload_date")
     val uploadDate: Long? = null,
     @ColumnInfo(name = "download_date")
@@ -37,10 +37,14 @@ data class OfflineVideo(
     var lastWatchPosition: Long? = null,
     var progress: Int,
     @ColumnInfo(name = "max_progress")
-    val maxProgress: Int,
+    var maxProgress: Int,
+    var downloadPath: String? = null,
+    val fromTime: Long? = null,
+    val toTime: Long? = null,
     var status: Int = STATUS_PENDING,
     val type: String? = null,
-    val videoId: String? = null) : Parcelable {
+    val videoId: String? = null,
+    val quality: String? = null) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)
@@ -56,5 +60,6 @@ data class OfflineVideo(
         const val STATUS_DOWNLOADED = 2
         const val STATUS_MOVING = 3
         const val STATUS_DELETING = 4
+        const val STATUS_CONVERTING = 5
     }
 }

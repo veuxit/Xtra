@@ -71,7 +71,7 @@ class SavedPagerViewModel @Inject constructor(
             if (existingVideo == null) {
                 offlineRepository.saveVideo(OfflineVideo(
                     url = url,
-                    name = url.substringAfterLast("%2F").removeSuffix(".mp4"),
+                    name = url.substringAfterLast("%2F").removeSuffix(".mp4").removeSuffix(".ts"),
                     thumbnail = url,
                     progress = 100,
                     maxProgress = 100,
