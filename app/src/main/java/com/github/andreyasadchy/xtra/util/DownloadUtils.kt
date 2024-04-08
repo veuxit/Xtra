@@ -39,7 +39,7 @@ object DownloadUtils {
         DownloadService.activeRequests.add(request.offlineVideoId)
     }
 
-    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long?, startPosition: Long?, segmentFrom: Int? = null, segmentTo: Int? = null): OfflineVideo {
+    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long? = null, startPosition: Long? = null, segmentFrom: Int? = null, segmentTo: Int? = null, downloadPath: String? = null, fromTime: Long? = null, toTime: Long? = null, quality: String? = null): OfflineVideo {
         return with(downloadable) {
             val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
                 savePng(context, thumbnail, "thumbnails", it)
@@ -65,8 +65,12 @@ object DownloadUtils {
                 downloadDate = System.currentTimeMillis(),
                 progress = 0,
                 maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,
+                downloadPath = downloadPath,
+                fromTime = fromTime,
+                toTime = toTime,
                 type = type,
-                videoId = id
+                videoId = id,
+                quality = if (quality?.contains("Audio", true) != true) quality else "audio"
             )
         }
     }

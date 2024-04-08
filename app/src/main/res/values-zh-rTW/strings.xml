@@ -612,4 +612,9 @@
     <string name="download_moving">正在移動</string>
     <string name="theme_adapted_username_color">基於應用程式主題的可讀顏色</string>
     <string name="download_deleting">正在刪除</string>
+    <string name="download_vod_to_file">Download videos to single files</string>
+    <string name="convert_vod_to_file">Convert to a file</string>
+    <string name="download_converting">Converting</string>
+    <string name="convert_message">Convert this video to a single file?</string>
+    <string name="convert">Convert</string>
 </resources>

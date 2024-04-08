@@ -4,8 +4,24 @@ import android.app.Application
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.github.andreyasadchy.xtra.db.*
-import com.github.andreyasadchy.xtra.repository.*
+import com.github.andreyasadchy.xtra.db.AppDatabase
+import com.github.andreyasadchy.xtra.db.BookmarksDao
+import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
+import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
+import com.github.andreyasadchy.xtra.db.RecentEmotesDao
+import com.github.andreyasadchy.xtra.db.RequestsDao
+import com.github.andreyasadchy.xtra.db.SortChannelDao
+import com.github.andreyasadchy.xtra.db.SortGameDao
+import com.github.andreyasadchy.xtra.db.VideoPositionsDao
+import com.github.andreyasadchy.xtra.db.VideosDao
+import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
+import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
+import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.SortChannelRepository
+import com.github.andreyasadchy.xtra.repository.SortGameRepository
+import com.github.andreyasadchy.xtra.repository.VodBookmarkIgnoredUsersRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -200,6 +216,14 @@ class DatabaseModule {
                                 db.execSQL("INSERT INTO local_follows_games1 (gameId, gameName, boxArt, id) SELECT gameId, gameName, boxArt, id FROM local_follows_games")
                                 db.execSQL("DROP TABLE local_follows_games")
                                 db.execSQL("ALTER TABLE local_follows_games1 RENAME TO local_follows_games")
+                            }
+                        },
+                        object : Migration(22, 23) {
+                            override fun migrate(db: SupportSQLiteDatabase) {
+                                db.execSQL("CREATE TABLE IF NOT EXISTS videos1 (url TEXT NOT NULL, source_url TEXT, source_start_position INTEGER, name TEXT, channel_id TEXT, channel_login TEXT, channel_name TEXT, channel_logo TEXT, thumbnail TEXT, gameId TEXT, gameSlug TEXT, gameName TEXT, duration INTEGER, upload_date INTEGER, download_date INTEGER, last_watch_position INTEGER, progress INTEGER NOT NULL, max_progress INTEGER NOT NULL, downloadPath TEXT, fromTime INTEGER, toTime INTEGER, status INTEGER NOT NULL, type TEXT, videoId TEXT, quality TEXT, id INTEGER NOT NULL, is_vod INTEGER NOT NULL, PRIMARY KEY (id))")
+                                db.execSQL("INSERT INTO videos1 (url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, status, type, videoId, id, is_vod) SELECT url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, status, type, videoId, id, is_vod FROM videos")
+                                db.execSQL("DROP TABLE videos")
+                                db.execSQL("ALTER TABLE videos1 RENAME TO videos")
                             }
                         },
                     )
