@@ -74,12 +74,12 @@ class SettingsViewModel @Inject constructor(
                                         ))
                                     }
                                 }
-                            } else if (file.isFile && file.name.endsWith(".mp4")) {
+                            } else if (file.isFile && (file.name.endsWith(".mp4") || file.name.endsWith(".ts"))) {
                                 val existingVideo = offlineRepository.getVideoByUrl(file.path)
                                 if (existingVideo == null) {
                                     offlineRepository.saveVideo(OfflineVideo(
                                         url = file.path,
-                                        name = file.name.removeSuffix(".mp4"),
+                                        name = file.name.removeSuffix(".mp4").removeSuffix(".ts"),
                                         thumbnail = file.path,
                                         progress = 100,
                                         maxProgress = 100,

@@ -36,6 +36,7 @@ class DownloadsAdapter(
     private val fragment: Fragment,
     private val stopDownload: (Int) -> Unit,
     private val resumeDownload: (Int) -> Unit,
+    private val convertVideo: (OfflineVideo) -> Unit,
     private val moveVideo: (OfflineVideo) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
@@ -143,25 +144,25 @@ class DownloadsAdapter(
                     } else {
                         gameName.gone()
                     }
-                    if (item.duration != null) {
+                    item.duration?.let { itemDuration ->
                         duration.visible()
-                        duration.text = DateUtils.formatElapsedTime(item.duration / 1000L)
-                        if (item.sourceStartPosition != null)  {
+                        duration.text = DateUtils.formatElapsedTime(itemDuration / 1000L)
+                        item.sourceStartPosition?.let { sourceStartPosition ->
                             sourceStart.visible()
-                            sourceStart.text = context.getString(R.string.source_vod_start, DateUtils.formatElapsedTime(item.sourceStartPosition / 1000L))
+                            sourceStart.text = context.getString(R.string.source_vod_start, DateUtils.formatElapsedTime(sourceStartPosition / 1000L))
                             sourceEnd.visible()
-                            sourceEnd.text = context.getString(R.string.source_vod_end, DateUtils.formatElapsedTime((item.sourceStartPosition + item.duration) / 1000L))
-                        } else {
+                            sourceEnd.text = context.getString(R.string.source_vod_end, DateUtils.formatElapsedTime((sourceStartPosition + itemDuration) / 1000L))
+                        } ?: {
                             sourceStart.gone()
                             sourceEnd.gone()
                         }
-                        if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true) && item.lastWatchPosition != null && item.duration > 0L) {
-                            progressBar.progress = (item.lastWatchPosition!!.toFloat() / item.duration * 100).toInt()
+                        if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true) && item.lastWatchPosition != null && itemDuration > 0L) {
+                            progressBar.progress = (item.lastWatchPosition!!.toFloat() / itemDuration * 100).toInt()
                             progressBar.visible()
                         } else {
                             progressBar.gone()
                         }
-                    } else {
+                    } ?: {
                         duration.gone()
                         sourceStart.gone()
                         sourceEnd.gone()
@@ -186,7 +187,7 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING || item.status == OfflineVideo.STATUS_DELETING) {
+                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING || item.status == OfflineVideo.STATUS_DELETING || item.status == OfflineVideo.STATUS_CONVERTING) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP || Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !item.url.endsWith(".m3u8")) {
                                     menu.findItem(R.id.moveVideo).apply {
                                         isVisible = true
@@ -197,8 +198,11 @@ class DownloadsAdapter(
                                         })
                                     }
                                 }
+                                if (item.vod) {
+                                    menu.findItem(R.id.convertVideo).isVisible = true
+                                }
                             } else {
-                                if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
+                                if (item.sourceUrl?.endsWith(".m3u8") == true || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
                                     menu.findItem(R.id.stopDownload).isVisible = true
                                     menu.findItem(R.id.resumeDownload).isVisible = true
                                 }
@@ -207,6 +211,7 @@ class DownloadsAdapter(
                                 when(it.itemId) {
                                     R.id.stopDownload -> stopDownload(item.id)
                                     R.id.resumeDownload -> resumeDownload(item.id)
+                                    R.id.convertVideo -> convertVideo(item)
                                     R.id.moveVideo -> moveVideo(item)
                                     R.id.delete -> deleteVideo(item)
                                     else -> menu.close()
@@ -224,10 +229,11 @@ class DownloadsAdapter(
                                 OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
                                 OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
                                 OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
+                                OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
                                 else -> context.getString(R.string.download_pending)
                             }
                             visible()
-                            if (item.vod) {
+                            if (item.vod || item.sourceUrl?.endsWith(".m3u8") == true) {
                                 background = null
                                 isClickable = false
                                 isFocusable = false

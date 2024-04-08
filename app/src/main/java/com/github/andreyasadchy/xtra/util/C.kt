@@ -20,6 +20,7 @@ object C {
     const val TOKEN = "token"
     const val USERNAME = "username"
     const val USER_ID = "user_id"
+    const val DOWNLOAD_PLAYLIST_TO_FILE = "download_playlist_to_file"
     const val DOWNLOAD_CONCURRENT_LIMIT = "download_concurrent_limit"
     const val DOWNLOAD_STORAGE = "downloadStorage"
     const val DOWNLOAD_SHARED_PATH = "download_shared_path"

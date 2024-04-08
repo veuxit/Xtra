@@ -99,120 +99,132 @@ class VideoDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String, from: Long, to: Long, useWorkManager: Boolean) {
+    fun download(url: String, path: String, quality: String, from: Long, to: Long, playlistToFile: Boolean, useWorkManager: Boolean) {
         GlobalScope.launch {
             val video = _videoInfo.value!!.video
-            val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
-                PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
-            }
-            val targetDuration = playlist.targetDuration * 1000L
-            var totalDuration = 0L
-            val size = playlist.tracks.size
-            val relativeStartTimes = ArrayList<Long>(size)
-            val durations = ArrayList<Long>(size)
-            var relativeTime = 0L
-            playlist.tracks.forEach {
-                val duration = (it.trackInfo.duration * 1000f).toLong()
-                durations.add(duration)
-                totalDuration += duration
-                relativeStartTimes.add(relativeTime)
-                relativeTime += duration
-            }
-            val fromIndex = if (from == 0L) {
-                0
-            } else {
-                val min = from - targetDuration
-                relativeStartTimes.binarySearch(comparison = { time ->
-                    when {
-                        time > from -> 1
-                        time < min -> -1
-                        else -> 0
-                    }
-                }).let { if (it < 0) -it else it }
-            }
-            val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
-                relativeStartTimes.lastIndex
-            } else {
-                val max = to + targetDuration
-                relativeStartTimes.binarySearch(comparison = { time ->
-                    when {
-                        time > max -> 1
-                        time < to -> -1
-                        else -> 0
-                    }
-                }).let { if (it < 0) -it else it }
-            }
-            val startPosition = relativeStartTimes[fromIndex]
-            val duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
-            val urlPath = url.substringBeforeLast('/') + "/"
-            val videoDirectoryName = if (!video.id.isNullOrBlank()) {
-                "${video.id}${if (!quality.contains("Audio", true)) quality else "audio"}"
-            } else {
-                "${System.currentTimeMillis()}"
-            }
-            if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
-                val videoDirectory = directory?.findFile(videoDirectoryName) ?: directory?.createDirectory(videoDirectoryName)
-                val tracks = ArrayList<TrackData>()
-                for (i in fromIndex..toIndex) {
-                    val track = playlist.tracks[i]
-                    tracks.add(
-                        track.buildUpon()
-                            .withUri(videoDirectory?.uri.toString() + "%2F" + track.uri.replace("-unmuted", "-muted"))
-                            .build()
-                    )
-                }
-                val playlistFile = videoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")!!
-                applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
-                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
-                }
-                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex)
+            if (playlistToFile) {
+                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, url, "", downloadPath = path, fromTime = from, toTime = to, quality = quality)
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                if (useWorkManager) {
-                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                        videoId.toString(),
-                        ExistingWorkPolicy.KEEP,
-                        OneTimeWorkRequestBuilder<DownloadWorker>()
-                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
-                            .build()
-                    )
-                } else {
-                    val request = Request(videoId, urlPath, path)
-                    offlineRepository.saveRequest(request)
-
-                    DownloadUtils.download(applicationContext, request)
-                }
+                WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                    videoId.toString(),
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<DownloadWorker>()
+                        .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                        .build()
+                )
             } else {
-                val tracks = ArrayList<TrackData>()
-                for (i in fromIndex..toIndex) {
-                    val track = playlist.tracks[i]
-                    tracks.add(
-                        track.buildUpon()
-                            .withUri(track.uri.replace("-unmuted", "-muted"))
-                            .build()
-                    )
+                val playlist = ByteArrayInputStream(playerRepository.getResponse(url = url).toByteArray()).use {
+                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                 }
-                val directory = "$path${File.separator}$videoDirectoryName${File.separator}"
-                File(directory).mkdir()
-                val playlistUri = "$directory${System.currentTimeMillis()}.m3u8"
-                FileOutputStream(playlistUri).use {
-                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                val targetDuration = playlist.targetDuration * 1000L
+                var totalDuration = 0L
+                val size = playlist.tracks.size
+                val relativeStartTimes = ArrayList<Long>(size)
+                val durations = ArrayList<Long>(size)
+                var relativeTime = 0L
+                playlist.tracks.forEach {
+                    val duration = (it.trackInfo.duration * 1000f).toLong()
+                    durations.add(duration)
+                    totalDuration += duration
+                    relativeStartTimes.add(relativeTime)
+                    relativeTime += duration
                 }
-                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex)
-                val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                if (useWorkManager) {
-                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                        videoId.toString(),
-                        ExistingWorkPolicy.KEEP,
-                        OneTimeWorkRequestBuilder<DownloadWorker>()
-                            .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
-                            .build()
-                    )
+                val fromIndex = if (from == 0L) {
+                    0
                 } else {
-                    val request = Request(videoId, urlPath, directory)
-                    offlineRepository.saveRequest(request)
+                    val min = from - targetDuration
+                    relativeStartTimes.binarySearch(comparison = { time ->
+                        when {
+                            time > from -> 1
+                            time < min -> -1
+                            else -> 0
+                        }
+                    }).let { if (it < 0) -it else it }
+                }
+                val toIndex = if (to in relativeStartTimes.last()..totalDuration) {
+                    relativeStartTimes.lastIndex
+                } else {
+                    val max = to + targetDuration
+                    relativeStartTimes.binarySearch(comparison = { time ->
+                        when {
+                            time > max -> 1
+                            time < to -> -1
+                            else -> 0
+                        }
+                    }).let { if (it < 0) -it else it }
+                }
+                val startPosition = relativeStartTimes[fromIndex]
+                val duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
+                val urlPath = url.substringBeforeLast('/') + "/"
+                val videoDirectoryName = if (!video.id.isNullOrBlank()) {
+                    "${video.id}${if (!quality.contains("Audio", true)) quality else "audio"}"
+                } else {
+                    "${System.currentTimeMillis()}"
+                }
+                if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                    val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
+                    val videoDirectory = directory?.findFile(videoDirectoryName) ?: directory?.createDirectory(videoDirectoryName)
+                    val tracks = ArrayList<TrackData>()
+                    for (i in fromIndex..toIndex) {
+                        val track = playlist.tracks[i]
+                        tracks.add(
+                            track.buildUpon()
+                                .withUri(videoDirectory?.uri.toString() + "%2F" + track.uri.replace("-unmuted", "-muted"))
+                                .build()
+                        )
+                    }
+                    val playlistFile = videoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")!!
+                    applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
+                        PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                    }
+                    val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex, quality = quality)
+                    val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
+                    if (useWorkManager) {
+                        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                            videoId.toString(),
+                            ExistingWorkPolicy.KEEP,
+                            OneTimeWorkRequestBuilder<DownloadWorker>()
+                                .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                                .build()
+                        )
+                    } else {
+                        val request = Request(videoId, urlPath, path)
+                        offlineRepository.saveRequest(request)
 
-                    DownloadUtils.download(applicationContext, request)
+                        DownloadUtils.download(applicationContext, request)
+                    }
+                } else {
+                    val tracks = ArrayList<TrackData>()
+                    for (i in fromIndex..toIndex) {
+                        val track = playlist.tracks[i]
+                        tracks.add(
+                            track.buildUpon()
+                                .withUri(track.uri.replace("-unmuted", "-muted"))
+                                .build()
+                        )
+                    }
+                    val directory = "$path${File.separator}$videoDirectoryName${File.separator}"
+                    File(directory).mkdir()
+                    val playlistUri = "$directory${System.currentTimeMillis()}.m3u8"
+                    FileOutputStream(playlistUri).use {
+                        PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                    }
+                    val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex, quality = quality)
+                    val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
+                    if (useWorkManager) {
+                        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                            videoId.toString(),
+                            ExistingWorkPolicy.KEEP,
+                            OneTimeWorkRequestBuilder<DownloadWorker>()
+                                .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                                .build()
+                        )
+                    } else {
+                        val request = Request(videoId, urlPath, directory)
+                        offlineRepository.saveRequest(request)
+
+                        DownloadUtils.download(applicationContext, request)
+                    }
                 }
             }
         }
