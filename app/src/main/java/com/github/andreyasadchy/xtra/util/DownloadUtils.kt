@@ -61,7 +61,7 @@ object DownloadUtils {
                 gameSlug = gameSlug,
                 gameName = gameName,
                 duration = duration,
-                uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601Date(it) },
+                uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
                 downloadDate = System.currentTimeMillis(),
                 progress = 0,
                 maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,

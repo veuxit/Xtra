@@ -54,7 +54,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.util.TimeZone
 
 @AndroidEntryPoint
 class StreamPlayerFragment : BasePlayerFragment() {
@@ -109,8 +108,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
             }
             if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) && requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false) {
                 it?.startedAt?.let { date ->
-                    TwitchApiHelper.parseIso8601Date(date)?.let { startedAtMs ->
-                        updateUptime(TimeZone.getDefault().getOffset(System.currentTimeMillis()) + startedAtMs)
+                    TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
+                        updateUptime(startedAtMs)
                     }
                 }
             }
@@ -159,8 +158,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
         if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
             stream.startedAt?.let {
-                TwitchApiHelper.parseIso8601Date(it)?.let { startedAtMs ->
-                    updateUptime(TimeZone.getDefault().getOffset(System.currentTimeMillis()) + startedAtMs)
+                TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
+                    updateUptime(startedAtMs)
                 }
             }
         }
