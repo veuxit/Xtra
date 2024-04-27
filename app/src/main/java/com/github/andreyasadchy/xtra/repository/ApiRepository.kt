@@ -651,7 +651,7 @@ class ApiRepository @Inject constructor(
         try {
             val pageResponse = channelLogin?.let { misc.getChannelPage(it).string() }
             if (!pageResponse.isNullOrBlank()) {
-                val settingsRegex = Regex("(https://static.twitchcdn.net/config/settings.*?js)")
+                val settingsRegex = Regex("(https://assets.twitch.tv/config/settings.*?.js|https://static.twitchcdn.net/config/settings.*?js)")
                 val settingsUrl = settingsRegex.find(pageResponse)?.value
                 val settingsResponse = settingsUrl?.let { misc.getUrl(it).string() }
                 if (!settingsResponse.isNullOrBlank()) {
