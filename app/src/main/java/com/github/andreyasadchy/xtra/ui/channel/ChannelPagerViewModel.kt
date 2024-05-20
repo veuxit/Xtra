@@ -166,7 +166,7 @@ class ChannelPagerViewModel @Inject constructor(
                             userLogin = user.channelLogin
                             userName = user.channelName
                             channelLogo = downloadedLogo }) }
-                        for (i in offlineRepository.getVideosByUserId(user.channelId.toInt())) {
+                        for (i in offlineRepository.getVideosByUserId(user.channelId)) {
                             offlineRepository.updateVideo(i.apply {
                                 channelLogin = user.channelLogin
                                 channelName = user.channelName

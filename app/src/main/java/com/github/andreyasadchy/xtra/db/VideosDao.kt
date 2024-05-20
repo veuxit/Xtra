@@ -20,8 +20,11 @@ interface VideosDao {
     @Query("SELECT * FROM videos WHERE url = :url")
     fun getByUrl(url: String): OfflineVideo?
 
+    @Query("SELECT * FROM videos WHERE videoId = :id")
+    fun getByVideoId(id: String): List<OfflineVideo>
+
     @Query("SELECT * FROM videos WHERE channel_id = :id")
-    fun getByUserId(id: Int): List<OfflineVideo>
+    fun getByUserId(id: String): List<OfflineVideo>
 
     @Insert
     fun insert(video: OfflineVideo): Long
