@@ -498,7 +498,7 @@ class ApiRepository @Inject constructor(
                                 addProperty("channel_id", channelId)
                                 addProperty("broadcast_id", streamId)
                                 addProperty("player", "site")
-                                addProperty("user_id", userId?.toInt())
+                                addProperty("user_id", userId?.toLong())
                             })
                         }
                         val spadeRequest = Base64.encodeToString(json.toString().toByteArray(), Base64.NO_WRAP)

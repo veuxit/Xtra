@@ -30,7 +30,7 @@ class LocalFollowChannelRepository @Inject constructor(
     }
 
     suspend fun deleteFollow(context: Context, item: LocalFollowChannel) = withContext(Dispatchers.IO) {
-        if (!item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
+        if (!item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId).isEmpty()) {
             File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
         }
         localFollowsChannelDao.delete(item)

@@ -38,10 +38,10 @@ class BookmarksRepository @Inject constructor(
     }
 
     suspend fun deleteBookmark(context: Context, item: Bookmark) = withContext(Dispatchers.IO) {
-        if (!item.videoId.isNullOrBlank() && videosDao.getById(item.videoId.toInt()) == null) {
+        if (!item.videoId.isNullOrBlank() && videosDao.getByVideoId(item.videoId).isEmpty()) {
             File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
         }
-        if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId.toInt()).isEmpty()) {
+        if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId).isEmpty()) {
             File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
         }
         bookmarksDao.delete(item)

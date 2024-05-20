@@ -252,7 +252,7 @@ class FollowedChannelsDataSource(
                 val downloadedLogo = DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(profileImageURL, "profileimage"), "profile_pics", userId)
                 localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.updateFollow(it.apply {
                     channelLogo = downloadedLogo }) }
-                for (i in offlineRepository.getVideosByUserId(userId.toInt())) {
+                for (i in offlineRepository.getVideosByUserId(userId)) {
                     offlineRepository.updateVideo(i.apply {
                         channelLogo = downloadedLogo })
                 }
