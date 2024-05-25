@@ -10,7 +10,7 @@ class FfzGlobalDeserializer : JsonDeserializer<FfzGlobalResponse> {
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): FfzGlobalResponse {
-        val emotes = mutableListOf<FfzEmote>()
+        val emotes = mutableListOf<Emote>()
         val globalSets = json.takeIf { it.isJsonObject }?.asJsonObject?.get("default_sets")?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { set -> set.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isNumber }?.asInt }
         json.takeIf { it.isJsonObject }?.asJsonObject?.get("sets")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { set ->
             if (globalSets?.contains(set.key.toIntOrNull()) == true) {
@@ -19,13 +19,13 @@ class FfzGlobalDeserializer : JsonDeserializer<FfzGlobalResponse> {
                         obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
                             val isAnimated = obj.get("animated")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.isNotEmpty() == true
                             obj.get(if (isAnimated) "animated" else "urls")?.takeIf { it.isJsonObject }?.asJsonObject?.let { urls ->
-                                emotes.add(FfzEmote(
+                                emotes.add(Emote(
                                     name = name,
                                     url1x = urls.get("1")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                                     url2x = urls.get("2")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                                     url3x = urls.get("2")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
                                     url4x = urls.get("4")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString,
-                                    type = if (isAnimated) "webp" else null,
+                                    format = if (isAnimated) "webp" else null,
                                     isAnimated = isAnimated
                                 ))
                             }

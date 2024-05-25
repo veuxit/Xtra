@@ -1,27 +1,32 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
+import android.content.ContentResolver
+import android.content.Context
+import android.util.Base64
+import android.util.JsonReader
+import android.util.JsonToken
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.chat.BttvEmote
+import com.github.andreyasadchy.xtra.model.chat.Badge
+import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.chat.FfzEmote
-import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
-import com.github.andreyasadchy.xtra.model.chat.PubSubPointReward
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
-import com.github.andreyasadchy.xtra.model.chat.StvEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
+import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
+import com.github.andreyasadchy.xtra.ui.player.ChatReplayManagerLocal
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.SingleLiveEvent
@@ -45,15 +50,22 @@ import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okio.use
+import java.io.File
+import java.io.FileInputStream
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.collections.set
 
+
 @HiltViewModel
 class ChatViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
     private val playerRepository: PlayerRepository,
     private val okHttpClient: OkHttpClient) : ViewModel(), ChatView.ChatViewCallback {
@@ -81,6 +93,7 @@ class ChatViewModel @Inject constructor(
         get() = _otherEmotes
 
     private var loadedUserEmotes = false
+    val localTwitchEmotes = MutableLiveData<List<TwitchEmote>>()
     val globalStvEmotes = MutableLiveData<List<Emote>?>()
     val channelStvEmotes = MutableLiveData<List<Emote>>()
     val globalBttvEmotes = MutableLiveData<List<Emote>?>()
@@ -101,7 +114,7 @@ class ChatViewModel @Inject constructor(
     val title = MutableLiveData<BroadcastSettings?>()
     val streamLiveChanged = MutableLiveData<Pair<PlaybackMessage, String?>>()
     var streamId: String? = null
-    private val rewardList = mutableListOf<Pair<LiveChatMessage?, PubSubPointReward?>>()
+    private val rewardList = mutableListOf<ChatMessage>()
 
     private val _reloadMessages by lazy { SingleLiveEvent<Boolean>() }
     val reloadMessages: LiveData<Boolean>
@@ -141,42 +154,9 @@ class ChatViewModel @Inject constructor(
             this.streamId = streamId
             this.showRaids = showRaids
             raidAutoSwitch = autoSwitchRaids
-            chat = LiveChatController(
-                useChatWebSocket = useChatWebSocket,
-                useSSL = useSSL,
-                usePubSub = usePubSub,
-                account = account,
-                isLoggedIn = isLoggedIn,
-                helixClientId = helixClientId,
-                gqlHeaders = gqlHeaders,
-                channelId = channelId,
-                channelLogin = channelLogin,
-                channelName = channelName,
-                animateGifs = animateGifs,
-                showUserNotice = showUserNotice,
-                showClearMsg = showClearMsg,
-                showClearChat = showClearChat,
-                collectPoints = collectPoints,
-                notifyPoints = notifyPoints,
-                useApiCommands = useApiCommands,
-                useApiChatMessages = useApiChatMessages,
-                useEventSubChat = useEventSubChat,
-                checkIntegrity = checkIntegrity
-            )
+            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
             chat?.start()
-            loadEmotes(
-                helixClientId = helixClientId,
-                helixToken = account.helixToken,
-                gqlHeaders = gqlHeaders,
-                channelId = channelId,
-                channelLogin = channelLogin,
-                emoteQuality = emoteQuality,
-                animateGifs = animateGifs,
-                enableStv = enableStv,
-                enableBttv = enableBttv,
-                enableFfz = enableFfz,
-                checkIntegrity = checkIntegrity
-            )
+            loadEmotes(helixClientId, account.helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
             if (enableRecentMsg) {
                 loadRecentMessages(channelLogin, recentMsgLimit)
             }
@@ -186,30 +166,14 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(account: Account, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, videoId: String, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
+    fun startReplay(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, localUri: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
         if (chat == null) {
             this.messageLimit = messageLimit
-            chat = VideoChatController(
-                gqlHeaders = gqlHeaders,
-                videoId = videoId,
-                startTime = startTime,
-                getCurrentPosition = getCurrentPosition,
-                getCurrentSpeed = getCurrentSpeed
-            )
+            chat = VideoChatController(gqlHeaders, videoId, startTime, localUri, getCurrentPosition, getCurrentSpeed, helixClientId, helixToken, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
             chat?.start()
-            loadEmotes(
-                helixClientId = helixClientId,
-                helixToken = account.helixToken,
-                gqlHeaders = gqlHeaders,
-                channelId = channelId,
-                channelLogin = channelLogin,
-                emoteQuality = emoteQuality,
-                animateGifs = animateGifs,
-                enableStv = enableStv,
-                enableBttv = enableBttv,
-                enableFfz = enableFfz,
-                checkIntegrity = checkIntegrity
-            )
+            if (videoId != null) {
+                loadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+            }
         }
     }
 
@@ -241,7 +205,6 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
-        val list = mutableListOf<Emote>()
         savedGlobalBadges.also { saved ->
             if (!saved.isNullOrEmpty()) {
                 globalBadges.value = saved
@@ -269,9 +232,15 @@ class ChatViewModel @Inject constructor(
             savedGlobalStvEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    list.addAll(saved)
-                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                     globalStvEmotes.postValue(saved)
+                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                        addAll(saved)
+                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                    })
                     _reloadMessages.value = true
                 } else {
                     viewModelScope.launch {
@@ -280,9 +249,15 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalStvEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    list.addAll(emotes)
-                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                     globalStvEmotes.postValue(emotes)
+                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                        addAll(emotes)
+                                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                    })
                                     _reloadMessages.value = true
                                 }
                             }
@@ -298,9 +273,15 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadStvEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                list.addAll(it)
-                                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 channelStvEmotes.postValue(it)
+                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                    addAll(it)
+                                    channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                })
                                 _reloadMessages.value = true
                             }
                         }
@@ -314,9 +295,15 @@ class ChatViewModel @Inject constructor(
             savedGlobalBttvEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    list.addAll(saved)
-                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                     globalBttvEmotes.postValue(saved)
+                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                        addAll(saved)
+                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                    })
                     _reloadMessages.value = true
                 } else {
                     viewModelScope.launch {
@@ -325,9 +312,15 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalBttvEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    list.addAll(emotes)
-                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                     globalBttvEmotes.postValue(emotes)
+                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        addAll(emotes)
+                                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                    })
                                     _reloadMessages.value = true
                                 }
                             }
@@ -343,9 +336,15 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                list.addAll(it)
-                                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 channelBttvEmotes.postValue(it)
+                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                    channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    addAll(it)
+                                    channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                })
                                 _reloadMessages.value = true
                             }
                         }
@@ -359,9 +358,15 @@ class ChatViewModel @Inject constructor(
             savedGlobalFfzEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    list.addAll(saved)
-                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                     globalFfzEmotes.postValue(saved)
+                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                        addAll(saved)
+                    })
                     _reloadMessages.value = true
                 } else {
                     viewModelScope.launch {
@@ -370,9 +375,15 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalFfzEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    list.addAll(emotes)
-                                    _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                     globalFfzEmotes.postValue(emotes)
+                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                        addAll(emotes)
+                                    })
                                     _reloadMessages.value = true
                                 }
                             }
@@ -388,9 +399,15 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadFfzEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                list.addAll(it)
-                                _otherEmotes.value = list.sortedBy { emote -> emote is StvEmote }.sortedBy { emote -> emote is BttvEmote }.sortedBy { emote -> emote is FfzEmote }
                                 channelFfzEmotes.postValue(it)
+                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
+                                    channelStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    addAll(it)
+                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
+                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
+                                })
                                 _reloadMessages.value = true
                             }
                         }
@@ -577,8 +594,22 @@ class ChatViewModel @Inject constructor(
         fun loadUserEmotes() {
             savedUserEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
-                    addEmotes(saved)
-                    userEmotes.postValue(saved.sortedByDescending { it.ownerId == channelId })
+                    addEmotes(saved.map { Emote(
+                        name = it.name,
+                        url1x = it.url1x,
+                        url2x = it.url2x,
+                        url3x = it.url3x,
+                        url4x = it.url4x,
+                        format = it.format
+                    ) })
+                    userEmotes.postValue(saved.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                        name = it.name,
+                        url1x = it.url1x,
+                        url2x = it.url2x,
+                        url3x = it.url3x,
+                        url4x = it.url4x,
+                        format = it.format
+                    ) })
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank()) {
                         viewModelScope.launch {
@@ -586,8 +617,22 @@ class ChatViewModel @Inject constructor(
                                 repository.loadUserEmotes(helixClientId, account.helixToken, gqlHeaders, channelId, account.id, animateGifs, checkIntegrity).let { emotes ->
                                     if (emotes.isNotEmpty()) {
                                         val sorted = emotes.sortedByDescending { it.setId }
-                                        addEmotes(sorted)
-                                        userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId })
+                                        addEmotes(sorted.map { Emote(
+                                            name = it.name,
+                                            url1x = it.url1x,
+                                            url2x = it.url2x,
+                                            url3x = it.url3x,
+                                            url4x = it.url4x,
+                                            format = it.format
+                                        ) })
+                                        userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                                            name = it.name,
+                                            url1x = it.url1x,
+                                            url2x = it.url2x,
+                                            url3x = it.url3x,
+                                            url4x = it.url4x,
+                                            format = it.format
+                                        ) })
                                         loadedUserEmotes = true
                                     }
                                 }
@@ -614,8 +659,22 @@ class ChatViewModel @Inject constructor(
                         if (emotes.isNotEmpty()) {
                             val sorted = emotes.sortedByDescending { it.setId }
                             savedUserEmotes = sorted
-                            addEmotes(sorted)
-                            userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId })
+                            addEmotes(sorted.map { Emote(
+                                name = it.name,
+                                url1x = it.url1x,
+                                url2x = it.url2x,
+                                url3x = it.url3x,
+                                url4x = it.url4x,
+                                format = it.format
+                            ) })
+                            userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                                name = it.name,
+                                url1x = it.url1x,
+                                url2x = it.url2x,
+                                url3x = it.url3x,
+                                url4x = it.url4x,
+                                format = it.format
+                            ) })
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to load emote sets", e)
@@ -650,29 +709,40 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onRewardMessage(message: ChatMessage) {
-            when (message) {
-                is LiveChatMessage -> {
-                    val item = rewardList.find { it.second?.id == message.rewardId && it.second?.userId == message.userId }
-                    if (item != null) {
-                        message.apply { pointReward = item.second }.let {
-                            rewardList.remove(item)
-                            onMessage(it)
-                        }
-                    } else {
-                        rewardList.add(Pair(message, null))
-                    }
+            if (message.reward?.id != null) {
+                val item = rewardList.find { it.reward?.id == message.reward.id && it.userId == message.userId }
+                if (item != null) {
+                    rewardList.remove(item)
+                    onMessage(ChatMessage(
+                        id = message.id ?: item.id,
+                        userId = message.userId ?: item.userId,
+                        userLogin = message.userLogin ?: item.userLogin,
+                        userName = message.userName ?: item.userName,
+                        message = message.message ?: item.message,
+                        color = message.color ?: item.color,
+                        emotes = message.emotes ?: item.emotes,
+                        badges = message.badges ?: item.badges,
+                        isAction = message.isAction || item.isAction,
+                        isFirst = message.isFirst || item.isFirst,
+                        bits = message.bits ?: item.bits,
+                        systemMsg = message.systemMsg ?: item.systemMsg,
+                        msgId = message.msgId ?: item.msgId,
+                        reward = ChannelPointReward(
+                            id = message.reward.id,
+                            title = message.reward.title ?: item.reward?.title,
+                            cost = message.reward.cost ?: item.reward?.cost,
+                            url1x = message.reward.url1x ?: item.reward?.url1x,
+                            url2x = message.reward.url2x ?: item.reward?.url2x,
+                            url4x = message.reward.url4x ?: item.reward?.url4x,
+                        ),
+                        timestamp = message.timestamp ?: item.timestamp,
+                        fullMsg = message.fullMsg ?: item.fullMsg,
+                    ))
+                } else {
+                    rewardList.add(message)
                 }
-                is PubSubPointReward -> {
-                    val item = rewardList.find { it.first?.rewardId == message.id && it.first?.userId == message.userId }
-                    if (item != null) {
-                        item.first?.apply { pointReward = message }?.let {
-                            rewardList.remove(item)
-                            onMessage(it)
-                        }
-                    } else {
-                        rewardList.add(Pair(null, message))
-                    }
-                }
+            } else {
+                onMessage(message)
             }
         }
 
@@ -730,7 +800,7 @@ class ChatViewModel @Inject constructor(
             ).forEach {
                 viewModelScope.launch {
                     repository.createChatEventSubSubscription(helixClientId, account.helixToken, account.id, channelId, it, sessionId)?.let {
-                        onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+                        onMessage(ChatMessage(message = it, color = "#999999", isAction = true))
                     }
                 }
             }
@@ -760,7 +830,7 @@ class ChatViewModel @Inject constructor(
             if (useApiChatMessages && !account.helixToken.isNullOrBlank()) {
                 viewModelScope.launch {
                     repository.sendMessage(helixClientId, account.helixToken, account.id, channelId, message.toString())?.let {
-                        onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true))
+                        onMessage(ChatMessage(message = it, color = "#999999", isAction = true))
                     }
                 }
             } else {
@@ -793,7 +863,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 message = splits[1],
                                 color = splits[0].substringAfter("/announce", "").ifBlank { null }
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -809,7 +879,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 targetLogin = splits[1],
                                 reason = if (splits.size >= 3) splits[2] else null
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -824,7 +894,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -836,7 +906,7 @@ class ChatViewModel @Inject constructor(
                                 helixToken = account.helixToken,
                                 channelId = channelId,
                                 userId = account.id
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -857,7 +927,7 @@ class ChatViewModel @Inject constructor(
                                 helixToken = account.helixToken,
                                 userId = account.id
                             )
-                        }?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
                 }
                 command.equals("/commercial", true) -> {
@@ -870,7 +940,7 @@ class ChatViewModel @Inject constructor(
                                     helixToken = account.helixToken,
                                     channelId = channelId,
                                     length = splits[1]
-                                )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                                )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                             }
                         }
                     } else sendMessage(message)
@@ -886,7 +956,7 @@ class ChatViewModel @Inject constructor(
                                     channelId = channelId,
                                     userId = account.id,
                                     messageId = splits[1]
-                                )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                                )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                             }
                         }
                     } else sendMessage(message)
@@ -901,7 +971,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 emote = true
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -914,7 +984,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 emote = false
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -929,7 +999,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 followers = true,
                                 followersDuration = if (splits.size >= 2) splits[1] else null
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -942,7 +1012,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 followers = false
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -956,7 +1026,7 @@ class ChatViewModel @Inject constructor(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
                             description = if (splits.size >= 2) splits[1] else null
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
                 }
                 command.equals("/mod", true) -> {
@@ -969,7 +1039,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -983,7 +1053,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -992,7 +1062,7 @@ class ChatViewModel @Inject constructor(
                         repository.getModerators(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
                 }
                 command.equals("/raid", true) -> {
@@ -1006,7 +1076,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 targetLogin = splits[1],
                                 checkIntegrity = checkIntegrity
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1017,7 +1087,7 @@ class ChatViewModel @Inject constructor(
                             helixToken = account.helixToken,
                             gqlHeaders = gqlHeaders,
                             channelId = channelId
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
                 }
                 command.equals("/slow", true) -> {
@@ -1031,7 +1101,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 slow = true,
                                 slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1044,7 +1114,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 slow = false
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1057,7 +1127,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 subs = true,
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1070,7 +1140,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 subs = false,
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1087,7 +1157,7 @@ class ChatViewModel @Inject constructor(
                                 targetLogin = splits[1],
                                 duration = if (splits.size >= 3) splits[2] else null ?: if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) "10m" else "600",
                                 reason = if (splits.size >= 4) splits[3] else null,
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1102,7 +1172,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1115,7 +1185,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 unique = true,
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1128,7 +1198,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 unique = false,
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1142,7 +1212,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1156,7 +1226,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1165,7 +1235,7 @@ class ChatViewModel @Inject constructor(
                         repository.getVips(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
-                        )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                     }
                 }
                 command.equals("/w", true) -> {
@@ -1178,7 +1248,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 targetLogin = splits[1],
                                 message = splits[2]
-                            )?.let { onMessage(LiveChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
                         }
                     }
                 }
@@ -1189,22 +1259,40 @@ class ChatViewModel @Inject constructor(
 
     inner class VideoChatController(
         private val gqlHeaders: Map<String, String>,
-        private val videoId: String,
+        private val videoId: String?,
         private val startTime: Int,
+        private val chatUrl: String?,
         private val getCurrentPosition: () -> Long?,
-        private val getCurrentSpeed: () -> Float?) : ChatController() {
+        private val getCurrentSpeed: () -> Float?,
+        private val helixClientId: String?,
+        private val helixToken: String?,
+        private val channelId: String?,
+        private val channelLogin: String?,
+        private val emoteQuality: String,
+        private val animateGifs: Boolean,
+        private val enableStv: Boolean,
+        private val enableBttv: Boolean,
+        private val enableFfz: Boolean,
+        private val checkIntegrity: Boolean) : ChatController() {
 
         private var chatReplayManager: ChatReplayManager? = null
+        private var chatReplayManagerLocal: ChatReplayManagerLocal? = null
 
         override fun send(message: CharSequence) {}
 
         override fun start() {
             pause()
-            chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, getCurrentSpeed, this, { _chatMessages.postValue(ArrayList()) }, { _integrity.postValue(true) }, viewModelScope).apply { start() }
+            if (!chatUrl.isNullOrBlank()) {
+                readChatFile(chatUrl)
+            } else {
+                if (!videoId.isNullOrBlank()) {
+                    chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, getCurrentSpeed, this, { _chatMessages.postValue(ArrayList()) }, { _integrity.postValue(true) }, viewModelScope).apply { start() }
+                }
+            }
         }
 
         override fun pause() {
-            chatReplayManager?.stop()
+            chatReplayManager?.stop() ?: chatReplayManagerLocal?.stop()
         }
 
         override fun stop() {
@@ -1212,11 +1300,287 @@ class ChatViewModel @Inject constructor(
         }
 
         fun updatePosition(position: Long) {
-            chatReplayManager?.updatePosition(position)
+            chatReplayManager?.updatePosition(position) ?: chatReplayManagerLocal?.updatePosition(position)
         }
 
         fun updateSpeed(speed: Float) {
-            chatReplayManager?.updateSpeed(speed)
+            chatReplayManager?.updateSpeed(speed) ?: chatReplayManagerLocal?.updateSpeed(speed)
+        }
+
+        private fun readChatFile(url: String) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val messages = mutableListOf<VideoChatMessage>()
+                    var startTimeMs = 0L
+                    if (url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                        applicationContext.contentResolver.openInputStream(url.toUri())?.bufferedReader()
+                    } else {
+                        FileInputStream(File(url)).bufferedReader()
+                    }?.use { fileReader ->
+                        JsonReader(fileReader).use { reader ->
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                when (reader.nextName()) {
+                                    "comments" -> {
+                                        reader.beginArray()
+                                        while (reader.hasNext()) {
+                                            reader.beginObject()
+                                            val message = StringBuilder()
+                                            var id: String? = null
+                                            var offsetSeconds: Int? = null
+                                            var userId: String? = null
+                                            var userLogin: String? = null
+                                            var userName: String? = null
+                                            var color: String? = null
+                                            val emotesList = mutableListOf<TwitchEmote>()
+                                            val badgesList = mutableListOf<Badge>()
+                                            while (reader.hasNext()) {
+                                                when (reader.nextName()) {
+                                                    "id" -> id = reader.nextString()
+                                                    "commenter" -> {
+                                                        reader.beginObject()
+                                                        while (reader.hasNext()) {
+                                                            when (reader.nextName()) {
+                                                                "id" -> userId = reader.nextString()
+                                                                "login" -> userLogin = reader.nextString()
+                                                                "displayName" -> userName = reader.nextString()
+                                                                else -> reader.skipValue()
+                                                            }
+                                                        }
+                                                        reader.endObject()
+                                                    }
+                                                    "contentOffsetSeconds" -> offsetSeconds = reader.nextInt()
+                                                    "message" -> {
+                                                        reader.beginObject()
+                                                        while (reader.hasNext()) {
+                                                            when (reader.nextName()) {
+                                                                "fragments" -> {
+                                                                    reader.beginArray()
+                                                                    while (reader.hasNext()) {
+                                                                        reader.beginObject()
+                                                                        var emoteId: String? = null
+                                                                        var fragmentText: String? = null
+                                                                        while (reader.hasNext()) {
+                                                                            when (reader.nextName()) {
+                                                                                "emote" -> {
+                                                                                    when (reader.peek()) {
+                                                                                        JsonToken.BEGIN_OBJECT -> {
+                                                                                            reader.beginObject()
+                                                                                            while (reader.hasNext()) {
+                                                                                                when (reader.nextName()) {
+                                                                                                    "emoteID" -> emoteId = reader.nextString()
+                                                                                                    else -> reader.skipValue()
+                                                                                                }
+                                                                                            }
+                                                                                            reader.endObject()
+                                                                                        }
+                                                                                        else -> reader.skipValue()
+                                                                                    }
+                                                                                }
+                                                                                "text" -> fragmentText = reader.nextString()
+                                                                                else -> reader.skipValue()
+                                                                            }
+                                                                        }
+                                                                        if (fragmentText != null && !emoteId.isNullOrBlank()) {
+                                                                            emotesList.add(TwitchEmote(
+                                                                                id = emoteId,
+                                                                                begin = message.codePointCount(0, message.length),
+                                                                                end = message.codePointCount(0, message.length) + fragmentText.lastIndex
+                                                                            ))
+                                                                        }
+                                                                        message.append(fragmentText)
+                                                                        reader.endObject()
+                                                                    }
+                                                                    reader.endArray()
+                                                                }
+                                                                "userBadges" -> {
+                                                                    reader.beginArray()
+                                                                    while (reader.hasNext()) {
+                                                                        reader.beginObject()
+                                                                        var set: String? = null
+                                                                        var version: String? = null
+                                                                        while (reader.hasNext()) {
+                                                                            when (reader.nextName()) {
+                                                                                "setID" -> set = reader.nextString()
+                                                                                "version" -> version = reader.nextString()
+                                                                                else -> reader.skipValue()
+                                                                            }
+                                                                        }
+                                                                        if (!set.isNullOrBlank() && !version.isNullOrBlank()) {
+                                                                            badgesList.add(Badge(set, version))
+                                                                        }
+                                                                        reader.endObject()
+                                                                    }
+                                                                    reader.endArray()
+                                                                }
+                                                                "userColor" -> {
+                                                                    when (reader.peek()) {
+                                                                        JsonToken.STRING -> color = reader.nextString()
+                                                                        else -> reader.skipValue()
+                                                                    }
+                                                                }
+                                                                else -> reader.skipValue()
+                                                            }
+                                                        }
+                                                        messages.add(VideoChatMessage(
+                                                            id = id,
+                                                            offsetSeconds = offsetSeconds,
+                                                            userId = userId,
+                                                            userLogin = userLogin,
+                                                            userName = userName,
+                                                            message = message.toString(),
+                                                            color = color,
+                                                            emotes = emotesList,
+                                                            badges = badgesList,
+                                                            fullMsg = null
+                                                        ))
+                                                        reader.endObject()
+                                                    }
+                                                    else -> reader.skipValue()
+                                                }
+                                            }
+                                            reader.endObject()
+                                        }
+                                        reader.endArray()
+                                    }
+                                    "twitchEmotes" -> {
+                                        reader.beginArray()
+                                        val twitchEmotes = mutableListOf<TwitchEmote>()
+                                        while (reader.hasNext()) {
+                                            reader.beginObject()
+                                            var id: String? = null
+                                            var data: String? = null
+                                            while (reader.hasNext()) {
+                                                when (reader.nextName()) {
+                                                    "data" -> data = reader.nextString()
+                                                    "id" -> id = reader.nextString()
+                                                    else -> reader.skipValue()
+                                                }
+                                            }
+                                            if (!id.isNullOrBlank() && !data.isNullOrBlank()) {
+                                                twitchEmotes.add(TwitchEmote(
+                                                    id = id,
+                                                    localData = Base64.decode(data.toByteArray(), Base64.NO_WRAP or Base64.NO_PADDING)
+                                                ))
+                                            }
+                                            reader.endObject()
+                                        }
+                                        localTwitchEmotes.postValue(twitchEmotes)
+                                        reader.endArray()
+                                    }
+                                    "twitchBadges" -> {
+                                        reader.beginArray()
+                                        val twitchBadges = mutableListOf<TwitchBadge>()
+                                        while (reader.hasNext()) {
+                                            reader.beginObject()
+                                            var setId: String? = null
+                                            var version: String? = null
+                                            var data: String? = null
+                                            while (reader.hasNext()) {
+                                                when (reader.nextName()) {
+                                                    "data" -> data = reader.nextString()
+                                                    "setId" -> setId = reader.nextString()
+                                                    "version" -> version = reader.nextString()
+                                                    else -> reader.skipValue()
+                                                }
+                                            }
+                                            if (!setId.isNullOrBlank() && !version.isNullOrBlank() && !data.isNullOrBlank()) {
+                                                twitchBadges.add(TwitchBadge(
+                                                    setId = setId,
+                                                    version = version,
+                                                    localData = Base64.decode(data.toByteArray(), Base64.NO_WRAP or Base64.NO_PADDING)
+                                                ))
+                                            }
+                                            reader.endObject()
+                                        }
+                                        channelBadges.postValue(twitchBadges)
+                                        reader.endArray()
+                                    }
+                                    "cheerEmotes" -> {
+                                        reader.beginArray()
+                                        val cheerEmotesList = mutableListOf<CheerEmote>()
+                                        while (reader.hasNext()) {
+                                            reader.beginObject()
+                                            var name: String? = null
+                                            var data: String? = null
+                                            var minBits: Int? = null
+                                            var color: String? = null
+                                            while (reader.hasNext()) {
+                                                when (reader.nextName()) {
+                                                    "data" -> data = reader.nextString()
+                                                    "name" -> name = reader.nextString()
+                                                    "minBits" -> minBits = reader.nextInt()
+                                                    "color" -> {
+                                                        when (reader.peek()) {
+                                                            JsonToken.STRING -> color = reader.nextString()
+                                                            else -> reader.skipValue()
+                                                        }
+                                                    }
+                                                    else -> reader.skipValue()
+                                                }
+                                            }
+                                            if (!name.isNullOrBlank() && minBits != null && !data.isNullOrBlank()) {
+                                                cheerEmotesList.add(CheerEmote(
+                                                    name = name,
+                                                    localData = Base64.decode(data.toByteArray(), Base64.NO_WRAP or Base64.NO_PADDING),
+                                                    minBits = minBits,
+                                                    color = color
+                                                ))
+                                            }
+                                            reader.endObject()
+                                        }
+                                        cheerEmotes.postValue(cheerEmotesList)
+                                        reader.endArray()
+                                    }
+                                    "emotes" -> {
+                                        reader.beginArray()
+                                        val emotes = mutableListOf<Emote>()
+                                        while (reader.hasNext()) {
+                                            reader.beginObject()
+                                            var data: String? = null
+                                            var name: String? = null
+                                            var isZeroWidth = false
+                                            while (reader.hasNext()) {
+                                                when (reader.nextName()) {
+                                                    "data" -> data = reader.nextString()
+                                                    "name" -> name = reader.nextString()
+                                                    "isZeroWidth" -> isZeroWidth = reader.nextBoolean()
+                                                    else -> reader.skipValue()
+                                                }
+                                            }
+                                            if (!name.isNullOrBlank() && !data.isNullOrBlank()) {
+                                                emotes.add(Emote(
+                                                    name = name,
+                                                    localData = Base64.decode(data.toByteArray(), Base64.NO_WRAP or Base64.NO_PADDING),
+                                                    isZeroWidth = isZeroWidth
+                                                ))
+                                            }
+                                            reader.endObject()
+                                        }
+                                        channelStvEmotes.postValue(emotes)
+                                        if (emotes.isEmpty()) {
+                                            viewModelScope.launch {
+                                                loadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+                                            }
+                                        }
+                                        reader.endArray()
+                                    }
+                                    "startTime" -> { startTimeMs = reader.nextInt().times(1000L) }
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+                        }
+                    }
+                    if (messages.isNotEmpty()) {
+                        viewModelScope.launch {
+                            chatReplayManagerLocal = ChatReplayManagerLocal(messages, startTimeMs, getCurrentPosition, getCurrentSpeed, this@VideoChatController, { _chatMessages.postValue(ArrayList()) }, viewModelScope).apply { start() }
+                        }
+                    }
+                } catch (e: Exception) {
+
+                }
+            }
         }
     }
 
@@ -1238,8 +1602,8 @@ class ChatViewModel @Inject constructor(
         private var savedEmoteSets: List<String>? = null
         private var savedUserEmotes: List<TwitchEmote>? = null
         private var savedGlobalBadges: List<TwitchBadge>? = null
-        private var savedGlobalStvEmotes: List<StvEmote>? = null
-        private var savedGlobalBttvEmotes: List<BttvEmote>? = null
-        private var savedGlobalFfzEmotes: List<FfzEmote>? = null
+        private var savedGlobalStvEmotes: List<Emote>? = null
+        private var savedGlobalBttvEmotes: List<Emote>? = null
+        private var savedGlobalFfzEmotes: List<Emote>? = null
     }
 }

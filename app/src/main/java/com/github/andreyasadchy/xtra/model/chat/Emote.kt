@@ -1,17 +1,15 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-abstract class Emote {
-    abstract val name: String
-    abstract val url1x: String?
-    abstract val url2x: String?
-    abstract val url3x: String?
-    abstract val url4x: String?
-    open val type: String?
-        get() = null
-    open val isAnimated: Boolean?
-        get() = null
-    open val isZeroWidth: Boolean
-        get() = false
+class Emote(
+    val name: String? = null,
+    val localData: ByteArray? = null,
+    val url1x: String? = null,
+    val url2x: String? = null,
+    val url3x: String? = null,
+    val url4x: String? = null,
+    val format: String? = null,
+    val isAnimated: Boolean = true,
+    val isZeroWidth: Boolean = false) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

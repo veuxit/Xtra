@@ -99,11 +99,22 @@ class VideoDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String, from: Long, to: Long, playlistToFile: Boolean, useWorkManager: Boolean) {
+    fun download(url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, useWorkManager: Boolean) {
         GlobalScope.launch {
             val video = _videoInfo.value!!.video
             if (playlistToFile) {
-                val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, url, "", downloadPath = path, fromTime = from, toTime = to, quality = quality)
+                val offlineVideo = DownloadUtils.prepareDownload(
+                    context = applicationContext,
+                    downloadable = video,
+                    url = url,
+                    path = "",
+                    downloadDate = System.currentTimeMillis(),
+                    downloadPath = path,
+                    fromTime = from,
+                    toTime = to,
+                    quality = quality,
+                    downloadChat = downloadChat,
+                    downloadChatEmotes = downloadChatEmotes)
                 val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                     videoId.toString(),
@@ -161,6 +172,7 @@ class VideoDownloadViewModel @Inject constructor(
                 } else {
                     "${System.currentTimeMillis()}"
                 }
+                val downloadDate = System.currentTimeMillis()
                 if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                     val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
                     val videoDirectory = directory?.findFile(videoDirectoryName) ?: directory?.createDirectory(videoDirectoryName)
@@ -173,13 +185,25 @@ class VideoDownloadViewModel @Inject constructor(
                                 .build()
                         )
                     }
-                    val playlistFile = videoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")!!
+                    val playlistFile = videoDirectory?.createFile("", "${downloadDate}.m3u8")!!
                     applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
                         PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                     }
-                    val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistFile.uri.toString(), duration, startPosition, fromIndex, toIndex, quality = quality)
+                    val offlineVideo = DownloadUtils.prepareDownload(
+                        context = applicationContext,
+                        downloadable = video,
+                        url = urlPath,
+                        path = playlistFile.uri.toString(),
+                        duration = duration,
+                        downloadDate = downloadDate,
+                        startPosition = startPosition,
+                        segmentFrom = fromIndex,
+                        segmentTo = toIndex,
+                        quality = quality,
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes)
                     val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                    if (useWorkManager) {
+                    if (useWorkManager || downloadChat) {
                         WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                             videoId.toString(),
                             ExistingWorkPolicy.KEEP,
@@ -205,13 +229,25 @@ class VideoDownloadViewModel @Inject constructor(
                     }
                     val directory = "$path${File.separator}$videoDirectoryName${File.separator}"
                     File(directory).mkdir()
-                    val playlistUri = "$directory${System.currentTimeMillis()}.m3u8"
+                    val playlistUri = "$directory${downloadDate}.m3u8"
                     FileOutputStream(playlistUri).use {
                         PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
                     }
-                    val offlineVideo = DownloadUtils.prepareDownload(applicationContext, video, urlPath, playlistUri, duration, startPosition, fromIndex, toIndex, quality = quality)
+                    val offlineVideo = DownloadUtils.prepareDownload(
+                        context = applicationContext,
+                        downloadable = video,
+                        url = urlPath,
+                        path = playlistUri,
+                        duration = duration,
+                        downloadDate = downloadDate,
+                        startPosition = startPosition,
+                        segmentFrom = fromIndex,
+                        segmentTo = toIndex,
+                        quality = quality,
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes)
                     val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-                    if (useWorkManager) {
+                    if (useWorkManager || downloadChat) {
                         WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                             videoId.toString(),
                             ExistingWorkPolicy.KEEP,

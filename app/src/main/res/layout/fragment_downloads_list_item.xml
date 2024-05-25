@@ -155,19 +155,40 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextView
+    <LinearLayout
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:textAppearance="?attr/textAppearanceTitleLarge"
-        android:textColor="@android:color/white"
-        android:textSize="30sp"
-        android:textAllCaps="true"
-        android:visibility="gone"
-        android:layout_gravity="center"
         android:background="#80000000"
-        android:gravity="center"
         android:clickable="true"
-        android:focusable="true" />
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/downloadProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textAllCaps="true"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:textColor="@android:color/white"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/chatDownloadProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textAllCaps="true"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:textColor="@android:color/white"
+            android:textSize="30sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

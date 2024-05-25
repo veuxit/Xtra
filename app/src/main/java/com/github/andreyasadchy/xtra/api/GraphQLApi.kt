@@ -1,11 +1,26 @@
 package com.github.andreyasadchy.xtra.api
 
-import com.github.andreyasadchy.xtra.model.gql.channel.*
-import com.github.andreyasadchy.xtra.model.gql.chat.*
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsDataResponse
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosDataResponse
+import com.github.andreyasadchy.xtra.model.gql.channel.ChannelViewerListDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.ChannelCheerEmotesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.ChannelPointsContextDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.ChatBadgesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.EmoteCardResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.GlobalCheerEmotesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.ModeratorsDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.UserEmotesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.chat.VipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipUrlsResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipVideoResponse
-import com.github.andreyasadchy.xtra.model.gql.followed.*
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowedChannelsDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowedGamesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowedStreamsDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowedVideosDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowingGameDataResponse
+import com.github.andreyasadchy.xtra.model.gql.followed.FollowingUserDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameClipsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.game.GameStreamsDataResponse
@@ -16,9 +31,11 @@ import com.github.andreyasadchy.xtra.model.gql.search.SearchGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.search.SearchVideosDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.StreamsDataResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewersDataResponse
-import com.github.andreyasadchy.xtra.model.gql.tag.*
+import com.github.andreyasadchy.xtra.model.gql.tag.FreeformTagDataResponse
+import com.github.andreyasadchy.xtra.model.gql.tag.TagGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDownloadDataResponse
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import okhttp3.ResponseBody
@@ -89,6 +106,9 @@ interface GraphQLApi {
 
     @POST(".")
     suspend fun getVideoMessages(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): VideoMessagesDataResponse
+
+    @POST(".")
+    suspend fun getVideoMessagesDownload(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): VideoMessagesDownloadDataResponse
 
     @POST(".")
     suspend fun getVideoGames(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): VideoGamesDataResponse

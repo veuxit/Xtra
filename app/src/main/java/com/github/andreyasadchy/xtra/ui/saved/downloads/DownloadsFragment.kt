@@ -47,6 +47,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     private lateinit var pagingAdapter: PagingDataAdapter<OfflineVideo, out RecyclerView.ViewHolder>
     override var enableNetworkCheck = false
     private var fileResultLauncher: ActivityResultLauncher<Intent>? = null
+    private var chatFileResultLauncher: ActivityResultLauncher<Intent>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,16 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     viewModel.selectedVideo?.let { video ->
                         requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                         viewModel.moveToSharedStorage(it, video)
+                    }
+                }
+            }
+        }
+        chatFileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.data?.let {
+                    viewModel.selectedVideo?.let { video ->
+                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        viewModel.updateChatUrl(it, video)
                     }
                 }
             }
@@ -123,16 +134,14 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     .show()
             } else {
                 viewModel.selectedVideo = it
-                if (it.url.endsWith(".m3u8")) {
-                    fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
-                } else {
-                    fileResultLauncher?.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                        putExtra(Intent.EXTRA_TITLE, it.url.substringAfterLast("/", ""))
-                    })
-                }
+                fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
             }
+        }, {
+            viewModel.selectedVideo = it
+            chatFileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            })
         }, {
             val delete = getString(R.string.delete)
             val checkBox = CheckBox(requireContext()).apply {

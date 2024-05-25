@@ -1,13 +1,14 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-data class Image(
-        val url1x: String?,
-        val url2x: String?,
-        val url3x: String?,
-        val url4x: String?,
-        val type: String? = null,
-        val isAnimated: Boolean? = null,
-        val isZeroWidth: Boolean = false,
-        var start: Int,
-        var end: Int,
-        val isEmote: Boolean)
+class Image(
+    val localData: ByteArray? = null,
+    val url1x: String? = null,
+    val url2x: String? = null,
+    val url3x: String? = null,
+    val url4x: String? = null,
+    val format: String? = null,
+    val isAnimated: Boolean = false,
+    val isZeroWidth: Boolean = false,
+    val isEmote: Boolean = false,
+    var start: Int,
+    var end: Int)

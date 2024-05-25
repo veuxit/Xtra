@@ -35,6 +35,7 @@ import com.github.andreyasadchy.xtra.model.gql.tag.FreeformTagDataResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.TagGameDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDownloadDataResponse
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -470,7 +471,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                     url2x = response.config.scales.find { it.startsWith("2") }?.let { url.replaceFirst("SCALE", it) },
                     url3x = response.config.scales.find { it.startsWith("3") }?.let { url.replaceFirst("SCALE", it) },
                     url4x = response.config.scales.find { it.startsWith("4") }?.let { url.replaceFirst("SCALE", it) },
-                    type = if (format?.key == "animated") "gif" else null,
+                    format = if (format?.key == "animated") "gif" else null,
                     isAnimated = format?.key == "animated",
                     minBits = colorMap.key,
                     color = colorMap.value
@@ -496,6 +497,24 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             })
         }
         return graphQL.getVideoMessages(headers, json)
+    }
+
+    suspend fun loadVideoMessagesDownload(headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDownloadDataResponse {
+        val json = JsonObject().apply {
+            add("extensions", JsonObject().apply {
+                add("persistedQuery", JsonObject().apply {
+                    addProperty("sha256Hash", "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a")
+                    addProperty("version", 1)
+                })
+            })
+            addProperty("operationName", "VideoCommentsByOffsetOrCursor")
+            add("variables", JsonObject().apply {
+                addProperty("cursor", cursor)
+                addProperty("contentOffsetSeconds", offset)
+                addProperty("videoID", videoId)
+            })
+        }
+        return graphQL.getVideoMessagesDownload(headers, json)
     }
 
     suspend fun loadVideoGames(headers: Map<String, String>, videoId: String?): VideoGamesDataResponse {
