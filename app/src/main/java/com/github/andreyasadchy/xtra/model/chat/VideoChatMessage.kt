@@ -1,14 +1,13 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-data class VideoChatMessage(
-    override val id: String?,
+class VideoChatMessage(
+    val id: String?,
     val offsetSeconds: Int?,
-    override val userId: String?,
-    override val userLogin: String?,
-    override val userName: String?,
-    override val message: String?,
-    override val color: String?,
-    override val isAction: Boolean = false,
-    override val emotes: List<TwitchEmote>?,
-    override val badges: List<Badge>?,
-    override val fullMsg: String?) : ChatMessage
+    val userId: String?,
+    val userLogin: String?,
+    val userName: String?,
+    val message: String?,
+    val color: String?,
+    val emotes: List<TwitchEmote>?,
+    val badges: List<Badge>?,
+    val fullMsg: String?)

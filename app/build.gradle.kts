@@ -29,7 +29,7 @@ android {
         minSdk = 21
         targetSdk = 34
         versionCode = 121
-        versionName = "2.31.3"
+        versionName = "2.32.0"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "it", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -66,20 +66,19 @@ dependencies {
     implementation(libs.draglistview)
 
     //Architecture components
-    implementation(libs.paging.runtime.ktx)
-    implementation(libs.lifecycle.viewmodel.ktx)
-    implementation(libs.lifecycle.livedata.ktx)
-    implementation(libs.lifecycle.common.java8)
+    implementation(libs.paging.runtime)
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.process)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.room.paging)
     ksp(libs.room.compiler)
+    implementation(libs.room.paging)
     implementation(libs.work.runtime)
     implementation(libs.core.ktx)
     implementation(libs.fragment.ktx)
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
     implementation(libs.webkit)
 
     //Misc

@@ -632,4 +632,8 @@
     <string name="download_converting">Converting</string>
     <string name="convert_message">Convert this video to a single file?</string>
     <string name="convert">Convert</string>
+    <string name="download_chat">Download chat replay</string>
+    <string name="download_chat_emotes">Download emotes and badges</string>
+    <string name="chat_downloading_progress">Chat: %d%%</string>
+    <string name="change_chat_file">Change chat file</string>
 </resources>

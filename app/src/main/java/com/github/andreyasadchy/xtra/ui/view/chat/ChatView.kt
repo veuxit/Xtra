@@ -33,6 +33,7 @@ import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
+import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.common.ChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
@@ -117,7 +118,7 @@ class ChatView : ConstraintLayout {
                 enableZeroWidth = context.prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
                 enableTimestamps = context.prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
                 timestampFormat = context.prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
-                firstMsgVisibility = context.prefs().getString(C.CHAT_FIRSTMSG_VISIBILITY, "0"),
+                firstMsgVisibility = context.prefs().getString(C.CHAT_FIRSTMSG_VISIBILITY, "0")?.toIntOrNull() ?: 0,
                 firstChatMsg = context.getString(R.string.chat_first),
                 rewardChatMsg = context.getString(R.string.chat_reward),
                 redeemedChatMsg = context.getString(R.string.redeemed),
@@ -276,6 +277,10 @@ class ChatView : ConstraintLayout {
         }
     }
 
+    fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
+        adapter.addLocalTwitchEmotes(list)
+    }
+
     fun addGlobalStvEmotes(list: List<Emote>?) {
         adapter.addGlobalStvEmotes(list)
         addToAutoCompleteList(list)
@@ -366,10 +371,10 @@ class ChatView : ConstraintLayout {
 
     fun enableChatInteraction(enableMessaging: Boolean) {
         with(binding) {
-            adapter.setOnClickListener { original, formatted, userId, channelId, fullMsg ->
+            adapter.setOnClickListener { formatted, message, userId, userName, channelId, fullMsg ->
                 editText.hideKeyboard()
                 editText.clearFocus()
-                MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId, channelId, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
+                MessageClickedDialog.newInstance(enableMessaging, formatted, message, userId, userName, channelId, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
             }
             if (enableMessaging) {
                 autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {

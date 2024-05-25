@@ -10,7 +10,7 @@ class StvGlobalDeserializer : JsonDeserializer<StvGlobalResponse> {
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): StvGlobalResponse {
-        val emotes = mutableListOf<StvEmote>()
+        val emotes = mutableListOf<Emote>()
         json.takeIf { it.isJsonObject }?.asJsonObject?.get("emotes")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { emote ->
             emote.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 obj.get("name")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
@@ -27,14 +27,14 @@ class StvGlobalDeserializer : JsonDeserializer<StvGlobalResponse> {
                                         }
                                     }
                                 }
-                                emotes.add(StvEmote(
+                                emotes.add(Emote(
                                     name = name,
                                     url1x = urls.getOrNull(0) ?: "https:${template}/1x.webp",
                                     url2x = urls.getOrNull(1) ?: if (urls.isEmpty()) "https:${template}/2x.webp" else null,
                                     url3x = urls.getOrNull(2) ?: if (urls.isEmpty()) "https:${template}/3x.webp" else null,
                                     url4x = urls.getOrNull(3) ?: if (urls.isEmpty()) "https:${template}/4x.webp" else null,
-                                    type = urls.getOrNull(0)?.substringAfterLast(".") ?: "webp",
-                                    isAnimated = data.get("animated")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean,
+                                    format = urls.getOrNull(0)?.substringAfterLast(".") ?: "webp",
+                                    isAnimated = data.get("animated")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean ?: true,
                                     isZeroWidth = obj.get("flags")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isNumber }?.asInt == 1
                                 ))
                             }

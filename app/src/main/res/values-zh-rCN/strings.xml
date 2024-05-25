@@ -617,4 +617,8 @@
     <string name="download_converting">正在转换</string>
     <string name="convert_message">把视频转换为一个文件？</string>
     <string name="convert">转换</string>
+    <string name="download_chat">Download chat replay</string>
+    <string name="download_chat_emotes">Download emotes and badges</string>
+    <string name="chat_downloading_progress">Chat: %d%%</string>
+    <string name="change_chat_file">Change chat file</string>
 </resources>

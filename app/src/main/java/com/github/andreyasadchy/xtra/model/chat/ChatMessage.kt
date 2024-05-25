@@ -1,14 +1,19 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-interface ChatMessage {
-    val id: String?
-    val userId: String?
-    val userLogin: String?
-    val userName: String?
-    val message: String?
-    val color: String?
-    val isAction: Boolean
-    val emotes: List<TwitchEmote>?
-    val badges: List<Badge>?
-    val fullMsg: String?
-}
+class ChatMessage(
+    val id: String? = null,
+    val userId: String? = null,
+    val userLogin: String? = null,
+    val userName: String? = null,
+    val message: String? = null,
+    val color: String? = null,
+    val emotes: List<TwitchEmote>? = null,
+    val badges: List<Badge>? = null,
+    val isAction: Boolean = false,
+    val isFirst: Boolean = false,
+    val bits: Int? = null,
+    val systemMsg: String? = null,
+    val msgId: String? = null,
+    val reward: ChannelPointReward? = null,
+    val timestamp: Long? = null,
+    val fullMsg: String? = null)

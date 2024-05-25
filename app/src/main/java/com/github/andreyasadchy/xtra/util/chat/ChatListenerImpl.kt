@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import com.github.andreyasadchy.xtra.model.chat.Badge
-import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
+import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import kotlin.collections.set
 
@@ -14,7 +15,7 @@ class ChatListenerImpl(
     private val usePubSub: Boolean) : ChatReadIRC.OnMessageReceivedListener, ChatWriteIRC.OnMessageReceivedListener, ChatReadWebSocket.OnMessageReceivedListener, ChatWriteWebSocket.OnMessageReceivedListener {
     
     override fun onMessage(message: String, userNotice: Boolean) {
-        if (!userNotice || (userNotice && showUserNotice)) {
+        if (!userNotice || showUserNotice) {
             val parts = message.substring(1).split(" ".toRegex(), 2)
             val prefixes = splitAndMakeMap(parts[0], ";", "=")
             val messageInfo = parts[1] //:<user>!<user>@<user>.tmi.twitch.tv PRIVMSG #<channelName> :<message>
@@ -43,11 +44,10 @@ class ChatListenerImpl(
                         isAction = true
                     }
                 }
-                var emotesList: MutableList<TwitchEmote>? = null
+                val emotesList = mutableListOf<TwitchEmote>()
                 val emotes = prefixes["emotes"]
                 if (emotes != null) {
                     val entries = splitAndMakeMap(emotes, "/", ":").entries
-                    emotesList = ArrayList(entries.size)
                     entries.forEach { emote ->
                         emote.value?.split(",")?.forEach { indexes ->
                             val index = indexes.split("-")
@@ -55,11 +55,10 @@ class ChatListenerImpl(
                         }
                     }
                 }
-                var badgesList: MutableList<Badge>? = null
+                val badgesList = mutableListOf<Badge>()
                 val badges = prefixes["badges"]
                 if (badges != null) {
                     val entries = splitAndMakeMap(badges, ",", "/").entries
-                    badgesList = ArrayList(entries.size)
                     entries.forEach {
                         it.value?.let { value ->
                             badgesList.add(Badge(it.key, value))
@@ -67,21 +66,21 @@ class ChatListenerImpl(
                     }
                 }
                 val rewardId = prefixes["custom-reward-id"]
-                val chatMessage = LiveChatMessage(
+                val chatMessage = ChatMessage(
                     id = prefixes["id"],
                     userId = prefixes["user-id"],
                     userLogin = userLogin,
                     userName = prefixes["display-name"]?.replace("\\s", " "),
                     message = userMessage,
                     color = prefixes["color"],
-                    isAction = isAction,
-                    rewardId = rewardId,
-                    isFirst = prefixes["first-msg"] == "1",
-                    bits = prefixes["bits"]?.toIntOrNull(),
-                    msgId = prefixes["msg-id"],
-                    systemMsg = systemMsg,
                     emotes = emotesList,
                     badges = badgesList,
+                    isAction = isAction,
+                    isFirst = prefixes["first-msg"] == "1",
+                    bits = prefixes["bits"]?.toIntOrNull(),
+                    systemMsg = systemMsg,
+                    msgId = prefixes["msg-id"],
+                    reward = rewardId?.let { ChannelPointReward(id = it) },
                     timestamp = prefixes["tmi-sent-ts"]?.toLong(),
                     fullMsg = message
                 )

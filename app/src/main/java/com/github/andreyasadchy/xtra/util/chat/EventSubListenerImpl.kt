@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import com.github.andreyasadchy.xtra.model.chat.Badge
-import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
+import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import org.json.JSONObject
@@ -60,19 +61,19 @@ class EventSubListenerImpl(
             }
         }
         val rewardId = if (!json.isNull("channel_points_custom_reward_id")) json.optString("channel_points_custom_reward_id").takeIf { it.isNotBlank() } else null
-        val chatMessage = LiveChatMessage(
+        val chatMessage = ChatMessage(
             id = if (!json.isNull("message_id")) json.optString("message_id").takeIf { it.isNotBlank() } else null,
             userId = if (!json.isNull("chatter_user_id")) json.optString("chatter_user_id").takeIf { it.isNotBlank() } else null,
             userLogin = if (!json.isNull("chatter_user_login")) json.optString("chatter_user_login").takeIf { it.isNotBlank() } else null,
             userName = if (!json.isNull("chatter_user_name")) json.optString("chatter_user_name").takeIf { it.isNotBlank() } else null,
             message = message.toString(),
             color = if (!json.isNull("color")) json.optString("color").takeIf { it.isNotBlank() } else null,
-            isAction = messageText?.startsWith(ChatListenerImpl.ACTION) == true,
-            rewardId = rewardId,
-            bits = json.optJSONObject("cheer")?.let { cheer -> if (!cheer.isNull("bits")) cheer.optInt("bits").takeIf { it > 0 } else null },
-            msgId = if (!json.isNull("message_type")) json.optString("message_type").takeIf { it.isNotBlank() && !it.equals("text", true) } else null,
             emotes = emotesList,
             badges = badgesList,
+            isAction = messageText?.startsWith(ChatListenerImpl.ACTION) == true,
+            bits = json.optJSONObject("cheer")?.let { cheer -> if (!cheer.isNull("bits")) cheer.optInt("bits").takeIf { it > 0 } else null },
+            msgId = if (!json.isNull("message_type")) json.optString("message_type").takeIf { it.isNotBlank() && !it.equals("text", true) } else null,
+            reward = rewardId?.let { ChannelPointReward(id = it) },
             timestamp = timestamp?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
             fullMsg = json.toString()
         )
@@ -127,18 +128,18 @@ class EventSubListenerImpl(
                         }
                     }
                 }
-                callbackMessage.onMessage(LiveChatMessage(
+                callbackMessage.onMessage(ChatMessage(
                     id = if (!json.isNull("message_id")) json.optString("message_id").takeIf { it.isNotBlank() } else null,
                     userId = if (!json.isNull("chatter_user_id")) json.optString("chatter_user_id").takeIf { it.isNotBlank() } else null,
                     userLogin = if (!json.isNull("chatter_user_login")) json.optString("chatter_user_login").takeIf { it.isNotBlank() } else null,
                     userName = if (!json.isNull("chatter_user_name")) json.optString("chatter_user_name").takeIf { it.isNotBlank() } else null,
                     message = message.toString(),
                     color = if (!json.isNull("color")) json.optString("color").takeIf { it.isNotBlank() } else null,
-                    isAction = messageText.startsWith(ChatListenerImpl.ACTION),
-                    msgId = if (!json.isNull("notice_type")) json.optString("notice_type").takeIf { it.isNotBlank() } else null,
-                    systemMsg = systemMsg,
                     emotes = emotesList,
                     badges = badgesList,
+                    isAction = messageText.startsWith(ChatListenerImpl.ACTION),
+                    systemMsg = systemMsg,
+                    msgId = if (!json.isNull("notice_type")) json.optString("notice_type").takeIf { it.isNotBlank() } else null,
                     timestamp = timestamp?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
                     fullMsg = json.toString()
                 ))

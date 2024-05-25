@@ -15,9 +15,9 @@ data class OfflineVideo(
     val sourceUrl: String? = null,
     @ColumnInfo(name = "source_start_position")
     var sourceStartPosition: Long? = null,
-    val name: String? = null,
+    var name: String? = null,
     @ColumnInfo(name = "channel_id")
-    val channelId: String? = null,
+    var channelId: String? = null,
     @ColumnInfo(name = "channel_login")
     var channelLogin: String? = null,
     @ColumnInfo(name = "channel_name")
@@ -25,12 +25,12 @@ data class OfflineVideo(
     @ColumnInfo(name = "channel_logo")
     var channelLogo: String? = null,
     var thumbnail: String? = null,
-    val gameId: String? = null,
-    val gameSlug: String? = null,
-    val gameName: String? = null,
+    var gameId: String? = null,
+    var gameSlug: String? = null,
+    var gameName: String? = null,
     var duration: Long? = null,
     @ColumnInfo(name = "upload_date")
-    val uploadDate: Long? = null,
+    var uploadDate: Long? = null,
     @ColumnInfo(name = "download_date")
     val downloadDate: Long? = null,
     @ColumnInfo(name = "last_watch_position")
@@ -43,8 +43,12 @@ data class OfflineVideo(
     val toTime: Long? = null,
     var status: Int = STATUS_PENDING,
     val type: String? = null,
-    val videoId: String? = null,
-    val quality: String? = null) : Parcelable {
+    var videoId: String? = null,
+    val quality: String? = null,
+    val downloadChat: Boolean? = null,
+    val downloadChatEmotes: Boolean? = null,
+    var chatProgress: Int? = null,
+    var chatUrl: String? = null) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)

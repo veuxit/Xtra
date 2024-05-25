@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.util.JsonReader
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
@@ -182,7 +183,7 @@ class DownloadsViewModel @Inject internal constructor(
                         if (oldVideoDirectory != null) {
                             val newDirectory = DocumentFile.fromTreeUri(applicationContext, newUri)
                             val newVideoDirectory = newDirectory?.findFile(oldVideoDirectory.name) ?: newDirectory?.createDirectory(oldVideoDirectory.name)
-                            val newPlaylistFile = newVideoDirectory?.createFile("", "${System.currentTimeMillis()}.m3u8")
+                            val newPlaylistFile = newVideoDirectory?.createFile("", oldPlaylistFile.name)
                             if (newPlaylistFile != null) {
                                 val oldPlaylist = FileInputStream(oldPlaylistFile).use {
                                     PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
@@ -219,6 +220,13 @@ class DownloadsViewModel @Inject internal constructor(
                                         }
                                     }
                                 }
+                                val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
+                                val newChatFile = oldChatFile?.let { newDirectory?.findFile(it.name) ?: newDirectory?.createFile("", it.name) }
+                                if (newChatFile != null) {
+                                    applicationContext.contentResolver.openOutputStream(newChatFile.uri)!!.sink().buffer().use { sink ->
+                                        sink.writeAll(oldChatFile.source().buffer())
+                                    }
+                                }
                                 repository.updateVideo(video.apply {
                                     thumbnail.let {
                                         if (it == null || it == url || !File(it).exists()) {
@@ -230,30 +238,45 @@ class DownloadsViewModel @Inject internal constructor(
                                         }
                                     }
                                     url = newPlaylistFile.uri.toString()
+                                    chatUrl = newChatFile?.uri?.toString()
                                 })
                                 if (playlists?.isNotEmpty() == true) {
                                     oldPlaylistFile.delete()
                                 } else {
                                     oldVideoDirectory.deleteRecursively()
                                 }
+                                oldChatFile?.delete()
                             }
                         }
                     }
                 } else {
                     val oldFile = File(video.url)
                     if (oldFile.exists()) {
-                        applicationContext.contentResolver.openOutputStream(newUri)!!.sink().buffer().use { sink ->
-                            sink.writeAll(oldFile.source().buffer())
-                        }
-                        repository.updateVideo(video.apply {
-                            thumbnail.let {
-                                if (it == null || it == url || !File(it).exists()) {
-                                    thumbnail = newUri.toString()
+                        val newDirectory = DocumentFile.fromTreeUri(applicationContext, newUri)
+                        val newFile = newDirectory?.findFile(oldFile.name) ?: newDirectory?.createFile("", oldFile.name)
+                        if (newFile != null) {
+                            applicationContext.contentResolver.openOutputStream(newFile.uri)!!.sink().buffer().use { sink ->
+                                sink.writeAll(oldFile.source().buffer())
+                            }
+                            val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
+                            val newChatFile = oldChatFile?.let { newDirectory?.findFile(it.name) ?: newDirectory?.createFile("", it.name) }
+                            if (newChatFile != null) {
+                                applicationContext.contentResolver.openOutputStream(newChatFile.uri)!!.sink().buffer().use { sink ->
+                                    sink.writeAll(oldChatFile.source().buffer())
                                 }
                             }
-                            url = newUri.toString()
-                        })
-                        oldFile.delete()
+                            repository.updateVideo(video.apply {
+                                thumbnail.let {
+                                    if (it == null || it == url || !File(it).exists()) {
+                                        thumbnail = newFile.uri.toString()
+                                    }
+                                }
+                                url = newFile.uri.toString()
+                                chatUrl = newChatFile?.uri?.toString()
+                            })
+                            oldFile.delete()
+                            oldChatFile?.delete()
+                        }
                     }
                 }
             }.invokeOnCompletion {
@@ -282,7 +305,7 @@ class DownloadsViewModel @Inject internal constructor(
                         if (oldVideoDirectory != null) {
                             val newVideoDirectoryUri = "$path${File.separator}${oldVideoDirectory.name}${File.separator}"
                             File(newVideoDirectoryUri).mkdir()
-                            val newPlaylistFileUri = "$newVideoDirectoryUri${System.currentTimeMillis()}.m3u8"
+                            val newPlaylistFileUri = "$newVideoDirectoryUri${oldPlaylistFile.name}"
                             val oldPlaylist = applicationContext.contentResolver.openInputStream(oldPlaylistFile.uri).use {
                                 PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
                             }
@@ -318,6 +341,13 @@ class DownloadsViewModel @Inject internal constructor(
                                     }
                                 }
                             }
+                            val oldChatFile = video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri()) }
+                            val newChatFileUri = oldChatFile?.let { "$path${File.separator}${it.name}" }
+                            if (newChatFileUri != null) {
+                                File(newChatFileUri).sink().buffer().use { sink ->
+                                    sink.writeAll(applicationContext.contentResolver.openInputStream(oldChatFile.uri)!!.source().buffer())
+                                }
+                            }
                             repository.updateVideo(video.apply {
                                 thumbnail.let {
                                     if (it == null || it == url || !File(it).exists()) {
@@ -325,12 +355,14 @@ class DownloadsViewModel @Inject internal constructor(
                                     }
                                 }
                                 url = newPlaylistFileUri
+                                chatUrl = newChatFileUri
                             })
                             if (playlists.isNotEmpty()) {
                                 oldPlaylistFile.delete()
                             } else {
                                 oldVideoDirectory.delete()
                             }
+                            oldChatFile?.delete()
                         }
                     }
                 } else {
@@ -340,6 +372,13 @@ class DownloadsViewModel @Inject internal constructor(
                         File(newFileUri).sink().buffer().use { sink ->
                             sink.writeAll(applicationContext.contentResolver.openInputStream(oldFile.uri)!!.source().buffer())
                         }
+                        val oldChatFile = video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri()) }
+                        val newChatFileUri = oldChatFile?.let { "$path${File.separator}${it.name}" }
+                        if (newChatFileUri != null) {
+                            File(newChatFileUri).sink().buffer().use { sink ->
+                                sink.writeAll(applicationContext.contentResolver.openInputStream(oldChatFile.uri)!!.source().buffer())
+                            }
+                        }
                         repository.updateVideo(video.apply {
                             thumbnail.let {
                                 if (it == null || it == url || !File(it).exists()) {
@@ -347,8 +386,10 @@ class DownloadsViewModel @Inject internal constructor(
                                 }
                             }
                             url = newFileUri
+                            chatUrl = newChatFileUri
                         })
                         oldFile.delete()
+                        oldChatFile?.delete()
                     }
                 }
             }.invokeOnCompletion {
@@ -362,6 +403,67 @@ class DownloadsViewModel @Inject internal constructor(
         }
     }
 
+    fun updateChatUrl(newUri: Uri, video: OfflineVideo) {
+        if (!videosInUse.contains(video)) {
+            viewModelScope.launch(Dispatchers.IO) {
+                var id: String? = null
+                var title: String? = null
+                var uploadDate: Long? = null
+                var channelId: String? = null
+                var channelLogin: String? = null
+                var channelName: String? = null
+                var gameId: String? = null
+                var gameSlug: String? = null
+                var gameName: String? = null
+                try {
+                    applicationContext.contentResolver.openInputStream(newUri)?.bufferedReader()?.use { fileReader ->
+                        JsonReader(fileReader).use { reader ->
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                when (reader.nextName()) {
+                                    "video" -> {
+                                        reader.beginObject()
+                                        while (reader.hasNext()) {
+                                            when (reader.nextName()) {
+                                                "id" -> id = reader.nextString()
+                                                "title" -> title = reader.nextString()
+                                                "uploadDate" -> uploadDate = reader.nextLong()
+                                                "channelId" -> channelId = reader.nextString()
+                                                "channelLogin" -> channelLogin = reader.nextString()
+                                                "channelName" -> channelName = reader.nextString()
+                                                "gameId" -> gameId = reader.nextString()
+                                                "gameSlug" -> gameSlug = reader.nextString()
+                                                "gameName" -> gameName = reader.nextString()
+                                                else -> reader.skipValue()
+                                            }
+                                        }
+                                        reader.endObject()
+                                    }
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+                        }
+                    }
+                } catch (e: Exception) {
+
+                }
+                repository.updateVideo(video.apply {
+                    if (!title.isNullOrBlank()) this.name = title
+                    if (!channelId.isNullOrBlank()) this.channelId = channelId
+                    if (!channelLogin.isNullOrBlank()) this.channelLogin = channelLogin
+                    if (!channelName.isNullOrBlank()) this.channelName = channelName
+                    if (!gameId.isNullOrBlank()) this.gameId = gameId
+                    if (!gameSlug.isNullOrBlank()) this.gameSlug = gameSlug
+                    if (!gameName.isNullOrBlank()) this.gameName = gameName
+                    if (uploadDate != null) this.uploadDate = uploadDate
+                    if (!id.isNullOrBlank()) this.videoId = id
+                    chatUrl = newUri.toString()
+                })
+            }
+        }
+    }
+
     fun delete(video: OfflineVideo, keepFiles: Boolean) {
         if (!videosInUse.contains(video)) {
             videosInUse.add(video)
@@ -369,7 +471,7 @@ class DownloadsViewModel @Inject internal constructor(
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_DELETING
                 })
-                val useWorkManager = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || applicationContext.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
+                val useWorkManager = video.downloadChat == true || video.sourceUrl?.endsWith(".m3u8") == true || Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || applicationContext.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
                 if (video.status == OfflineVideo.STATUS_DOWNLOADED || video.status == OfflineVideo.STATUS_MOVING || video.status == OfflineVideo.STATUS_DELETING || video.status == OfflineVideo.STATUS_CONVERTING || useWorkManager) {
                     if (useWorkManager) {
                         WorkManager.getInstance(applicationContext).cancelUniqueWork(video.id.toString())
@@ -400,6 +502,7 @@ class DownloadsViewModel @Inject internal constructor(
                             } else {
                                 DocumentFile.fromSingleUri(applicationContext, video.url.toUri())?.delete()
                             }
+                            video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri())?.delete() }
                         } else {
                             val playlistFile = File(video.url)
                             if (!playlistFile.exists()) {
@@ -427,6 +530,7 @@ class DownloadsViewModel @Inject internal constructor(
                             } else {
                                 playlistFile.delete()
                             }
+                            video.chatUrl?.let { File(it).delete() }
                         }
                     }
                 } else {

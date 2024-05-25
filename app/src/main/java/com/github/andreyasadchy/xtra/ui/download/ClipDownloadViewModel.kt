@@ -82,7 +82,14 @@ class ClipDownloadViewModel @Inject constructor(
                 }
                 "$path${File.separator}$fileName.mp4"
             }
-            val offlineVideo = DownloadUtils.prepareDownload(applicationContext, clip, url, fileUri, clip.duration?.toLong()?.times(1000L), clip.vodOffset?.toLong()?.times(1000L))
+            val offlineVideo = DownloadUtils.prepareDownload(
+                context = applicationContext,
+                downloadable = clip,
+                url = url,
+                path = fileUri,
+                downloadDate = System.currentTimeMillis(),
+                duration = clip.duration?.toLong()?.times(1000L),
+                startPosition = clip.vodOffset?.toLong()?.times(1000L))
             val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
             if (useWorkManager) {
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(

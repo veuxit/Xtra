@@ -10,15 +10,20 @@ class BttvGlobalDeserializer : JsonDeserializer<BttvGlobalResponse> {
 
     @Throws(JsonParseException::class)
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): BttvGlobalResponse {
-        val emotes = mutableListOf<BttvEmote>()
+        val emotes = mutableListOf<Emote>()
         json.takeIf { it.isJsonArray }?.asJsonArray?.forEach { emote ->
             emote.takeIf { it.isJsonObject }?.asJsonObject?.let { obj ->
                 obj.get("code")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { name ->
                     obj.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { id ->
-                        emotes.add(BttvEmote(
-                            id = id,
+                        emotes.add(Emote(
                             name = name,
-                            isAnimated = obj.get("animated")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean
+                            url1x = "https://cdn.betterttv.net/emote/$id/1x.webp",
+                            url2x = "https://cdn.betterttv.net/emote/$id/2x.webp",
+                            url3x = "https://cdn.betterttv.net/emote/$id/2x.webp",
+                            url4x = "https://cdn.betterttv.net/emote/$id/3x.webp",
+                            format = "webp",
+                            isAnimated = obj.get("animated")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isBoolean }?.asBoolean ?: true,
+                            isZeroWidth = listOf("IceCold", "SoSnowy", "SantaHat", "TopHat", "CandyCane", "ReinDeer", "cvHazmat", "cvMask").contains(name)
                         ))
                     }
                 }

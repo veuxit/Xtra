@@ -1,12 +1,13 @@
 package com.github.andreyasadchy.xtra.model.chat
 
 class CheerEmote(
-    override val name: String,
-    override val url1x: String?,
-    override val url2x: String?,
-    override val url3x: String?,
-    override val url4x: String?,
-    override val type: String?,
-    override val isAnimated: Boolean?,
+    val name: String,
+    val localData: ByteArray? = null,
+    val url1x: String? = null,
+    val url2x: String? = null,
+    val url3x: String? = null,
+    val url4x: String? = null,
+    val format: String? = null,
+    val isAnimated: Boolean = true,
     val minBits: Int,
-    val color: String? = null) : Emote()
+    val color: String? = null)
