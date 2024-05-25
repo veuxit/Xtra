@@ -11,8 +11,8 @@ import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
@@ -57,6 +57,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             val isLive = args.getBoolean(KEY_IS_LIVE)
             val account = Account.get(requireContext())
             val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank())
+            val chatUrl = args.getString(KEY_CHAT_URL)
             val enableChat = when {
                 requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) -> false
                 isLive -> {
@@ -71,7 +72,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     true
                 }
-                args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY) -> {
+                chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) -> {
                     chatView.init(this@ChatFragment, channelId)
                     true
                 }
@@ -84,6 +85,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 chatView.enableChatInteraction(isLive && isLoggedIn)
                 viewModel.chatMessages.observe(viewLifecycleOwner, Observer(chatView::submitList))
                 viewModel.newMessage.observe(viewLifecycleOwner) { chatView.notifyMessageAdded() }
+                viewModel.localTwitchEmotes.observe(viewLifecycleOwner, Observer(chatView::addLocalTwitchEmotes))
                 viewModel.globalStvEmotes.observe(viewLifecycleOwner, Observer(chatView::addGlobalStvEmotes))
                 viewModel.channelStvEmotes.observe(viewLifecycleOwner, Observer(chatView::addChannelStvEmotes))
                 viewModel.globalBttvEmotes.observe(viewLifecycleOwner, Observer(chatView::addGlobalBttvEmotes))
@@ -104,6 +106,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewModel.viewerCount.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it) }
                 viewModel.title.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateTitle(it?.title, it?.gameId, null, it?.gameName) }
             }
+            if (chatUrl != null) {
+                initialize()
+            }
         }
     }
 
@@ -112,7 +117,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelId = args.getString(KEY_CHANNEL_ID)
         val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
         val channelName = args.getString(KEY_CHANNEL_NAME)
-        val streamId = args.getString(KEY_STREAM_ID)
         val account = Account.get(requireContext())
         val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank())
         val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
@@ -143,14 +147,16 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val isLive = args.getBoolean(KEY_IS_LIVE)
         if (!disableChat) {
             if (isLive) {
+                val streamId = args.getString(KEY_STREAM_ID)
                 viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
             } else {
-                args.getString(KEY_VIDEO_ID).let {
-                    if (it != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
-                        val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
-                        val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
-                        viewModel.startReplay(account, helixClientId, gqlHeaders, channelId, channelLogin, it, args.getInt(KEY_START_TIME), getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
-                    }
+                val chatUrl = args.getString(KEY_CHAT_URL)
+                val videoId = args.getString(KEY_VIDEO_ID)
+                if (chatUrl != null || (videoId != null && !args.getBoolean(KEY_START_TIME_EMPTY))) {
+                    val startTime = args.getInt(KEY_START_TIME)
+                    val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
+                    val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                    viewModel.startReplay(helixClientId, account.helixToken, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
                 }
             }
         }
@@ -181,12 +187,12 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             "stream_offline" -> requireContext().getString(R.string.stream_offline, command.duration)
             else -> command.message
         }
-        viewModel.chat?.onMessage(LiveChatMessage(message = message, color = "#999999", isAction = true, emotes = command.emotes, timestamp = command.timestamp, fullMsg = command.fullMsg))
+        viewModel.chat?.onMessage(ChatMessage(message = message, color = "#999999", emotes = command.emotes, isAction = true, timestamp = command.timestamp, fullMsg = command.fullMsg))
     }
 
     private fun postPointsEarned(points: PointsEarned) {
         val message = requireContext().getString(R.string.points_earned, points.pointsGained)
-        viewModel.chat?.onMessage(LiveChatMessage(message = message, color = "#999999", isAction = true, timestamp = points.timestamp, fullMsg = points.fullMsg))
+        viewModel.chat?.onMessage(ChatMessage(message = message, color = "#999999", isAction = true, timestamp = points.timestamp, fullMsg = points.fullMsg))
     }
 
     fun isActive(): Boolean? {
@@ -329,6 +335,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         private const val KEY_CHANNEL_NAME = "channel_name"
         private const val KEY_STREAM_ID = "streamId"
         private const val KEY_VIDEO_ID = "videoId"
+        private const val KEY_CHAT_URL = "chatUrl"
         private const val KEY_START_TIME_EMPTY = "startTime_empty"
         private const val KEY_START_TIME = "startTime"
 
@@ -354,6 +361,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 } else {
                     putBoolean(KEY_START_TIME_EMPTY, true)
                 }
+            }
+        }
+
+        fun newLocalInstance(channelId: String?, channelLogin: String?, chatUrl: String?) = ChatFragment().apply {
+            arguments = Bundle().apply {
+                putString(KEY_CHANNEL_ID, channelId)
+                putString(KEY_CHANNEL_LOGIN, channelLogin)
+                putString(KEY_CHAT_URL, chatUrl)
             }
         }
     }

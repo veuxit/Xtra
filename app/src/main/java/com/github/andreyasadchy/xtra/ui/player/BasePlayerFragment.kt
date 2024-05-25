@@ -299,14 +299,14 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (this !is ClipPlayerFragment) {
                 view.findViewById<ImageButton>(R.id.playerMode)?.disable()
             }
-            if (prefs.getBoolean(C.PLAYER_DOUBLETAP, true) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
-                playerView.setOnDoubleTapListener {
-                    if (!isPortrait && slidingLayout.isMaximized) {
-                        if (chatLayout.isVisible) {
-                            hideChat()
-                        } else {
-                            showChat()
-                        }
+        }
+        if (prefs.getBoolean(C.PLAYER_DOUBLETAP, true) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
+            playerView.setOnDoubleTapListener {
+                if (!isPortrait && slidingLayout.isMaximized) {
+                    if (chatLayout.isVisible) {
+                        hideChat()
+                    } else {
+                        showChat()
                     }
                 }
             }
@@ -689,26 +689,21 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 height = LinearLayout.LayoutParams.MATCH_PARENT
                 weight = 1f
             }
-            if (this !is OfflinePlayerFragment) {
-                chatLayout.updateLayoutParams<LinearLayout.LayoutParams> {
-                    width = chatWidthLandscape
-                    height = LinearLayout.LayoutParams.MATCH_PARENT
-                    weight = 0f
-                }
-                if (prefs.getBoolean(C.CHAT_DISABLE, false)) {
-                    chatLayout.gone()
-                    slidingLayout.maximizedSecondViewVisibility = View.GONE
-                } else {
-                    setPreferredChatVisibility()
-                }
-                val recyclerView = requireView().findViewById<RecyclerView>(R.id.recyclerView)
-                val btnDown = requireView().findViewById<Button>(R.id.btnDown)
-                if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView?.adapter?.itemCount != null) {
-                    recyclerView.scrollToPosition(recyclerView.adapter?.itemCount!! - 1) // scroll down
-                }
-            } else {
+            chatLayout.updateLayoutParams<LinearLayout.LayoutParams> {
+                width = chatWidthLandscape
+                height = LinearLayout.LayoutParams.MATCH_PARENT
+                weight = 0f
+            }
+            if (prefs.getBoolean(C.CHAT_DISABLE, false)) {
                 chatLayout.gone()
                 slidingLayout.maximizedSecondViewVisibility = View.GONE
+            } else {
+                setPreferredChatVisibility()
+            }
+            val recyclerView = requireView().findViewById<RecyclerView>(R.id.recyclerView)
+            val btnDown = requireView().findViewById<Button>(R.id.btnDown)
+            if (chatLayout.isVisible && btnDown != null && !btnDown.isVisible && recyclerView?.adapter?.itemCount != null) {
+                recyclerView.scrollToPosition(recyclerView.adapter?.itemCount!! - 1) // scroll down
             }
             requireView().findViewById<ImageButton>(R.id.playerFullscreenToggle)?.let {
                 if (it.isVisible) {

@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.31.3"
+        versionName = "2.32.0"
         resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "it", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
@@ -55,16 +55,19 @@ android {
     }
     configurations.all {
         resolutionStrategy.force(listOf(
+            "androidx.appcompat:appcompat:1.7.0-alpha03",
+            "androidx.core:core-ktx:1.13.0-alpha01",
+            "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",
             "androidx.hilt:hilt-work:1.1.0",
-            "androidx.lifecycle:lifecycle-common-java8:2.7.0-alpha03",
-            "androidx.lifecycle:lifecycle-livedata-ktx:2.7.0-alpha03",
+            "androidx.lifecycle:lifecycle-livedata:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-process:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0-alpha03",
             "androidx.media3:media3-exoplayer:1.2.1",
             "androidx.media3:media3-exoplayer-hls:1.2.1",
             "androidx.media3:media3-session:1.2.1",
             "androidx.media3:media3-ui:1.2.1",
+            "androidx.paging:paging-runtime:3.3.0-alpha02",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "com.google.android.material:material:1.11.0",
             "com.squareup.okhttp3:okhttp:3.12.13",
@@ -90,20 +93,19 @@ dependencies {
     implementation(libs.draglistview)
 
     //Architecture components
-    implementation(libs.paging.runtime.ktx)
-    implementation(libs.lifecycle.viewmodel.ktx)
-    implementation(libs.lifecycle.livedata.ktx)
-    implementation(libs.lifecycle.common.java8)
+    implementation(libs.paging.runtime)
+    //implementation(libs.lifecycle.viewmodel)
+    implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.process)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.room.paging)
     ksp(libs.room.compiler)
+    implementation(libs.room.paging)
     implementation(libs.work.runtime)
     implementation(libs.core.ktx)
     implementation(libs.fragment.ktx)
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
     implementation(libs.webkit)
 
     //Misc

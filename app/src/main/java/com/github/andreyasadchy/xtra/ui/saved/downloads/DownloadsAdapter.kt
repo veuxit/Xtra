@@ -38,6 +38,7 @@ class DownloadsAdapter(
     private val resumeDownload: (Int) -> Unit,
     private val convertVideo: (OfflineVideo) -> Unit,
     private val moveVideo: (OfflineVideo) -> Unit,
+    private val updateChatUrl: (OfflineVideo) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
@@ -94,10 +95,10 @@ class DownloadsAdapter(
                     }
                     root.setOnLongClickListener { deleteVideo(item); true }
                     thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
-                    if (item.uploadDate != null) {
+                    item.uploadDate?.let {
                         date.visible()
-                        date.text = context.getString(R.string.uploaded_date, TwitchApiHelper.formatTime(context, item.uploadDate))
-                    } else {
+                        date.text = context.getString(R.string.uploaded_date, TwitchApiHelper.formatTime(context, it))
+                    } ?: {
                         date.gone()
                     }
                     if (item.downloadDate != null) {
@@ -131,10 +132,10 @@ class DownloadsAdapter(
                     } else {
                         username.gone()
                     }
-                    if (item.name != null)  {
+                    item.name?.let {
                         title.visible()
-                        title.text = item.name.trim()
-                    } else {
+                        title.text = it.trim()
+                    } ?: {
                         title.gone()
                     }
                     if (item.gameName != null)  {
@@ -201,8 +202,9 @@ class DownloadsAdapter(
                                 if (item.vod) {
                                     menu.findItem(R.id.convertVideo).isVisible = true
                                 }
+                                menu.findItem(R.id.updateChatUrl).isVisible = true
                             } else {
-                                if (item.sourceUrl?.endsWith(".m3u8") == true || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
+                                if (item.downloadChat == true || item.sourceUrl?.endsWith(".m3u8") == true || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
                                     menu.findItem(R.id.stopDownload).isVisible = true
                                     menu.findItem(R.id.resumeDownload).isVisible = true
                                 }
@@ -213,6 +215,7 @@ class DownloadsAdapter(
                                     R.id.resumeDownload -> resumeDownload(item.id)
                                     R.id.convertVideo -> convertVideo(item)
                                     R.id.moveVideo -> moveVideo(item)
+                                    R.id.updateChatUrl -> updateChatUrl(item)
                                     R.id.delete -> deleteVideo(item)
                                     else -> menu.close()
                                 }
@@ -221,27 +224,32 @@ class DownloadsAdapter(
                             show()
                         }
                     }
-                    status.apply {
-                        if (item.status == OfflineVideo.STATUS_DOWNLOADED) {
-                            gone()
+                    if (item.status == OfflineVideo.STATUS_DOWNLOADED) {
+                        status.gone()
+                    } else {
+                        downloadProgress.text = when (item.status) {
+                            OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                            OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
+                            OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
+                            OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
+                            else -> context.getString(R.string.download_pending)
+                        }
+                        if (item.downloadChat == true && item.status == OfflineVideo.STATUS_DOWNLOADING) {
+                            chatDownloadProgress.visible()
+                            chatDownloadProgress.text = context.getString(R.string.chat_downloading_progress, item.chatProgress ?: 0)
                         } else {
-                            text = when (item.status) {
-                                OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
-                                OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
-                                OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
-                                OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
-                                else -> context.getString(R.string.download_pending)
-                            }
-                            visible()
-                            if (item.vod || item.sourceUrl?.endsWith(".m3u8") == true) {
-                                background = null
-                                isClickable = false
-                                isFocusable = false
-                                setShadowLayer(4f, 0f, 0f, Color.BLACK)
-                            } else {
-                                setOnClickListener { deleteVideo(item) }
-                                setOnLongClickListener { deleteVideo(item); true }
-                            }
+                            chatDownloadProgress.gone()
+                        }
+                        status.visible()
+                        if (item.vod || item.sourceUrl?.endsWith(".m3u8") == true) {
+                            status.background = null
+                            status.isClickable = false
+                            status.isFocusable = false
+                            downloadProgress.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                            chatDownloadProgress.setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                        } else {
+                            status.setOnClickListener { deleteVideo(item) }
+                            status.setOnLongClickListener { deleteVideo(item); true }
                         }
                     }
                 }

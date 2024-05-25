@@ -79,33 +79,37 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             fileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
+                    val list = mutableListOf<String>()
                     result.data?.clipData?.let { clipData ->
                         for (i in 0 until clipData.itemCount) {
                             val item = clipData.getItemAt(i)
                             item.uri?.let {
                                 requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                                viewModel.saveVideo(it.toString())
+                                list.add(it.toString())
                             }
                         }
                     } ?: result.data?.data?.let {
                         requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        viewModel.saveVideo(it.toString())
+                        list.add(it.toString())
                     }
+                    viewModel.saveVideos(list)
                 }
             }
         } else {
             fileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
+                    val list = mutableListOf<String>()
                     result.data?.clipData?.let { clipData ->
                         for (i in 0 until clipData.itemCount) {
                             val item = clipData.getItemAt(i)
                             item.uri?.path?.let {
-                                viewModel.saveVideo(it)
+                                list.add(it)
                             }
                         }
                     } ?: result.data?.data?.path?.let {
-                        viewModel.saveVideo(it)
+                        list.add(it)
                     }
+                    viewModel.saveVideos(list)
                 }
             }
         }

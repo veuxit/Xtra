@@ -36,15 +36,16 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
 
     companion object {
         private const val KEY_MESSAGING = "messaging"
-        private const val KEY_ORIGINAL = "original"
         private const val KEY_FORMATTED = "formatted"
-        private const val KEY_USERID = "userid"
+        private const val KEY_MESSAGE = "message"
+        private const val KEY_USERID = "userId"
+        private const val KEY_USERNAME = "userName"
         private const val KEY_CHANNEL_ID = "channelId"
         private const val KEY_FULL_MSG = "full"
         private val savedUsers = mutableListOf<Pair<User, String?>>()
 
-        fun newInstance(messagingEnabled: Boolean, originalMessage: CharSequence, formattedMessage: CharSequence, userId: String?, channelId: String?, fullMsg: String?) = MessageClickedDialog().apply {
-            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_ORIGINAL to originalMessage, KEY_FORMATTED to formattedMessage, KEY_USERID to userId, KEY_CHANNEL_ID to channelId, KEY_FULL_MSG to fullMsg)
+        fun newInstance(messagingEnabled: Boolean, formattedMessage: CharSequence, message: String?, userId: String?, userName: String?, channelId: String?, fullMsg: String?) = MessageClickedDialog().apply {
+            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_FORMATTED to formattedMessage, KEY_MESSAGE to message, KEY_USERID to userId, KEY_USERNAME to userName, KEY_CHANNEL_ID to channelId, KEY_FULL_MSG to fullMsg)
         }
     }
 
@@ -73,9 +74,10 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
         }
         with(binding) {
             val args = requireArguments()
-            message.text = args.getCharSequence(KEY_FORMATTED)!!
-            val msg = args.getCharSequence(KEY_ORIGINAL)!!
+            message.text = args.getCharSequence(KEY_FORMATTED)
+            val msg = args.getString(KEY_MESSAGE)
             val userId = args.getString(KEY_USERID)
+            val userName = args.getString(KEY_USERNAME)
             val targetId = args.getString(KEY_CHANNEL_ID)
             val fullMsg = args.getString(KEY_FULL_MSG)
             val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
@@ -101,23 +103,24 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                     }
                 }
                 if (args.getBoolean(KEY_MESSAGING)) {
-                    reply.visible()
-                    reply.setOnClickListener {
-                        listener.onReplyClicked(extractUserName(msg))
-                        dismiss()
+                    if (!userName.isNullOrBlank()) {
+                        reply.visible()
+                        reply.setOnClickListener {
+                            listener.onReplyClicked(userName)
+                            dismiss()
+                        }
                     }
-                    copyMessage.visible()
-                    copyMessage.setOnClickListener {
-                        listener.onCopyMessageClicked(msg.substring(msg.indexOf(':') + 2))
-                        dismiss()
+                    if (!msg.isNullOrBlank()) {
+                        copyMessage.visible()
+                        copyMessage.setOnClickListener {
+                            listener.onCopyMessageClicked(msg)
+                            dismiss()
+                        }
                     }
-                } else {
-                    reply.gone()
-                    copyMessage.gone()
                 }
             }
             copyClip.setOnClickListener {
-                clipboard?.setPrimaryClip(ClipData.newPlainText("label", if (userId != null) msg.substring(msg.indexOf(':') + 2) else msg))
+                clipboard?.setPrimaryClip(ClipData.newPlainText("label", msg))
                 dismiss()
             }
             if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false) && fullMsg != null) {
@@ -191,20 +194,6 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                 viewProfile.visible()
             }
         }
-    }
-
-    private fun extractUserName(text: CharSequence): String {
-        val userName = StringBuilder()
-        for (c in text) {
-            if (!c.isWhitespace()) {
-                if (c != ':') {
-                    userName.append(c)
-                } else {
-                    break
-                }
-            }
-        }
-        return userName.toString()
     }
 
     override fun onDestroyView() {

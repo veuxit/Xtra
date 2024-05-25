@@ -39,7 +39,7 @@ object DownloadUtils {
         DownloadService.activeRequests.add(request.offlineVideoId)
     }
 
-    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long? = null, startPosition: Long? = null, segmentFrom: Int? = null, segmentTo: Int? = null, downloadPath: String? = null, fromTime: Long? = null, toTime: Long? = null, quality: String? = null): OfflineVideo {
+    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long? = null, downloadDate: Long? = null, startPosition: Long? = null, segmentFrom: Int? = null, segmentTo: Int? = null, downloadPath: String? = null, fromTime: Long? = null, toTime: Long? = null, quality: String? = null, downloadChat: Boolean = false, downloadChatEmotes: Boolean = false): OfflineVideo {
         return with(downloadable) {
             val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
                 savePng(context, thumbnail, "thumbnails", it)
@@ -62,7 +62,7 @@ object DownloadUtils {
                 gameName = gameName,
                 duration = duration,
                 uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                downloadDate = System.currentTimeMillis(),
+                downloadDate = downloadDate,
                 progress = 0,
                 maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,
                 downloadPath = downloadPath,
@@ -70,7 +70,9 @@ object DownloadUtils {
                 toTime = toTime,
                 type = type,
                 videoId = id,
-                quality = if (quality?.contains("Audio", true) != true) quality else "audio"
+                quality = if (quality?.contains("Audio", true) != true) quality else "audio",
+                downloadChat = downloadChat,
+                downloadChatEmotes = downloadChatEmotes
             )
         }
     }

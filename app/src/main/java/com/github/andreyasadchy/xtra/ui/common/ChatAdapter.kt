@@ -4,11 +4,9 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-import android.text.Spanned.SPAN_INCLUSIVE_INCLUSIVE
 import android.text.method.LinkMovementMethod
 import android.text.style.ForegroundColorSpan
 import android.text.style.ImageSpan
@@ -33,8 +31,6 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.Image
-import com.github.andreyasadchy.xtra.model.chat.LiveChatMessage
-import com.github.andreyasadchy.xtra.model.chat.PubSubPointReward
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.CenteredImageSpan
@@ -63,7 +59,7 @@ class ChatAdapter(
     private val enableZeroWidth: Boolean,
     private val enableTimestamps: Boolean,
     private val timestampFormat: String?,
-    private val firstMsgVisibility: String?,
+    private val firstMsgVisibility: Int,
     private val firstChatMsg: String,
     private val rewardChatMsg: String,
     private val redeemedChatMsg: String,
@@ -84,6 +80,7 @@ class ChatAdapter(
     private val random = Random()
     private val userColors = HashMap<String, Int>()
     private val savedColors = HashMap<String, Int>()
+    private var localTwitchEmotes: List<TwitchEmote>? = null
     private var globalStvEmotes: List<Emote>? = null
     private var channelStvEmotes: List<Emote>? = null
     private var globalBttvEmotes: List<Emote>? = null
@@ -96,7 +93,7 @@ class ChatAdapter(
     private var loggedInUser: String? = null
     private val scaledEmoteSize = (emoteSize * 0.78f).toInt()
 
-    private var messageClickListener: ((CharSequence, CharSequence, String?, String?, String?) -> Unit)? = null
+    private var messageClickListener: ((CharSequence, String?, String?, String?, String?, String?) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.chat_list_item, parent, false))
@@ -104,286 +101,304 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val chatMessage = messages?.get(position) ?: return
-        val liveMessage = chatMessage as? LiveChatMessage
-        val pointReward = chatMessage as? PubSubPointReward ?: liveMessage?.pointReward
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
-        var imageIndex = 0
+        var builderIndex = 0
         var badgesCount = 0
-        val systemMsg = liveMessage?.systemMsg
-        if (systemMsg != null) {
-            builder.append("$systemMsg\n")
-            imageIndex += systemMsg.length + 1
-        } else {
-            val msgId = liveMessage?.msgId?.let { TwitchApiHelper.getMessageIdString(it) ?: it }
-            if (msgId != null) {
-                builder.append("$msgId\n")
-                imageIndex += msgId.length + 1
+        if (chatMessage.message.isNullOrBlank()) {
+            if (chatMessage.timestamp != null && enableTimestamps) {
+                val timestamp = TwitchApiHelper.getTimestamp(chatMessage.timestamp, timestampFormat)
+                if (timestamp != null) {
+                    builder.append("$timestamp ")
+                    builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), 0, timestamp.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    builderIndex += timestamp.length + 1
+                }
             }
-        }
-        if (liveMessage?.isFirst == true && firstMsgVisibility == "0") {
-            builder.append("$firstChatMsg\n")
-            imageIndex += firstChatMsg.length + 1
-        }
-        if (liveMessage?.rewardId != null && pointReward == null && firstMsgVisibility == "0") {
-            builder.append("$rewardChatMsg\n")
-            imageIndex += rewardChatMsg.length + 1
-        }
-        if (!pointReward?.message.isNullOrBlank()) {
-            val string = redeemedChatMsg.format(pointReward?.rewardTitle)
-            builder.append("$string ")
-            imageIndex += string.length + 1
-            builder.append("  ")
-            images.add(Image(
-                url1x = pointReward?.rewardImage?.url1,
-                url2x = pointReward?.rewardImage?.url2,
-                url3x = pointReward?.rewardImage?.url4,
-                url4x = pointReward?.rewardImage?.url4,
-                start = imageIndex++,
-                end = imageIndex++,
-                isEmote = false
-            ))
-            badgesCount++
-            builder.append("${pointReward?.rewardCost}\n")
-            imageIndex += (pointReward?.rewardCost?.toString()?.length ?: 0) + 1
-        }
-        val timestamp = liveMessage?.timestamp?.let { TwitchApiHelper.getTimestamp(it, timestampFormat) } ?: pointReward?.timestamp?.let { TwitchApiHelper.getTimestamp(it, timestampFormat) }
-        if (enableTimestamps && timestamp != null) {
-            builder.append("$timestamp ")
-            builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), imageIndex, imageIndex + timestamp.length, SPAN_INCLUSIVE_INCLUSIVE)
-            imageIndex += timestamp.length + 1
-        }
-        chatMessage.badges?.forEach { chatBadge ->
-            val badge = channelBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version } ?: globalBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version }
-            badge?.let {
-                builder.append("  ")
-                images.add(Image(
-                    url1x = it.url1x,
-                    url2x = it.url2x,
-                    url3x = it.url3x,
-                    url4x = it.url4x,
-                    start = imageIndex++,
-                    end = imageIndex++,
-                    isEmote = false
-                ))
-                badgesCount++
-            }
-        }
-        val fullMsg = chatMessage.fullMsg
-        val userId = chatMessage.userId
-        val userName = chatMessage.userName
-        val userNameLength = userName?.length ?: 0
-        val userNameEndIndex = imageIndex + userNameLength
-        val originalMessage: String
-        val userNameWithPostfixLength: Int
-        if (chatMessage !is PubSubPointReward && !userName.isNullOrBlank()) {
-            builder.append(userName)
-            if (!chatMessage.isAction) {
-                builder.append(": ")
-                originalMessage = "$userName: ${chatMessage.message}"
-                userNameWithPostfixLength = userNameLength + 2
+            if (chatMessage.systemMsg != null) {
+                builder.append("${chatMessage.systemMsg}")
+                builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), builderIndex, chatMessage.systemMsg.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                builderIndex += chatMessage.systemMsg.length
             } else {
-                builder.append(" ")
-                originalMessage = "$userName ${chatMessage.message}"
-                userNameWithPostfixLength = userNameLength + 1
-            }
-        } else {
-            if (chatMessage is PubSubPointReward && pointReward?.message.isNullOrBlank()) {
-                val string = redeemedNoMsg.format(userName, pointReward?.rewardTitle)
-                builder.append("$string ")
-                imageIndex += string.length + 1
-                builder.append("  ")
-                images.add(Image(
-                    url1x = pointReward?.rewardImage?.url1,
-                    url2x = pointReward?.rewardImage?.url2,
-                    url3x = pointReward?.rewardImage?.url4,
-                    url4x = pointReward?.rewardImage?.url4,
-                    type = null,
-                    isAnimated = false,
-                    isZeroWidth = false,
-                    start = imageIndex++,
-                    end = imageIndex++,
-                    isEmote = false
-                ))
-                badgesCount++
-                builder.append("${pointReward?.rewardCost}")
-                imageIndex += pointReward?.rewardCost?.toString()?.length ?: 0
-                originalMessage = "$userName: ${chatMessage.message}"
-                userNameWithPostfixLength = imageIndex
-                builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), 0, imageIndex, SPAN_INCLUSIVE_INCLUSIVE)
-            } else {
-                originalMessage = "${chatMessage.message}"
-                userNameWithPostfixLength = 0
-            }
-        }
-        if (chatMessage.message != null) {
-            builder.append(chatMessage.message)
-        }
-        val color = if (chatMessage is PubSubPointReward) null else {
-            chatMessage.color.let { userColor ->
-                if (userColor == null) {
-                    userColors[userName] ?: getRandomColor().let { newColor ->
-                        if (useThemeAdaptedUsernameColor) {
-                            adaptUsernameColor(newColor)
-                        } else {
-                            newColor
-                        }.also { if (userName != null) userColors[userName] = it }
-                    }
-                } else {
-                    getSavedColor(userColor)
-                }
-            }
-        }
-        if (color != null && userName != null) {
-            builder.setSpan(ForegroundColorSpan(color), imageIndex, userNameEndIndex, SPAN_EXCLUSIVE_EXCLUSIVE)
-            builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), imageIndex, userNameEndIndex, SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        try {
-            chatMessage.emotes?.let { emotes ->
-                val copy = emotes.map {
-                    val realBegin = chatMessage.message?.offsetByCodePoints(0, it.begin) ?: 0
-                    val realEnd = if (it.begin == realBegin) {
-                        it.end
-                    } else {
-                        it.end + realBegin - it.begin
-                    }
-                    TwitchEmote(id = it.id, begin = realBegin, end = realEnd)
-                }
-                imageIndex += userNameWithPostfixLength
-                for (e in copy) {
-                    val begin = imageIndex + e.begin
-                    builder.replace(begin, imageIndex + e.end + 1, ".")
-                    builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), begin, begin + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    val length = e.end - e.begin
-                    for (e1 in copy) {
-                        if (e.begin < e1.begin) {
-                            e1.begin -= length
-                            e1.end -= length
-                        }
-                    }
-                    e.end -= length
-                }
-                copy.forEach { images.add(Image(
-                    url1x = it.url1x,
-                    url2x = it.url2x,
-                    url3x = it.url3x,
-                    url4x = it.url4x,
-                    type = it.type,
-                    isAnimated = it.isAnimated,
-                    isZeroWidth = it.isZeroWidth,
-                    start = imageIndex + it.begin,
-                    end = imageIndex + it.end + 1,
-                    isEmote = true
-                )) }
-            }
-            val split = builder.substring(userNameWithPostfixLength).split(" ")
-            var builderIndex = userNameWithPostfixLength
-            var emotesFound = 0
-            var wasMentioned = false
-            for (value in split) {
-                val length = value.length
-                val endIndex = builderIndex + length
-                var emote =
-                    channelStvEmotes?.find { it.name == value } ?:
-                    channelBttvEmotes?.find { it.name == value } ?:
-                    channelFfzEmotes?.find { it.name == value } ?:
-                    globalStvEmotes?.find { it.name == value } ?:
-                    globalBttvEmotes?.find { it.name == value } ?:
-                    globalFfzEmotes?.find { it.name == value }
-                val bitsCount = value.takeLastWhile { it.isDigit() }
-                val bitsName = value.substringBeforeLast(bitsCount)
-                if (bitsCount.isNotEmpty()) {
-                    val cheerEmote = if (liveMessage == null || liveMessage.bits != null) {
-                        cheerEmotes?.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
-                    } else null
-                    if (cheerEmote != null) {
-                        emote = cheerEmote
-                        emote.color?.let {
-                            builder.setSpan(ForegroundColorSpan(getSavedColor(it)), builderIndex + bitsName.length, endIndex, SPAN_INCLUSIVE_INCLUSIVE)
-                        }
-                    }
-                }
-                if (emote == null) {
-                    if (!Patterns.WEB_URL.matcher(value).matches()) {
-                        if (value.startsWith('@')) {
-                            builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), builderIndex, endIndex, SPAN_EXCLUSIVE_EXCLUSIVE)
-                        }
-                        loggedInUser?.let {
-                            if (!wasMentioned && value.contains(it, true) && chatMessage.userLogin != it) {
-                                wasMentioned = true
-                            }
-                        }
-                    } else {
-                        val url = if (value.startsWith("http")) value else "https://$value"
-                        builder.setSpan(URLSpan(url), builderIndex, endIndex, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    builderIndex += length + 1
-                } else {
-                    for (j in images.lastIndex - emotesFound downTo badgesCount) {
-                        val e = images[j]
-                        if (e.start > builderIndex) {
-                            val remove = if (emote is CheerEmote) {
-                                length - 1 - bitsCount.length
-                            } else {
-                                length - 1
-                            }
-                            e.start -= remove
-                            e.end -= remove
-                        }
-                    }
-                    if (emote is CheerEmote) {
-                        builder.replace(builderIndex, builderIndex + bitsName.length, ".")
-                    } else {
-                        builder.replace(builderIndex, endIndex, ".")
-                    }
-                    builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (chatMessage.reward?.title != null) {
+                    val startIndex = builderIndex
+                    val string = redeemedNoMsg.format(chatMessage.userName, chatMessage.reward.title)
+                    builder.append("$string ")
+                    builderIndex += string.length + 1
+                    builder.append("  ")
                     images.add(Image(
-                        url1x = emote.url1x,
-                        url2x = emote.url2x,
-                        url3x = emote.url3x,
-                        url4x = emote.url4x,
-                        type = emote.type,
-                        isAnimated = emote.isAnimated,
-                        isZeroWidth = emote.isZeroWidth,
-                        start = builderIndex,
-                        end = builderIndex + 1,
-                        isEmote = true
+                        url1x = chatMessage.reward.url1x,
+                        url2x = chatMessage.reward.url2x,
+                        url3x = chatMessage.reward.url4x,
+                        url4x = chatMessage.reward.url4x,
+                        start = builderIndex++,
+                        end = builderIndex++
                     ))
-                    emotesFound++
-                    builderIndex += 2
-                    if (emote is CheerEmote) {
-                        builderIndex += bitsCount.length
-                    }
+                    badgesCount++
+                    builder.append("${chatMessage.reward.cost}")
+                    builderIndex += chatMessage.reward.cost.toString().length
+                    builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), startIndex, builderIndex, SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
-            if (color != null && chatMessage.isAction) {
-                builder.setSpan(ForegroundColorSpan(color), if (userName != null) userNameEndIndex + 1 else 0, builder.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else {
+            if (chatMessage.systemMsg != null) {
+                builder.append("${chatMessage.systemMsg}\n")
+                builderIndex += chatMessage.systemMsg.length + 1
+            } else {
+                if (chatMessage.msgId != null) {
+                    val msgId = TwitchApiHelper.getMessageIdString(chatMessage.msgId) ?: chatMessage.msgId
+                    builder.append("$msgId\n")
+                    builderIndex += msgId.length + 1
+                }
             }
-            when {
-                liveMessage?.isFirst == true && (firstMsgVisibility?.toInt() ?: 0) < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageFirst)
-                liveMessage?.rewardId != null && (firstMsgVisibility?.toInt() ?: 0) < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageReward)
-                liveMessage?.systemMsg != null || liveMessage?.msgId != null -> holder.textView.setBackgroundResource(R.color.chatMessageNotice)
-                wasMentioned && userId != null -> holder.textView.setBackgroundResource(R.color.chatMessageMention)
-                else -> holder.textView.background = null
+            if (chatMessage.isFirst && firstMsgVisibility == 0) {
+                builder.append("$firstChatMsg\n")
+                builderIndex += firstChatMsg.length + 1
             }
-        } catch (e: Exception) {
-//            Crashlytics.logException(e)
+            if (chatMessage.reward?.title != null) {
+                val string = redeemedChatMsg.format(chatMessage.reward.title)
+                builder.append("$string ")
+                builderIndex += string.length + 1
+                builder.append("  ")
+                images.add(Image(
+                    url1x = chatMessage.reward.url1x,
+                    url2x = chatMessage.reward.url2x,
+                    url3x = chatMessage.reward.url4x,
+                    url4x = chatMessage.reward.url4x,
+                    start = builderIndex++,
+                    end = builderIndex++
+                ))
+                badgesCount++
+                builder.append("${chatMessage.reward.cost}\n")
+                builderIndex += chatMessage.reward.cost.toString().length + 1
+            } else {
+                if (chatMessage.reward?.id != null && firstMsgVisibility == 0) {
+                    builder.append("$rewardChatMsg\n")
+                    builderIndex += rewardChatMsg.length + 1
+                }
+            }
+            if (chatMessage.timestamp != null && enableTimestamps) {
+                val timestamp = TwitchApiHelper.getTimestamp(chatMessage.timestamp, timestampFormat)
+                if (timestamp != null) {
+                    builder.append("$timestamp ")
+                    builder.setSpan(ForegroundColorSpan(getSavedColor("#999999")), builderIndex, builderIndex + timestamp.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    builderIndex += timestamp.length + 1
+                }
+            }
+            chatMessage.badges?.forEach { chatBadge ->
+                val badge = channelBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version } ?: globalBadges?.find { it.setId == chatBadge.setId && it.version == chatBadge.version }
+                if (badge != null) {
+                    builder.append("  ")
+                    images.add(Image(
+                        localData = badge.localData,
+                        url1x = badge.url1x,
+                        url2x = badge.url2x,
+                        url3x = badge.url3x,
+                        url4x = badge.url4x,
+                        start = builderIndex++,
+                        end = builderIndex++
+                    ))
+                    badgesCount++
+                }
+            }
+            val color = if (chatMessage.color == null) {
+                userColors[chatMessage.userName] ?: getRandomColor().let { newColor ->
+                    if (useThemeAdaptedUsernameColor) {
+                        adaptUsernameColor(newColor)
+                    } else {
+                        newColor
+                    }.also { if (chatMessage.userName != null) userColors[chatMessage.userName] = it }
+                }
+            } else {
+                getSavedColor(chatMessage.color)
+            }
+            val userNameEndIndex = builderIndex + (chatMessage.userName?.length ?: 0)
+            if (!chatMessage.userName.isNullOrBlank()) {
+                builder.append(chatMessage.userName)
+                builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), builderIndex, builderIndex + chatMessage.userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                builderIndex += if (!chatMessage.isAction) {
+                    builder.append(": ")
+                    chatMessage.userName.length + 2
+                } else {
+                    builder.append(" ")
+                    chatMessage.userName.length + 1
+                }
+            }
+            builder.append(chatMessage.message)
+            try {
+                chatMessage.emotes?.let { emotes ->
+                    val copy = emotes.map {
+                        val realBegin = chatMessage.message.offsetByCodePoints(0, it.begin)
+                        val realEnd = if (it.begin == realBegin) {
+                            it.end
+                        } else {
+                            it.end + realBegin - it.begin
+                        }
+                        localTwitchEmotes?.let { localEmotes ->
+                            localEmotes.find { emote -> emote.id == it.id }?.let { emote ->
+                                TwitchEmote(
+                                    id = emote.id,
+                                    name = emote.name,
+                                    localData = emote.localData,
+                                    format = emote.format,
+                                    isAnimated = emote.isAnimated,
+                                    begin = realBegin,
+                                    end = realEnd,
+                                    setId = emote.setId,
+                                    ownerId = emote.ownerId
+                                )
+                            }
+                        } ?: TwitchEmote(id = it.id, begin = realBegin, end = realEnd)
+                    }
+                    for (e in copy) {
+                        val begin = builderIndex + e.begin
+                        builder.replace(begin, builderIndex + e.end + 1, ".")
+                        builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), begin, begin + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                        val length = e.end - e.begin
+                        for (e1 in copy) {
+                            if (e.begin < e1.begin) {
+                                e1.begin -= length
+                                e1.end -= length
+                            }
+                        }
+                        e.end -= length
+                    }
+                    copy.forEach { images.add(Image(
+                        localData = it.localData,
+                        url1x = it.url1x,
+                        url2x = it.url2x,
+                        url3x = it.url3x,
+                        url4x = it.url4x,
+                        format = it.format,
+                        isAnimated = it.isAnimated,
+                        isEmote = true,
+                        start = builderIndex + it.begin,
+                        end = builderIndex + it.end + 1
+                    )) }
+                }
+                val split = builder.substring(builderIndex).split(" ")
+                var emotesFound = 0
+                var wasMentioned = false
+                for (value in split) {
+                    val cheerEmote = if (chatMessage.bits != null) {
+                        val bitsCount = value.takeLastWhile { it.isDigit() }
+                        val bitsName = value.substringBeforeLast(bitsCount)
+                        if (bitsCount.isNotEmpty()) {
+                            val emote = cheerEmotes?.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
+                            if (emote != null) {
+                                for (j in images.lastIndex - emotesFound downTo badgesCount) {
+                                    val e = images[j]
+                                    if (e.start > builderIndex) {
+                                        val remove = bitsName.length - 1
+                                        e.start -= remove
+                                        e.end -= remove
+                                    }
+                                }
+                                builder.replace(builderIndex, builderIndex + bitsName.length, ".")
+                                builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                images.add(Image(
+                                    localData = emote.localData,
+                                    url1x = emote.url1x,
+                                    url2x = emote.url2x,
+                                    url3x = emote.url3x,
+                                    url4x = emote.url4x,
+                                    format = emote.format,
+                                    isAnimated = emote.isAnimated,
+                                    isZeroWidth = false,
+                                    isEmote = true,
+                                    start = builderIndex,
+                                    end = builderIndex + 1
+                                ))
+                                emotesFound++
+                                builderIndex += 1
+                                if (!emote.color.isNullOrBlank()) {
+                                    builder.setSpan(ForegroundColorSpan(getSavedColor(emote.color)), builderIndex, builderIndex + bitsCount.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                }
+                                builderIndex += bitsCount.length + 1
+                            }
+                            emote
+                        } else null
+                    } else null
+                    if (cheerEmote == null) {
+                        val emote = channelStvEmotes?.find { it.name == value } ?:
+                        channelBttvEmotes?.find { it.name == value } ?:
+                        channelFfzEmotes?.find { it.name == value } ?:
+                        globalStvEmotes?.find { it.name == value } ?:
+                        globalBttvEmotes?.find { it.name == value } ?:
+                        globalFfzEmotes?.find { it.name == value }
+                        if (emote != null) {
+                            for (j in images.lastIndex - emotesFound downTo badgesCount) {
+                                val e = images[j]
+                                if (e.start > builderIndex) {
+                                    val remove = value.length - 1
+                                    e.start -= remove
+                                    e.end -= remove
+                                }
+                            }
+                            builder.replace(builderIndex, builderIndex + value.length, ".")
+                            builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            images.add(Image(
+                                localData = emote.localData,
+                                url1x = emote.url1x,
+                                url2x = emote.url2x,
+                                url3x = emote.url3x,
+                                url4x = emote.url4x,
+                                format = emote.format,
+                                isAnimated = emote.isAnimated,
+                                isZeroWidth = emote.isZeroWidth,
+                                isEmote = true,
+                                start = builderIndex,
+                                end = builderIndex + 1
+                            ))
+                            emotesFound++
+                            builderIndex += 2
+                        } else {
+                            if (Patterns.WEB_URL.matcher(value).matches()) {
+                                val url = if (value.startsWith("http")) value else "https://$value"
+                                builder.setSpan(URLSpan(url), builderIndex, builderIndex + value.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            } else {
+                                if (value.startsWith('@')) {
+                                    builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), builderIndex, builderIndex + value.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                }
+                                loggedInUser?.let {
+                                    if (!wasMentioned && value.contains(it, true) && chatMessage.userId != null && chatMessage.userLogin != it) {
+                                        wasMentioned = true
+                                    }
+                                }
+                            }
+                            builderIndex += value.length + 1
+                        }
+                    }
+                }
+                if (chatMessage.isAction) {
+                    builder.setSpan(ForegroundColorSpan(color), userNameEndIndex, builder.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                when {
+                    chatMessage.isFirst && firstMsgVisibility < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageFirst)
+                    chatMessage.reward?.id != null && firstMsgVisibility < 2 -> holder.textView.setBackgroundResource(R.color.chatMessageReward)
+                    chatMessage.systemMsg != null || chatMessage.msgId != null -> holder.textView.setBackgroundResource(R.color.chatMessageNotice)
+                    wasMentioned -> holder.textView.setBackgroundResource(R.color.chatMessageMention)
+                    else -> holder.textView.background = null
+                }
+            } catch (e: Exception) {
+
+            }
         }
-        holder.bind(originalMessage, builder, userId, channelId, fullMsg)
-        loadImages(holder, images, originalMessage, builder, userId, channelId, fullMsg)
+        holder.bind(builder, chatMessage.message, chatMessage.userId, chatMessage.userName, channelId, chatMessage.fullMsg)
+        loadImages(holder, images, builder, chatMessage.message, chatMessage.userId, chatMessage.userName, channelId, chatMessage.fullMsg)
     }
 
     override fun getItemCount(): Int = messages?.size ?: 0
 
-    private fun loadImages(holder: ViewHolder, images: List<Image>, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
+    private fun loadImages(holder: ViewHolder, images: List<Image>, builder: SpannableStringBuilder, message: String?, userId: String?, userName: String?, channelId: String?, fullMsg: String?) {
         images.forEach {
-            loadGlide(holder, it, originalMessage, builder, userId, channelId, fullMsg)
+            loadGlide(holder, it, builder, message, userId, userName, channelId, fullMsg)
         }
     }
 
-    private fun loadGlide(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
+    private fun loadGlide(holder: ViewHolder, image: Image, builder: SpannableStringBuilder, message: String?, userId: String?, userName: String?, channelId: String?, fullMsg: String?) {
         Glide.with(fragment)
-            .load(when (emoteQuality) {
+            .load(image.localData ?: when (emoteQuality) {
                 "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
                 "3" -> image.url3x ?: image.url2x ?: image.url1x
                 "2" -> image.url2x ?: image.url1x
@@ -402,7 +417,7 @@ class ChatAdapter(
                     } else {
                         resource.setBounds(0, 0, size.first, size.second)
                     }
-                    if (resource is Animatable && image.isAnimated != false && animateGifs) {
+                    if (resource is Animatable && image.isAnimated && animateGifs) {
                         resource.callback = object : Drawable.Callback {
                             override fun unscheduleDrawable(who: Drawable, what: Runnable) {
                                 holder.textView.removeCallbacks(what)
@@ -422,12 +437,16 @@ class ChatAdapter(
                         builder.setSpan(CenteredImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
                     } catch (e: IndexOutOfBoundsException) {
                     }
-                    holder.bind(originalMessage, builder, userId, channelId, fullMsg)
+                    holder.bind(builder, message, userId, userName, channelId, fullMsg)
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {
                 }
             })
+    }
+
+    fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
+        localTwitchEmotes = list
     }
 
     fun addGlobalStvEmotes(list: List<Emote>?) {
@@ -470,7 +489,7 @@ class ChatAdapter(
         loggedInUser = username
     }
 
-    fun setOnClickListener(listener: (CharSequence, CharSequence, String?, String?, String?) -> Unit) {
+    fun setOnClickListener(listener: (CharSequence, String?, String?, String?, String?, String?) -> Unit) {
         messageClickListener = listener
     }
 
@@ -567,16 +586,12 @@ class ChatAdapter(
 
         val textView = itemView as TextView
 
-        fun bind(originalMessage: CharSequence, formattedMessage: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
+        fun bind(formattedMessage: SpannableStringBuilder, message: String?, userId: String?, userName: String?, channelId: String?, fullMsg: String?) {
             textView.apply {
                 text = formattedMessage
                 movementMethod = LinkMovementMethod.getInstance()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    tooltipText = originalMessage
-                } else {
-                    TooltipCompat.setTooltipText(this, originalMessage)
-                }
-                setOnClickListener { messageClickListener?.invoke(originalMessage, formattedMessage, userId, channelId, fullMsg) }
+                TooltipCompat.setTooltipText(this, message)
+                setOnClickListener { messageClickListener?.invoke(formattedMessage, message, userId, userName, channelId, fullMsg) }
             }
         }
     }

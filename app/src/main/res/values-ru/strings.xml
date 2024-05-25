@@ -617,4 +617,8 @@
     <string name="download_converting">Преобразуется</string>
     <string name="convert_message">Преобразовать это видео в один файл?</string>
     <string name="convert">Преобразовать</string>
+    <string name="download_chat">Download chat replay</string>
+    <string name="download_chat_emotes">Download emotes and badges</string>
+    <string name="chat_downloading_progress">Chat: %d%%</string>
+    <string name="change_chat_file">Change chat file</string>
 </resources>

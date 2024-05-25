@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerOfflineBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
@@ -112,6 +113,15 @@ class OfflinePlayerFragment : BasePlayerFragment() {
                     )
                     slidingLayout.minimize()
                 }
+            }
+        }
+        chatFragment = childFragmentManager.findFragmentById(R.id.chatFragmentContainer).let {
+            if (it != null) {
+                it as ChatFragment
+            } else {
+                val fragment = ChatFragment.newLocalInstance(video.channelId, video.channelLogin, video.chatUrl)
+                childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
+                fragment
             }
         }
     }

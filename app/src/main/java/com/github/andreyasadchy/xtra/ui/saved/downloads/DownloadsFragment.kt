@@ -36,6 +36,7 @@ import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -48,6 +49,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     private lateinit var pagingAdapter: PagingDataAdapter<OfflineVideo, out RecyclerView.ViewHolder>
     override var enableNetworkCheck = false
     private var fileResultLauncher: ActivityResultLauncher<Intent>? = null
+    private var chatFileResultLauncher: ActivityResultLauncher<Intent>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,28 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                         viewModel.selectedVideo?.let { video ->
                             requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             viewModel.moveToSharedStorage(it, video)
+                        }
+                    }
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            chatFileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.let {
+                        viewModel.selectedVideo?.let { video ->
+                            requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            viewModel.updateChatUrl(it, video)
+                        }
+                    }
+                }
+            }
+        } else {
+            chatFileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.path?.let {
+                        viewModel.selectedVideo?.let { video ->
+                            viewModel.updateChatUrl(it.toUri(), video)
                         }
                     }
                 }
@@ -126,14 +150,24 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     .show()
             } else {
                 viewModel.selectedVideo = it
-                if (it.url.endsWith(".m3u8")) {
-                    fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+            }
+        }, {
+            viewModel.selectedVideo = it
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                chatFileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                })
+            } else {
+                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                    chatFileResultLauncher?.launch(intent)
                 } else {
-                    fileResultLauncher?.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                        putExtra(Intent.EXTRA_TITLE, it.url.substringAfterLast("/", ""))
-                    })
+                    requireContext().toast(R.string.no_file_manager_found)
                 }
             }
         }, {

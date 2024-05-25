@@ -306,7 +306,7 @@ class ApiRepository @Inject constructor(
                         url2x = get.config.scales.find { it.startsWith("2") }?.let { url.replaceFirst("SCALE", it) },
                         url3x = get.config.scales.find { it.startsWith("3") }?.let { url.replaceFirst("SCALE", it) },
                         url4x = get.config.scales.find { it.startsWith("4") }?.let { url.replaceFirst("SCALE", it) },
-                        type = if (format?.key == "animated") "gif" else null,
+                        format = if (format?.key == "animated") "gif" else null,
                         isAnimated = format?.key == "animated",
                         minBits = colorMap.key,
                         color = colorMap.value
@@ -332,7 +332,7 @@ class ApiRepository @Inject constructor(
                         url2x = emote.urls["2"],
                         url3x = emote.urls["3"],
                         url4x = emote.urls["4"],
-                        type = if (emote.format == "animated") "gif" else null,
+                        format = if (emote.format == "animated") "gif" else null,
                         isAnimated = emote.format == "animated",
                         minBits = emote.minBits,
                         color = emote.color
@@ -393,7 +393,7 @@ class ApiRepository @Inject constructor(
                             url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
                             url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
                             url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                            type = if (format == "animated") "gif" else null,
+                            format = if (format == "animated") "gif" else null,
                             setId = emote.setId,
                             ownerId = emote.ownerId
                         ))
@@ -427,7 +427,7 @@ class ApiRepository @Inject constructor(
                 url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
                 url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
                 url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                type = if (format == "animated") "gif" else null,
+                format = if (format == "animated") "gif" else null,
                 setId = emote.setId,
                 ownerId = emote.ownerId
             ))

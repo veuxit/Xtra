@@ -93,6 +93,8 @@ import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesDataResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataDeserializer
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDownloadDataDeserializer
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDownloadDataResponse
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchDeserializer
 import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearchResponse
 import com.github.andreyasadchy.xtra.model.helix.chat.ChatBadgesDeserializer
@@ -305,6 +307,7 @@ class XtraModule {
                 .registerTypeAdapter(GlobalCheerEmotesDataResponse::class.java, GlobalCheerEmotesDataDeserializer())
                 .registerTypeAdapter(ChannelCheerEmotesDataResponse::class.java, ChannelCheerEmotesDataDeserializer())
                 .registerTypeAdapter(VideoMessagesDataResponse::class.java, VideoMessagesDataDeserializer())
+                .registerTypeAdapter(VideoMessagesDownloadDataResponse::class.java, VideoMessagesDownloadDataDeserializer())
                 .registerTypeAdapter(VideoGamesDataResponse::class.java, VideoGamesDataDeserializer())
                 .registerTypeAdapter(FollowedStreamsDataResponse::class.java, FollowedStreamsDataDeserializer())
                 .registerTypeAdapter(FollowedVideosDataResponse::class.java, FollowedVideosDataDeserializer())

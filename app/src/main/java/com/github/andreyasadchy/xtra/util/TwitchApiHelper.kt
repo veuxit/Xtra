@@ -20,7 +20,6 @@ import java.time.LocalDateTime
 import java.time.Year
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.Date
@@ -131,32 +130,18 @@ object TwitchApiHelper {
 
     fun getUptime(context: Context, input: String?): String? {
         return if (input != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val createdAt = try {
-                    Instant.parse(input)
-                } catch (e: DateTimeParseException) {
-                    null
-                }
-                if (createdAt != null) {
-                    val diff = Duration.between(createdAt, Instant.now())
-                    if (!diff.isNegative) {
-                        getDurationFromSeconds(context, diff.seconds.toString(), false)
-                    } else null
-                } else null
-            } else {
-                val currentTime = Calendar.getInstance().time.time
-                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-                format.timeZone = TimeZone.getTimeZone("UTC")
-                val createdAt = try {
-                    format.parse(input)?.time
-                } catch (e: ParseException) {
-                    null
-                }
-                val diff = if (createdAt != null) ((currentTime - createdAt) / 1000) else null
-                if (diff != null && diff >= 0) {
-                    getDurationFromSeconds(context, diff.toString(), false)
-                } else null
+            val currentTime = Calendar.getInstance().time.time
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            format.timeZone = TimeZone.getTimeZone("UTC")
+            val createdAt = try {
+                format.parse(input)?.time
+            } catch (e: ParseException) {
+                null
             }
+            val diff = if (createdAt != null) ((currentTime - createdAt) / 1000) else null
+            if (diff != null && diff >= 0) {
+                getDurationFromSeconds(context, diff.toString(), false)
+            } else null
         } else null
     }
 
@@ -225,25 +210,17 @@ object TwitchApiHelper {
     }
 
     fun parseIso8601DateUTC(date: String): Long? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            format.timeZone = TimeZone.getTimeZone("UTC")
+            format.parse(date)?.time?.takeIf { it > 0 }
+        } catch (e: ParseException) {
             try {
-                Instant.parse(date).toEpochMilli().takeIf { it > 0 }
-            } catch (e: DateTimeParseException) {
-                null
-            }
-        } else {
-            try {
-                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
                 format.timeZone = TimeZone.getTimeZone("UTC")
                 format.parse(date)?.time?.takeIf { it > 0 }
             } catch (e: ParseException) {
-                try {
-                    val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
-                    format.timeZone = TimeZone.getTimeZone("UTC")
-                    format.parse(date)?.time?.takeIf { it > 0 }
-                } catch (e: ParseException) {
-                    null
-                }
+                null
             }
         }
     }
