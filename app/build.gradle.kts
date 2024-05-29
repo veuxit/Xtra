@@ -30,16 +30,15 @@ android {
         targetSdk = 34
         versionCode = 121
         versionName = "2.32.0"
-        resourceConfigurations += listOf("ar", "de", "en", "es", "fr", "in", "it", "ja", "pt-rBR", "ru", "tr", "zh-rTW", "zh-rCN")
     }
 
     buildTypes {
-        getByName("debug") {
+        debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-DEBUG"
             signingConfig = signingConfigs.getByName("debug")
         }
-        getByName("release") {
+        release {
             isShrinkResources = true
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -49,6 +48,9 @@ android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
+    }
+    androidResources {
+        generateLocaleConfig = true
     }
     lint {
         disable += "ContentDescription"
