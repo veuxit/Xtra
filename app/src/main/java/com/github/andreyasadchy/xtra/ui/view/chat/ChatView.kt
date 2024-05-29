@@ -102,7 +102,7 @@ class ChatView : ConstraintLayout {
         _binding = ViewChatBinding.inflate(LayoutInflater.from(context), this, true)
     }
 
-    fun init(fragment: Fragment, channelId: String?) {
+    fun init(fragment: Fragment, channelId: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)? = null, chatUrl: String? = null) {
         this.fragment = fragment
         with(binding) {
             adapter = ChatAdapter(
@@ -124,7 +124,9 @@ class ChatView : ConstraintLayout {
                 redeemedChatMsg = context.getString(R.string.redeemed),
                 redeemedNoMsg = context.getString(R.string.user_redeemed),
                 imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
-                channelId = channelId
+                channelId = channelId,
+                getEmoteBytes = getEmoteBytes,
+                chatUrl = chatUrl
             )
             recyclerView.let {
                 it.adapter = adapter
