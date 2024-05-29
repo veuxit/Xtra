@@ -73,7 +73,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     true
                 }
                 chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) -> {
-                    chatView.init(this@ChatFragment, channelId)
+                    chatView.init(this@ChatFragment, channelId, viewModel::getEmoteBytes, chatUrl)
                     true
                 }
                 else -> {

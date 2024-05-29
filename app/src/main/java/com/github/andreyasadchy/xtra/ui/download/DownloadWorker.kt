@@ -21,6 +21,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
@@ -34,7 +35,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
@@ -61,7 +61,6 @@ import okio.appendingSink
 import okio.buffer
 import okio.sink
 import okio.use
-import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -359,109 +358,6 @@ class DownloadWorker @AssistedInject constructor(
                         }
                     }
                     val savedEmotes = mutableListOf<String>()
-                    val comments = mutableListOf<JsonObject>()
-                    val twitchEmotes = mutableListOf<JSONObject>()
-                    val twitchBadges = mutableListOf<JSONObject>()
-                    val cheerEmotes = mutableListOf<JSONObject>()
-                    val emotes = mutableListOf<JSONObject>()
-                    var cursor: String? = null
-                    do {
-                        val get = if (cursor == null) {
-                            graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, offset = startTimeSeconds)
-                        } else {
-                            graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, cursor = cursor)
-                        }
-                        cursor = get.cursor
-                        comments.addAll(get.data)
-                        if (downloadEmotes) {
-                            get.emotes.forEach {
-                                if (!savedTwitchEmotes.contains(it)) {
-                                    savedTwitchEmotes.add(it)
-                                    val emote = TwitchEmote(id = it)
-                                    val url = when (emoteQuality) {
-                                        "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                                        "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                                        "2" -> emote.url2x ?: emote.url1x
-                                        else -> emote.url1x
-                                    }!!
-                                    okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                                        twitchEmotes.add(JSONObject().apply {
-                                            put("data", Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
-                                            put("id", it)
-                                        })
-                                    }
-                                }
-                            }
-                            get.badges.forEach {
-                                val badge = badgeList.find { badge -> badge.setId == it.setId && badge.version == it.version }
-                                if (badge != null && !savedBadges.contains(badge)) {
-                                    savedBadges.add(badge)
-                                    val url = when (emoteQuality) {
-                                        "4" -> badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x
-                                        "3" -> badge.url3x ?: badge.url2x ?: badge.url1x
-                                        "2" -> badge.url2x ?: badge.url1x
-                                        else -> badge.url1x
-                                    }!!
-                                    okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                                        twitchBadges.add(JSONObject().apply {
-                                            put("data", Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
-                                            put("setId", badge.setId)
-                                            put("version", badge.version)
-                                        })
-                                    }
-                                }
-                            }
-                            get.words.forEach { word ->
-                                if (!savedEmotes.contains(word)) {
-                                    val bitsCount = word.takeLastWhile { it.isDigit() }
-                                    val cheerEmote = if (bitsCount.isNotEmpty()) {
-                                        val bitsName = word.substringBeforeLast(bitsCount)
-                                        cheerEmoteList.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
-                                    } else null
-                                    if (cheerEmote != null) {
-                                        savedEmotes.add(word)
-                                        val url = when (emoteQuality) {
-                                            "4" -> cheerEmote.url4x ?: cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
-                                            "3" -> cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
-                                            "2" -> cheerEmote.url2x ?: cheerEmote.url1x
-                                            else -> cheerEmote.url1x
-                                        }!!
-                                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                                            cheerEmotes.add(JSONObject().apply {
-                                                put("data", Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
-                                                put("name", cheerEmote.name)
-                                                put("minBits", cheerEmote.minBits)
-                                                put("color", cheerEmote.color)
-                                            })
-                                        }
-                                    } else {
-                                        val emote = emoteList.find { it.name == word }
-                                        if (emote != null) {
-                                            savedEmotes.add(word)
-                                            val url = when (emoteQuality) {
-                                                "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                                                "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                                                "2" -> emote.url2x ?: emote.url1x
-                                                else -> emote.url1x
-                                            }!!
-                                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                                                emotes.add(JSONObject().apply {
-                                                    put("data", Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
-                                                    put("name", emote.name)
-                                                    put("isZeroWidth", emote.isZeroWidth)
-                                                })
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (get.lastOffsetSeconds != null) {
-                            offlineRepository.updateVideo(offlineVideo.apply {
-                                chatProgress = min((((get.lastOffsetSeconds - startTimeSeconds).toFloat() / durationSeconds) * 100f).toInt(), 100)
-                            })
-                        }
-                    } while (get.lastOffsetSeconds?.let { it < endTimeSeconds } != false && !get.cursor.isNullOrBlank() && get.hasNextPage != false)
                     if (isShared) {
                         context.contentResolver.openOutputStream(fileUri.toUri())!!.bufferedWriter()
                     } else {
@@ -469,75 +365,6 @@ class DownloadWorker @AssistedInject constructor(
                     }.use { fileWriter ->
                         JsonWriter(fileWriter).use { writer ->
                             writer.beginObject()
-                            writer.name("comments")
-                            writer.beginArray()
-                            comments.forEach { json ->
-                                writer.beginObject()
-                                json.keySet().forEach { key ->
-                                    writeJsonElement(key, json.get(key), writer)
-                                }
-                                writer.endObject()
-                            }
-                            writer.endArray()
-                            if (downloadEmotes) {
-                                writer.name("twitchEmotes")
-                                writer.beginArray()
-                                twitchEmotes.forEach { json ->
-                                    writer.beginObject()
-                                    json.keys().forEach { key ->
-                                        when (val value = json.get(key)) {
-                                            is String -> writer.name(key).value(value)
-                                            is Boolean -> writer.name(key).value(value)
-                                            is Int -> writer.name(key).value(value)
-                                        }
-                                    }
-                                    writer.endObject()
-                                }
-                                writer.endArray()
-                                writer.name("twitchBadges")
-                                writer.beginArray()
-                                twitchBadges.forEach { json ->
-                                    writer.beginObject()
-                                    json.keys().forEach { key ->
-                                        when (val value = json.get(key)) {
-                                            is String -> writer.name(key).value(value)
-                                            is Boolean -> writer.name(key).value(value)
-                                            is Int -> writer.name(key).value(value)
-                                        }
-                                    }
-                                    writer.endObject()
-                                }
-                                writer.endArray()
-                                writer.name("cheerEmotes")
-                                writer.beginArray()
-                                cheerEmotes.forEach { json ->
-                                    writer.beginObject()
-                                    json.keys().forEach { key ->
-                                        when (val value = json.get(key)) {
-                                            is String -> writer.name(key).value(value)
-                                            is Boolean -> writer.name(key).value(value)
-                                            is Int -> writer.name(key).value(value)
-                                        }
-                                    }
-                                    writer.endObject()
-                                }
-                                writer.endArray()
-                                writer.name("emotes")
-                                writer.beginArray()
-                                emotes.forEach { json ->
-                                    writer.beginObject()
-                                    json.keys().forEach { key ->
-                                        when (val value = json.get(key)) {
-                                            is String -> writer.name(key).value(value)
-                                            is Boolean -> writer.name(key).value(value)
-                                            is Int -> writer.name(key).value(value)
-                                        }
-                                    }
-                                    writer.endObject()
-                                }
-                                writer.endArray()
-                            }
-                            writer.name("startTime").value(startTimeSeconds)
                             writer.name("video")
                             writer.beginObject()
                             writer.name("id").value(videoId)
@@ -550,6 +377,152 @@ class DownloadWorker @AssistedInject constructor(
                             writer.name("gameSlug").value(offlineVideo.gameSlug)
                             writer.name("gameName").value(offlineVideo.gameName)
                             writer.endObject()
+                            writer.name("startTime").value(startTimeSeconds)
+                            var cursor: String? = null
+                            do {
+                                val get = if (cursor == null) {
+                                    graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, offset = startTimeSeconds)
+                                } else {
+                                    graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, cursor = cursor)
+                                }
+                                cursor = get.cursor
+                                val comments = get.data
+                                if (comments.isNotEmpty()) {
+                                    writer.name("comments")
+                                    writer.beginArray()
+                                    comments.forEach { json ->
+                                        writer.beginObject()
+                                        json.keySet().forEach { key ->
+                                            writeJsonElement(key, json.get(key), writer)
+                                        }
+                                        writer.endObject()
+                                    }
+                                    writer.endArray()
+                                }
+                                if (downloadEmotes) {
+                                    val twitchEmotes = mutableListOf<TwitchEmote>()
+                                    val twitchBadges = mutableListOf<TwitchBadge>()
+                                    val cheerEmotes = mutableListOf<CheerEmote>()
+                                    val emotes = mutableListOf<Emote>()
+                                    get.emotes.forEach {
+                                        if (!savedTwitchEmotes.contains(it)) {
+                                            savedTwitchEmotes.add(it)
+                                            twitchEmotes.add(TwitchEmote(id = it))
+                                        }
+                                    }
+                                    get.badges.forEach {
+                                        val badge = badgeList.find { badge -> badge.setId == it.setId && badge.version == it.version }
+                                        if (badge != null && !savedBadges.contains(badge)) {
+                                            savedBadges.add(badge)
+                                            twitchBadges.add(badge)
+                                        }
+                                    }
+                                    get.words.forEach { word ->
+                                        if (!savedEmotes.contains(word)) {
+                                            val bitsCount = word.takeLastWhile { it.isDigit() }
+                                            val cheerEmote = if (bitsCount.isNotEmpty()) {
+                                                val bitsName = word.substringBeforeLast(bitsCount)
+                                                cheerEmoteList.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
+                                            } else null
+                                            if (cheerEmote != null) {
+                                                savedEmotes.add(word)
+                                                cheerEmotes.add(cheerEmote)
+                                            } else {
+                                                val emote = emoteList.find { it.name == word }
+                                                if (emote != null) {
+                                                    savedEmotes.add(word)
+                                                    emotes.add(emote)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (twitchEmotes.isNotEmpty()) {
+                                        writer.name("twitchEmotes")
+                                        writer.beginArray()
+                                        twitchEmotes.forEach { emote ->
+                                            val url = when (emoteQuality) {
+                                                "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                                                "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                                                "2" -> emote.url2x ?: emote.url1x
+                                                else -> emote.url1x
+                                            }!!
+                                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                                writer.beginObject()
+                                                writer.name("data").value(Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
+                                                writer.name("id").value(emote.id)
+                                                writer.endObject()
+                                            }
+                                        }
+                                        writer.endArray()
+                                    }
+                                    if (twitchBadges.isNotEmpty()) {
+                                        writer.name("twitchBadges")
+                                        writer.beginArray()
+                                        twitchBadges.forEach { badge ->
+                                            val url = when (emoteQuality) {
+                                                "4" -> badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x
+                                                "3" -> badge.url3x ?: badge.url2x ?: badge.url1x
+                                                "2" -> badge.url2x ?: badge.url1x
+                                                else -> badge.url1x
+                                            }!!
+                                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                                writer.beginObject()
+                                                writer.name("data").value(Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
+                                                writer.name("setId").value(badge.setId)
+                                                writer.name("version").value(badge.version)
+                                                writer.endObject()
+                                            }
+                                        }
+                                        writer.endArray()
+                                    }
+                                    if (cheerEmotes.isNotEmpty()) {
+                                        writer.name("cheerEmotes")
+                                        writer.beginArray()
+                                        cheerEmotes.forEach { cheerEmote ->
+                                            val url = when (emoteQuality) {
+                                                "4" -> cheerEmote.url4x ?: cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
+                                                "3" -> cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
+                                                "2" -> cheerEmote.url2x ?: cheerEmote.url1x
+                                                else -> cheerEmote.url1x
+                                            }!!
+                                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                                writer.beginObject()
+                                                writer.name("data").value(Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
+                                                writer.name("name").value(cheerEmote.name)
+                                                writer.name("minBits").value(cheerEmote.minBits)
+                                                writer.name("color").value(cheerEmote.color)
+                                                writer.endObject()
+                                            }
+                                        }
+                                        writer.endArray()
+                                    }
+                                    if (emotes.isNotEmpty()) {
+                                        writer.name("emotes")
+                                        writer.beginArray()
+                                        emotes.forEach { emote ->
+                                            val url = when (emoteQuality) {
+                                                "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                                                "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                                                "2" -> emote.url2x ?: emote.url1x
+                                                else -> emote.url1x
+                                            }!!
+                                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                                writer.beginObject()
+                                                writer.name("data").value(Base64.encodeToString(response.body()!!.source().readByteArray(), Base64.NO_WRAP or Base64.NO_PADDING))
+                                                writer.name("name").value(emote.name)
+                                                writer.name("isZeroWidth").value(emote.isZeroWidth)
+                                                writer.endObject()
+                                            }
+                                        }
+                                        writer.endArray()
+                                    }
+                                }
+                                if (get.lastOffsetSeconds != null) {
+                                    offlineRepository.updateVideo(offlineVideo.apply {
+                                        chatProgress = min((((get.lastOffsetSeconds - startTimeSeconds).toFloat() / durationSeconds) * 100f).toInt(), 100)
+                                    })
+                                }
+                            } while (get.lastOffsetSeconds?.let { it < endTimeSeconds } != false && !get.cursor.isNullOrBlank() && get.hasNextPage != false)
                             writer.endObject()
                         }
                     }
@@ -562,34 +535,36 @@ class DownloadWorker @AssistedInject constructor(
     }
 
     private fun writeJsonElement(key: String, value: JsonElement, writer: JsonWriter) {
-        when {
-            value.isJsonObject -> {
-                writer.name(key)
-                writer.beginObject()
-                value.asJsonObject.entrySet().forEach {
-                    writeJsonElement(it.key, it.value, writer)
-                }
-                writer.endObject()
-            }
-            value.isJsonArray -> {
-                writer.name(key)
-                writer.beginArray()
-                value.asJsonArray.forEach { json ->
-                    if (json.isJsonObject) {
-                        writer.beginObject()
-                        json.asJsonObject.entrySet().forEach {
-                            writeJsonElement(it.key, it.value, writer)
-                        }
-                        writer.endObject()
+        if (key != "__typename") {
+            when {
+                value.isJsonObject -> {
+                    writer.name(key)
+                    writer.beginObject()
+                    value.asJsonObject.entrySet().forEach {
+                        writeJsonElement(it.key, it.value, writer)
                     }
+                    writer.endObject()
                 }
-                writer.endArray()
-            }
-            value.isJsonPrimitive -> {
-                when {
-                    value.asJsonPrimitive.isString -> writer.name(key).value(value.asString)
-                    value.asJsonPrimitive.isBoolean -> writer.name(key).value(value.asBoolean)
-                    value.asJsonPrimitive.isNumber -> writer.name(key).value(value.asNumber)
+                value.isJsonArray -> {
+                    writer.name(key)
+                    writer.beginArray()
+                    value.asJsonArray.forEach { json ->
+                        if (json.isJsonObject) {
+                            writer.beginObject()
+                            json.asJsonObject.entrySet().forEach {
+                                writeJsonElement(it.key, it.value, writer)
+                            }
+                            writer.endObject()
+                        }
+                    }
+                    writer.endArray()
+                }
+                value.isJsonPrimitive -> {
+                    when {
+                        value.asJsonPrimitive.isString -> writer.name(key).value(value.asString)
+                        value.asJsonPrimitive.isBoolean -> writer.name(key).value(value.asBoolean)
+                        value.asJsonPrimitive.isNumber -> writer.name(key).value(value.asNumber)
+                    }
                 }
             }
         }

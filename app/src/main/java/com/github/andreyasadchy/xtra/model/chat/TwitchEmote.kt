@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.model.chat
 class TwitchEmote(
     val id: String? = null,
     val name: String? = null,
-    val localData: ByteArray? = null,
+    val localData: Pair<Long, Int>? = null,
     val url1x: String? = "https://static-cdn.jtvnw.net/emoticons/v2/$id/default/dark/1.0",
     val url2x: String? = "https://static-cdn.jtvnw.net/emoticons/v2/$id/default/dark/2.0",
     val url3x: String? = "https://static-cdn.jtvnw.net/emoticons/v2/$id/default/dark/2.0",

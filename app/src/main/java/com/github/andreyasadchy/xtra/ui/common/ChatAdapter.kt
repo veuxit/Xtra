@@ -40,6 +40,7 @@ import kotlin.collections.set
 import kotlin.math.floor
 import kotlin.math.pow
 
+
 private const val RED_HUE_DEGREES = 0f
 private const val GREEN_HUE_DEGREES = 120f
 private const val BLUE_HUE_DEGREES = 240f
@@ -65,7 +66,9 @@ class ChatAdapter(
     private val redeemedChatMsg: String,
     private val redeemedNoMsg: String,
     private val imageLibrary: String?,
-    private val channelId: String?) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
+    private val channelId: String?,
+    private val getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?,
+    private val chatUrl: String?) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     var messages: MutableList<ChatMessage>? = null
         set(value) {
@@ -80,6 +83,10 @@ class ChatAdapter(
     private val random = Random()
     private val userColors = HashMap<String, Int>()
     private val savedColors = HashMap<String, Int>()
+    private val savedLocalTwitchEmotes = mutableMapOf<String, ByteArray>()
+    private val savedLocalBadges = mutableMapOf<String, ByteArray>()
+    private val savedLocalCheerEmotes = mutableMapOf<String, ByteArray>()
+    private val savedLocalEmotes = mutableMapOf<String, ByteArray>()
     private var localTwitchEmotes: List<TwitchEmote>? = null
     private var globalStvEmotes: List<Emote>? = null
     private var channelStvEmotes: List<Emote>? = null
@@ -189,7 +196,7 @@ class ChatAdapter(
                 if (badge != null) {
                     builder.append("  ")
                     images.add(Image(
-                        localData = badge.localData,
+                        localData = badge.localData?.let { getLocalBadgeData(badge.setId + badge.version, it) },
                         url1x = badge.url1x,
                         url2x = badge.url2x,
                         url3x = badge.url3x,
@@ -263,18 +270,20 @@ class ChatAdapter(
                         }
                         e.end -= length
                     }
-                    copy.forEach { images.add(Image(
-                        localData = it.localData,
-                        url1x = it.url1x,
-                        url2x = it.url2x,
-                        url3x = it.url3x,
-                        url4x = it.url4x,
-                        format = it.format,
-                        isAnimated = it.isAnimated,
-                        isEmote = true,
-                        start = builderIndex + it.begin,
-                        end = builderIndex + it.end + 1
-                    )) }
+                    copy.forEach { emote ->
+                        images.add(Image(
+                            localData = emote.localData?.let { getLocalTwitchEmoteData(emote.id!!, it) },
+                            url1x = emote.url1x,
+                            url2x = emote.url2x,
+                            url3x = emote.url3x,
+                            url4x = emote.url4x,
+                            format = emote.format,
+                            isAnimated = emote.isAnimated,
+                            isEmote = true,
+                            start = builderIndex + emote.begin,
+                            end = builderIndex + emote.end + 1
+                        ))
+                    }
                 }
                 val split = builder.substring(builderIndex).split(" ")
                 var emotesFound = 0
@@ -297,7 +306,7 @@ class ChatAdapter(
                                 builder.replace(builderIndex, builderIndex + bitsName.length, ".")
                                 builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
                                 images.add(Image(
-                                    localData = emote.localData,
+                                    localData = emote.localData?.let { getLocalCheerEmoteData(emote.name + emote.minBits, it) },
                                     url1x = emote.url1x,
                                     url2x = emote.url2x,
                                     url3x = emote.url3x,
@@ -338,7 +347,7 @@ class ChatAdapter(
                             builder.replace(builderIndex, builderIndex + value.length, ".")
                             builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
                             images.add(Image(
-                                localData = emote.localData,
+                                localData = emote.localData?.let { getLocalEmoteData(emote.name!!, it) },
                                 url1x = emote.url1x,
                                 url2x = emote.url2x,
                                 url3x = emote.url3x,
@@ -443,6 +452,58 @@ class ChatAdapter(
                 override fun onLoadCleared(placeholder: Drawable?) {
                 }
             })
+    }
+
+    private fun getLocalTwitchEmoteData(name: String, data: Pair<Long, Int>): ByteArray? {
+        return savedLocalTwitchEmotes[name] ?: chatUrl?.let{ url ->
+            getEmoteBytes?.let { get ->
+                get(url, data)?.also {
+                    if (savedLocalTwitchEmotes.size >= 100) {
+                        savedLocalTwitchEmotes.remove(savedLocalTwitchEmotes.keys.first())
+                    }
+                    savedLocalTwitchEmotes[name] = it
+                }
+            }
+        }
+    }
+
+    private fun getLocalBadgeData(name: String, data: Pair<Long, Int>): ByteArray? {
+        return savedLocalBadges[name] ?: chatUrl?.let{ url ->
+            getEmoteBytes?.let { get ->
+                get(url, data)?.also {
+                    if (savedLocalBadges.size >= 100) {
+                        savedLocalBadges.remove(savedLocalBadges.keys.first())
+                    }
+                    savedLocalBadges[name] = it
+                }
+            }
+        }
+    }
+
+    private fun getLocalCheerEmoteData(name: String, data: Pair<Long, Int>): ByteArray? {
+        return savedLocalCheerEmotes[name] ?: chatUrl?.let{ url ->
+            getEmoteBytes?.let { get ->
+                get(url, data)?.also {
+                    if (savedLocalCheerEmotes.size >= 100) {
+                        savedLocalCheerEmotes.remove(savedLocalCheerEmotes.keys.first())
+                    }
+                    savedLocalCheerEmotes[name] = it
+                }
+            }
+        }
+    }
+
+    private fun getLocalEmoteData(name: String, data: Pair<Long, Int>): ByteArray? {
+        return savedLocalEmotes[name] ?: chatUrl?.let{ url ->
+            getEmoteBytes?.let { get ->
+                get(url, data)?.also {
+                    if (savedLocalEmotes.size >= 100) {
+                        savedLocalEmotes.remove(savedLocalEmotes.keys.first())
+                    }
+                    savedLocalEmotes[name] = it
+                }
+            }
+        }
     }
 
     fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
