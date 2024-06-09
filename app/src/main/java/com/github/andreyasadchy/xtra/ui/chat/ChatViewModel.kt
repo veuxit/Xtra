@@ -1335,35 +1335,155 @@ class ChatViewModel @Inject constructor(
                         FileInputStream(File(url)).bufferedReader()
                     }?.use { fileReader ->
                         JsonReader(fileReader).use { reader ->
+                            reader.isLenient = true
                             var position = 0L
-                            reader.beginObject().also { position += 1 }
-                            while (reader.hasNext()) {
-                                when (reader.peek()) {
-                                    JsonToken.NAME -> {
-                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                            "comments" -> {
-                                                reader.beginArray().also { position += 1 }
-                                                while (reader.hasNext()) {
-                                                    reader.beginObject().also { position += 1 }
-                                                    val message = StringBuilder()
-                                                    var id: String? = null
-                                                    var offsetSeconds: Int? = null
-                                                    var userId: String? = null
-                                                    var userLogin: String? = null
-                                                    var userName: String? = null
-                                                    var color: String? = null
-                                                    val emotesList = mutableListOf<TwitchEmote>()
-                                                    val badgesList = mutableListOf<Badge>()
-                                                    while (reader.hasNext()) {
-                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                            "id" -> id = reader.nextString().also { position += it.length + 2 }
-                                                            "commenter" -> {
+                            var token: JsonToken
+                            do {
+                                token = reader.peek()
+                                when (token) {
+                                    JsonToken.END_DOCUMENT -> {}
+                                    JsonToken.BEGIN_OBJECT -> {
+                                        reader.beginObject().also { position += 1 }
+                                        while (reader.hasNext()) {
+                                            when (reader.peek()) {
+                                                JsonToken.NAME -> {
+                                                    when (reader.nextName().also { position += it.length + 3 }) {
+                                                        "comments" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
                                                                 reader.beginObject().also { position += 1 }
+                                                                val message = StringBuilder()
+                                                                var id: String? = null
+                                                                var offsetSeconds: Int? = null
+                                                                var userId: String? = null
+                                                                var userLogin: String? = null
+                                                                var userName: String? = null
+                                                                var color: String? = null
+                                                                val emotesList = mutableListOf<TwitchEmote>()
+                                                                val badgesList = mutableListOf<Badge>()
                                                                 while (reader.hasNext()) {
                                                                     when (reader.nextName().also { position += it.length + 3 }) {
-                                                                        "id" -> userId = reader.nextString().also { position += it.length + 2 }
-                                                                        "login" -> userLogin = reader.nextString().also { position += it.length + 2 }
-                                                                        "displayName" -> userName = reader.nextString().also { position += it.length + 2 }
+                                                                        "id" -> id = reader.nextString().also { position += it.length + 2 }
+                                                                        "commenter" -> {
+                                                                            reader.beginObject().also { position += 1 }
+                                                                            while (reader.hasNext()) {
+                                                                                when (reader.nextName().also { position += it.length + 3 }) {
+                                                                                    "id" -> userId = reader.nextString().also { position += it.length + 2 }
+                                                                                    "login" -> userLogin = reader.nextString().also { position += it.length + 2 }
+                                                                                    "displayName" -> userName = reader.nextString().also { position += it.length + 2 }
+                                                                                    else -> position += skipJsonValue(reader)
+                                                                                }
+                                                                                if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                                    position += 1
+                                                                                }
+                                                                            }
+                                                                            reader.endObject().also { position += 1 }
+                                                                        }
+                                                                        "contentOffsetSeconds" -> offsetSeconds = reader.nextInt().also { position += it.toString().length }
+                                                                        "message" -> {
+                                                                            reader.beginObject().also { position += 1 }
+                                                                            while (reader.hasNext()) {
+                                                                                when (reader.nextName().also { position += it.length + 3 }) {
+                                                                                    "fragments" -> {
+                                                                                        reader.beginArray().also { position += 1 }
+                                                                                        while (reader.hasNext()) {
+                                                                                            reader.beginObject().also { position += 1 }
+                                                                                            var emoteId: String? = null
+                                                                                            var fragmentText: String? = null
+                                                                                            while (reader.hasNext()) {
+                                                                                                when (reader.nextName().also { position += it.length + 3 }) {
+                                                                                                    "emote" -> {
+                                                                                                        when (reader.peek()) {
+                                                                                                            JsonToken.BEGIN_OBJECT -> {
+                                                                                                                reader.beginObject().also { position += 1 }
+                                                                                                                while (reader.hasNext()) {
+                                                                                                                    when (reader.nextName().also { position += it.length + 3 }) {
+                                                                                                                        "emoteID" -> emoteId = reader.nextString().also { position += it.length + 2 }
+                                                                                                                        else -> position += skipJsonValue(reader)
+                                                                                                                    }
+                                                                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                                                                        position += 1
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                reader.endObject().also { position += 1 }
+                                                                                                            }
+                                                                                                            else -> position += skipJsonValue(reader)
+                                                                                                        }
+                                                                                                    }
+                                                                                                    "text" -> fragmentText = reader.nextString().also { position += it.length + 2 + it.count { c -> c == '"' || c == '\\' } }
+                                                                                                    else -> position += skipJsonValue(reader)
+                                                                                                }
+                                                                                                if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                                                    position += 1
+                                                                                                }
+                                                                                            }
+                                                                                            if (fragmentText != null && !emoteId.isNullOrBlank()) {
+                                                                                                emotesList.add(TwitchEmote(
+                                                                                                    id = emoteId,
+                                                                                                    begin = message.codePointCount(0, message.length),
+                                                                                                    end = message.codePointCount(0, message.length) + fragmentText.lastIndex
+                                                                                                ))
+                                                                                            }
+                                                                                            message.append(fragmentText)
+                                                                                            reader.endObject().also { position += 1 }
+                                                                                            if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                                                position += 1
+                                                                                            }
+                                                                                        }
+                                                                                        reader.endArray().also { position += 1 }
+                                                                                    }
+                                                                                    "userBadges" -> {
+                                                                                        reader.beginArray().also { position += 1 }
+                                                                                        while (reader.hasNext()) {
+                                                                                            reader.beginObject().also { position += 1 }
+                                                                                            var set: String? = null
+                                                                                            var version: String? = null
+                                                                                            while (reader.hasNext()) {
+                                                                                                when (reader.nextName().also { position += it.length + 3 }) {
+                                                                                                    "setID" -> set = reader.nextString().also { position += it.length + 2 }
+                                                                                                    "version" -> version = reader.nextString().also { position += it.length + 2 }
+                                                                                                    else -> position += skipJsonValue(reader)
+                                                                                                }
+                                                                                                if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                                                    position += 1
+                                                                                                }
+                                                                                            }
+                                                                                            if (!set.isNullOrBlank() && !version.isNullOrBlank()) {
+                                                                                                badgesList.add(Badge(set, version))
+                                                                                            }
+                                                                                            reader.endObject().also { position += 1 }
+                                                                                            if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                                                position += 1
+                                                                                            }
+                                                                                        }
+                                                                                        reader.endArray().also { position += 1 }
+                                                                                    }
+                                                                                    "userColor" -> {
+                                                                                        when (reader.peek()) {
+                                                                                            JsonToken.STRING -> color = reader.nextString().also { position += it.length + 2 }
+                                                                                            else -> position += skipJsonValue(reader)
+                                                                                        }
+                                                                                    }
+                                                                                    else -> position += skipJsonValue(reader)
+                                                                                }
+                                                                                if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                                    position += 1
+                                                                                }
+                                                                            }
+                                                                            messages.add(VideoChatMessage(
+                                                                                id = id,
+                                                                                offsetSeconds = offsetSeconds,
+                                                                                userId = userId,
+                                                                                userLogin = userLogin,
+                                                                                userName = userName,
+                                                                                message = message.toString(),
+                                                                                color = color,
+                                                                                emotes = emotesList,
+                                                                                badges = badgesList,
+                                                                                fullMsg = null
+                                                                            ))
+                                                                            reader.endObject().also { position += 1 }
+                                                                        }
                                                                         else -> position += skipJsonValue(reader)
                                                                     }
                                                                     if (reader.peek() != JsonToken.END_OBJECT) {
@@ -1371,87 +1491,102 @@ class ChatViewModel @Inject constructor(
                                                                     }
                                                                 }
                                                                 reader.endObject().also { position += 1 }
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
+                                                                }
                                                             }
-                                                            "contentOffsetSeconds" -> offsetSeconds = reader.nextInt().also { position += it.toString().length }
-                                                            "message" -> {
+                                                            reader.endArray().also { position += 1 }
+                                                        }
+                                                        "twitchEmotes" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
                                                                 reader.beginObject().also { position += 1 }
+                                                                var id: String? = null
+                                                                var data: Pair<Long, Int>? = null
                                                                 while (reader.hasNext()) {
                                                                     when (reader.nextName().also { position += it.length + 3 }) {
-                                                                        "fragments" -> {
-                                                                            reader.beginArray().also { position += 1 }
-                                                                            while (reader.hasNext()) {
-                                                                                reader.beginObject().also { position += 1 }
-                                                                                var emoteId: String? = null
-                                                                                var fragmentText: String? = null
-                                                                                while (reader.hasNext()) {
-                                                                                    when (reader.nextName().also { position += it.length + 3 }) {
-                                                                                        "emote" -> {
-                                                                                            when (reader.peek()) {
-                                                                                                JsonToken.BEGIN_OBJECT -> {
-                                                                                                    reader.beginObject().also { position += 1 }
-                                                                                                    while (reader.hasNext()) {
-                                                                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                                                                            "emoteID" -> emoteId = reader.nextString().also { position += it.length + 2 }
-                                                                                                            else -> position += skipJsonValue(reader)
-                                                                                                        }
-                                                                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                                                                            position += 1
-                                                                                                        }
-                                                                                                    }
-                                                                                                    reader.endObject().also { position += 1 }
-                                                                                                }
-                                                                                                else -> position += skipJsonValue(reader)
-                                                                                            }
-                                                                                        }
-                                                                                        "text" -> fragmentText = reader.nextString().also { position += it.length + 2 + it.count { c -> c == '"' || c == '\\' } }
-                                                                                        else -> position += skipJsonValue(reader)
-                                                                                    }
-                                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
-                                                                                        position += 1
-                                                                                    }
-                                                                                }
-                                                                                if (fragmentText != null && !emoteId.isNullOrBlank()) {
-                                                                                    emotesList.add(TwitchEmote(
-                                                                                        id = emoteId,
-                                                                                        begin = message.codePointCount(0, message.length),
-                                                                                        end = message.codePointCount(0, message.length) + fragmentText.lastIndex
-                                                                                    ))
-                                                                                }
-                                                                                message.append(fragmentText)
-                                                                                reader.endObject().also { position += 1 }
-                                                                                if (reader.peek() != JsonToken.END_ARRAY) {
-                                                                                    position += 1
-                                                                                }
-                                                                            }
-                                                                            reader.endArray().also { position += 1 }
+                                                                        "data" -> {
+                                                                            position += 1
+                                                                            val length = reader.nextString().length
+                                                                            data = Pair(position, length)
+                                                                            position += length + 1
                                                                         }
-                                                                        "userBadges" -> {
-                                                                            reader.beginArray().also { position += 1 }
-                                                                            while (reader.hasNext()) {
-                                                                                reader.beginObject().also { position += 1 }
-                                                                                var set: String? = null
-                                                                                var version: String? = null
-                                                                                while (reader.hasNext()) {
-                                                                                    when (reader.nextName().also { position += it.length + 3 }) {
-                                                                                        "setID" -> set = reader.nextString().also { position += it.length + 2 }
-                                                                                        "version" -> version = reader.nextString().also { position += it.length + 2 }
-                                                                                        else -> position += skipJsonValue(reader)
-                                                                                    }
-                                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
-                                                                                        position += 1
-                                                                                    }
-                                                                                }
-                                                                                if (!set.isNullOrBlank() && !version.isNullOrBlank()) {
-                                                                                    badgesList.add(Badge(set, version))
-                                                                                }
-                                                                                reader.endObject().also { position += 1 }
-                                                                                if (reader.peek() != JsonToken.END_ARRAY) {
-                                                                                    position += 1
-                                                                                }
-                                                                            }
-                                                                            reader.endArray().also { position += 1 }
+                                                                        "id" -> id = reader.nextString().also { position += it.length + 2 }
+                                                                        else -> position += skipJsonValue(reader)
+                                                                    }
+                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                        position += 1
+                                                                    }
+                                                                }
+                                                                if (!id.isNullOrBlank() && data != null) {
+                                                                    twitchEmotes.add(TwitchEmote(
+                                                                        id = id,
+                                                                        localData = data
+                                                                    ))
+                                                                }
+                                                                reader.endObject().also { position += 1 }
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
+                                                                }
+                                                            }
+                                                            reader.endArray().also { position += 1 }
+                                                        }
+                                                        "twitchBadges" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
+                                                                reader.beginObject().also { position += 1 }
+                                                                var setId: String? = null
+                                                                var version: String? = null
+                                                                var data: Pair<Long, Int>? = null
+                                                                while (reader.hasNext()) {
+                                                                    when (reader.nextName().also { position += it.length + 3 }) {
+                                                                        "data" -> {
+                                                                            position += 1
+                                                                            val length = reader.nextString().length
+                                                                            data = Pair(position, length)
+                                                                            position += length + 1
                                                                         }
-                                                                        "userColor" -> {
+                                                                        "setId" -> setId = reader.nextString().also { position += it.length + 2 }
+                                                                        "version" -> version = reader.nextString().also { position += it.length + 2 }
+                                                                        else -> position += skipJsonValue(reader)
+                                                                    }
+                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                        position += 1
+                                                                    }
+                                                                }
+                                                                if (!setId.isNullOrBlank() && !version.isNullOrBlank() && data != null) {
+                                                                    twitchBadges.add(TwitchBadge(
+                                                                        setId = setId,
+                                                                        version = version,
+                                                                        localData = data
+                                                                    ))
+                                                                }
+                                                                reader.endObject().also { position += 1 }
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
+                                                                }
+                                                            }
+                                                            reader.endArray().also { position += 1 }
+                                                        }
+                                                        "cheerEmotes" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
+                                                                reader.beginObject().also { position += 1 }
+                                                                var name: String? = null
+                                                                var data: Pair<Long, Int>? = null
+                                                                var minBits: Int? = null
+                                                                var color: String? = null
+                                                                while (reader.hasNext()) {
+                                                                    when (reader.nextName().also { position += it.length + 3 }) {
+                                                                        "data" -> {
+                                                                            position += 1
+                                                                            val length = reader.nextString().length
+                                                                            data = Pair(position, length)
+                                                                            position += length + 1
+                                                                        }
+                                                                        "name" -> name = reader.nextString().also { position += it.length + 2 }
+                                                                        "minBits" -> minBits = reader.nextInt().also { position += it.toString().length }
+                                                                        "color" -> {
                                                                             when (reader.peek()) {
                                                                                 JsonToken.STRING -> color = reader.nextString().also { position += it.length + 2 }
                                                                                 else -> position += skipJsonValue(reader)
@@ -1463,197 +1598,73 @@ class ChatViewModel @Inject constructor(
                                                                         position += 1
                                                                     }
                                                                 }
-                                                                messages.add(VideoChatMessage(
-                                                                    id = id,
-                                                                    offsetSeconds = offsetSeconds,
-                                                                    userId = userId,
-                                                                    userLogin = userLogin,
-                                                                    userName = userName,
-                                                                    message = message.toString(),
-                                                                    color = color,
-                                                                    emotes = emotesList,
-                                                                    badges = badgesList,
-                                                                    fullMsg = null
-                                                                ))
+                                                                if (!name.isNullOrBlank() && minBits != null && data != null) {
+                                                                    cheerEmotesList.add(CheerEmote(
+                                                                        name = name,
+                                                                        localData = data,
+                                                                        minBits = minBits,
+                                                                        color = color
+                                                                    ))
+                                                                }
                                                                 reader.endObject().also { position += 1 }
-                                                            }
-                                                            else -> position += skipJsonValue(reader)
-                                                        }
-                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                            position += 1
-                                                        }
-                                                    }
-                                                    reader.endObject().also { position += 1 }
-                                                    if (reader.peek() != JsonToken.END_ARRAY) {
-                                                        position += 1
-                                                    }
-                                                }
-                                                reader.endArray().also { position += 1 }
-                                            }
-                                            "twitchEmotes" -> {
-                                                reader.beginArray().also { position += 1 }
-                                                while (reader.hasNext()) {
-                                                    reader.beginObject().also { position += 1 }
-                                                    var id: String? = null
-                                                    var data: Pair<Long, Int>? = null
-                                                    while (reader.hasNext()) {
-                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                            "data" -> {
-                                                                position += 1
-                                                                val length = reader.nextString().length
-                                                                data = Pair(position, length)
-                                                                position += length + 1
-                                                            }
-                                                            "id" -> id = reader.nextString().also { position += it.length + 2 }
-                                                            else -> position += skipJsonValue(reader)
-                                                        }
-                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                            position += 1
-                                                        }
-                                                    }
-                                                    if (!id.isNullOrBlank() && data != null) {
-                                                        twitchEmotes.add(TwitchEmote(
-                                                            id = id,
-                                                            localData = data
-                                                        ))
-                                                    }
-                                                    reader.endObject().also { position += 1 }
-                                                    if (reader.peek() != JsonToken.END_ARRAY) {
-                                                        position += 1
-                                                    }
-                                                }
-                                                reader.endArray().also { position += 1 }
-                                            }
-                                            "twitchBadges" -> {
-                                                reader.beginArray().also { position += 1 }
-                                                while (reader.hasNext()) {
-                                                    reader.beginObject().also { position += 1 }
-                                                    var setId: String? = null
-                                                    var version: String? = null
-                                                    var data: Pair<Long, Int>? = null
-                                                    while (reader.hasNext()) {
-                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                            "data" -> {
-                                                                position += 1
-                                                                val length = reader.nextString().length
-                                                                data = Pair(position, length)
-                                                                position += length + 1
-                                                            }
-                                                            "setId" -> setId = reader.nextString().also { position += it.length + 2 }
-                                                            "version" -> version = reader.nextString().also { position += it.length + 2 }
-                                                            else -> position += skipJsonValue(reader)
-                                                        }
-                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                            position += 1
-                                                        }
-                                                    }
-                                                    if (!setId.isNullOrBlank() && !version.isNullOrBlank() && data != null) {
-                                                        twitchBadges.add(TwitchBadge(
-                                                            setId = setId,
-                                                            version = version,
-                                                            localData = data
-                                                        ))
-                                                    }
-                                                    reader.endObject().also { position += 1 }
-                                                    if (reader.peek() != JsonToken.END_ARRAY) {
-                                                        position += 1
-                                                    }
-                                                }
-                                                reader.endArray().also { position += 1 }
-                                            }
-                                            "cheerEmotes" -> {
-                                                reader.beginArray().also { position += 1 }
-                                                while (reader.hasNext()) {
-                                                    reader.beginObject().also { position += 1 }
-                                                    var name: String? = null
-                                                    var data: Pair<Long, Int>? = null
-                                                    var minBits: Int? = null
-                                                    var color: String? = null
-                                                    while (reader.hasNext()) {
-                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                            "data" -> {
-                                                                position += 1
-                                                                val length = reader.nextString().length
-                                                                data = Pair(position, length)
-                                                                position += length + 1
-                                                            }
-                                                            "name" -> name = reader.nextString().also { position += it.length + 2 }
-                                                            "minBits" -> minBits = reader.nextInt().also { position += it.toString().length }
-                                                            "color" -> {
-                                                                when (reader.peek()) {
-                                                                    JsonToken.STRING -> color = reader.nextString().also { position += it.length + 2 }
-                                                                    else -> position += skipJsonValue(reader)
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
                                                                 }
                                                             }
-                                                            else -> position += skipJsonValue(reader)
+                                                            reader.endArray().also { position += 1 }
                                                         }
-                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                            position += 1
-                                                        }
-                                                    }
-                                                    if (!name.isNullOrBlank() && minBits != null && data != null) {
-                                                        cheerEmotesList.add(CheerEmote(
-                                                            name = name,
-                                                            localData = data,
-                                                            minBits = minBits,
-                                                            color = color
-                                                        ))
-                                                    }
-                                                    reader.endObject().also { position += 1 }
-                                                    if (reader.peek() != JsonToken.END_ARRAY) {
-                                                        position += 1
-                                                    }
-                                                }
-                                                reader.endArray().also { position += 1 }
-                                            }
-                                            "emotes" -> {
-                                                reader.beginArray().also { position += 1 }
-                                                while (reader.hasNext()) {
-                                                    reader.beginObject().also { position += 1 }
-                                                    var data: Pair<Long, Int>? = null
-                                                    var name: String? = null
-                                                    var isZeroWidth = false
-                                                    while (reader.hasNext()) {
-                                                        when (reader.nextName().also { position += it.length + 3 }) {
-                                                            "data" -> {
-                                                                position += 1
-                                                                val length = reader.nextString().length
-                                                                data = Pair(position, length)
-                                                                position += length + 1
+                                                        "emotes" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
+                                                                reader.beginObject().also { position += 1 }
+                                                                var data: Pair<Long, Int>? = null
+                                                                var name: String? = null
+                                                                var isZeroWidth = false
+                                                                while (reader.hasNext()) {
+                                                                    when (reader.nextName().also { position += it.length + 3 }) {
+                                                                        "data" -> {
+                                                                            position += 1
+                                                                            val length = reader.nextString().length
+                                                                            data = Pair(position, length)
+                                                                            position += length + 1
+                                                                        }
+                                                                        "name" -> name = reader.nextString().also { position += it.length + 2 }
+                                                                        "isZeroWidth" -> isZeroWidth = reader.nextBoolean().also { position += it.toString().length }
+                                                                        else -> position += skipJsonValue(reader)
+                                                                    }
+                                                                    if (reader.peek() != JsonToken.END_OBJECT) {
+                                                                        position += 1
+                                                                    }
+                                                                }
+                                                                if (!name.isNullOrBlank() && data != null) {
+                                                                    emotes.add(Emote(
+                                                                        name = name,
+                                                                        localData = data,
+                                                                        isZeroWidth = isZeroWidth
+                                                                    ))
+                                                                }
+                                                                reader.endObject().also { position += 1 }
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
+                                                                }
                                                             }
-                                                            "name" -> name = reader.nextString().also { position += it.length + 2 }
-                                                            "isZeroWidth" -> isZeroWidth = reader.nextBoolean().also { position += it.toString().length }
-                                                            else -> position += skipJsonValue(reader)
+                                                            reader.endArray().also { position += 1 }
                                                         }
-                                                        if (reader.peek() != JsonToken.END_OBJECT) {
-                                                            position += 1
-                                                        }
-                                                    }
-                                                    if (!name.isNullOrBlank() && data != null) {
-                                                        emotes.add(Emote(
-                                                            name = name,
-                                                            localData = data,
-                                                            isZeroWidth = isZeroWidth
-                                                        ))
-                                                    }
-                                                    reader.endObject().also { position += 1 }
-                                                    if (reader.peek() != JsonToken.END_ARRAY) {
-                                                        position += 1
+                                                        "startTime" -> { startTimeMs = reader.nextInt().also { position += it.toString().length }.times(1000L) }
+                                                        else -> position += skipJsonValue(reader)
                                                     }
                                                 }
-                                                reader.endArray().also { position += 1 }
+                                                else -> position += skipJsonValue(reader)
                                             }
-                                            "startTime" -> { startTimeMs = reader.nextInt().also { position += it.toString().length }.times(1000L) }
-                                            else -> position += skipJsonValue(reader)
+                                            if (reader.peek() != JsonToken.END_OBJECT) {
+                                                position += 1
+                                            }
                                         }
+                                        reader.endObject().also { position += 1 }
                                     }
                                     else -> position += skipJsonValue(reader)
                                 }
-                                if (reader.peek() != JsonToken.END_OBJECT) {
-                                    position += 1
-                                }
-                            }
-                            reader.endObject().also { position += 1 }
+                            } while (token != JsonToken.END_DOCUMENT)
                         }
                     }
                     localTwitchEmotes.postValue(twitchEmotes)

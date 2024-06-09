@@ -577,7 +577,6 @@
     <string name="proxy_settings">Http proxy ayarları</string>
     <string name="stop_download">İndirmeyi durdur</string>
     <string name="resume_download">İndirmeye devam et</string>
-    <string name="use_workmanager_downloads">İndirmeler için WorkManager\'ı kullanın</string>
     <string name="show_view_count_icon">Görüntüleme sayısını ve çalışma süresi simgelerini göster</string>
     <string name="playback_speeds">Oynatma hızları</string>
     <string name="use_custom_proxy">Özel proxy kullan</string>
@@ -621,4 +620,8 @@
     <string name="download_chat_emotes">Download emotes and badges</string>
     <string name="chat_downloading_progress">Chat: %d%%</string>
     <string name="change_chat_file">Change chat file</string>
+    <string name="download_queued">Queued</string>
+    <string name="download_blocked">Waiting for Internet connection</string>
+    <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
+    <string name="download_wifi_only">Download using Wi-Fi only</string>
 </resources>

@@ -28,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 34
-        versionCode = 240
-        versionName = "2.32.1"
+        versionCode = 241
+        versionName = "2.32.2"
     }
 
     buildTypes {
@@ -91,8 +91,6 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.apollo.runtime)
 
-    implementation(libs.fetch)
-    implementation(libs.fetch.okhttp)
     implementation(libs.okio)
     implementation(libs.open.m3u8)
 

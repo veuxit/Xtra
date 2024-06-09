@@ -26,7 +26,3 @@
 }
 
 -keep class com.woxthebox.draglistview.** { *; }
-
-# fetch okhttp
--dontwarn okhttp3.internal.Util
--dontwarn okhttp3.internal.annotations.EverythingIsNonNull

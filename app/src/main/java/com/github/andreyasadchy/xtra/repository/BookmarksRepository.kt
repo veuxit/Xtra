@@ -41,7 +41,7 @@ class BookmarksRepository @Inject constructor(
         if (!item.videoId.isNullOrBlank() && videosDao.getByVideoId(item.videoId).isEmpty()) {
             File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
         }
-        if (!item.userId.isNullOrBlank() && localFollowsChannelDao.getByUserId(item.userId) == null && videosDao.getByUserId(item.userId).isEmpty()) {
+        if (!item.userId.isNullOrBlank() && getBookmarksByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId).isEmpty() && localFollowsChannelDao.getByUserId(item.userId) == null) {
             File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
         }
         bookmarksDao.delete(item)

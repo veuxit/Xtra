@@ -580,6 +580,13 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="download_wifi_only"
+        android:title="@string/download_wifi_only"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <SeekBarPreference
         android:defaultValue="10"
         android:key="download_concurrent_limit"
@@ -663,13 +670,6 @@
     <Preference
         android:key="get_integrity_token"
         android:title="@string/get_integrity_token"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="debug_workmanager_downloads"
-        android:title="@string/use_workmanager_downloads"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

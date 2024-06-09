@@ -10,7 +10,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 @Entity(tableName = "videos")
 data class OfflineVideo(
-    var url: String,
+    var url: String? = null,
     @ColumnInfo(name = "source_url")
     val sourceUrl: String? = null,
     @ColumnInfo(name = "source_start_position")
@@ -35,28 +35,30 @@ data class OfflineVideo(
     val downloadDate: Long? = null,
     @ColumnInfo(name = "last_watch_position")
     var lastWatchPosition: Long? = null,
-    var progress: Int,
+    var progress: Int = 0,
     @ColumnInfo(name = "max_progress")
-    var maxProgress: Int,
+    var maxProgress: Int = 100,
+    var bytes: Long = 0,
     var downloadPath: String? = null,
     val fromTime: Long? = null,
     val toTime: Long? = null,
     var status: Int = STATUS_PENDING,
     val type: String? = null,
     var videoId: String? = null,
+    val clipId: String? = null,
     val quality: String? = null,
-    val downloadChat: Boolean? = null,
-    val downloadChatEmotes: Boolean? = null,
-    var chatProgress: Int? = null,
-    var chatUrl: String? = null) : Parcelable {
+    val downloadChat: Boolean = false,
+    val downloadChatEmotes: Boolean = false,
+    var chatProgress: Int = 0,
+    var maxChatProgress: Int = 100,
+    var chatBytes: Long = 0,
+    var chatOffsetSeconds: Int = 0,
+    var chatUrl: String? = null,
+    val playlistToFile: Boolean = false) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)
     var id = 0
-
-    @IgnoredOnParcel
-    @ColumnInfo(name = "is_vod")
-    var vod = url.endsWith(".m3u8")
 
     companion object {
         const val STATUS_PENDING = 0
@@ -65,5 +67,8 @@ data class OfflineVideo(
         const val STATUS_MOVING = 3
         const val STATUS_DELETING = 4
         const val STATUS_CONVERTING = 5
+        const val STATUS_BLOCKED = 6
+        const val STATUS_QUEUED = 7
+        const val STATUS_QUEUED_WIFI = 8
     }
 }

@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.di
 
-import android.app.Application
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.network.okHttpClient
 import com.github.andreyasadchy.xtra.BuildConfig
@@ -119,10 +118,7 @@ import com.github.andreyasadchy.xtra.model.helix.user.UsersDeserializer
 import com.github.andreyasadchy.xtra.model.helix.user.UsersResponse
 import com.github.andreyasadchy.xtra.model.helix.video.VideosDeserializer
 import com.github.andreyasadchy.xtra.model.helix.video.VideosResponse
-import com.github.andreyasadchy.xtra.util.FetchProvider
 import com.google.gson.GsonBuilder
-import com.tonyodev.fetch2.FetchConfiguration
-import com.tonyodev.fetch2okhttp.OkHttpDownloader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -279,23 +275,5 @@ class XtraModule {
             readTimeout(5, TimeUnit.MINUTES)
         }
         return builder.build()
-    }
-
-    @Singleton
-    @Provides
-    fun providesFetchProvider(fetchConfigurationBuilder: FetchConfiguration.Builder): FetchProvider {
-        return FetchProvider(fetchConfigurationBuilder)
-    }
-
-    @Singleton
-    @Provides
-    fun providesFetchConfigurationBuilder(application: Application, okHttpClient: OkHttpClient): FetchConfiguration.Builder {
-        return FetchConfiguration.Builder(application)
-                .enableLogging(BuildConfig.DEBUG)
-                .enableRetryOnNetworkGain(true)
-                .setDownloadConcurrentLimit(3)
-                .setHttpDownloader(OkHttpDownloader(okHttpClient))
-                .setProgressReportingInterval(1000L)
-                .setAutoRetryMaxAttempts(3)
     }
 }

@@ -163,13 +163,12 @@ class VideoDownloadDialog : BaseDownloadDialog() {
                         }
                         from < to -> {
                             val quality = spinner.editText?.text.toString()
-                            val url = videoInfo.qualities.getValue(quality)
                             val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
                             val path = if (location == 0) sharedPath else downloadPath
                             val downloadChat = downloadChat.isChecked
                             val downloadChatEmotes = downloadChatEmotes.isChecked
                             if (!path.isNullOrBlank()) {
-                                viewModel.download(url, path, quality, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                                viewModel.download(videoInfo.qualities.getValue(quality), path, quality, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                                 requireContext().prefs().edit {
                                     putInt(C.DOWNLOAD_LOCATION, location)
                                     if (location == 0) {
