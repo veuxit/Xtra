@@ -477,27 +477,29 @@ class PlaybackService : MediaSessionService() {
                                 @Suppress("DEPRECATION")
                                 customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
-                                Companion.item = item
-                                urls = mapOf(
-                                    ContextCompat.getString(this@PlaybackService, R.string.source) to item.url,
-                                    ContextCompat.getString(this@PlaybackService, R.string.audio_only) to ""
-                                )
-                                qualities = LinkedList(urls.keys)
-                                session.player.setMediaItem(MediaItem.Builder()
-                                    .setUri(item.url)
-                                    .setMediaMetadata(MediaMetadata.Builder()
-                                        .setTitle(item.name)
-                                        .setArtist(item.channelName)
-                                        .setArtworkUri(item.channelLogo?.toUri())
+                                item.url?.let { url ->
+                                    Companion.item = item
+                                    urls = mapOf(
+                                        ContextCompat.getString(this@PlaybackService, R.string.source) to url,
+                                        ContextCompat.getString(this@PlaybackService, R.string.audio_only) to ""
+                                    )
+                                    qualities = LinkedList(urls.keys)
+                                    session.player.setMediaItem(MediaItem.Builder()
+                                        .setUri(url)
+                                        .setMediaMetadata(MediaMetadata.Builder()
+                                            .setTitle(item.name)
+                                            .setArtist(item.channelName)
+                                            .setArtworkUri(item.channelLogo?.toUri())
+                                            .build())
                                         .build())
-                                    .build())
-                                session.player.volume = prefs.getInt(C.PLAYER_VOLUME, 100) / 100f
-                                session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
-                                session.player.prepare()
-                                session.player.playWhenReady = true
-                                session.player.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                                    savedPosition?.let { if (it.id == item.id.toLong()) it.position else null } ?: item.lastWatchPosition ?: 0
-                                } else 0)
+                                    session.player.volume = prefs.getInt(C.PLAYER_VOLUME, 100) / 100f
+                                    session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                                    session.player.prepare()
+                                    session.player.playWhenReady = true
+                                    session.player.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                                        savedPosition?.let { if (it.id == item.id.toLong()) it.position else null } ?: item.lastWatchPosition ?: 0
+                                    } else 0)
+                                }
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }

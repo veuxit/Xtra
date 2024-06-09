@@ -3,7 +3,6 @@ package com.github.andreyasadchy.xtra.util
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
@@ -16,12 +15,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.offline.Downloadable
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
-import com.github.andreyasadchy.xtra.model.offline.Request
 import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
-import com.github.andreyasadchy.xtra.ui.download.DownloadService
-import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_REQUEST
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -31,51 +25,6 @@ object DownloadUtils {
 
     val isExternalStorageAvailable: Boolean
         get() = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
-
-    fun download(context: Context, request: Request) {
-        val intent = Intent(context, DownloadService::class.java)
-                .putExtra(KEY_REQUEST, request)
-        context.startService(intent)
-        DownloadService.activeRequests.add(request.offlineVideoId)
-    }
-
-    suspend fun prepareDownload(context: Context, downloadable: Downloadable, url: String, path: String, duration: Long? = null, downloadDate: Long? = null, startPosition: Long? = null, segmentFrom: Int? = null, segmentTo: Int? = null, downloadPath: String? = null, fromTime: Long? = null, toTime: Long? = null, quality: String? = null, downloadChat: Boolean = false, downloadChatEmotes: Boolean = false): OfflineVideo {
-        return with(downloadable) {
-            val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
-                savePng(context, thumbnail, "thumbnails", it)
-            }
-            val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
-                savePng(context, channelLogo, "profile_pics", it)
-            }
-            OfflineVideo(
-                url = path,
-                sourceUrl = url,
-                sourceStartPosition = startPosition,
-                name = title,
-                channelId = channelId,
-                channelLogin = channelLogin,
-                channelName = channelName,
-                channelLogo = downloadedLogo,
-                thumbnail = downloadedThumbnail,
-                gameId = gameId,
-                gameSlug = gameSlug,
-                gameName = gameName,
-                duration = duration,
-                uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                downloadDate = downloadDate,
-                progress = 0,
-                maxProgress = if (segmentTo != null && segmentFrom != null) segmentTo - segmentFrom + 1 else 100,
-                downloadPath = downloadPath,
-                fromTime = fromTime,
-                toTime = toTime,
-                type = type,
-                videoId = id,
-                quality = if (quality?.contains("Audio", true) != true) quality else "audio",
-                downloadChat = downloadChat,
-                downloadChatEmotes = downloadChatEmotes
-            )
-        }
-    }
 
     fun requestNotificationPermission(activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

@@ -12,12 +12,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import androidx.work.NetworkType
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FetchProvider
-import com.github.andreyasadchy.xtra.util.prefs
 import com.iheartradio.m3u8.Encoding
 import com.iheartradio.m3u8.Format
 import com.iheartradio.m3u8.ParsingMode
@@ -28,6 +27,7 @@ import com.iheartradio.m3u8.data.TrackData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import okio.appendingSink
 import okio.buffer
@@ -44,11 +44,11 @@ import kotlin.math.max
 @HiltViewModel
 class DownloadsViewModel @Inject internal constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val repository: OfflineRepository,
-    private val fetchProvider: FetchProvider) : ViewModel() {
+    private val repository: OfflineRepository) : ViewModel() {
 
     var selectedVideo: OfflineVideo? = null
     private val videosInUse = mutableListOf<OfflineVideo>()
+    private val currentDownloads = mutableListOf<Int>()
 
     val flow = Pager(
         PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30),
@@ -56,18 +56,62 @@ class DownloadsViewModel @Inject internal constructor(
         repository.loadAllVideos()
     }.flow.cachedIn(viewModelScope)
 
+    fun checkDownloadStatus(videoId: Int) {
+        if (!currentDownloads.contains(videoId)) {
+            currentDownloads.add(videoId)
+            viewModelScope.launch(Dispatchers.IO) {
+                WorkManager.getInstance(applicationContext).getWorkInfosByTagFlow(videoId.toString()).collect { list ->
+                    val work = list.lastOrNull()
+                    when {
+                        work == null || work.state.isFinished -> {
+                            repository.getVideoById(videoId)?.let { video ->
+                                if (video.status == OfflineVideo.STATUS_DOWNLOADING || video.status == OfflineVideo.STATUS_BLOCKED || video.status == OfflineVideo.STATUS_QUEUED || video.status == OfflineVideo.STATUS_QUEUED_WIFI) {
+                                    repository.updateVideo(video.apply {
+                                        status = OfflineVideo.STATUS_PENDING
+                                    })
+                                }
+                            }
+                            cancel()
+                        }
+                        work.state == WorkInfo.State.ENQUEUED -> {
+                            repository.getVideoById(videoId)?.let { video ->
+                                repository.updateVideo(video.apply {
+                                    status = if (work.constraints.requiredNetworkType == NetworkType.UNMETERED) {
+                                        OfflineVideo.STATUS_QUEUED_WIFI
+                                    } else {
+                                        OfflineVideo.STATUS_QUEUED
+                                    }
+                                })
+                            }
+                        }
+                        work.state == WorkInfo.State.BLOCKED -> {
+                            repository.getVideoById(videoId)?.let { video ->
+                                repository.updateVideo(video.apply {
+                                    status = OfflineVideo.STATUS_BLOCKED
+                                })
+                            }
+                        }
+                    }
+                }
+            }.invokeOnCompletion {
+                currentDownloads.remove(videoId)
+            }
+        }
+    }
+
     fun convertToFile(video: OfflineVideo) {
-        if (!videosInUse.contains(video)) {
+        val videoUrl = video.url
+        if (!videosInUse.contains(video) && videoUrl != null) {
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_CONVERTING
                 })
-                if (video.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                    val oldPlaylistFile = DocumentFile.fromSingleUri(applicationContext, video.url.toUri())
+                if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                    val oldPlaylistFile = DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())
                     if (oldPlaylistFile != null) {
-                        val oldDirectory = DocumentFile.fromTreeUri(applicationContext, video.url.substringBefore("/document/").toUri())
-                        val oldVideoDirectory = oldDirectory?.findFile(video.url.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
+                        val oldDirectory = DocumentFile.fromTreeUri(applicationContext, videoUrl.substringBefore("/document/").toUri())
+                        val oldVideoDirectory = oldDirectory?.findFile(videoUrl.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                         if (oldVideoDirectory != null) {
                             val oldPlaylist = applicationContext.contentResolver.openInputStream(oldPlaylistFile.uri).use {
                                 PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
@@ -102,7 +146,6 @@ class DownloadsViewModel @Inject internal constructor(
                                         }
                                     }
                                     url = newVideoFile.uri.toString()
-                                    vod = false
                                 })
                                 if (playlists.isNotEmpty()) {
                                     oldPlaylistFile.delete()
@@ -113,7 +156,7 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                 } else {
-                    val oldPlaylistFile = File(video.url)
+                    val oldPlaylistFile = File(videoUrl)
                     if (oldPlaylistFile.exists()) {
                         val oldVideoDirectory = oldPlaylistFile.parentFile
                         val oldDirectory = oldVideoDirectory?.parentFile
@@ -148,7 +191,6 @@ class DownloadsViewModel @Inject internal constructor(
                                     }
                                 }
                                 url = newVideoFileUri
-                                vod = false
                             })
                             if (playlists?.isNotEmpty() == true) {
                                 oldPlaylistFile.delete()
@@ -170,14 +212,15 @@ class DownloadsViewModel @Inject internal constructor(
     }
 
     fun moveToSharedStorage(newUri: Uri, video: OfflineVideo) {
-        if (!videosInUse.contains(video)) {
+        val videoUrl = video.url
+        if (!videosInUse.contains(video) && videoUrl != null) {
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_MOVING
                 })
-                if (video.vod) {
-                    val oldPlaylistFile = File(video.url)
+                if (videoUrl.endsWith(".m3u8")) {
+                    val oldPlaylistFile = File(videoUrl)
                     if (oldPlaylistFile.exists()) {
                         val oldVideoDirectory = oldPlaylistFile.parentFile
                         if (oldVideoDirectory != null) {
@@ -250,7 +293,7 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                 } else {
-                    val oldFile = File(video.url)
+                    val oldFile = File(videoUrl)
                     if (oldFile.exists()) {
                         val newDirectory = DocumentFile.fromTreeUri(applicationContext, newUri)
                         val newFile = newDirectory?.findFile(oldFile.name) ?: newDirectory?.createFile("", oldFile.name)
@@ -291,17 +334,18 @@ class DownloadsViewModel @Inject internal constructor(
     }
 
     fun moveToAppStorage(path: String, video: OfflineVideo) {
-        if (!videosInUse.contains(video)) {
+        val videoUrl = video.url
+        if (!videosInUse.contains(video) && videoUrl != null) {
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_MOVING
                 })
-                if (video.vod) {
-                    val oldPlaylistFile = DocumentFile.fromSingleUri(applicationContext, video.url.toUri())
+                if (videoUrl.endsWith(".m3u8")) {
+                    val oldPlaylistFile = DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())
                     if (oldPlaylistFile != null) {
-                        val oldDirectory = DocumentFile.fromTreeUri(applicationContext, video.url.substringBefore("/document/").toUri())
-                        val oldVideoDirectory = oldDirectory?.findFile(video.url.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
+                        val oldDirectory = DocumentFile.fromTreeUri(applicationContext, videoUrl.substringBefore("/document/").toUri())
+                        val oldVideoDirectory = oldDirectory?.findFile(videoUrl.substringAfter("/document/").substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A"))
                         if (oldVideoDirectory != null) {
                             val newVideoDirectoryUri = "$path${File.separator}${oldVideoDirectory.name}${File.separator}"
                             File(newVideoDirectoryUri).mkdir()
@@ -366,7 +410,7 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                 } else {
-                    val oldFile = DocumentFile.fromSingleUri(applicationContext, video.url.toUri())
+                    val oldFile = DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())
                     if (oldFile != null) {
                         val newFileUri = "$path${File.separator}${oldFile.name}"
                         File(newFileUri).sink().buffer().use { sink ->
@@ -469,76 +513,70 @@ class DownloadsViewModel @Inject internal constructor(
     }
 
     fun delete(video: OfflineVideo, keepFiles: Boolean) {
-        if (!videosInUse.contains(video)) {
+        val videoUrl = video.url
+        if (!videosInUse.contains(video) && videoUrl != null) {
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_DELETING
                 })
-                val useWorkManager = video.downloadChat == true || video.sourceUrl?.endsWith(".m3u8") == true || Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || applicationContext.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false)
-                if (video.status == OfflineVideo.STATUS_DOWNLOADED || video.status == OfflineVideo.STATUS_MOVING || video.status == OfflineVideo.STATUS_DELETING || video.status == OfflineVideo.STATUS_CONVERTING || useWorkManager) {
-                    if (useWorkManager) {
-                        WorkManager.getInstance(applicationContext).cancelUniqueWork(video.id.toString())
-                    }
-                    if (!keepFiles) {
-                        if (video.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                            if (video.vod) {
-                                val directory = DocumentFile.fromTreeUri(applicationContext, video.url.substringBefore("/document/").toUri()) ?: return@launch
-                                val videoDirectory = directory.findFile(video.url.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
-                                val playlistFile = videoDirectory.findFile(video.url.substringAfterLast("%2F")) ?: return@launch
-                                val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
-                                if (playlists.isEmpty()) {
-                                    videoDirectory.delete()
-                                } else {
-                                    val playlist = applicationContext.contentResolver.openInputStream(video.url.toUri()).use {
+                WorkManager.getInstance(applicationContext).cancelAllWorkByTag(video.id.toString())
+                if (!keepFiles) {
+                    if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+                        if (videoUrl.endsWith(".m3u8")) {
+                            val directory = DocumentFile.fromTreeUri(applicationContext, videoUrl.substringBefore("/document/").toUri()) ?: return@launch
+                            val videoDirectory = directory.findFile(videoUrl.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
+                            val playlistFile = videoDirectory.findFile(videoUrl.substringAfterLast("%2F")) ?: return@launch
+                            val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
+                            if (playlists.isEmpty()) {
+                                videoDirectory.delete()
+                            } else {
+                                val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri()).use {
+                                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                                }
+                                val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
+                                playlists.forEach { file ->
+                                    val p = applicationContext.contentResolver.openInputStream(file.uri).use {
                                         PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
                                     }
-                                    val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
-                                    playlists.forEach { file ->
-                                        val p = applicationContext.contentResolver.openInputStream(file.uri).use {
-                                            PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                                        }
-                                        tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
-                                    }
-                                    tracksToDelete.forEach { videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete() }
-                                    playlistFile.delete()
+                                    tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
                                 }
-                            } else {
-                                DocumentFile.fromSingleUri(applicationContext, video.url.toUri())?.delete()
-                            }
-                            video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri())?.delete() }
-                        } else {
-                            val playlistFile = File(video.url)
-                            if (!playlistFile.exists()) {
-                                return@launch
-                            }
-                            if (video.vod) {
-                                val directory = playlistFile.parentFile
-                                if (directory != null) {
-                                    val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
-                                    if (playlists != null) {
-                                        if (playlists.isEmpty()) {
-                                            directory.deleteRecursively()
-                                        } else {
-                                            val playlist = PlaylistParser(playlistFile.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                                            val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
-                                            playlists.forEach {
-                                                val p = PlaylistParser(it.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                                                tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
-                                            }
-                                            tracksToDelete.forEach { File(it.uri).delete() }
-                                            playlistFile.delete()
-                                        }
-                                    }
-                                }
-                            } else {
+                                tracksToDelete.forEach { videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete() }
                                 playlistFile.delete()
                             }
-                            video.chatUrl?.let { File(it).delete() }
+                        } else {
+                            DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())?.delete()
                         }
+                        video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri())?.delete() }
+                    } else {
+                        val playlistFile = File(videoUrl)
+                        if (!playlistFile.exists()) {
+                            return@launch
+                        }
+                        if (videoUrl.endsWith(".m3u8")) {
+                            val directory = playlistFile.parentFile
+                            if (directory != null) {
+                                val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
+                                if (playlists != null) {
+                                    if (playlists.isEmpty()) {
+                                        directory.deleteRecursively()
+                                    } else {
+                                        val playlist = PlaylistParser(playlistFile.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                                        val tracksToDelete = playlist.mediaPlaylist.tracks.toMutableSet()
+                                        playlists.forEach {
+                                            val p = PlaylistParser(it.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                                            tracksToDelete.removeAll(p.mediaPlaylist.tracks.toSet())
+                                        }
+                                        tracksToDelete.forEach { File(it.uri).delete() }
+                                        playlistFile.delete()
+                                    }
+                                }
+                            }
+                        } else {
+                            playlistFile.delete()
+                        }
+                        video.chatUrl?.let { File(it).delete() }
                     }
-                } else {
-                    fetchProvider.get(video.id).deleteGroup(video.id)
                 }
             }.invokeOnCompletion {
                 videosInUse.remove(video)

@@ -19,7 +19,9 @@ import androidx.fragment.app.viewModels
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -97,15 +99,28 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = DownloadsAdapter(this, {
-            WorkManager.getInstance(requireContext()).cancelUniqueWork(it.toString())
+            viewModel.checkDownloadStatus(it)
+        }, {
+            WorkManager.getInstance(requireContext()).cancelAllWorkByTag(it.toString())
         }, {
             WorkManager.getInstance(requireContext()).enqueueUniqueWork(
-                it.toString(),
-                ExistingWorkPolicy.KEEP,
+                "download",
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<DownloadWorker>()
                     .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to it))
+                    .addTag(it.toString())
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
+                                NetworkType.UNMETERED
+                            } else {
+                                NetworkType.CONNECTED
+                            })
+                            .build()
+                    )
                     .build()
             )
+            viewModel.checkDownloadStatus(it)
         }, {
             val convert = getString(R.string.convert)
             requireActivity().getAlertDialogBuilder()
@@ -115,7 +130,7 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                 .setNegativeButton(getString(android.R.string.cancel), null)
                 .show()
         }, {
-            if (it.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
+            if (it.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
                 val storage = DownloadUtils.getAvailableStorage(requireContext())
                 val binding = StorageSelectionBinding.inflate(layoutInflater).apply {
                     storageSpinner.gone()

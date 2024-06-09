@@ -1,17 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.download
 
-import android.content.ContentResolver
 import android.content.Context
-import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.github.andreyasadchy.xtra.model.offline.Request
+import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -22,7 +22,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -70,40 +69,51 @@ class ClipDownloadViewModel @Inject constructor(
         }
     }
 
-    fun download(url: String, path: String, quality: String, useWorkManager: Boolean) {
+    fun download(url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         GlobalScope.launch {
-            val fileUri = if (path.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                path
-            } else {
-                val fileName = if (!clip.id.isNullOrBlank()) {
-                    "${clip.id}$quality"
-                } else {
-                    System.currentTimeMillis()
+            with(clip) {
+                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(applicationContext, thumbnail, "thumbnails", it)
                 }
-                "$path${File.separator}$fileName.mp4"
-            }
-            val offlineVideo = DownloadUtils.prepareDownload(
-                context = applicationContext,
-                downloadable = clip,
-                url = url,
-                path = fileUri,
-                downloadDate = System.currentTimeMillis(),
-                duration = clip.duration?.toLong()?.times(1000L),
-                startPosition = clip.vodOffset?.toLong()?.times(1000L))
-            val videoId = offlineRepository.saveVideo(offlineVideo).toInt()
-            if (useWorkManager) {
+                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
+                    DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", it)
+                }
+                val videoId = offlineRepository.saveVideo(OfflineVideo(
+                    sourceUrl = url,
+                    sourceStartPosition = vodOffset?.toLong()?.times(1000L),
+                    name = title,
+                    channelId = channelId,
+                    channelLogin = channelLogin,
+                    channelName = channelName,
+                    channelLogo = downloadedLogo,
+                    thumbnail = downloadedThumbnail,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    duration = duration?.toLong()?.times(1000L),
+                    uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                    downloadDate = System.currentTimeMillis(),
+                    downloadPath = path,
+                    status = OfflineVideo.STATUS_BLOCKED,
+                    videoId = videoId,
+                    clipId = id,
+                    quality = if (!quality.contains("Audio", true)) quality else "audio",
+                    downloadChat = downloadChat,
+                    downloadChatEmotes = downloadChatEmotes
+                )).toInt()
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                    videoId.toString(),
-                    ExistingWorkPolicy.KEEP,
+                    "download",
+                    ExistingWorkPolicy.APPEND_OR_REPLACE,
                     OneTimeWorkRequestBuilder<DownloadWorker>()
                         .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to videoId))
+                        .addTag(videoId.toString())
+                        .setConstraints(
+                            Constraints.Builder()
+                                .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                                .build()
+                        )
                         .build()
                 )
-            } else {
-                val request = Request(videoId, url, offlineVideo.url)
-                offlineRepository.saveRequest(request)
-
-                DownloadUtils.download(applicationContext, request)
             }
         }
     }

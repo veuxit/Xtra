@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.32.1"
+        versionName = "2.32.2"
     }
 
     buildTypes {
@@ -117,8 +117,6 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
 
-    implementation(libs.fetch)
-    implementation(libs.fetch.okhttp)
     implementation(libs.okio)
     implementation(libs.open.m3u8)
 

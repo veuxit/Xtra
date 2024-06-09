@@ -577,7 +577,6 @@
     <string name="proxy_settings">HTTP プロキシ設定</string>
     <string name="stop_download">ダウンロードを一時停止</string>
     <string name="resume_download">ダウンロードを再開</string>
-    <string name="use_workmanager_downloads">ダウンロードに WorkManager を使用</string>
     <string name="show_view_count_icon">視聴者数と経過時間にアイコンを表示</string>
     <string name="playback_speeds">再生速度</string>
     <string name="use_custom_proxy">カスタムプロキシを使用</string>
@@ -621,4 +620,8 @@
     <string name="download_chat_emotes">Download emotes and badges</string>
     <string name="chat_downloading_progress">Chat: %d%%</string>
     <string name="change_chat_file">Change chat file</string>
+    <string name="download_queued">Queued</string>
+    <string name="download_blocked">Waiting for Internet connection</string>
+    <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
+    <string name="download_wifi_only">Download using Wi-Fi only</string>
 </resources>

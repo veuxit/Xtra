@@ -1,34 +1,31 @@
 package com.github.andreyasadchy.xtra.model.ui
 
 import android.os.Parcelable
-import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Clip(
-        override val id: String? = null,
-        override val channelId: String? = null,
-        override val channelName: String? = null,
+        val id: String? = null,
+        val channelId: String? = null,
+        val channelName: String? = null,
         val videoId: String? = null,
-        override var gameId: String? = null,
-        override val title: String? = null,
+        var gameId: String? = null,
+        val title: String? = null,
         val viewCount: Int? = null,
-        override val uploadDate: String? = null,
+        val uploadDate: String? = null,
         val thumbnailUrl: String? = null,
         val duration: Double? = null,
         val vodOffset: Int? = null,
 
-        override var gameSlug: String? = null,
-        override var gameName: String? = null,
-        override var channelLogin: String? = null,
+        var gameSlug: String? = null,
+        var gameName: String? = null,
+        var channelLogin: String? = null,
         var profileImageUrl: String? = null,
-        val videoAnimatedPreviewURL: String? = null) : Parcelable, Downloadable {
+        val videoAnimatedPreviewURL: String? = null) : Parcelable {
 
-        override val thumbnail: String?
+        val thumbnail: String?
                 get() = TwitchApiHelper.getTemplateUrl(thumbnailUrl, "clip")
-        override val channelLogo: String?
+        val channelLogo: String?
                 get() = TwitchApiHelper.getTemplateUrl(profileImageUrl, "profileimage")
-        override val type: String?
-                get() = null
 }

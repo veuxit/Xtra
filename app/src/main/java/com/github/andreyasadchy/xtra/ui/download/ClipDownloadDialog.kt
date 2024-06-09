@@ -3,8 +3,10 @@ package com.github.andreyasadchy.xtra.ui.download
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.text.InputType
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.edit
@@ -77,7 +79,7 @@ class ClipDownloadDialog : BaseDownloadDialog() {
             binding.layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
             init(it)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             with(binding.storageSelectionContainer) {
                 val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                     if (result.resultCode == Activity.RESULT_OK) {
@@ -85,19 +87,15 @@ class ClipDownloadDialog : BaseDownloadDialog() {
                             requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             sharedPath = it.toString()
                             directory.visible()
-                            directory.text = it.path?.substringAfter("/document/")
+                            directory.text = it.path?.substringAfter("/tree/")?.removeSuffix(":")
                         }
                     }
                 }
                 selectDirectory.setOnClickListener {
-                    resultLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                        putExtra(Intent.EXTRA_TITLE, if (!viewModel.clip.id.isNullOrBlank()) {
-                            "${viewModel.clip.id}${binding.spinner.editText?.text.toString()}.mp4"
-                        } else {
-                            "${System.currentTimeMillis()}.mp4"
-                        })
+                    resultLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            putExtra(DocumentsContract.EXTRA_INITIAL_URI, sharedPath)
+                        }
                     })
                 }
             }
@@ -132,6 +130,24 @@ class ClipDownloadDialog : BaseDownloadDialog() {
         with(binding) {
             val context = requireContext()
             init(context, binding.storageSelectionContainer, download)
+            val previousPath = prefs.getString(C.DOWNLOAD_SHARED_PATH, null)
+            if (!previousPath.isNullOrBlank()) {
+                sharedPath = previousPath
+                storageSelectionContainer.directory.apply {
+                    visible()
+                    text = Uri.decode(previousPath.substringAfter("/tree/"))
+                }
+            }
+            downloadChat.apply {
+                isChecked = prefs.getBoolean(C.DOWNLOAD_CHAT, false)
+                setOnCheckedChangeListener { _, isChecked ->
+                    downloadChatEmotes.isEnabled = isChecked
+                }
+            }
+            downloadChatEmotes.apply {
+                isChecked = prefs.getBoolean(C.DOWNLOAD_CHAT_EMOTES, false)
+                isEnabled = downloadChat.isChecked
+            }
             (spinner.editText as? MaterialAutoCompleteTextView)?.apply {
                 setSimpleItems(qualities.keys.toTypedArray())
                 setText(adapter.getItem(0).toString(), false)
@@ -148,10 +164,17 @@ class ClipDownloadDialog : BaseDownloadDialog() {
                 val quality = spinner.editText?.text.toString()
                 val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
                 val path = if (location == 0) sharedPath else downloadPath
+                val downloadChat = downloadChat.isChecked
+                val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    viewModel.download(qualities.getValue(quality), path, quality, Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || requireContext().prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))
+                    viewModel.download(qualities.getValue(quality), path, quality, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
+                        if (location == 0) {
+                            putString(C.DOWNLOAD_SHARED_PATH, sharedPath)
+                        }
+                        putBoolean(C.DOWNLOAD_CHAT, downloadChat)
+                        putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
                     }
                     DownloadUtils.requestNotificationPermission(requireActivity())
                 }
