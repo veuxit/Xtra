@@ -577,7 +577,6 @@
     <string name="proxy_settings">Configuración del proxy HTTP</string>
     <string name="stop_download">Detener descarga</string>
     <string name="resume_download">Reanudar descarga</string>
-    <string name="use_workmanager_downloads">Usar WorkManager para descargas</string>
     <string name="show_view_count_icon">Mostrar el contador de visitas y los iconos de tiempo de actividad</string>
     <string name="playback_speeds">Velocidades de reproducción</string>
     <string name="use_custom_proxy">Utilizar proxy personalizado</string>
@@ -621,4 +620,8 @@
     <string name="download_chat_emotes">Descargar emoticonos e insignias</string>
     <string name="chat_downloading_progress">Chat: %d%%</string>
     <string name="change_chat_file">Cambiar archivo de chat</string>
+    <string name="download_queued">Queued</string>
+    <string name="download_blocked">Waiting for Internet connection</string>
+    <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
+    <string name="download_wifi_only">Download using Wi-Fi only</string>
 </resources>

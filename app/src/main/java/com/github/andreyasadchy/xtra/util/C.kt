@@ -21,6 +21,7 @@ object C {
     const val USERNAME = "username"
     const val USER_ID = "user_id"
     const val DOWNLOAD_PLAYLIST_TO_FILE = "download_playlist_to_file"
+    const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
     const val DOWNLOAD_CONCURRENT_LIMIT = "download_concurrent_limit"
     const val DOWNLOAD_STORAGE = "downloadStorage"
     const val DOWNLOAD_SHARED_PATH = "download_shared_path"
@@ -222,5 +223,4 @@ object C {
     const val ENABLE_INTEGRITY = "enable_integrity"
     const val USE_WEBVIEW_INTEGRITY = "use_webview_integrity"
     const val GET_ALL_GQL_HEADERS = "get_all_gql_headers"
-    const val DEBUG_WORKMANAGER_DOWNLOADS = "debug_workmanager_downloads"
 }

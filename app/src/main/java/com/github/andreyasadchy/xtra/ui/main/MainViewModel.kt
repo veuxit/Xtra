@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -16,7 +15,6 @@ import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.AuthRepository
-import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.Event
@@ -25,17 +23,14 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @ApplicationContext applicationContext: Context,
     private val repository: ApiRepository,
-    private val authRepository: AuthRepository,
-    private val offlineRepository: OfflineRepository) : ViewModel() {
+    private val authRepository: AuthRepository) : ViewModel() {
 
     private val _integrity by lazy { SingleLiveEvent<Boolean>() }
     val integrity: LiveData<Boolean>
@@ -60,12 +55,6 @@ class MainViewModel @Inject constructor(
     private val _user = MutableLiveData<User?>()
     val user: MutableLiveData<User?>
         get() = _user
-
-    init {
-        viewModelScope.launch {
-            offlineRepository.resumeDownloads(applicationContext)
-        }
-    }
 
     fun onMaximize() {
         isPlayerMaximized = true

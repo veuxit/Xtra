@@ -1,8 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.content.ContentResolver
-import android.graphics.Color
-import android.os.Build
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -31,9 +29,11 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
+import kotlin.math.min
 
 class DownloadsAdapter(
     private val fragment: Fragment,
+    private val checkDownloadStatus: (Int) -> Unit,
     private val stopDownload: (Int) -> Unit,
     private val resumeDownload: (Int) -> Unit,
     private val convertVideo: (OfflineVideo) -> Unit,
@@ -188,23 +188,24 @@ class DownloadsAdapter(
                     options.setOnClickListener { it ->
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
-                            if (item.status == OfflineVideo.STATUS_DOWNLOADED || item.status == OfflineVideo.STATUS_MOVING || item.status == OfflineVideo.STATUS_DELETING || item.status == OfflineVideo.STATUS_CONVERTING) {
-                                menu.findItem(R.id.moveVideo).apply {
-                                    isVisible = true
-                                    title = context.getString(if (item.url.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                                        R.string.move_to_app_storage
-                                    } else {
-                                        R.string.move_to_shared_storage
-                                    })
-                                }
-                                if (item.vod) {
-                                    menu.findItem(R.id.convertVideo).isVisible = true
-                                }
-                                menu.findItem(R.id.updateChatUrl).isVisible = true
-                            } else {
-                                if (item.downloadChat == true || item.sourceUrl?.endsWith(".m3u8") == true || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.prefs().getBoolean(C.DEBUG_WORKMANAGER_DOWNLOADS, false))) {
+                            when (item.status) {
+                                OfflineVideo.STATUS_DOWNLOADING, OfflineVideo.STATUS_BLOCKED, OfflineVideo.STATUS_QUEUED, OfflineVideo.STATUS_QUEUED_WIFI -> {
                                     menu.findItem(R.id.stopDownload).isVisible = true
-                                    menu.findItem(R.id.resumeDownload).isVisible = true
+                                }
+                                OfflineVideo.STATUS_PENDING -> menu.findItem(R.id.resumeDownload).isVisible = true
+                                else -> {
+                                    menu.findItem(R.id.moveVideo).apply {
+                                        isVisible = true
+                                        title = context.getString(if (item.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
+                                            R.string.move_to_app_storage
+                                        } else {
+                                            R.string.move_to_shared_storage
+                                        })
+                                    }
+                                    if (item.url?.endsWith(".m3u8") == true) {
+                                        menu.findItem(R.id.convertVideo).isVisible = true
+                                    }
+                                    menu.findItem(R.id.updateChatUrl).isVisible = true
                                 }
                             }
                             setOnMenuItemClickListener {
@@ -230,24 +231,20 @@ class DownloadsAdapter(
                             OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
                             OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
                             OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
+                            OfflineVideo.STATUS_BLOCKED -> context.getString(R.string.download_queued)
+                            OfflineVideo.STATUS_QUEUED -> context.getString(R.string.download_blocked)
+                            OfflineVideo.STATUS_QUEUED_WIFI -> context.getString(R.string.download_blocked_wifi)
                             else -> context.getString(R.string.download_pending)
                         }
-                        if (item.downloadChat == true && item.status == OfflineVideo.STATUS_DOWNLOADING) {
+                        if (item.downloadChat && item.status == OfflineVideo.STATUS_DOWNLOADING) {
                             chatDownloadProgress.visible()
-                            chatDownloadProgress.text = context.getString(R.string.chat_downloading_progress, item.chatProgress ?: 0)
+                            chatDownloadProgress.text = context.getString(R.string.chat_downloading_progress, min(((item.chatProgress.toFloat() / item.maxChatProgress) * 100f).toInt(), 100))
                         } else {
                             chatDownloadProgress.gone()
                         }
                         status.visible()
-                        if (item.vod || item.sourceUrl?.endsWith(".m3u8") == true) {
-                            status.background = null
-                            status.isClickable = false
-                            status.isFocusable = false
-                            downloadProgress.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-                            chatDownloadProgress.setShadowLayer(4f, 0f, 0f, Color.BLACK)
-                        } else {
-                            status.setOnClickListener { deleteVideo(item) }
-                            status.setOnLongClickListener { deleteVideo(item); true }
+                        if (item.status == OfflineVideo.STATUS_DOWNLOADING || item.status == OfflineVideo.STATUS_BLOCKED || item.status == OfflineVideo.STATUS_QUEUED || item.status == OfflineVideo.STATUS_QUEUED_WIFI) {
+                            checkDownloadStatus(item.id)
                         }
                     }
                 }

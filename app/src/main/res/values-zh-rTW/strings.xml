@@ -577,7 +577,6 @@
     <string name="proxy_settings">HTTP Proxy 設定</string>
     <string name="stop_download">停止下載</string>
     <string name="resume_download">繼續下載</string>
-    <string name="use_workmanager_downloads">使用 WorkManager 進行下載</string>
     <string name="show_view_count_icon">顯示觀看數量與上線時間圖示</string>
     <string name="playback_speeds">播放速度</string>
     <string name="use_custom_proxy">使用自訂 Proxy</string>
@@ -621,4 +620,8 @@
     <string name="download_chat_emotes">下載表情符號與徽章</string>
     <string name="chat_downloading_progress">聊天：%d%%</string>
     <string name="change_chat_file">變更聊天檔案</string>
+    <string name="download_queued">Queued</string>
+    <string name="download_blocked">Waiting for Internet connection</string>
+    <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
+    <string name="download_wifi_only">Download using Wi-Fi only</string>
 </resources>

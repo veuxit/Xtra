@@ -9,7 +9,6 @@ import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
-import com.github.andreyasadchy.xtra.db.RequestsDao
 import com.github.andreyasadchy.xtra.db.SortChannelDao
 import com.github.andreyasadchy.xtra.db.SortGameDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
@@ -34,7 +33,7 @@ class DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesRepository(videosDao: VideosDao, requestsDao: RequestsDao, localFollowsChannelDao: LocalFollowsChannelDao, bookmarksDao: BookmarksDao): OfflineRepository = OfflineRepository(videosDao, requestsDao, localFollowsChannelDao, bookmarksDao)
+    fun providesRepository(videosDao: VideosDao, localFollowsChannelDao: LocalFollowsChannelDao, bookmarksDao: BookmarksDao): OfflineRepository = OfflineRepository(videosDao, localFollowsChannelDao, bookmarksDao)
 
     @Singleton
     @Provides
@@ -63,10 +62,6 @@ class DatabaseModule {
     @Singleton
     @Provides
     fun providesVideosDao(database: AppDatabase): VideosDao = database.videos()
-
-    @Singleton
-    @Provides
-    fun providesRequestsDao(database: AppDatabase): RequestsDao = database.requests()
 
     @Singleton
     @Provides
@@ -230,6 +225,15 @@ class DatabaseModule {
                             override fun migrate(db: SupportSQLiteDatabase) {
                                 db.execSQL("CREATE TABLE IF NOT EXISTS videos1 (url TEXT NOT NULL, source_url TEXT, source_start_position INTEGER, name TEXT, channel_id TEXT, channel_login TEXT, channel_name TEXT, channel_logo TEXT, thumbnail TEXT, gameId TEXT, gameSlug TEXT, gameName TEXT, duration INTEGER, upload_date INTEGER, download_date INTEGER, last_watch_position INTEGER, progress INTEGER NOT NULL, max_progress INTEGER NOT NULL, downloadPath TEXT, fromTime INTEGER, toTime INTEGER, status INTEGER NOT NULL, type TEXT, videoId TEXT, quality TEXT, downloadChat INTEGER, downloadChatEmotes INTEGER, chatProgress INTEGER, chatUrl TEXT, id INTEGER NOT NULL, is_vod INTEGER NOT NULL, PRIMARY KEY (id))")
                                 db.execSQL("INSERT INTO videos1 (url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, downloadPath, fromTime, toTime, status, type, videoId, quality, id, is_vod) SELECT url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, downloadPath, fromTime, toTime, status, type, videoId, quality, id, is_vod FROM videos")
+                                db.execSQL("DROP TABLE videos")
+                                db.execSQL("ALTER TABLE videos1 RENAME TO videos")
+                            }
+                        },
+                        object : Migration(24, 25) {
+                            override fun migrate(db: SupportSQLiteDatabase) {
+                                db.execSQL("DROP TABLE requests")
+                                db.execSQL("CREATE TABLE IF NOT EXISTS videos1 (url TEXT, source_url TEXT, source_start_position INTEGER, name TEXT, channel_id TEXT, channel_login TEXT, channel_name TEXT, channel_logo TEXT, thumbnail TEXT, gameId TEXT, gameSlug TEXT, gameName TEXT, duration INTEGER, upload_date INTEGER, download_date INTEGER, last_watch_position INTEGER, progress INTEGER NOT NULL, max_progress INTEGER NOT NULL, bytes INTEGER NOT NULL, downloadPath TEXT, fromTime INTEGER, toTime INTEGER, status INTEGER NOT NULL, type TEXT, videoId TEXT, clipId TEXT, quality TEXT, downloadChat INTEGER NOT NULL, downloadChatEmotes INTEGER NOT NULL, chatProgress INTEGER NOT NULL, maxChatProgress INTEGER NOT NULL, chatBytes INTEGER NOT NULL, chatOffsetSeconds INTEGER NOT NULL, chatUrl TEXT, playlistToFile INTEGER NOT NULL, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                                db.execSQL("INSERT INTO videos1 (url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, bytes, downloadPath, fromTime, toTime, status, type, videoId, quality, downloadChat, downloadChatEmotes, chatProgress, maxChatProgress, chatBytes, chatOffsetSeconds, chatUrl, playlistToFile, id) SELECT url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, 0, downloadPath, fromTime, toTime, status, type, videoId, quality, downloadChat, downloadChatEmotes, chatProgress, 100, 0, 0, chatUrl, 0, id FROM videos")
                                 db.execSQL("DROP TABLE videos")
                                 db.execSQL("ALTER TABLE videos1 RENAME TO videos")
                             }
