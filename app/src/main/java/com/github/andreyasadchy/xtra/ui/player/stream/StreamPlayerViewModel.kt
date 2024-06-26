@@ -70,7 +70,7 @@ class StreamPlayerViewModel @Inject constructor(
                 val url = playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
                 if (proxyMultivariantPlaylist) {
                     val response = playerRepository.loadStreamPlaylistResponse(url, true, proxyHost, proxyPort, proxyUser, proxyPassword)
-                    Base64.encodeToString(response.source().readByteArray(), Base64.DEFAULT)
+                    Base64.encodeToString(response.toByteArray(), Base64.DEFAULT)
                 } else {
                     url
                 }
