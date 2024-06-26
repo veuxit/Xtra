@@ -14,7 +14,7 @@ class UserResultIDDeserializer : JsonDeserializer<UserResultIDQueryResponse> {
             item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
         }
         val dataJson = json.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonObject }?.asJsonObject?.get("userResultByID")?.takeIf { it.isJsonObject }?.asJsonObject
-        val data = androidx.core.util.Pair(if (dataJson?.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.isString == true) null else "userResultByID", dataJson?.get("reason")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString)
+        val data = Pair(if (dataJson?.get("id")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.isString == true) null else "userResultByID", dataJson?.get("reason")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString)
         return UserResultIDQueryResponse(data)
     }
 }

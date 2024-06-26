@@ -37,16 +37,11 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
+import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.iheartradio.m3u8.Encoding
-import com.iheartradio.m3u8.Format
-import com.iheartradio.m3u8.ParsingMode
-import com.iheartradio.m3u8.PlaylistParser
-import com.iheartradio.m3u8.PlaylistWriter
-import com.iheartradio.m3u8.data.Playlist
-import com.iheartradio.m3u8.data.TrackData
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
@@ -76,7 +71,7 @@ import java.io.StringReader
 import javax.inject.Inject
 
 @HiltWorker
-class DownloadWorker @AssistedInject constructor(
+class VideoDownloadWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
 
@@ -111,17 +106,17 @@ class DownloadWorker @AssistedInject constructor(
                 val isShared = path.toUri().scheme == ContentResolver.SCHEME_CONTENT
                 val playlist = okHttpClient.newCall(Request.Builder().url(sourceUrl).build()).execute().use { response ->
                     response.body()!!.byteStream().use {
-                        PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                        PlaylistUtils.parseMediaPlaylist(it)
                     }
                 }
                 val targetDuration = playlist.targetDuration * 1000L
                 var totalDuration = 0L
-                val size = playlist.tracks.size
+                val size = playlist.segments.size
                 val relativeStartTimes = ArrayList<Long>(size)
                 val durations = ArrayList<Long>(size)
                 var relativeTime = 0L
-                playlist.tracks.forEach {
-                    val duration = (it.trackInfo.duration * 1000f).toLong()
+                playlist.segments.forEach {
+                    val duration = (it.duration * 1000f).toLong()
                     durations.add(duration)
                     totalDuration += duration
                     relativeStartTimes.add(relativeTime)
@@ -152,19 +147,23 @@ class DownloadWorker @AssistedInject constructor(
                     }).let { if (it < 0) -it else it }
                 }
                 val urlPath = sourceUrl.substringBeforeLast('/') + "/"
-                val tracks = ArrayList<TrackData>()
+                val segments = ArrayList<Segment>()
                 if (offlineVideo.progress < offlineVideo.maxProgress) {
                     for (i in fromIndex + offlineVideo.progress..toIndex) {
-                        val track = playlist.tracks[i]
-                        tracks.add(
-                            track.buildUpon()
-                                .withUri(track.uri.replace("-unmuted", "-muted"))
-                                .build()
-                        )
+                        val segment = playlist.segments[i]
+                        segments.add(segment.copy(uri = segment.uri.replace("-unmuted", "-muted")))
                     }
                 }
                 val requestSemaphore = Semaphore(context.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
-                if (offlineVideo.playlistToFile) {
+                val mutexMap = mutableMapOf<Int, Mutex>()
+                val count = MutableStateFlow(0)
+                val collector = launch {
+                    count.collect {
+                        mutexMap[it]?.unlock()
+                        mutexMap.remove(it)
+                    }
+                }
+                val jobs = if (offlineVideo.playlistToFile) {
                     val videoFileUri = if (!offlineVideo.url.isNullOrBlank()) {
                         val fileUri = offlineVideo.url!!
                         if (isShared) {
@@ -180,7 +179,7 @@ class DownloadWorker @AssistedInject constructor(
                         }
                         fileUri
                     } else {
-                        val fileName = "${offlineVideo.videoId ?: ""}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}.${tracks.first().uri.substringAfterLast(".")}"
+                        val fileName = "${offlineVideo.videoId ?: ""}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}.${segments.first().uri.substringAfterLast(".")}"
                         val fileUri = if (isShared) {
                             val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
                             (directory.findFile(fileName) ?: directory.createFile("", fileName))!!.uri.toString()
@@ -188,28 +187,33 @@ class DownloadWorker @AssistedInject constructor(
                             "$path${File.separator}$fileName"
                         }
                         val startPosition = relativeStartTimes[fromIndex]
+                        val initSegmentBytes = if (playlist.initSegmentUri != null) {
+                            okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
+                                if (isShared) {
+                                    context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.sink().buffer()
+                                } else {
+                                    File(fileUri).appendingSink().buffer()
+                                }.use { sink ->
+                                    sink.writeAll(response.body()!!.source())
+                                }
+                                response.body()!!.contentLength()
+                            }
+                        } else null
                         offlineRepository.updateVideo(offlineVideo.apply {
                             url = fileUri
                             duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
                             sourceStartPosition = startPosition
                             maxProgress = toIndex - fromIndex + 1
+                            initSegmentBytes?.let { bytes += it }
                         })
                         fileUri
                     }
-                    val mutexMap = mutableMapOf<Int, Mutex>()
-                    val count = MutableStateFlow(0)
-                    val collector = launch {
-                        count.collect {
-                            mutexMap[it]?.unlock()
-                            mutexMap.remove(it)
-                        }
-                    }
-                    val jobs = tracks.map {
+                    segments.map {
                         async {
                             requestSemaphore.withPermit {
                                 okHttpClient.newCall(Request.Builder().url(urlPath + it.uri).build()).execute().use { response ->
                                     val mutex = Mutex()
-                                    val id = tracks.indexOf(it)
+                                    val id = segments.indexOf(it)
                                     if (count.value != id) {
                                         mutex.lock()
                                         mutexMap[id] = mutex
@@ -233,10 +237,6 @@ class DownloadWorker @AssistedInject constructor(
                             }
                         }
                     }
-                    val chatJob = startChatJob(this, path)
-                    jobs.awaitAll()
-                    collector.cancel()
-                    chatJob.join()
                 } else {
                     val videoDirectoryName = if (!offlineVideo.videoId.isNullOrBlank()) {
                         "${offlineVideo.videoId}${offlineVideo.quality ?: ""}"
@@ -249,22 +249,29 @@ class DownloadWorker @AssistedInject constructor(
                         val playlistFileUri = if (!offlineVideo.url.isNullOrBlank()) {
                             offlineVideo.url!!
                         } else {
-                            val sharedTracks = ArrayList<TrackData>()
+                            val sharedSegments = ArrayList<Segment>()
                             for (i in fromIndex..toIndex) {
-                                val track = playlist.tracks[i]
-                                sharedTracks.add(
-                                    track.buildUpon()
-                                        .withUri(videoDirectory.uri.toString() + "%2F" + track.uri.replace("-unmuted", "-muted"))
-                                        .build()
-                                )
+                                val segment = playlist.segments[i]
+                                sharedSegments.add(segment.copy(uri = videoDirectory.uri.toString() + "%2F" + segment.uri.replace("-unmuted", "-muted")))
                             }
                             val fileName = "${offlineVideo.downloadDate}.m3u8"
                             val playlistFile = videoDirectory.findFile(fileName) ?: videoDirectory.createFile("", fileName)!!
-                            applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
-                                PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(sharedTracks).build()).build())
+                            applicationContext.contentResolver.openOutputStream(playlistFile.uri)!!.use {
+                                PlaylistUtils.writeMediaPlaylist(playlist.copy(
+                                    initSegmentUri = videoDirectory.uri.toString() + "%2F" + playlist.initSegmentUri,
+                                    segments = sharedSegments
+                                ), it)
                             }
                             val playlistUri = playlistFile.uri.toString()
                             val startPosition = relativeStartTimes[fromIndex]
+                            if (playlist.initSegmentUri != null) {
+                                okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
+                                    val file = videoDirectory.findFile(playlist.initSegmentUri) ?: videoDirectory.createFile("", playlist.initSegmentUri)!!
+                                    context.contentResolver.openOutputStream(file.uri)!!.sink().buffer().use { sink ->
+                                        sink.writeAll(response.body()!!.source())
+                                    }
+                                }
+                            }
                             offlineRepository.updateVideo(offlineVideo.apply {
                                 url = playlistUri
                                 duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
@@ -276,12 +283,12 @@ class DownloadWorker @AssistedInject constructor(
                         val downloadedTracks = mutableListOf<String>()
                         val playlists = videoDirectory.listFiles().filter { it.isFile && it.name?.endsWith(".m3u8") == true && it.uri.toString() != playlistFileUri }
                         playlists.forEach { file ->
-                            val p = applicationContext.contentResolver.openInputStream(file.uri).use {
-                                PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
+                            val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
                             }
-                            p.mediaPlaylist.tracks.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
+                            p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                         }
-                        val jobs = tracks.map {
+                        segments.map {
                             async {
                                 requestSemaphore.withPermit {
                                     if (videoDirectory.findFile(it.uri) == null || !downloadedTracks.contains(it.uri)) {
@@ -292,14 +299,20 @@ class DownloadWorker @AssistedInject constructor(
                                             }
                                         }
                                     }
-                                    offlineRepository.updateVideo(offlineVideo.apply { progress += 1 })
+                                    val mutex = Mutex()
+                                    val id = segments.indexOf(it)
+                                    if (count.value != id) {
+                                        mutex.lock()
+                                        mutexMap[id] = mutex
+                                    }
+                                    mutex.withLock {
+                                        offlineRepository.updateVideo(offlineVideo.apply { progress += 1 })
+                                    }
+                                    count.update { it + 1 }
                                     setForeground(createForegroundInfo())
                                 }
                             }
                         }
-                        val chatJob = startChatJob(this, path)
-                        jobs.awaitAll()
-                        chatJob.join()
                     } else {
                         val directory = "$path${File.separator}$videoDirectoryName${File.separator}"
                         val playlistFileUri = if (!offlineVideo.url.isNullOrBlank()) {
@@ -308,9 +321,16 @@ class DownloadWorker @AssistedInject constructor(
                             File(directory).mkdir()
                             val playlistUri = "$directory${offlineVideo.downloadDate}.m3u8"
                             FileOutputStream(playlistUri).use {
-                                PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                                PlaylistUtils.writeMediaPlaylist(playlist.copy(segments = segments), it)
                             }
                             val startPosition = relativeStartTimes[fromIndex]
+                            if (playlist.initSegmentUri != null) {
+                                okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
+                                    File(directory + playlist.initSegmentUri).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body()!!.source())
+                                    }
+                                }
+                            }
                             offlineRepository.updateVideo(offlineVideo.apply {
                                 url = playlistUri
                                 duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
@@ -322,10 +342,10 @@ class DownloadWorker @AssistedInject constructor(
                         val downloadedTracks = mutableListOf<String>()
                         val playlists = File(directory).listFiles(FileFilter { it.extension == "m3u8" && it.path != playlistFileUri })
                         playlists?.forEach { file ->
-                            val p = PlaylistParser(file.inputStream(), Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse()
-                            p.mediaPlaylist.tracks.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
+                            val p = PlaylistUtils.parseMediaPlaylist(file.inputStream())
+                            p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                         }
-                        val jobs = tracks.map {
+                        segments.map {
                             async {
                                 requestSemaphore.withPermit {
                                     if (!File(directory + it.uri).exists() || !downloadedTracks.contains(it.uri)) {
@@ -335,16 +355,26 @@ class DownloadWorker @AssistedInject constructor(
                                             }
                                         }
                                     }
-                                    offlineRepository.updateVideo(offlineVideo.apply { progress += 1 })
+                                    val mutex = Mutex()
+                                    val id = segments.indexOf(it)
+                                    if (count.value != id) {
+                                        mutex.lock()
+                                        mutexMap[id] = mutex
+                                    }
+                                    mutex.withLock {
+                                        offlineRepository.updateVideo(offlineVideo.apply { progress += 1 })
+                                    }
+                                    count.update { it + 1 }
                                     setForeground(createForegroundInfo())
                                 }
                             }
                         }
-                        val chatJob = startChatJob(this, path)
-                        jobs.awaitAll()
-                        chatJob.join()
                     }
                 }
+                val chatJob = startChatJob(this, path)
+                jobs.awaitAll()
+                collector.cancel()
+                chatJob.join()
             } else {
                 val path = offlineVideo.downloadPath!!
                 val isShared = path.toUri().scheme == ContentResolver.SCHEME_CONTENT

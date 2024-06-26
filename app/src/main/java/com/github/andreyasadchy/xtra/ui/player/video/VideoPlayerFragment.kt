@@ -23,8 +23,8 @@ import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -329,9 +329,9 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
                                 result.get().extras.getParcelable(PlaybackService.RESULT, VideoDownloadInfo::class.java)
                             } else {
                                 @Suppress("DEPRECATION")
-                                result.get().extras.getParcelable(PlaybackService.RESULT) as? VideoDownloadInfo
+                                result.get().extras.getParcelable(PlaybackService.RESULT)
                             }?.let {
-                                VideoDownloadDialog.newInstance(it.copy(video = video)).show(childFragmentManager, null)
+                                DownloadDialog.newInstance(video, it).show(childFragmentManager, null)
                             }
                         }
                     }, MoreExecutors.directExecutor())

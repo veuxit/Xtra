@@ -9,13 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
-import com.iheartradio.m3u8.Encoding
-import com.iheartradio.m3u8.Format
-import com.iheartradio.m3u8.ParsingMode
-import com.iheartradio.m3u8.PlaylistParser
-import com.iheartradio.m3u8.PlaylistWriter
-import com.iheartradio.m3u8.data.Playlist
-import com.iheartradio.m3u8.data.TrackData
+import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
+import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -47,21 +42,20 @@ class SavedPagerViewModel @Inject constructor(
                         videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true }.forEach { playlistFile ->
                             val existingVideo = offlineRepository.getVideoByUrl(playlistFile.uri.toString())
                             if (existingVideo == null) {
-                                val playlist = applicationContext.contentResolver.openInputStream(playlistFile.uri).use {
-                                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                                val playlist = applicationContext.contentResolver.openInputStream(playlistFile.uri)!!.use {
+                                    PlaylistUtils.parseMediaPlaylist(it)
                                 }
                                 var totalDuration = 0L
-                                val tracks = ArrayList<TrackData>()
-                                playlist.tracks.forEach { track ->
-                                    totalDuration += (track.trackInfo.duration * 1000f).toLong()
-                                    tracks.add(
-                                        track.buildUpon()
-                                            .withUri(videoDirectory?.uri.toString() + "%2F" + track.uri.substringAfterLast("%2F").substringAfterLast("/"))
-                                            .build()
-                                    )
+                                val segments = ArrayList<Segment>()
+                                playlist.segments.forEach { segment ->
+                                    totalDuration += (segment.duration * 1000f).toLong()
+                                    segments.add(segment.copy(uri = videoDirectory?.uri.toString() + "%2F" + segment.uri.substringAfterLast("%2F").substringAfterLast("/")))
                                 }
-                                applicationContext.contentResolver.openOutputStream(playlistFile.uri).use {
-                                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                                applicationContext.contentResolver.openOutputStream(playlistFile.uri)!!.use {
+                                    PlaylistUtils.writeMediaPlaylist(playlist.copy(
+                                        initSegmentUri = playlist.initSegmentUri?.let { uri -> videoDirectory?.uri.toString() + "%2F" + uri.substringAfterLast("%2F").substringAfterLast("/") },
+                                        segments = segments
+                                    ), it)
                                 }
                                 val chatFile = chatFiles[videoDirectory.name + playlistFile.name?.removeSuffix(".m3u8")]
                                 var id: String? = null
@@ -114,7 +108,7 @@ class SavedPagerViewModel @Inject constructor(
                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                                    thumbnail = tracks.getOrNull(max(0,  (tracks.size / 2) - 1))?.uri,
+                                    thumbnail = segments.getOrNull(max(0,  (segments.size / 2) - 1))?.uri,
                                     gameId = if (!gameId.isNullOrBlank()) gameId else null,
                                     gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
                                     gameName = if (!gameName.isNullOrBlank()) gameName else null,
@@ -143,20 +137,19 @@ class SavedPagerViewModel @Inject constructor(
                             val existingVideo = offlineRepository.getVideoByUrl(playlistFile.path)
                             if (existingVideo == null) {
                                 val playlist = FileInputStream(playlistFile).use {
-                                    PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                                    PlaylistUtils.parseMediaPlaylist(it)
                                 }
                                 var totalDuration = 0L
-                                val tracks = ArrayList<TrackData>()
-                                playlist.tracks.forEach { track ->
-                                    totalDuration += (track.trackInfo.duration * 1000f).toLong()
-                                    tracks.add(
-                                        track.buildUpon()
-                                            .withUri(track.uri.substringAfterLast("%2F").substringAfterLast("/"))
-                                            .build()
-                                    )
+                                val segments = ArrayList<Segment>()
+                                playlist.segments.forEach { segment ->
+                                    totalDuration += (segment.duration * 1000f).toLong()
+                                    segments.add(segment.copy(uri = segment.uri.substringAfterLast("%2F").substringAfterLast("/")))
                                 }
                                 FileOutputStream(playlistFile).use {
-                                    PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                                    PlaylistUtils.writeMediaPlaylist(playlist.copy(
+                                        initSegmentUri = playlist.initSegmentUri?.substringAfterLast("%2F")?.substringAfterLast("/"),
+                                        segments = segments
+                                    ), it)
                                 }
                                 val chatFile = chatFiles[videoDirectory.name + playlistFile.name.removeSuffix(".m3u8")]
                                 var id: String? = null
@@ -210,7 +203,7 @@ class SavedPagerViewModel @Inject constructor(
                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                                    thumbnail = videoDirectory.path + File.separator + tracks.getOrNull(max(0,  (tracks.size / 2) - 1))?.uri,
+                                    thumbnail = videoDirectory.path + File.separator + segments.getOrNull(max(0,  (segments.size / 2) - 1))?.uri,
                                     gameId = if (!gameId.isNullOrBlank()) gameId else null,
                                     gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
                                     gameName = if (!gameName.isNullOrBlank()) gameName else null,

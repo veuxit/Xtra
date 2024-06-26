@@ -249,7 +249,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
                         PlaybackService.ITEM to stream,
                         PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
-                        PlaybackService.HEADERS to headers,
+                        PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
+                        PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray()
                     )), Bundle.EMPTY)
                     player?.prepare()
                 } else {
@@ -279,7 +280,8 @@ class StreamPlayerFragment : BasePlayerFragment() {
                             player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
                                 PlaybackService.ITEM to stream,
                                 PlaybackService.URI to result,
-                                PlaybackService.HEADERS to headers,
+                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
+                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
                                 PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
                             )), Bundle.EMPTY)
                             player?.prepare()

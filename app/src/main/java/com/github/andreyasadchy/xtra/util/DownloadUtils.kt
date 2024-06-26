@@ -15,7 +15,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -107,4 +106,9 @@ object DownloadUtils {
         }
         return File(context.filesDir.path + File.separator + folder + File.separator + "$fileName.png").absolutePath
     }
+
+    data class Storage(
+            val id: Int,
+            val name: String,
+            val path: String)
 }

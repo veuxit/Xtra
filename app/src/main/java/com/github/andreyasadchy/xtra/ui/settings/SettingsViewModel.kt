@@ -8,13 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.iheartradio.m3u8.Encoding
-import com.iheartradio.m3u8.Format
-import com.iheartradio.m3u8.ParsingMode
-import com.iheartradio.m3u8.PlaylistParser
-import com.iheartradio.m3u8.PlaylistWriter
-import com.iheartradio.m3u8.data.Playlist
-import com.iheartradio.m3u8.data.TrackData
+import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
+import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -54,20 +49,19 @@ class SettingsViewModel @Inject constructor(
                                         val existingVideo = offlineRepository.getVideoByUrl(playlistFile.path)
                                         if (existingVideo == null) {
                                             val playlist = FileInputStream(playlistFile).use {
-                                                PlaylistParser(it, Format.EXT_M3U, Encoding.UTF_8, ParsingMode.LENIENT).parse().mediaPlaylist
+                                                PlaylistUtils.parseMediaPlaylist(it)
                                             }
                                             var totalDuration = 0L
-                                            val tracks = ArrayList<TrackData>()
-                                            playlist.tracks.forEach { track ->
-                                                totalDuration += (track.trackInfo.duration * 1000f).toLong()
-                                                tracks.add(
-                                                    track.buildUpon()
-                                                        .withUri(track.uri.substringAfterLast("%2F").substringAfterLast("/"))
-                                                        .build()
-                                                )
+                                            val segments = ArrayList<Segment>()
+                                            playlist.segments.forEach { segment ->
+                                                totalDuration += (segment.duration * 1000f).toLong()
+                                                segments.add(segment.copy(uri = segment.uri.substringAfterLast("%2F").substringAfterLast("/")))
                                             }
                                             FileOutputStream(playlistFile).use {
-                                                PlaylistWriter(it, Format.EXT_M3U, Encoding.UTF_8).write(Playlist.Builder().withMediaPlaylist(playlist.buildUpon().withTracks(tracks).build()).build())
+                                                PlaylistUtils.writeMediaPlaylist(playlist.copy(
+                                                    initSegmentUri = playlist.initSegmentUri?.substringAfterLast("%2F")?.substringAfterLast("/"),
+                                                    segments = segments
+                                                ), it)
                                             }
                                             val chatFile = chatFiles[file.name + playlistFile.name.removeSuffix(".m3u8")]
                                             var id: String? = null
@@ -120,7 +114,7 @@ class SettingsViewModel @Inject constructor(
                                                 channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                                 channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                                 channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                                                thumbnail = file.path + File.separator + tracks.getOrNull(max(0, (tracks.size / 2) - 1))?.uri,
+                                                thumbnail = file.path + File.separator + segments.getOrNull(max(0, (segments.size / 2) - 1))?.uri,
                                                 gameId = if (!gameId.isNullOrBlank()) gameId else null,
                                                 gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
                                                 gameName = if (!gameName.isNullOrBlank()) gameName else null,

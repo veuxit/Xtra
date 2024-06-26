@@ -3,8 +3,8 @@ package com.github.andreyasadchy.xtra.ui.videos
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.prefs
@@ -27,7 +27,7 @@ abstract class BaseVideosFragment : PagedListFragment(), HasDownloadDialog {
     override fun showDownloadDialog() {
         if (DownloadUtils.hasStoragePermission(requireActivity())) {
             lastSelectedItem?.let {
-                VideoDownloadDialog.newInstance(it).show(childFragmentManager, null)
+                DownloadDialog.newInstance(it).show(childFragmentManager, null)
             }
         }
     }

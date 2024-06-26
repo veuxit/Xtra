@@ -31,7 +31,7 @@ import com.github.andreyasadchy.xtra.databinding.StorageSelectionBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
-import com.github.andreyasadchy.xtra.ui.download.DownloadWorker
+import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
@@ -106,8 +106,8 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
             WorkManager.getInstance(requireContext()).enqueueUniqueWork(
                 "download",
                 ExistingWorkPolicy.APPEND_OR_REPLACE,
-                OneTimeWorkRequestBuilder<DownloadWorker>()
-                    .setInputData(workDataOf(DownloadWorker.KEY_VIDEO_ID to it))
+                OneTimeWorkRequestBuilder<VideoDownloadWorker>()
+                    .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to it))
                     .addTag(it.toString())
                     .setConstraints(
                         Constraints.Builder()

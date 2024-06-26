@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.repository
 
 import android.util.Base64
-import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi

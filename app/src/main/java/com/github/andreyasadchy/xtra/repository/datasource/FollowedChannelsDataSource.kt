@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import android.content.Context
-import androidx.core.util.Pair
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.R

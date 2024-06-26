@@ -312,8 +312,8 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return graphQL.getQueryUserResultLogin(headers, json)
     }
 
-    suspend fun loadPlaybackAccessToken(headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
-        val json = JsonObject().apply {
+    fun getPlaybackAccessTokenRequestBody(login: String?, vodId: String?, playerType: String?): JsonObject {
+        return JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
                     addProperty("sha256Hash", "3093517e37e4f4cb48906155bcd894150aef92617939236d2508f3375ab732ce")
@@ -329,7 +329,10 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("playerType", playerType)
             })
         }
-        return graphQL.getPlaybackAccessToken(headers, json)
+    }
+
+    suspend fun loadPlaybackAccessToken(headers: Map<String, String>, login: String? = null, vodId: String? = null, playerType: String?): PlaybackAccessTokenResponse {
+        return graphQL.getPlaybackAccessToken(headers, getPlaybackAccessTokenRequestBody(login, vodId, playerType))
     }
 
     suspend fun loadClipUrls(headers: Map<String, String>, slug: String?): Map<String, String>? = withContext(Dispatchers.IO) {
@@ -742,8 +745,8 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         return data
     }
 
-    suspend fun loadVideoMessages(headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse {
-        val json = JsonObject().apply {
+    private fun getVideoMessagesRequestBody(videoId: String?, offset: Int?, cursor: String?): JsonObject {
+        return JsonObject().apply {
             add("extensions", JsonObject().apply {
                 add("persistedQuery", JsonObject().apply {
                     addProperty("sha256Hash", "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a")
@@ -757,25 +760,14 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
                 addProperty("videoID", videoId)
             })
         }
-        return graphQL.getVideoMessages(headers, json)
+    }
+
+    suspend fun loadVideoMessages(headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse {
+        return graphQL.getVideoMessages(headers, getVideoMessagesRequestBody(videoId, offset, cursor))
     }
 
     suspend fun loadVideoMessagesDownload(headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesDownloadDataResponse {
-        val json = JsonObject().apply {
-            add("extensions", JsonObject().apply {
-                add("persistedQuery", JsonObject().apply {
-                    addProperty("sha256Hash", "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a")
-                    addProperty("version", 1)
-                })
-            })
-            addProperty("operationName", "VideoCommentsByOffsetOrCursor")
-            add("variables", JsonObject().apply {
-                addProperty("cursor", cursor)
-                addProperty("contentOffsetSeconds", offset)
-                addProperty("videoID", videoId)
-            })
-        }
-        return graphQL.getVideoMessagesDownload(headers, json)
+        return graphQL.getVideoMessagesDownload(headers, getVideoMessagesRequestBody(videoId, offset, cursor))
     }
 
     suspend fun loadVideoGames(headers: Map<String, String>, videoId: String?): VideoGamesDataResponse {

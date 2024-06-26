@@ -1,7 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.saved
 
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -33,6 +35,7 @@ import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
@@ -70,8 +73,27 @@ class SavedPagerFragment : Fragment(), Scrollable, FragmentHost {
         } else {
             folderResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
-                    result.data?.data?.path?.let {
-                        viewModel.saveFolders(it.substringBeforeLast("/"))
+                    result.data?.data?.let {
+                        val isShared = it.scheme == ContentResolver.SCHEME_CONTENT
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && isShared) {
+                            val storage = DownloadUtils.getAvailableStorage(requireContext())
+                            val uri = Uri.decode(it.path).substringAfter("/document/")
+                            val storageName = uri.substringBefore(":")
+                            val storagePath = if (storageName.equals("primary", true)) {
+                                storage.firstOrNull()
+                            } else {
+                                if (storage.size >= 2) {
+                                    storage.lastOrNull()
+                                } else {
+                                    storage.firstOrNull()
+                                }
+                            }?.path?.substringBefore("/Android/data") ?: "/storage/emulated/0"
+                            val path = uri.substringAfter(":").substringBeforeLast("/")
+                            val fullUri = "$storagePath/$path"
+                            viewModel.saveFolders(fullUri)
+                        } else {
+                            it.path?.substringBeforeLast("/")?.let { uri -> viewModel.saveFolders(uri) }
+                        }
                     }
                 }
             }
