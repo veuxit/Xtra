@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.repository
 
 import android.util.Base64
-import androidx.core.util.Pair
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.BadgesQuery

@@ -29,7 +29,7 @@ android {
         minSdk = 21
         targetSdk = 34
         versionCode = 121
-        versionName = "2.32.4"
+        versionName = "2.32.5"
     }
 
     buildTypes {
@@ -90,9 +90,7 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.apollo.runtime)
-
     implementation(libs.okio)
-    implementation(libs.open.m3u8)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
