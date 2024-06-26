@@ -5,7 +5,6 @@ import android.os.Build
 import android.text.format.DateUtils
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import androidx.core.util.Pair
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
@@ -416,11 +415,11 @@ object TwitchApiHelper {
             )
     }
 
-    fun getVideoUrlMapFromPreview(url: String, type: String?): MutableMap<String, String> {
+    fun getVideoUrlMapFromPreview(url: String, type: String?): Map<String, String> {
         val qualityList = listOf("chunked", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
         val map = mutableMapOf<String, String>()
         qualityList.forEach { quality ->
-            map[quality] = url
+            map[if (quality == "chunked") "source" else quality] = url
                 .replace("storyboards", quality)
                 .replaceAfterLast("/",
                     if (type?.lowercase() == "highlight") {
@@ -433,8 +432,8 @@ object TwitchApiHelper {
         return map
     }
 
-    fun getClipUrlMapFromPreview(context: Context, url: String): Map<String, String> {
-        return mapOf(kotlin.Pair(ContextCompat.getString(context, R.string.source), url.substringBefore("-preview") + ".mp4"))
+    fun getClipUrlMapFromPreview(url: String): Map<String, String> {
+        return mapOf(Pair("source", url.substringBefore("-preview") + ".mp4"))
     }
 
     fun getMessageIdString(msgId: String?): String? {

@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.search
 
-import androidx.core.util.Pair
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel

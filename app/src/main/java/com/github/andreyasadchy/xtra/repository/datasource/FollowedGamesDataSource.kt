@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
-import androidx.core.util.Pair
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.apollographql.apollo3.ApolloClient

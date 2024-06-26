@@ -215,7 +215,7 @@ class PlaybackService : MediaSessionService() {
                             val tags = playlist.tags
                             val qualityNames = mutableListOf<String>()
                             val codecs = mutableListOf<String>()
-                            val map = mutableMapOf<String, String>()
+                            val map = mutableMapOf<String, Pair<String, String>>()
                             val audioOnly = ContextCompat.getString(this@PlaybackService, R.string.audio_only)
                             val qualityPattern = Pattern.compile("NAME=\"(.+?)\"")
                             val codecPattern = Pattern.compile("CODECS=\"(.+?)\\.")
@@ -246,23 +246,25 @@ class PlaybackService : MediaSessionService() {
                             }
                             qualityNames.forEachIndexed { index, quality ->
                                 val url = playlist.variants[trackIndex++].url.toString()
-                                map[if (!quality.startsWith("audio", true)) {
-                                    codecs.getOrNull(index)?.let { codec ->
+                                if (!quality.startsWith("audio", true)) {
+                                    val name = codecs.getOrNull(index)?.let { codec ->
                                         "$quality $codec"
                                     } ?: quality
+                                    map[name] = Pair(quality, url)
                                 } else {
-                                    audioOnly
-                                }] = url
+                                    map[audioOnly] = Pair("audio_only", url)
+                                }
                             }
-                            urls = map.apply {
+                            map.apply {
                                 if (containsKey(audioOnly)) {
                                     remove(audioOnly)?.let { url ->
                                         put(audioOnly, url) //move audio option to bottom
                                     }
                                 } else {
-                                    put(audioOnly, "")
+                                    put(audioOnly, Pair("audio_only", ""))
                                 }
                             }
+                            urls = map.values.associate { it.first to it.second }
                             qualities = LinkedList(map.keys).apply {
                                 if (usingAutoQuality) {
                                     addFirst(ContextCompat.getString(this@PlaybackService, R.string.auto))
@@ -338,11 +340,10 @@ class PlaybackService : MediaSessionService() {
                                 usingAutoQuality = true
                                 usingChatOnlyQuality = true
                                 val uri = customCommand.customExtras.getString(URI)
-                                val headers = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    customCommand.customExtras.getSerializable(HEADERS, HashMap::class.java) as? HashMap<String, String>
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    customCommand.customExtras.getSerializable(HEADERS) as? HashMap<String, String>
+                                val headers = args.getStringArray(HEADERS_KEYS)?.let { keys ->
+                                    args.getStringArray(HEADERS_VALUES)?.let { values ->
+                                        keys.zip(values).toMap(mutableMapOf())
+                                    }
                                 }
                                 val playlistAsData = customCommand.customExtras.getBoolean(PLAYLIST_AS_DATA)
                                 Companion.item = item
@@ -395,17 +396,26 @@ class PlaybackService : MediaSessionService() {
                                     customCommand.customExtras.getString(URI)?.toUri()
                                 } else {
                                     item.animatedPreviewURL?.let { preview ->
-                                        val map = TwitchApiHelper.getVideoUrlMapFromPreview(preview, item.type)
-                                        urls = map.apply {
+                                        val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, item.type)
+                                        val map = mutableMapOf<String, Pair<String, String>>()
+                                        qualityMap.forEach {
+                                            if (it.key == "source") {
+                                                map[ContextCompat.getString(this@PlaybackService, R.string.source)] = Pair(it.key, it.value)
+                                            } else {
+                                                map[it.key] = Pair(it.key, it.value)
+                                            }
+                                        }
+                                        map.apply {
                                             if (containsKey("audio_only")) {
                                                 remove("audio_only")?.let { url ->
                                                     put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), url) //move audio option to bottom
                                                 }
                                             } else {
-                                                put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), "")
+                                                put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), Pair("audio_only", ""))
                                             }
                                         }
-                                        qualities = LinkedList(urls.keys).apply {
+                                        urls = map.values.associate { it.first to it.second }
+                                        qualities = LinkedList(map.keys).apply {
                                             addFirst(ContextCompat.getString(this@PlaybackService, R.string.auto))
                                         }
                                         qualityIndex = 1
@@ -451,14 +461,28 @@ class PlaybackService : MediaSessionService() {
                             }?.let { item ->
                                 customCommand.customExtras.getStringArray(URLS_KEYS)?.let { keys ->
                                     customCommand.customExtras.getStringArray(URLS_VALUES)?.let { values ->
-                                        val map = keys.zip(values).toMap(mutableMapOf())
-                                        Companion.item = item
-                                        urls = map.apply {
-                                            put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), "")
+                                        val map = mutableMapOf<String, Pair<String, String>>()
+                                        keys.forEachIndexed { index, key ->
+                                            if (key == "source") {
+                                                map[ContextCompat.getString(this@PlaybackService, R.string.source)] = Pair(key, values[index])
+                                            } else {
+                                                map[key] = Pair(key, values[index])
+                                            }
                                         }
-                                        qualities = LinkedList(urls.keys)
+                                        map.apply {
+                                            if (containsKey("audio_only")) {
+                                                remove("audio_only")?.let { url ->
+                                                    put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), url) //move audio option to bottom
+                                                }
+                                            } else {
+                                                put(ContextCompat.getString(this@PlaybackService, R.string.audio_only), Pair("audio_only", ""))
+                                            }
+                                        }
+                                        Companion.item = item
+                                        urls = map.values.associate { it.first to it.second }
+                                        qualities = LinkedList(map.keys)
                                         setQualityIndex()
-                                        (map.values.elementAtOrNull(qualityUrlIndex) ?: map.values.firstOrNull())?.let { url ->
+                                        (map.values.elementAtOrNull(qualityUrlIndex) ?: map.values.firstOrNull())?.second?.let { url ->
                                             session.player.setMediaItem(MediaItem.Builder()
                                                 .setUri(url)
                                                 .setMediaMetadata(MediaMetadata.Builder()
@@ -486,11 +510,12 @@ class PlaybackService : MediaSessionService() {
                             }?.let { item ->
                                 item.url?.let { url ->
                                     Companion.item = item
-                                    urls = mapOf(
-                                        ContextCompat.getString(this@PlaybackService, R.string.source) to url,
-                                        ContextCompat.getString(this@PlaybackService, R.string.audio_only) to ""
+                                    val map = mapOf(
+                                        ContextCompat.getString(this@PlaybackService, R.string.source) to Pair("source", url),
+                                        ContextCompat.getString(this@PlaybackService, R.string.audio_only) to Pair("audio_only", "")
                                     )
-                                    qualities = LinkedList(urls.keys)
+                                    urls = map.values.associate { it.first to it.second }
+                                    qualities = LinkedList(map.keys)
                                     session.player.setMediaItem(MediaItem.Builder()
                                         .setUri(url)
                                         .setMediaMetadata(MediaMetadata.Builder()
@@ -629,7 +654,6 @@ class PlaybackService : MediaSessionService() {
                         GET_VIDEO_DOWNLOAD_INFO -> {
                             val info = (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.let { playlist ->
                                 VideoDownloadInfo(
-                                    video = Video(),
                                     qualities = urls,
                                     totalDuration = playlist.durationUs / 1000L,
                                     currentPosition = session.player.currentPosition
@@ -954,7 +978,7 @@ class PlaybackService : MediaSessionService() {
     companion object {
         private var item: Parcelable? = null
         private var mediaItem: MediaItem? = null
-        private var headers: HashMap<String, String>? = null
+        private var headers: Map<String, String>? = null
         private var playbackPosition: Long = 0
         private var savedPosition: VideoPosition? = null
 
@@ -1006,7 +1030,8 @@ class PlaybackService : MediaSessionService() {
         const val URI = "uri"
         const val URLS_KEYS = "urlsKeys"
         const val URLS_VALUES = "urlsValues"
-        const val HEADERS = "headers"
+        const val HEADERS_KEYS = "headersKeys"
+        const val HEADERS_VALUES = "headersValues"
         const val USING_PLAYLIST = "usingPlaylist"
         const val PLAYLIST_AS_DATA = "playlistAsData"
         const val PLAYBACK_POSITION = "playbackPosition"

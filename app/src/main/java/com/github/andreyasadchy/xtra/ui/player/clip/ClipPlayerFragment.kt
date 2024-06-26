@@ -22,7 +22,7 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
-import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
@@ -227,7 +227,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
             if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
                 viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
                 viewModel.result.observe(viewLifecycleOwner) { map ->
-                    val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(requireContext(), clip.thumbnailUrl) } else mapOf()
+                    val urls = map ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) { TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl) } else mapOf()
                     player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
                         PlaybackService.ITEM to clip,
                         PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
@@ -235,7 +235,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     )), Bundle.EMPTY)
                 }
             } else {
-                val urls = TwitchApiHelper.getClipUrlMapFromPreview(requireContext(), clip.thumbnailUrl)
+                val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
                 player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
                     PlaybackService.ITEM to clip,
                     PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
@@ -256,8 +256,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                         result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
                             result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                val urls = keys.zip(values).toMap(mutableMapOf())
-                                ClipDownloadDialog.newInstance(clip, urls).show(childFragmentManager, null)
+                                DownloadDialog.newInstance(clip, keys, values).show(childFragmentManager, null)
                             }
                         }
                     }
