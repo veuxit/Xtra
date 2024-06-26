@@ -73,7 +73,7 @@ class PlayerRepository @Inject constructor(
         ).toString()
     }
 
-    suspend fun loadStreamPlaylistResponse(url: String, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): ResponseBody = withContext(Dispatchers.IO) {
+    suspend fun loadStreamPlaylistResponse(url: String, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
         okHttpClient.newBuilder().apply {
             if (proxyMultivariantPlaylist && !proxyHost.isNullOrBlank() && proxyPort != null) {
                 proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
@@ -84,7 +84,7 @@ class PlayerRepository @Inject constructor(
                 }
             }
         }.build().newCall(Request.Builder().url(url).build()).execute().use { response ->
-            response.body
+            response.body.string()
         }
     }
 
