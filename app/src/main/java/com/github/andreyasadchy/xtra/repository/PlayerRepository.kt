@@ -73,6 +73,22 @@ class PlayerRepository @Inject constructor(
         ).toString()
     }
 
+    suspend fun loadStreamPlaylist(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
+        val accessToken = loadStreamPlaybackAccessToken(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, false, null, null, null, null, enableIntegrity)
+        val playlistQueryOptions = HashMap<String, String>().apply {
+            put("allow_source", "true")
+            put("allow_audio_only", "true")
+            put("p", Random.nextInt(9999999).toString())
+            if (supportedCodecs?.contains("av1", true) == true) {
+                put("platform", "web")
+            }
+            accessToken?.signature?.let { put("sig", it) }
+            supportedCodecs?.let { put("supported_codecs", it) }
+            accessToken?.token?.let { put("token", it) }
+        }
+        usher.getStreamPlaylist(channelLogin, playlistQueryOptions).body()?.string()
+    }
+
     suspend fun loadStreamPlaylistResponse(url: String, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
         okHttpClient.newBuilder().apply {
             if (proxyMultivariantPlaylist && !proxyHost.isNullOrBlank() && proxyPort != null) {

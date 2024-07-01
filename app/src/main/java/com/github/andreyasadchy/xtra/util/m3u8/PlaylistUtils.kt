@@ -31,8 +31,8 @@ object PlaylistUtils {
                                     rangeClass = Pattern.compile("CLASS=\"(.+?)\"").matcher(line).let { if (it.find()) it.group(1) else null },
                                     startDate = startDate,
                                     endDate = Pattern.compile("END-DATE=\"(.+?)\"").matcher(line).let { if (it.find()) it.group(1) else null },
-                                    duration = Pattern.compile("DURATION=(.+?)").matcher(line).let { if (it.find()) it.group(1) else null },
-                                    plannedDuration = Pattern.compile("PLANNED-DURATION=(.+?)").matcher(line).let { if (it.find()) it.group(1) else null },
+                                    duration = Pattern.compile("DURATION=(.+?)").matcher(line).let { if (it.find()) it.group(1)?.toFloatOrNull() else null },
+                                    plannedDuration = Pattern.compile("PLANNED-DURATION=(.+?)").matcher(line).let { if (it.find()) it.group(1)?.toFloatOrNull() else null },
                                     ad = Pattern.compile("X-TV-TWITCH-AD-.+?=\"(.+?)\"").matcher(line).let { if (it.find()) it.group(1) else null } != null
                                 ))
                             }
@@ -61,13 +61,13 @@ object PlaylistUtils {
                     }
                 } else {
                     segmentInfo?.let {
-                        segments.add(Segment(line, it.first, it.second))
+                        segments.add(Segment(line, it.first, it.second, programDateTime))
                         segmentInfo = null
                     }
                 }
             }
         }
-        return MediaPlaylist(targetDuration, dateRanges, programDateTime, initSegmentUri, segments)
+        return MediaPlaylist(targetDuration, dateRanges, initSegmentUri, segments)
     }
 
     fun writeMediaPlaylist(playlist: MediaPlaylist, output: OutputStream) {

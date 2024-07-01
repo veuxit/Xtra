@@ -11,7 +11,6 @@ import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
 import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
@@ -24,10 +23,7 @@ import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.Command
-import com.github.andreyasadchy.xtra.util.chat.PointsEarned
 import com.github.andreyasadchy.xtra.util.chat.Raid
-import com.github.andreyasadchy.xtra.util.chat.RoomState
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
@@ -98,8 +94,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewModel.roomState.observe(viewLifecycleOwner) { chatView.notifyRoomState(it) }
                 viewModel.reloadMessages.observe(viewLifecycleOwner) { chatView.notifyEmotesLoaded() }
                 viewModel.scrollDown.observe(viewLifecycleOwner) { chatView.scrollToLastPosition() }
-                viewModel.command.observe(viewLifecycleOwner) { postCommand(it) }
-                viewModel.pointsEarned.observe(viewLifecycleOwner) { postPointsEarned(it) }
+                viewModel.hideRaid.observe(viewLifecycleOwner) { chatView.hideRaid() }
                 viewModel.raid.observe(viewLifecycleOwner) { onRaidUpdate(it) }
                 viewModel.raidClicked.observe(viewLifecycleOwner) { onRaidClicked() }
                 viewModel.streamLiveChanged.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateLive(it.first.live, it.first.serverTime?.times(1000), it.second) }
@@ -160,39 +155,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 }
             }
         }
-    }
-
-    private fun postCommand(command: Command) {
-        val message = when (command.type) {
-            "join" -> requireContext().getString(R.string.chat_join, command.message)
-            "disconnect" -> requireContext().getString(R.string.chat_disconnect, command.message, command.duration)
-            "disconnect_command" -> {
-                binding.chatView.hideRaid()
-                binding.chatView.notifyRoomState(RoomState("0", "-1", "0", "0", "0"))
-                requireContext().getString(R.string.disconnected)
-            }
-            "send_msg_error" -> requireContext().getString(R.string.chat_send_msg_error, command.message)
-            "socket_error" -> requireContext().getString(R.string.chat_socket_error, command.message)
-            "notice" -> {
-                when (command.duration) { // msg-id
-                    "unraid_success" -> binding.chatView.hideRaid()
-                }
-                TwitchApiHelper.getNoticeString(requireContext(), command.duration, command.message)
-            }
-            "clearmsg" -> requireContext().getString(R.string.chat_clearmsg, command.message, command.duration)
-            "clearchat" -> requireContext().getString(R.string.chat_clear)
-            "timeout" -> requireContext().getString(R.string.chat_timeout, command.message, TwitchApiHelper.getDurationFromSeconds(requireContext(), command.duration))
-            "ban" -> requireContext().getString(R.string.chat_ban, command.message)
-            "stream_live" -> requireContext().getString(R.string.stream_live, command.duration)
-            "stream_offline" -> requireContext().getString(R.string.stream_offline, command.duration)
-            else -> command.message
-        }
-        viewModel.chat?.onMessage(ChatMessage(message = message, color = "#999999", emotes = command.emotes, isAction = true, timestamp = command.timestamp, fullMsg = command.fullMsg))
-    }
-
-    private fun postPointsEarned(points: PointsEarned) {
-        val message = requireContext().getString(R.string.points_earned, points.pointsGained)
-        viewModel.chat?.onMessage(ChatMessage(message = message, color = "#999999", isAction = true, timestamp = points.timestamp, fullMsg = points.fullMsg))
     }
 
     fun isActive(): Boolean? {

@@ -13,8 +13,8 @@ class ChatWriteIRC(
     private val useSSL: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
-    private val channelName: String,
-    private val listener: OnMessageReceivedListener) : Thread() {
+    channelName: String,
+    private val listener: ChatListener) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter
@@ -93,13 +93,12 @@ class ChatWriteIRC(
             socketOut?.close()
         } catch (e: IOException) {
             Log.e(TAG, "Error while closing socketOut", e)
-            listener.onCommand(message = e.toString(), duration = null, type = "socket_error", fullMsg = e.stackTraceToString())
         }
     }
 
     @Throws(IOException::class)
     private fun write(message: String, vararg writers: BufferedWriter?) {
-        writers.forEach { it?.write(message + System.getProperty("line.separator")) }
+        writers.forEach { it?.write(message + System.lineSeparator()) }
     }
 
     fun send(message: CharSequence) {
@@ -110,18 +109,8 @@ class ChatWriteIRC(
                 Log.d(TAG, "Sent message to $hashChannelName: $message")
             } catch (e: Exception) {
                 Log.e(TAG, "Error sending message", e)
-                listener.onCommand(message = e.toString(), duration = null, type = "send_msg_error", fullMsg = e.stackTraceToString())
+                listener.onSendMessageError(e.toString(), e.stackTraceToString())
             }
         }
-    }
-
-    interface OnMessageReceivedListener {
-        fun onMessage(message: String, userNotice: Boolean)
-        fun onCommand(message: String, duration: String?, type: String?, fullMsg: String?)
-        fun onClearMessage(message: String)
-        fun onClearChat(message: String)
-        fun onNotice(message: String)
-        fun onRoomState(message: String)
-        fun onUserState(message: String)
     }
 }

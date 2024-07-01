@@ -258,7 +258,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                             val playlistFile = videoDirectory.findFile(fileName) ?: videoDirectory.createFile("", fileName)!!
                             applicationContext.contentResolver.openOutputStream(playlistFile.uri)!!.use {
                                 PlaylistUtils.writeMediaPlaylist(playlist.copy(
-                                    initSegmentUri = videoDirectory.uri.toString() + "%2F" + playlist.initSegmentUri,
+                                    initSegmentUri = playlist.initSegmentUri?.let { uri -> videoDirectory.uri.toString() + "%2F" + uri },
                                     segments = sharedSegments
                                 ), it)
                             }

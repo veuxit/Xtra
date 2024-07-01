@@ -217,7 +217,6 @@
     <string name="show_copy_fullmsg">Vollständige IRC Nachricht kopieren</string>
     <string name="chat_disconnect">Getrennt von %1$s - %2$s</string>
     <string name="chat_send_msg_error">Fehler beim Senden der Nachricht - %s</string>
-    <string name="chat_socket_error">Fehler beim Schließen des Sockets - %s</string>
     <string name="irc_notice_already_banned">%s is already banned in this channel.</string>
     <string name="irc_notice_already_emote_only_off">This room is not in emote-only mode.</string>
     <string name="irc_notice_already_emote_only_on">This room is already in emote-only mode.</string>
@@ -624,4 +623,14 @@
     <string name="download_blocked">Waiting for Internet connection</string>
     <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
     <string name="download_wifi_only">Download using Wi-Fi only</string>
+    <string name="download_waiting_for_stream">Waiting for stream</string>
+    <string name="settings_downloads">DOWNLOADS</string>
+    <string name="download_live_check">Stream playlist check frequency</string>
+    <string name="download_live_check_summary">Seconds to wait between checks to see if the playlist has new segments</string>
+    <string name="download_offline_check">Live check frequency</string>
+    <string name="download_offline_check_summary">Seconds to wait between checks to see if stream is live</string>
+    <string name="download_start_wait">Wait time before stream</string>
+    <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
+    <string name="download_end_wait">Wait time after stream</string>
+    <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
 </resources>

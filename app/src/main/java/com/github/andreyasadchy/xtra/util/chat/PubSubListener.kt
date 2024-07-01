@@ -1,16 +1,16 @@
 package com.github.andreyasadchy.xtra.util.chat
 
-import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import org.json.JSONObject
 
-interface PubSubCallback {
-    fun onPlaybackMessage(message: PlaybackMessage)
-    fun onTitleUpdate(message: BroadcastSettings)
-    fun onRewardMessage(message: ChatMessage)
-    fun onPointsEarned(message: PointsEarned)
+interface PubSubListener {
+    fun onPlaybackMessage(message: JSONObject)
+    fun onTitleUpdate(message: JSONObject)
+    fun onRewardMessage(message: JSONObject)
+    fun onPointsEarned(message: JSONObject)
     fun onClaimAvailable()
     fun onMinuteWatched()
-    fun onRaidUpdate(message: Raid)
+    fun onRaidUpdate(message: JSONObject, openStream: Boolean)
 }
 
 data class PlaybackMessage(

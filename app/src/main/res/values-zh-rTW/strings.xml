@@ -217,7 +217,6 @@
     <string name="show_copy_fullmsg">複製完整的 IRC 訊息</string>
     <string name="chat_disconnect">斷開連接，從 %1$s - %2$s</string>
     <string name="chat_send_msg_error">發送訊息時發生錯誤 - %s</string>
-    <string name="chat_socket_error">關閉通訊端時發生錯誤 - %s</string>
     <string name="irc_notice_already_banned">%s 已在此頻道中被禁止。</string>
     <string name="irc_notice_already_emote_only_off">此房間不處於表情符號限定模式。</string>
     <string name="irc_notice_already_emote_only_on">此房間已經處於表情符號限定模式。</string>
@@ -624,4 +623,14 @@
     <string name="download_blocked">Waiting for Internet connection</string>
     <string name="download_blocked_wifi">Waiting for Wi-Fi connection</string>
     <string name="download_wifi_only">Download using Wi-Fi only</string>
+    <string name="download_waiting_for_stream">Waiting for stream</string>
+    <string name="settings_downloads">DOWNLOADS</string>
+    <string name="download_live_check">Stream playlist check frequency</string>
+    <string name="download_live_check_summary">Seconds to wait between checks to see if the playlist has new segments</string>
+    <string name="download_offline_check">Live check frequency</string>
+    <string name="download_offline_check_summary">Seconds to wait between checks to see if stream is live</string>
+    <string name="download_start_wait">Wait time before stream</string>
+    <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
+    <string name="download_end_wait">Wait time after stream</string>
+    <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
 </resources>

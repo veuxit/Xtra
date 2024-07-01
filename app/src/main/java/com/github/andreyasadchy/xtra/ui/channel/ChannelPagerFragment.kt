@@ -32,6 +32,7 @@ import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
@@ -154,6 +155,12 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                                 setNegativeButton(getString(R.string.no), null)
                                 setPositiveButton(getString(R.string.yes)) { _, _ -> activity.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java)) }
                             }.show()
+                        }
+                        true
+                    }
+                    R.id.download -> {
+                        if (viewModel.stream.isInitialized) {
+                            viewModel.stream.value?.let { DownloadDialog.newInstance(it).show(childFragmentManager, null) }
                         }
                         true
                     }

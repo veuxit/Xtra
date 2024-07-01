@@ -32,6 +32,9 @@
 
     <LinearLayout style="@style/PlayerTopRightPanel">
         <ImageButton
+            style="@style/PlayerDownload"
+            tools:visibility="visible" />
+        <ImageButton
             style="@style/PlayerFollow"
             tools:visibility="visible" />
         <ImageButton
