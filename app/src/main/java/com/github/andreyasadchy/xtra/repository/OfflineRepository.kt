@@ -29,6 +29,10 @@ class OfflineRepository @Inject constructor(
         videosDao.getByUrl(url)
     }
 
+    suspend fun getLiveDownload(login: String) = withContext(Dispatchers.IO) {
+        videosDao.getLiveDownload(login)
+    }
+
     suspend fun getVideosByUserId(id: String) = withContext(Dispatchers.IO) {
         videosDao.getByUserId(id)
     }

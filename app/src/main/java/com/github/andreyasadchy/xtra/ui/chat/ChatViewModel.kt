@@ -6,12 +6,14 @@ import android.util.Base64
 import android.util.JsonReader
 import android.util.JsonToken
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
@@ -22,7 +24,6 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
@@ -30,22 +31,21 @@ import com.github.andreyasadchy.xtra.ui.player.ChatReplayManagerLocal
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.SingleLiveEvent
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.BroadcastSettings
-import com.github.andreyasadchy.xtra.util.chat.ChatCallback
-import com.github.andreyasadchy.xtra.util.chat.ChatListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.ChatListener
 import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
+import com.github.andreyasadchy.xtra.util.chat.ChatUtils
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
-import com.github.andreyasadchy.xtra.util.chat.Command
-import com.github.andreyasadchy.xtra.util.chat.EventSubCallback
-import com.github.andreyasadchy.xtra.util.chat.EventSubListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.EventSubListener
+import com.github.andreyasadchy.xtra.util.chat.EventSubUtils
 import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
 import com.github.andreyasadchy.xtra.util.chat.PlaybackMessage
-import com.github.andreyasadchy.xtra.util.chat.PointsEarned
-import com.github.andreyasadchy.xtra.util.chat.PubSubCallback
-import com.github.andreyasadchy.xtra.util.chat.PubSubListenerImpl
+import com.github.andreyasadchy.xtra.util.chat.PubSubListener
+import com.github.andreyasadchy.xtra.util.chat.PubSubUtils
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
@@ -55,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okio.use
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.util.Collections
@@ -122,12 +123,9 @@ class ChatViewModel @Inject constructor(
     private val _scrollDown by lazy { SingleLiveEvent<Boolean>() }
     val scrollDown: LiveData<Boolean>
         get() = _scrollDown
-    private val _command by lazy { SingleLiveEvent<Command>() }
-    val command: LiveData<Command>
-        get() = _command
-    private val _pointsEarned by lazy { SingleLiveEvent<PointsEarned>() }
-    val pointsEarned: LiveData<PointsEarned>
-        get() = _pointsEarned
+    private val _hideRaid by lazy { SingleLiveEvent<Boolean>() }
+    val hideRaid: LiveData<Boolean>
+        get() = _hideRaid
 
     private var messageLimit = 600
     private val _chatMessages by lazy {
@@ -508,7 +506,7 @@ class ChatViewModel @Inject constructor(
         private val useApiCommands: Boolean,
         private val useApiChatMessages: Boolean,
         private val useEventSubChat: Boolean,
-        private val checkIntegrity: Boolean) : ChatController(), ChatCallback, PubSubCallback, EventSubCallback {
+        private val checkIntegrity: Boolean) : ChatController(), ChatListener, PubSubListener, EventSubListener {
 
         private var chatReadIRC: ChatReadIRC? = null
         private var chatWriteIRC: ChatWriteIRC? = null
@@ -562,22 +560,22 @@ class ChatViewModel @Inject constructor(
             val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
             val helixToken = account.helixToken
             if (useEventSubChat && !account.helixToken.isNullOrBlank()) {
-                eventSub = EventSubWebSocket(channelLogin, okHttpClient, viewModelScope, EventSubListenerImpl(this, this, this, showUserNotice, showClearChat, usePubSub)).apply { connect() }
+                eventSub = EventSubWebSocket(okHttpClient, viewModelScope, this).apply { connect() }
             } else {
                 if (useChatWebSocket) {
-                    chatReadWebSocket = ChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
+                    chatReadWebSocket = ChatReadWebSocket(isLoggedIn, channelLogin, okHttpClient, viewModelScope, this).apply { connect() }
                     if (isLoggedIn && (!gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank() && !useApiChatMessages)) {
-                        chatWriteWebSocket = ChatWriteWebSocket(account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, okHttpClient, viewModelScope, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { connect() }
+                        chatWriteWebSocket = ChatWriteWebSocket(account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, okHttpClient, viewModelScope, this).apply { connect() }
                     }
                 } else {
-                    chatReadIRC = ChatReadIRC(useSSL, isLoggedIn, channelLogin, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+                    chatReadIRC = ChatReadIRC(useSSL, isLoggedIn, channelLogin, this).apply { start() }
                     if (isLoggedIn && (!gqlToken.isNullOrBlank() || !account.helixToken.isNullOrBlank() && !useApiChatMessages)) {
-                        chatWriteIRC = ChatWriteIRC(useSSL, account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, ChatListenerImpl(this, this, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+                        chatWriteIRC = ChatWriteIRC(useSSL, account.login, gqlToken?.takeIf { it.isNotBlank() } ?: helixToken, channelLogin, this).apply { start() }
                     }
                 }
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
-                pubSub = PubSubWebSocket(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, PubSubListenerImpl(this, this)).apply { connect() }
+                pubSub = PubSubWebSocket(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this).apply { connect() }
             }
         }
 
@@ -591,17 +589,70 @@ class ChatViewModel @Inject constructor(
             pause()
         }
 
-        override fun onMessage(message: ChatMessage) {
-            super.onMessage(message)
+        private fun onChatMessage(message: ChatMessage) {
+            onMessage(message)
             addChatter(message.userName)
         }
 
-        override fun onCommand(list: Command) {
-            _command.postValue(list)
+        override fun onConnect() {
+            onMessage(ChatMessage(
+                message = ContextCompat.getString(applicationContext, R.string.chat_join).format(channelLogin),
+                color = "#999999",
+                isAction = true,
+            ))
         }
 
-        override fun onRoomState(list: RoomState) {
-            roomState.postValue(list)
+        override fun onDisconnect(message: String, fullMsg: String) {
+            onMessage(ChatMessage(
+                message = ContextCompat.getString(applicationContext, R.string.chat_disconnect).format(channelLogin, message),
+                color = "#999999",
+                isAction = true,
+                fullMsg = fullMsg
+            ))
+        }
+
+        override fun onSendMessageError(message: String, fullMsg: String) {
+            onMessage(ChatMessage(
+                message = ContextCompat.getString(applicationContext, R.string.chat_send_msg_error).format(message),
+                color = "#999999",
+                isAction = true,
+                fullMsg = fullMsg
+            ))
+        }
+
+        override fun onChatMessage(message: String, userNotice: Boolean) {
+            if (!userNotice || showUserNotice) {
+                val chatMessage = ChatUtils.parseChatMessage(message, userNotice)
+                if (usePubSub && chatMessage.reward != null && !chatMessage.reward.id.isNullOrBlank()) {
+                    onRewardMessage(chatMessage)
+                } else {
+                    onChatMessage(chatMessage)
+                }
+            }
+        }
+
+        override fun onClearMessage(message: String) {
+            if (showClearMsg) {
+                onMessage(ChatUtils.parseClearMessage(applicationContext, message))
+            }
+        }
+
+        override fun onClearChat(message: String) {
+            if (showClearChat) {
+                onMessage(ChatUtils.parseClearChat(applicationContext, message))
+            }
+        }
+
+        override fun onNotice(message: String) {
+            val result = ChatUtils.parseNotice(applicationContext, message)
+            onMessage(result.first)
+            if (result.second) {
+                _hideRaid.postValue(true)
+            }
+        }
+
+        override fun onRoomState(message: String) {
+            roomState.postValue(ChatUtils.parseRoomState(message))
         }
 
         fun loadUserEmotes() {
@@ -696,8 +747,9 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onUserState(emoteSets: List<String>?) {
-            if (savedEmoteSets != emoteSets) {
+        override fun onUserState(message: String) {
+            val emoteSets = ChatUtils.parseEmoteSets(message)
+            if (emoteSets != null && savedEmoteSets != emoteSets) {
                 savedEmoteSets = emoteSets
                 if (!loadedUserEmotes) {
                     loadEmoteSets()
@@ -705,28 +757,39 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onPlaybackMessage(message: PlaybackMessage) {
-            message.live?.let {
-                if (it) {
-                    _command.postValue(Command(duration = channelLogin, type = "stream_live"))
-                } else {
-                    _command.postValue(Command(duration = channelLogin, type = "stream_offline"))
+        override fun onPlaybackMessage(message: JSONObject) {
+            val playbackMessage = PubSubUtils.parsePlaybackMessage(message)
+            if (playbackMessage != null) {
+                playbackMessage.live?.let {
+                    if (it) {
+                        onMessage(ChatMessage(
+                            message = ContextCompat.getString(applicationContext, R.string.stream_live).format(channelLogin),
+                            color = "#999999",
+                            isAction = true,
+                        ))
+                    } else {
+                        onMessage(ChatMessage(
+                            message = ContextCompat.getString(applicationContext, R.string.stream_offline).format(channelLogin),
+                            color = "#999999",
+                            isAction = true,
+                        ))
+                    }
+                    streamLiveChanged.postValue(Pair(playbackMessage, channelLogin))
                 }
-                streamLiveChanged.postValue(Pair(message, channelLogin))
+                viewerCount.postValue(playbackMessage.viewers)
             }
-            viewerCount.postValue(message.viewers)
         }
 
-        override fun onTitleUpdate(message: BroadcastSettings) {
-            this@ChatViewModel.title.postValue(message)
+        override fun onTitleUpdate(message: JSONObject) {
+            title.postValue(PubSubUtils.parseTitleUpdate(message))
         }
 
-        override fun onRewardMessage(message: ChatMessage) {
+        private fun onRewardMessage(message: ChatMessage) {
             if (message.reward?.id != null) {
                 val item = rewardList.find { it.reward?.id == message.reward.id && it.userId == message.userId }
                 if (item != null) {
                     rewardList.remove(item)
-                    onMessage(ChatMessage(
+                    onChatMessage(ChatMessage(
                         id = message.id ?: item.id,
                         userId = message.userId ?: item.userId,
                         userLogin = message.userLogin ?: item.userLogin,
@@ -755,12 +818,28 @@ class ChatViewModel @Inject constructor(
                     rewardList.add(message)
                 }
             } else {
-                onMessage(message)
+                onChatMessage(message)
             }
         }
 
-        override fun onPointsEarned(message: PointsEarned) {
-            _pointsEarned.postValue(message)
+        override fun onRewardMessage(message: JSONObject) {
+            val chatMessage = PubSubUtils.parseRewardMessage(message)
+            if (!chatMessage.message.isNullOrBlank()) {
+                onRewardMessage(chatMessage)
+            } else {
+                onChatMessage(chatMessage)
+            }
+        }
+
+        override fun onPointsEarned(message: JSONObject) {
+            val points = PubSubUtils.parsePointsEarned(message)
+            onMessage(ChatMessage(
+                message = ContextCompat.getString(applicationContext, R.string.points_earned).format(points.pointsGained),
+                color = "#999999",
+                isAction = true,
+                timestamp = points.timestamp,
+                fullMsg = points.fullMsg
+            ))
         }
 
         override fun onClaimAvailable() {
@@ -785,18 +864,20 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun onRaidUpdate(message: Raid) {
-            raidNewId = message.raidId != usedRaidId
-            raid.postValue(message)
-            if (raidNewId) {
-                usedRaidId = message.raidId
-                if (collectPoints && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    viewModelScope.launch {
-                        try {
-                            repository.loadJoinRaid(gqlHeaders, message.raidId)
-                        } catch (e: Exception) {
-                            if (e.message == "failed integrity check") {
-                                _integrity.postValue(true)
+        override fun onRaidUpdate(message: JSONObject, openStream: Boolean) {
+            PubSubUtils.onRaidUpdate(message, openStream)?.let {
+                raidNewId = it.raidId != usedRaidId
+                raid.postValue(it)
+                if (raidNewId) {
+                    usedRaidId = it.raidId
+                    if (collectPoints && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        viewModelScope.launch {
+                            try {
+                                repository.loadJoinRaid(gqlHeaders, it.raidId)
+                            } catch (e: Exception) {
+                                if (e.message == "failed integrity check") {
+                                    _integrity.postValue(true)
+                                }
                             }
                         }
                     }
@@ -819,6 +900,31 @@ class ChatViewModel @Inject constructor(
             }
         }
 
+        override fun onChatMessage(json: JSONObject, timestamp: String?) {
+            val chatMessage = EventSubUtils.parseChatMessage(json, timestamp)
+            if (usePubSub && chatMessage.reward != null && !chatMessage.reward.id.isNullOrBlank()) {
+                onRewardMessage(chatMessage)
+            } else {
+                onChatMessage(chatMessage)
+            }
+        }
+
+        override fun onUserNotice(json: JSONObject, timestamp: String?) {
+            if (showUserNotice) {
+                onChatMessage(EventSubUtils.parseUserNotice(json, timestamp))
+            }
+        }
+
+        override fun onClearChat(json: JSONObject, timestamp: String?) {
+            if (showClearChat) {
+                onMessage(EventSubUtils.parseClearChat(applicationContext, json, timestamp))
+            }
+        }
+
+        override fun onRoomState(json: JSONObject, timestamp: String?) {
+            roomState.postValue(EventSubUtils.parseRoomState(json))
+        }
+
         fun addEmotes(list: List<Emote>) {
             allEmotes.addAll(list.filter { it !in allEmotes })
         }
@@ -834,8 +940,15 @@ class ChatViewModel @Inject constructor(
                 pubSub?.disconnect()
                 usedRaidId = null
                 onRaidClose()
-                _chatMessages.postValue(mutableListOf())
-                _command.postValue(Command(type = "disconnect_command"))
+                _chatMessages.postValue(
+                    mutableListOf(ChatMessage(
+                        message = ContextCompat.getString(applicationContext, R.string.disconnected),
+                        color = "#999999",
+                        isAction = true,
+                    ))
+                )
+                _hideRaid.postValue(true)
+                roomState.postValue(RoomState("0", "-1", "0", "0", "0"))
             }
         }
 
@@ -1323,7 +1436,7 @@ class ChatViewModel @Inject constructor(
         private fun readChatFile(url: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val messages = mutableListOf<VideoChatMessage>()
+                    val messages = mutableListOf<ChatMessage>()
                     var startTimeMs = 0L
                     val twitchEmotes = mutableListOf<TwitchEmote>()
                     val twitchBadges = mutableListOf<TwitchBadge>()
@@ -1348,6 +1461,23 @@ class ChatViewModel @Inject constructor(
                                             when (reader.peek()) {
                                                 JsonToken.NAME -> {
                                                     when (reader.nextName().also { position += it.length + 3 }) {
+                                                        "liveStartTime" -> { TwitchApiHelper.parseIso8601DateUTC(reader.nextString().also { position += it.length + 2 })?.let { startTimeMs = it } }
+                                                        "liveComments" -> {
+                                                            reader.beginArray().also { position += 1 }
+                                                            while (reader.hasNext()) {
+                                                                val message = reader.nextString().also { position += it.length + 2 + it.count { c -> c == '"' || c == '\\' } }
+                                                                when {
+                                                                    message.contains("PRIVMSG") -> messages.add(ChatUtils.parseChatMessage(message, false))
+                                                                    message.contains("USERNOTICE") -> messages.add(ChatUtils.parseChatMessage(message, true))
+                                                                    message.contains("CLEARMSG") -> messages.add(ChatUtils.parseClearMessage(applicationContext, message))
+                                                                    message.contains("CLEARCHAT") -> messages.add(ChatUtils.parseClearChat(applicationContext, message))
+                                                                }
+                                                                if (reader.peek() != JsonToken.END_ARRAY) {
+                                                                    position += 1
+                                                                }
+                                                            }
+                                                            reader.endArray().also { position += 1 }
+                                                        }
                                                         "comments" -> {
                                                             reader.beginArray().also { position += 1 }
                                                             while (reader.hasNext()) {
@@ -1470,9 +1600,8 @@ class ChatViewModel @Inject constructor(
                                                                                     position += 1
                                                                                 }
                                                                             }
-                                                                            messages.add(VideoChatMessage(
+                                                                            messages.add(ChatMessage(
                                                                                 id = id,
-                                                                                offsetSeconds = offsetSeconds,
                                                                                 userId = userId,
                                                                                 userLogin = userLogin,
                                                                                 userName = userName,
@@ -1480,6 +1609,8 @@ class ChatViewModel @Inject constructor(
                                                                                 color = color,
                                                                                 emotes = emotesList,
                                                                                 badges = badgesList,
+                                                                                bits = 0,
+                                                                                timestamp = offsetSeconds?.times(1000L),
                                                                                 fullMsg = null
                                                                             ))
                                                                             reader.endObject().also { position += 1 }

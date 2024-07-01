@@ -5,28 +5,26 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import org.json.JSONObject
 
-class PubSubListenerImpl(
-    private val callbackMessage: OnChatMessageReceivedListener,
-    private val callback: PubSubCallback) : PubSubWebSocket.OnMessageReceivedListener {
-
-    override fun onPlaybackMessage(message: JSONObject) {
+object PubSubUtils {
+    fun parsePlaybackMessage(message: JSONObject): PlaybackMessage? {
         val messageType = message.optString("type")
-        when {
-            messageType.startsWith("viewcount") -> callback.onPlaybackMessage(PlaybackMessage(viewers = if (!message.isNull("viewers")) message.optInt("viewers") else null))
-            messageType.startsWith("stream-up") -> callback.onPlaybackMessage(PlaybackMessage(true, if (!message.isNull("server_time")) message.optLong("server_time").takeIf { it > 0 } else null))
-            messageType.startsWith("stream-down") -> callback.onPlaybackMessage(PlaybackMessage(false))
+        return when {
+            messageType.startsWith("viewcount") -> PlaybackMessage(viewers = if (!message.isNull("viewers")) message.optInt("viewers") else null)
+            messageType.startsWith("stream-up") -> PlaybackMessage(true, if (!message.isNull("server_time")) message.optLong("server_time").takeIf { it > 0 } else null)
+            messageType.startsWith("stream-down") -> PlaybackMessage(false)
+            else -> null
         }
     }
 
-    override fun onTitleUpdate(message: JSONObject) {
-        callback.onTitleUpdate(BroadcastSettings(
+    fun parseTitleUpdate(message: JSONObject): BroadcastSettings {
+        return BroadcastSettings(
             title = if (!message.isNull("status")) message.optString("status").takeIf { it.isNotBlank() } else null,
             gameId = if (!message.isNull("game_id")) message.optInt("game_id").takeIf { it > 0 }?.toString() else null,
             gameName = if (!message.isNull("game")) message.optString("game").takeIf { it.isNotBlank() } else null,
-        ))
+        )
     }
 
-    override fun onRewardMessage(message: JSONObject) {
+    fun parseRewardMessage(message: JSONObject): ChatMessage {
         val messageData = message.optJSONObject("data")
         val redemption = messageData?.optJSONObject("redemption")
         val user = redemption?.optJSONObject("user")
@@ -34,7 +32,7 @@ class PubSubListenerImpl(
         val rewardImage = reward?.optJSONObject("image")
         val defaultImage = reward?.optJSONObject("default_image")
         val input = if (redemption?.isNull("user_input") == false) redemption.optString("user_input").takeIf { it.isNotBlank() } else null
-        val chatMessage = ChatMessage(
+        return ChatMessage(
             userId = if (user?.isNull("id") == false) user.optString("id").takeIf { it.isNotBlank() } else null,
             userLogin = if (user?.isNull("login") == false) user.optString("login").takeIf { it.isNotBlank() } else null,
             userName = if (user?.isNull("display_name") == false) user.optString("display_name").takeIf { it.isNotBlank() } else null,
@@ -53,35 +51,22 @@ class PubSubListenerImpl(
             timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) } else null,
             fullMsg = message.toString(),
         )
-        if (input.isNullOrBlank()) {
-            callbackMessage.onMessage(chatMessage)
-        } else {
-            callback.onRewardMessage(chatMessage)
-        }
     }
 
-    override fun onPointsEarned(message: JSONObject) {
+    fun parsePointsEarned(message: JSONObject): PointsEarned {
         val messageData = message.optJSONObject("data")
         val pointGain = messageData?.optJSONObject("point_gain")
-        callback.onPointsEarned(PointsEarned(
+        return PointsEarned(
             pointsGained = pointGain?.optInt("total_points"),
             timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) } else null,
             fullMsg = message.toString()
-        ))
+        )
     }
 
-    override fun onClaimAvailable() {
-        callback.onClaimAvailable()
-    }
-
-    override fun onMinuteWatched() {
-        callback.onMinuteWatched()
-    }
-
-    override fun onRaidUpdate(message: JSONObject, openStream: Boolean) {
+    fun onRaidUpdate(message: JSONObject, openStream: Boolean): Raid? {
         val raid = message.optJSONObject("raid")
-        if (raid != null) {
-            callback.onRaidUpdate(Raid(
+        return if (raid != null) {
+            Raid(
                 raidId = if (!raid.isNull("id")) raid.optString("id").takeIf { it.isNotBlank() } else null,
                 targetId = if (!raid.isNull("target_id")) raid.optString("target_id").takeIf { it.isNotBlank() } else null,
                 targetLogin = if (!raid.isNull("target_login")) raid.optString("target_login").takeIf { it.isNotBlank() } else null,
@@ -89,7 +74,7 @@ class PubSubListenerImpl(
                 targetProfileImage = if (!raid.isNull("target_profile_image")) raid.optString("target_profile_image").takeIf { it.isNotBlank() }?.replace("profile_image-%s", "profile_image-300x300") else null,
                 viewerCount = raid.optInt("viewer_count"),
                 openStream = openStream
-            ))
-        }
+            )
+        } else null
     }
 }

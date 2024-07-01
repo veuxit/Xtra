@@ -162,6 +162,7 @@ class ApiRepository @Inject constructor(
                     title = i.stream?.title,
                     viewerCount = i.stream?.viewersCount,
                     startedAt = i.stream?.createdAt?.toString(),
+                    thumbnailUrl = i.stream?.previewImageURL,
                     profileImageUrl = i.profileImageURL,
                     user = User(
                         channelId = i.id,

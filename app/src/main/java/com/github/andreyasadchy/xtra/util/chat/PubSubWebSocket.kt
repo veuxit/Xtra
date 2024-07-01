@@ -23,13 +23,13 @@ class PubSubWebSocket(
     private val showRaids: Boolean,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: OnMessageReceivedListener) {
+    private val listener: PubSubListener) {
     private var socket: WebSocket? = null
     private var isActive = false
     private var pongReceived = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://pubsub-edge.twitch.tv").build(), PubSubListener())
+        socket = client.newWebSocket(Request.Builder().url("wss://pubsub-edge.twitch.tv").build(), PubSubWebSocketListener())
     }
 
     fun disconnect() {
@@ -132,7 +132,7 @@ class PubSubWebSocket(
         }
     }
 
-    private inner class PubSubListener : WebSocketListener() {
+    private inner class PubSubWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             isActive = true
             listen()
@@ -184,15 +184,5 @@ class PubSubWebSocket(
 
             }
         }
-    }
-
-    interface OnMessageReceivedListener {
-        fun onPlaybackMessage(message: JSONObject)
-        fun onTitleUpdate(message: JSONObject)
-        fun onRewardMessage(message: JSONObject)
-        fun onPointsEarned(message: JSONObject)
-        fun onClaimAvailable()
-        fun onMinuteWatched()
-        fun onRaidUpdate(message: JSONObject, openStream: Boolean)
     }
 }

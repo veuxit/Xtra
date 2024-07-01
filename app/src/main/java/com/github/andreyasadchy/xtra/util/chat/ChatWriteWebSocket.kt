@@ -15,17 +15,17 @@ import okhttp3.WebSocketListener
 class ChatWriteWebSocket(
     private val userLogin: String?,
     private val userToken: String?,
-    private val channelName: String,
+    channelName: String,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: OnMessageReceivedListener) {
+    private val listener: ChatListener) {
     private val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
     private var isActive = false
     private var pongReceived = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(), PubSubListener())
+        socket = client.newWebSocket(Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(), ChatWriteWebSocketListener())
     }
 
     fun disconnect() {
@@ -98,10 +98,10 @@ class ChatWriteWebSocket(
     }
 
     private fun write(message: String) {
-        socket?.send(message + System.getProperty("line.separator"))
+        socket?.send(message + System.lineSeparator())
     }
 
-    private inner class PubSubListener : WebSocketListener() {
+    private inner class ChatWriteWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             isActive = true
             write("CAP REQ :twitch.tv/tags twitch.tv/commands")
@@ -129,15 +129,5 @@ class ChatWriteWebSocket(
                 }
             }
         }
-    }
-
-    interface OnMessageReceivedListener {
-        fun onMessage(message: String, userNotice: Boolean)
-        fun onCommand(message: String, duration: String?, type: String?, fullMsg: String?)
-        fun onClearMessage(message: String)
-        fun onClearChat(message: String)
-        fun onNotice(message: String)
-        fun onRoomState(message: String)
-        fun onUserState(message: String)
     }
 }

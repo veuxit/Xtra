@@ -551,7 +551,6 @@
     <Preference
         android:key="token_settings"
         android:title="@string/token_settings"
-        app:allowDividerAbove="true"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
@@ -567,12 +566,7 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <Preference
-        android:key="import_app_downloads"
-        android:title="@string/import_app_downloads"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
+    <PreferenceCategory android:title="@string/settings_downloads" app:iconSpaceReserved="false"/>
     <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="download_playlist_to_file"
@@ -595,6 +589,48 @@
         app:iconSpaceReserved="false"
         app:min="1"
         app:showSeekBarValue="true"
+        app:singleLineTitle="false" />
+
+    <EditTextPreference
+        android:defaultValue="2"
+        android:key="download_stream_live_check"
+        android:title="@string/download_live_check"
+        app:dialogMessage="@string/download_live_check_summary"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:defaultValue="10"
+        android:key="download_stream_offline_check"
+        android:title="@string/download_offline_check"
+        app:dialogMessage="@string/download_offline_check_summary"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:defaultValue="120"
+        android:key="download_stream_start_wait"
+        android:title="@string/download_start_wait"
+        app:dialogMessage="@string/download_start_wait_summary"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:defaultValue="15"
+        android:key="download_stream_end_wait"
+        android:title="@string/download_end_wait"
+        app:dialogMessage="@string/download_end_wait_summary"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <Preference
+        android:key="import_app_downloads"
+        android:title="@string/import_app_downloads"
+        app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
     <PreferenceCategory android:title="@string/settings_debug" app:iconSpaceReserved="false"/>

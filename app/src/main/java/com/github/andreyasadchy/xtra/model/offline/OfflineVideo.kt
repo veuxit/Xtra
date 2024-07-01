@@ -54,7 +54,9 @@ data class OfflineVideo(
     var chatBytes: Long = 0,
     var chatOffsetSeconds: Int = 0,
     var chatUrl: String? = null,
-    val playlistToFile: Boolean = false) : Parcelable {
+    val playlistToFile: Boolean = false,
+    val live: Boolean = false,
+    var lastSegmentUrl: String? = null) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)
@@ -70,5 +72,6 @@ data class OfflineVideo(
         const val STATUS_BLOCKED = 6
         const val STATUS_QUEUED = 7
         const val STATUS_QUEUED_WIFI = 8
+        const val STATUS_WAITING_FOR_STREAM = 9
     }
 }

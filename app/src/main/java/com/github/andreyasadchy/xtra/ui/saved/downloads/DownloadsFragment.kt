@@ -30,6 +30,7 @@ import com.github.andreyasadchy.xtra.databinding.StorageSelectionBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
+import com.github.andreyasadchy.xtra.ui.download.StreamDownloadWorker
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
@@ -83,28 +84,66 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = DownloadsAdapter(this, {
-            viewModel.checkDownloadStatus(it)
+            if (it.live) {
+                val channelLogin = it.channelLogin
+                if (!channelLogin.isNullOrBlank()) {
+                    viewModel.checkLiveDownloadStatus(channelLogin)
+                }
+            } else {
+                viewModel.checkDownloadStatus(it.id)
+            }
         }, {
-            WorkManager.getInstance(requireContext()).cancelAllWorkByTag(it.toString())
+            if (it.live) {
+                if (it.status != OfflineVideo.STATUS_PENDING) {
+                    it.channelLogin?.let { channelLogin -> WorkManager.getInstance(requireContext()).cancelUniqueWork(channelLogin) }
+                } else {
+                    viewModel.finishDownload(it)
+                }
+            } else {
+                WorkManager.getInstance(requireContext()).cancelAllWorkByTag(it.id.toString())
+            }
         }, {
-            WorkManager.getInstance(requireContext()).enqueueUniqueWork(
-                "download",
-                ExistingWorkPolicy.APPEND_OR_REPLACE,
-                OneTimeWorkRequestBuilder<VideoDownloadWorker>()
-                    .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to it))
-                    .addTag(it.toString())
-                    .setConstraints(
-                        Constraints.Builder()
-                            .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
-                                NetworkType.UNMETERED
-                            } else {
-                                NetworkType.CONNECTED
-                            })
+            if (it.live) {
+                val channelLogin = it.channelLogin
+                if (!channelLogin.isNullOrBlank()) {
+                    WorkManager.getInstance(requireContext()).enqueueUniqueWork(
+                        channelLogin,
+                        ExistingWorkPolicy.REPLACE,
+                        OneTimeWorkRequestBuilder<StreamDownloadWorker>()
+                            .setInputData(workDataOf(StreamDownloadWorker.KEY_VIDEO_ID to it.id))
+                            .setConstraints(
+                                Constraints.Builder()
+                                    .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
+                                        NetworkType.UNMETERED
+                                    } else {
+                                        NetworkType.CONNECTED
+                                    })
+                                    .build()
+                            )
                             .build()
                     )
-                    .build()
-            )
-            viewModel.checkDownloadStatus(it)
+                    viewModel.checkLiveDownloadStatus(channelLogin)
+                }
+            } else {
+                WorkManager.getInstance(requireContext()).enqueueUniqueWork(
+                    "download",
+                    ExistingWorkPolicy.APPEND_OR_REPLACE,
+                    OneTimeWorkRequestBuilder<VideoDownloadWorker>()
+                        .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to it.id))
+                        .addTag(it.id.toString())
+                        .setConstraints(
+                            Constraints.Builder()
+                                .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
+                                    NetworkType.UNMETERED
+                                } else {
+                                    NetworkType.CONNECTED
+                                })
+                                .build()
+                        )
+                        .build()
+                )
+                viewModel.checkDownloadStatus(it.id)
+            }
         }, {
             val convert = getString(R.string.convert)
             requireActivity().getAlertDialogBuilder()

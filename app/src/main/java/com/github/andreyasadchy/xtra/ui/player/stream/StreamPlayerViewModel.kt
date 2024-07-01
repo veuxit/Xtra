@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Base64
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.util.Util
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -19,7 +18,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,24 +39,22 @@ class StreamPlayerViewModel @Inject constructor(
     suspend fun checkPlaylist(url: String): Boolean {
         return try {
             val playlist = playerRepository.getMediaPlaylist(url)
-            if (playlist.segments.lastOrNull()?.title?.let { it.contains("Amazon") || it.contains("Adform") || it.contains("DCM") } == true) {
-                true
-            } else {
-                if (playlist.programDateTime != null) {
-                    val segmentStartTimeMs = Util.parseXsDateTime(playlist.programDateTime)
-                    playlist.dateRanges.find {
-                        (it.id.startsWith("stitched-ad-") || it.rangeClass == "twitch-stitched-ad" || it.ad) &&
-                                if (it.endDate != null) {
-                                    segmentStartTimeMs < Util.parseXsDateTime(it.endDate)
-                                } else {
-                                    val duration = it.duration ?: it.plannedDuration
-                                    if (duration != null) {
-                                        segmentStartTimeMs < (Util.parseXsDateTime(it.startDate) + BigDecimal(duration).multiply(BigDecimal(1000L)).toLong())
-                                    } else false
-                                }
-                    } != null
-                } else false
-            }
+            playlist.segments.lastOrNull()?.let { segment ->
+                segment.title?.let { it.contains("Amazon") || it.contains("Adform") || it.contains("DCM") } == true ||
+                        segment.programDateTime?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let { segmentStartTime ->
+                            playlist.dateRanges.find { dateRange ->
+                                (dateRange.id.startsWith("stitched-ad-") || dateRange.rangeClass == "twitch-stitched-ad" || dateRange.ad) &&
+                                        dateRange.endDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let { endTime ->
+                                            segmentStartTime < endTime
+                                        } == true ||
+                                        dateRange.startDate.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let { startTime ->
+                                            (dateRange.duration ?: dateRange.plannedDuration)?.let { (it * 1000f).toLong() }?.let { duration ->
+                                                segmentStartTime < (startTime + duration)
+                                            } == true
+                                        } == true
+                            } != null
+                        } == true
+            } == true
         } catch (e: Exception) {
             false
         }

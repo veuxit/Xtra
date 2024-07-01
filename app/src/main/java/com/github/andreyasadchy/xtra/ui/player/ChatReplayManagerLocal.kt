@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player
 
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
-import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +13,7 @@ import javax.inject.Inject
 import kotlin.math.max
 
 class ChatReplayManagerLocal @Inject constructor(
-    private val messages: List<VideoChatMessage>,
+    private val messages: List<ChatMessage>,
     private val startTime: Long,
     private val getCurrentPosition: () -> Long?,
     private val getCurrentSpeed: () -> Float?,
@@ -22,7 +21,7 @@ class ChatReplayManagerLocal @Inject constructor(
     private val clearMessages: () -> Unit,
     private val coroutineScope: CoroutineScope) {
 
-    private val list = mutableListOf<VideoChatMessage>()
+    private val list = mutableListOf<ChatMessage>()
     private var isLoading = false
     private var loadJob: Job? = null
     private var messageJob: Job? = null
@@ -48,7 +47,7 @@ class ChatReplayManagerLocal @Inject constructor(
         loadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
                 messageJob?.cancel()
-                list.addAll(messages.filter { it.offsetSeconds != null && it.offsetSeconds >= (max((position / 1000) - 20, 0)) })
+                list.addAll(messages.filter { it.timestamp != null && it.timestamp >= (max(position - 20000, 0)) })
                 isLoading = false
                 startJob()
             } catch (e: Exception) {
@@ -61,9 +60,9 @@ class ChatReplayManagerLocal @Inject constructor(
         messageJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
                 val message = list.firstOrNull() ?: break
-                if (message.offsetSeconds != null) {
+                if (message.timestamp != null) {
                     var currentPosition: Long
-                    val messageOffset = message.offsetSeconds.times(1000)
+                    val messageOffset = message.timestamp
                     while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
                         delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
                     }
@@ -76,7 +75,12 @@ class ChatReplayManagerLocal @Inject constructor(
                         color = message.color,
                         emotes = message.emotes,
                         badges = message.badges,
-                        bits = 0,
+                        isAction = message.isAction,
+                        isFirst = message.isFirst,
+                        bits = message.bits,
+                        systemMsg = message.systemMsg,
+                        msgId = message.msgId,
+                        reward = message.reward,
                         fullMsg = message.fullMsg
                     ))
                 }

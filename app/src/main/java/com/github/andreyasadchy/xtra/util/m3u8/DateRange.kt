@@ -5,7 +5,7 @@ data class DateRange(
     val rangeClass: String?,
     val startDate: String,
     val endDate: String?,
-    val duration: String?,
-    val plannedDuration: String?,
+    val duration: Float?,
+    val plannedDuration: Float?,
     val ad: Boolean
 )
