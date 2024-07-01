@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -48,6 +49,80 @@ class DownloadViewModel @Inject constructor(
     private val _qualities = MutableLiveData<Map<String, Pair<String, String>>?>()
     val qualities: LiveData<Map<String, Pair<String, String>>?>
         get() = _qualities
+
+    fun setStream(gqlHeaders: Map<String, String>, stream: Stream, qualities: Map<String, String>?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
+        if (_qualities.value == null) {
+            if (!qualities.isNullOrEmpty()) {
+                val map = mutableMapOf<String, Pair<String, String>>()
+                qualities.entries.forEach {
+                    if (it.key.equals("source", true)) {
+                        map[ContextCompat.getString(applicationContext, R.string.source)] = Pair(it.key, it.value)
+                    } else {
+                        map[it.key] = Pair(it.key, it.value)
+                    }
+                }
+                map.apply {
+                    if (containsKey("audio_only")) {
+                        remove("audio_only")?.let { url ->
+                            put(ContextCompat.getString(applicationContext, R.string.audio_only), url)
+                        }
+                    }
+                }
+                _qualities.value = map
+            } else {
+                viewModelScope.launch {
+                    val default = mutableMapOf("source" to "", "1080p60" to "", "1080p30" to "", "720p60" to "", "720p30" to "", "480p30" to "", "360p30" to "", "160p30" to "", "audio_only" to "")
+                    try {
+                        val urls = if (!stream.channelLogin.isNullOrBlank()) {
+                            val playlist = playerRepository.loadStreamPlaylist(gqlHeaders, stream.channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, enableIntegrity)
+                            if (!playlist.isNullOrBlank()) {
+                                val names = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
+                                val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
+                                names.zip(urls).toMap(mutableMapOf()).takeIf { it.isNotEmpty() } ?: default
+                            } else default
+                        } else default
+                        val map = mutableMapOf<String, Pair<String, String>>()
+                        urls.entries.forEach {
+                            if (it.key.equals("source", true)) {
+                                map[ContextCompat.getString(applicationContext, R.string.source)] = Pair(it.key, it.value)
+                            } else {
+                                map[it.key] = Pair(it.key, it.value)
+                            }
+                        }
+                        map.apply {
+                            if (containsKey("audio_only")) {
+                                remove("audio_only")?.let { url ->
+                                    put(ContextCompat.getString(applicationContext, R.string.audio_only), url)
+                                }
+                            }
+                        }
+                        _qualities.postValue(map)
+                    } catch (e: Exception) {
+                        if (e.message == "failed integrity check") {
+                            _integrity.postValue(true)
+                        } else {
+                            val map = mutableMapOf<String, Pair<String, String>>()
+                            default.entries.forEach {
+                                if (it.key.equals("source", true)) {
+                                    map[ContextCompat.getString(applicationContext, R.string.source)] = Pair(it.key, it.value)
+                                } else {
+                                    map[it.key] = Pair(it.key, it.value)
+                                }
+                            }
+                            map.apply {
+                                if (containsKey("audio_only")) {
+                                    remove("audio_only")?.let { url ->
+                                        put(ContextCompat.getString(applicationContext, R.string.audio_only), url)
+                                    }
+                                }
+                            }
+                            _qualities.value = map
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fun setVideo(gqlHeaders: Map<String, String>, video: Video, videoInfo: VideoDownloadInfo?, playerType: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
@@ -223,6 +298,52 @@ class DownloadViewModel @Inject constructor(
                             _integrity.postValue(true)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    fun downloadStream(stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        GlobalScope.launch {
+            with(stream) {
+                if (!channelLogin.isNullOrBlank()) {
+                    val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
+                        DownloadUtils.savePng(applicationContext, thumbnail, "thumbnails", it)
+                    }
+                    val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
+                        DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", it)
+                    }
+                    val videoId = offlineRepository.saveVideo(OfflineVideo(
+                        name = title,
+                        channelId = channelId,
+                        channelLogin = channelLogin,
+                        channelName = channelName,
+                        channelLogo = downloadedLogo,
+                        thumbnail = downloadedThumbnail,
+                        gameId = gameId,
+                        gameSlug = gameSlug,
+                        gameName = gameName,
+                        uploadDate = startedAt?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                        downloadDate = System.currentTimeMillis(),
+                        downloadPath = path,
+                        status = OfflineVideo.STATUS_BLOCKED,
+                        quality = if (!quality.contains("Audio", true)) quality else "audio",
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes,
+                        live = true
+                    )).toInt()
+                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                        channelLogin,
+                        ExistingWorkPolicy.REPLACE,
+                        OneTimeWorkRequestBuilder<StreamDownloadWorker>()
+                            .setInputData(workDataOf(StreamDownloadWorker.KEY_VIDEO_ID to videoId))
+                            .setConstraints(
+                                Constraints.Builder()
+                                    .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                                    .build()
+                            )
+                            .build()
+                    )
                 }
             }
         }

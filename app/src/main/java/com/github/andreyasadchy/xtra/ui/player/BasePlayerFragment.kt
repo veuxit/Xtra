@@ -293,9 +293,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         playerView.controllerAutoShow = controllerAutoShow
         if (this !is OfflinePlayerFragment) {
             view.findViewById<ImageButton>(R.id.playerSettings)?.disable()
-            if (this !is StreamPlayerFragment) {
-                view.findViewById<ImageButton>(R.id.playerDownload)?.disable()
-            }
+            view.findViewById<ImageButton>(R.id.playerDownload)?.disable()
             if (this !is ClipPlayerFragment) {
                 view.findViewById<ImageButton>(R.id.playerMode)?.disable()
             }

@@ -44,12 +44,85 @@ class DownloadsViewModel @Inject internal constructor(
     var selectedVideo: OfflineVideo? = null
     private val videosInUse = mutableListOf<OfflineVideo>()
     private val currentDownloads = mutableListOf<Int>()
+    private val liveDownloads = mutableListOf<String>()
 
     val flow = Pager(
         PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30),
     ) {
         repository.loadAllVideos()
     }.flow.cachedIn(viewModelScope)
+
+    fun finishDownload(video: OfflineVideo) {
+        video.chatUrl?.let { url ->
+            val isShared = url.toUri().scheme == ContentResolver.SCHEME_CONTENT
+            if (isShared) {
+                applicationContext.contentResolver.openFileDescriptor(url.toUri(), "rw")!!.use {
+                    FileOutputStream(it.fileDescriptor).use { output ->
+                        output.channel.truncate(video.chatBytes)
+                    }
+                }
+            } else {
+                FileOutputStream(url).use { output ->
+                    output.channel.truncate(video.chatBytes)
+                }
+            }
+            if (isShared) {
+                applicationContext.contentResolver.openOutputStream(url.toUri(), "wa")!!.bufferedWriter()
+            } else {
+                FileOutputStream(url, true).bufferedWriter()
+            }.use { fileWriter ->
+                fileWriter.write("}")
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateVideo(video.apply {
+                status = OfflineVideo.STATUS_DOWNLOADED
+            })
+        }
+    }
+
+    fun checkLiveDownloadStatus(channelLogin: String) {
+        if (!liveDownloads.contains(channelLogin)) {
+            liveDownloads.add(channelLogin)
+            viewModelScope.launch(Dispatchers.IO) {
+                WorkManager.getInstance(applicationContext).getWorkInfosForUniqueWorkFlow(channelLogin).collect { list ->
+                    val work = list.lastOrNull()
+                    when {
+                        work == null || work.state.isFinished -> {
+                            repository.getLiveDownload(channelLogin)?.let { video ->
+                                if (video.status == OfflineVideo.STATUS_DOWNLOADING || video.status == OfflineVideo.STATUS_BLOCKED || video.status == OfflineVideo.STATUS_QUEUED || video.status == OfflineVideo.STATUS_QUEUED_WIFI || video.status == OfflineVideo.STATUS_WAITING_FOR_STREAM) {
+                                    repository.updateVideo(video.apply {
+                                        status = OfflineVideo.STATUS_PENDING
+                                    })
+                                }
+                            }
+                            cancel()
+                        }
+                        work.state == WorkInfo.State.ENQUEUED -> {
+                            repository.getLiveDownload(channelLogin)?.let { video ->
+                                repository.updateVideo(video.apply {
+                                    status = if (work.constraints.requiredNetworkType == NetworkType.UNMETERED) {
+                                        OfflineVideo.STATUS_QUEUED_WIFI
+                                    } else {
+                                        OfflineVideo.STATUS_QUEUED
+                                    }
+                                })
+                            }
+                        }
+                        work.state == WorkInfo.State.BLOCKED -> {
+                            repository.getLiveDownload(channelLogin)?.let { video ->
+                                repository.updateVideo(video.apply {
+                                    status = OfflineVideo.STATUS_BLOCKED
+                                })
+                            }
+                        }
+                    }
+                }
+            }.invokeOnCompletion {
+                liveDownloads.remove(channelLogin)
+            }
+        }
+    }
 
     fun checkDownloadStatus(videoId: Int) {
         if (!currentDownloads.contains(videoId)) {
@@ -549,7 +622,11 @@ class DownloadsViewModel @Inject internal constructor(
                 repository.updateVideo(video.apply {
                     status = OfflineVideo.STATUS_DELETING
                 })
-                WorkManager.getInstance(applicationContext).cancelAllWorkByTag(video.id.toString())
+                if (video.live) {
+                    video.channelLogin?.let { WorkManager.getInstance(applicationContext).cancelUniqueWork(it) }
+                } else {
+                    WorkManager.getInstance(applicationContext).cancelAllWorkByTag(video.id.toString())
+                }
                 if (videoUrl != null && !keepFiles) {
                     if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                         if (videoUrl.endsWith(".m3u8")) {

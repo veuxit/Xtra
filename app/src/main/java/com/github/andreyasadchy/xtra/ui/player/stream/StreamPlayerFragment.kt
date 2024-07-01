@@ -31,6 +31,8 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
+import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -56,7 +58,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 @AndroidEntryPoint
-class StreamPlayerFragment : BasePlayerFragment() {
+class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     private var _binding: FragmentPlayerStreamBinding? = null
     private val binding get() = _binding!!
@@ -85,14 +87,17 @@ class StreamPlayerFragment : BasePlayerFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
+        val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
         val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
         viewModel.loaded.observe(viewLifecycleOwner) {
             if (it) {
                 settings?.enable()
+                download?.enable()
                 mode?.enable()
                 (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
             } else {
                 settings?.disable()
+                download?.disable()
                 mode?.disable()
             }
         }
@@ -122,6 +127,12 @@ class StreamPlayerFragment : BasePlayerFragment() {
                         fragmentManager = childFragmentManager,
                     )
                 }
+            }
+        }
+        if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
+            download?.apply {
+                visible()
+                setOnClickListener { showDownloadDialog() }
             }
         }
         if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
@@ -518,6 +529,22 @@ class StreamPlayerFragment : BasePlayerFragment() {
 //        viewModel.stream = stream
 //        draggableView?.maximize()
 //    }
+
+    override fun showDownloadDialog() {
+        if (viewModel.loaded.value == true) {
+            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                result.addListener({
+                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                        result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
+                            result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
+                                DownloadDialog.newInstance(stream, keys, values).show(childFragmentManager, null)
+                            }
+                        }
+                    }
+                }, MoreExecutors.directExecutor())
+            }
+        }
+    }
 
     override fun onNetworkRestored() {
         if (isResumed) {

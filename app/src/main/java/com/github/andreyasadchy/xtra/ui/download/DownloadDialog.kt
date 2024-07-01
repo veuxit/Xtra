@@ -27,6 +27,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
@@ -46,11 +47,16 @@ import kotlin.math.max
 class DownloadDialog : DialogFragment() {
 
     companion object {
+        private const val KEY_STREAM = "stream"
         private const val KEY_URLS_KEYS = "urls_keys"
         private const val KEY_URLS_VALUES = "urls_values"
         private const val KEY_VIDEO = "video"
         private const val KEY_VIDEO_INFO = "videoInfo"
         private const val KEY_CLIP = "clip"
+
+        fun newInstance(stream: Stream, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
+            return DownloadDialog().apply { arguments = bundleOf(KEY_STREAM to stream, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values) }
+        }
 
         fun newInstance(video: Video, videoInfo: VideoDownloadInfo? = null): DownloadDialog {
             return DownloadDialog().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_VIDEO_INFO to videoInfo) }
@@ -88,59 +94,87 @@ class DownloadDialog : DialogFragment() {
             }
         }
         val args = requireArguments()
-        val video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_VIDEO, Video::class.java)
+        val stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable(KEY_STREAM, Stream::class.java)
         } else {
             @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_VIDEO)
+            requireArguments().getParcelable(KEY_STREAM)
         }
-        if (video != null) {
-            viewModel.videoInfo.observe(this) {
-                if (it != null) {
-                    val qualities = viewModel.qualities.value
-                    if (!qualities.isNullOrEmpty()) {
-                        initVideo(video, qualities, it)
-                    }
-                } else {
-                    dismiss()
+        if (stream != null) {
+            viewModel.qualities.observe(this) {
+                if (!it.isNullOrEmpty()) {
+                    initStream(stream, it)
                 }
             }
-            viewModel.setVideo(
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                video = video,
-                videoInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    requireArguments().getParcelable(KEY_VIDEO_INFO, VideoDownloadInfo::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    requireArguments().getParcelable(KEY_VIDEO_INFO)
+            viewModel.setStream(
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
+                stream = stream,
+                qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                    args.getStringArray(KEY_URLS_VALUES)?.let { values ->
+                        keys.zip(values).toMap(mutableMapOf())
+                    }
                 },
-                playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
-                skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
+                randomDeviceId = requireContext().prefs().getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                xDeviceId = requireContext().prefs().getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE, "site"),
+                supportedCodecs = requireContext().prefs().getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                 enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
             )
         } else {
-            val clip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                args.getParcelable(KEY_CLIP, Clip::class.java)
+            val video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requireArguments().getParcelable(KEY_VIDEO, Video::class.java)
             } else {
                 @Suppress("DEPRECATION")
-                args.getParcelable(KEY_CLIP)
+                requireArguments().getParcelable(KEY_VIDEO)
             }
-            if (clip != null) {
-                viewModel.qualities.observe(this) {
-                    if (!it.isNullOrEmpty()) {
-                        initClip(clip, it)
+            if (video != null) {
+                viewModel.videoInfo.observe(this) {
+                    if (it != null) {
+                        val qualities = viewModel.qualities.value
+                        if (!qualities.isNullOrEmpty()) {
+                            initVideo(video, qualities, it)
+                        }
+                    } else {
+                        dismiss()
                     }
                 }
-                viewModel.setClip(
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                    clip = clip,
-                    qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
-                        args.getStringArray(KEY_URLS_VALUES)?.let { values ->
-                            keys.zip(values).toMap(mutableMapOf())
-                        }
+                viewModel.setVideo(
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
+                    video = video,
+                    videoInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requireArguments().getParcelable(KEY_VIDEO_INFO, VideoDownloadInfo::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        requireArguments().getParcelable(KEY_VIDEO_INFO)
                     },
-                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                    playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
                 )
+            } else {
+                val clip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    args.getParcelable(KEY_CLIP, Clip::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    args.getParcelable(KEY_CLIP)
+                }
+                if (clip != null) {
+                    viewModel.qualities.observe(this) {
+                        if (!it.isNullOrEmpty()) {
+                            initClip(clip, it)
+                        }
+                    }
+                    viewModel.setClip(
+                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                        clip = clip,
+                        qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                            args.getStringArray(KEY_URLS_VALUES)?.let { values ->
+                                keys.zip(values).toMap(mutableMapOf())
+                            }
+                        },
+                        skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                    )
+                }
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -281,6 +315,33 @@ class DownloadDialog : DialogFragment() {
                 }
             }
             cancel.setOnClickListener { dismiss() }
+        }
+    }
+
+    private fun initStream(stream: Stream, qualities: Map<String, Pair<String, String>>) {
+        with(binding) {
+            layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.timeLayout && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
+            init(qualities)
+            download.setOnClickListener {
+                val quality = qualities.getValue(spinner.editText?.text.toString())
+                val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
+                val path = if (location == 0) sharedPath else downloadPath
+                val downloadChat = downloadChat.isChecked
+                val downloadChatEmotes = downloadChatEmotes.isChecked
+                if (!path.isNullOrBlank()) {
+                    viewModel.downloadStream(stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    requireContext().prefs().edit {
+                        putInt(C.DOWNLOAD_LOCATION, location)
+                        if (location == 0) {
+                            putString(C.DOWNLOAD_SHARED_PATH, sharedPath)
+                        }
+                        putBoolean(C.DOWNLOAD_CHAT, downloadChat)
+                        putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
+                    }
+                    DownloadUtils.requestNotificationPermission(requireActivity())
+                }
+                dismiss()
+            }
         }
     }
 

@@ -34,9 +34,9 @@ import kotlin.math.min
 
 class DownloadsAdapter(
     private val fragment: Fragment,
-    private val checkDownloadStatus: (Int) -> Unit,
-    private val stopDownload: (Int) -> Unit,
-    private val resumeDownload: (Int) -> Unit,
+    private val checkDownloadStatus: (OfflineVideo) -> Unit,
+    private val stopDownload: (OfflineVideo) -> Unit,
+    private val resumeDownload: (OfflineVideo) -> Unit,
     private val convertVideo: (OfflineVideo) -> Unit,
     private val moveVideo: (OfflineVideo) -> Unit,
     private val updateChatUrl: (OfflineVideo) -> Unit,
@@ -190,10 +190,15 @@ class DownloadsAdapter(
                         PopupMenu(context, it).apply {
                             inflate(R.menu.offline_item)
                             when (item.status) {
-                                OfflineVideo.STATUS_DOWNLOADING, OfflineVideo.STATUS_BLOCKED, OfflineVideo.STATUS_QUEUED, OfflineVideo.STATUS_QUEUED_WIFI -> {
+                                OfflineVideo.STATUS_DOWNLOADING, OfflineVideo.STATUS_BLOCKED, OfflineVideo.STATUS_QUEUED, OfflineVideo.STATUS_QUEUED_WIFI, OfflineVideo.STATUS_WAITING_FOR_STREAM -> {
                                     menu.findItem(R.id.stopDownload).isVisible = true
                                 }
-                                OfflineVideo.STATUS_PENDING -> menu.findItem(R.id.resumeDownload).isVisible = true
+                                OfflineVideo.STATUS_PENDING -> {
+                                    if (item.live) {
+                                        menu.findItem(R.id.stopDownload).isVisible = true
+                                    }
+                                    menu.findItem(R.id.resumeDownload).isVisible = true
+                                }
                                 else -> {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         menu.findItem(R.id.moveVideo).apply {
@@ -213,8 +218,8 @@ class DownloadsAdapter(
                             }
                             setOnMenuItemClickListener {
                                 when(it.itemId) {
-                                    R.id.stopDownload -> stopDownload(item.id)
-                                    R.id.resumeDownload -> resumeDownload(item.id)
+                                    R.id.stopDownload -> stopDownload(item)
+                                    R.id.resumeDownload -> resumeDownload(item)
                                     R.id.convertVideo -> convertVideo(item)
                                     R.id.moveVideo -> moveVideo(item)
                                     R.id.updateChatUrl -> updateChatUrl(item)
@@ -230,24 +235,31 @@ class DownloadsAdapter(
                         status.gone()
                     } else {
                         downloadProgress.text = when (item.status) {
-                            OfflineVideo.STATUS_DOWNLOADING -> context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                            OfflineVideo.STATUS_DOWNLOADING -> {
+                                if (item.live) {
+                                    context.getString(R.string.downloading)
+                                } else {
+                                    context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                                }
+                            }
                             OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
                             OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
                             OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
                             OfflineVideo.STATUS_BLOCKED -> context.getString(R.string.download_queued)
                             OfflineVideo.STATUS_QUEUED -> context.getString(R.string.download_blocked)
                             OfflineVideo.STATUS_QUEUED_WIFI -> context.getString(R.string.download_blocked_wifi)
+                            OfflineVideo.STATUS_WAITING_FOR_STREAM -> context.getString(R.string.download_waiting_for_stream)
                             else -> context.getString(R.string.download_pending)
                         }
-                        if (item.downloadChat && item.status == OfflineVideo.STATUS_DOWNLOADING) {
+                        if (item.downloadChat && item.status == OfflineVideo.STATUS_DOWNLOADING && !item.live) {
                             chatDownloadProgress.visible()
                             chatDownloadProgress.text = context.getString(R.string.chat_downloading_progress, min(((item.chatProgress.toFloat() / item.maxChatProgress) * 100f).toInt(), 100))
                         } else {
                             chatDownloadProgress.gone()
                         }
                         status.visible()
-                        if (item.status == OfflineVideo.STATUS_DOWNLOADING || item.status == OfflineVideo.STATUS_BLOCKED || item.status == OfflineVideo.STATUS_QUEUED || item.status == OfflineVideo.STATUS_QUEUED_WIFI) {
-                            checkDownloadStatus(item.id)
+                        if (item.status == OfflineVideo.STATUS_DOWNLOADING || item.status == OfflineVideo.STATUS_BLOCKED || item.status == OfflineVideo.STATUS_QUEUED || item.status == OfflineVideo.STATUS_QUEUED_WIFI || item.status == OfflineVideo.STATUS_WAITING_FOR_STREAM) {
+                            checkDownloadStatus(item)
                         }
                     }
                 }

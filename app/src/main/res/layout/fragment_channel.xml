@@ -231,7 +231,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="?attr/actionBarSize"
                 app:layout_collapseMode="pin"
-                app:menu="@menu/top_menu" />
+                app:menu="@menu/channel_menu" />
 
             <LinearLayout
                 android:id="@+id/toolbarContainer2"

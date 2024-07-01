@@ -14,10 +14,9 @@ import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 class EventSubWebSocket(
-    private val channelName: String,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: OnMessageReceivedListener) {
+    private val listener: EventSubListener) {
     private var socket: WebSocket? = null
     var isActive = false
     private var pongReceived = false
@@ -26,7 +25,7 @@ class EventSubWebSocket(
     private val handledMessageIds = mutableListOf<String>()
 
     fun connect(reconnectUrl: String? = null) {
-        socket = client.newWebSocket(Request.Builder().url(reconnectUrl ?: "wss://eventsub.wss.twitch.tv/ws").build(), EventSubListener())
+        socket = client.newWebSocket(Request.Builder().url(reconnectUrl ?: "wss://eventsub.wss.twitch.tv/ws").build(), EventSubWebSocketListener())
     }
 
     fun disconnect() {
@@ -68,10 +67,10 @@ class EventSubWebSocket(
         }
     }
 
-    private inner class EventSubListener : WebSocketListener() {
+    private inner class EventSubWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             isActive = true
-            listener.onCommand(message = channelName, duration = null, type = "join", fullMsg = null)
+            listener.onConnect()
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -98,7 +97,7 @@ class EventSubWebSocket(
                             val event = payload?.optJSONObject("event")
                             if (event != null) {
                                 when (metadata.optString("subscription_type")) {
-                                    "channel.chat.message" -> listener.onMessage(event, timestamp)
+                                    "channel.chat.message" -> listener.onChatMessage(event, timestamp)
                                     "channel.chat.notification" -> listener.onUserNotice(event, timestamp)
                                     "channel.chat.clear" -> listener.onClearChat(event, timestamp)
                                     "channel.chat_settings.update" -> listener.onRoomState(event, timestamp)
@@ -133,14 +132,5 @@ class EventSubWebSocket(
 
             }
         }
-    }
-
-    interface OnMessageReceivedListener {
-        fun onWelcomeMessage(sessionId: String)
-        fun onMessage(json: JSONObject, timestamp: String?)
-        fun onUserNotice(json: JSONObject, timestamp: String?)
-        fun onClearChat(json: JSONObject, timestamp: String?)
-        fun onRoomState(json: JSONObject, timestamp: String?)
-        fun onCommand(message: String, duration: String?, type: String?, fullMsg: String?)
     }
 }

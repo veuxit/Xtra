@@ -16,8 +16,8 @@ private const val TAG = "ChatReadIRC"
 class ChatReadIRC(
     private val useSSL: Boolean,
     private val loggedIn: Boolean,
-    private val channelName: String,
-    private val listener: OnMessageReceivedListener) : Thread() {
+    channelName: String,
+    private val listener: ChatListener) : Thread() {
     private var socketIn: Socket? = null
     private lateinit var readerIn: BufferedReader
     private lateinit var writerIn: BufferedWriter
@@ -38,8 +38,8 @@ class ChatReadIRC(
                     val messageIn = readerIn.readLine()!!
                     messageIn.run {
                         when {
-                            contains("PRIVMSG") -> listener.onMessage(this, false)
-                            contains("USERNOTICE") -> listener.onMessage(this, true)
+                            contains("PRIVMSG") -> listener.onChatMessage(this, false)
+                            contains("USERNOTICE") -> listener.onChatMessage(this, true)
                             contains("CLEARMSG") -> listener.onClearMessage(this)
                             contains("CLEARCHAT") -> listener.onClearChat(this)
                             contains("NOTICE") -> {
@@ -55,7 +55,7 @@ class ChatReadIRC(
             } catch (e: IOException) {
                 Log.d(TAG, "Disconnecting from $hashChannelName")
                 if (e.message != "Socket closed" && e.message != "socket is closed" && e.message != "Connection reset" && e.message != "recvfrom failed: ECONNRESET (Connection reset by peer)") {
-                    listener.onCommand(message = channelName, duration = e.toString(), type = "disconnect", fullMsg = e.stackTraceToString())
+                    listener.onDisconnect(e.toString(), e.stackTraceToString())
                 }
                 close()
                 sleep(1000L)
@@ -84,7 +84,7 @@ class ChatReadIRC(
             write("JOIN $hashChannelName", writerIn)
             writerIn.flush()
             Log.d(TAG, "Successfully connected to - $hashChannelName")
-            listener.onCommand(message = channelName, duration = null, type = "join", fullMsg = null)
+            listener.onConnect()
         } catch (e: IOException) {
             Log.e(TAG, "Error connecting to Twitch IRC", e)
             throw e
@@ -107,22 +107,11 @@ class ChatReadIRC(
             socketIn?.close()
         } catch (e: IOException) {
             Log.e(TAG, "Error while closing socketIn", e)
-            listener.onCommand(message = e.toString(), duration = null, type = "socket_error", fullMsg = e.stackTraceToString())
         }
     }
 
     @Throws(IOException::class)
     private fun write(message: String, vararg writers: BufferedWriter?) {
-        writers.forEach { it?.write(message + System.getProperty("line.separator")) }
-    }
-
-    interface OnMessageReceivedListener {
-        fun onMessage(message: String, userNotice: Boolean)
-        fun onCommand(message: String, duration: String?, type: String?, fullMsg: String?)
-        fun onClearMessage(message: String)
-        fun onClearChat(message: String)
-        fun onNotice(message: String)
-        fun onRoomState(message: String)
-        fun onUserState(message: String)
+        writers.forEach { it?.write(message + System.lineSeparator()) }
     }
 }
