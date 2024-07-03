@@ -12,6 +12,7 @@ object PlaylistUtils {
         var initSegmentUri: String? = null
         val segments = mutableListOf<Segment>()
         var segmentInfo: Pair<Float, String?>? = null
+        var end = false
         input.bufferedReader().forEachLine { line ->
             if (line.isNotBlank()) {
                 if (line.startsWith('#')) {
@@ -58,6 +59,9 @@ object PlaylistUtils {
                                 }
                             }
                         }
+                        line.startsWith("#EXT-X-ENDLIST") -> {
+                            end = true
+                        }
                     }
                 } else {
                     segmentInfo?.let {
@@ -67,7 +71,7 @@ object PlaylistUtils {
                 }
             }
         }
-        return MediaPlaylist(targetDuration, dateRanges, initSegmentUri, segments)
+        return MediaPlaylist(targetDuration, dateRanges, initSegmentUri, segments, end)
     }
 
     fun writeMediaPlaylist(playlist: MediaPlaylist, output: OutputStream) {

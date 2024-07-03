@@ -447,11 +447,14 @@ class StreamDownloadWorker @AssistedInject constructor(
                             }
                             jobs.awaitAll()
                             collector.cancel()
+                            if (playlist.end) {
+                                return@withContext true
+                            }
                         } else {
-                            return@withContext false
+                            return@withContext true
                         }
                     } else {
-                        return@withContext false
+                        return@withContext true
                     }
                 }
                 val timeTaken = System.currentTimeMillis() - startTime
