@@ -491,8 +491,6 @@
     <string name="follow_system_theme">デバイスのテーマに応じて変更</string>
     <string name="pixels">%d ピクセル</string>
     <string name="image_quality">画像品質</string>
-    <string name="ignore_cutouts">ディスプレイのカットアウトを無視</string>
-    <string name="portrait_only">縦画面時のみ</string>
     <string name="lang_auto">システムのデフォルト</string>
     <string name="save_default">デフォルトとして保存</string>
     <string name="viewers_high">視聴者数 (多い順)</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">Dynamic dark</string>
     <string name="dynamic_light">Dynamic light</string>
     <string name="rounded_corners">Rounded corners</string>
-    <string name="edge_to_edge">Edge-to-edge</string>
     <string name="appbar_lift">Lift app bar on scroll</string>
     <string name="bottom_nav_color">Bottom navigation color</string>
     <string name="dynamic_amoled">Dynamic black</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

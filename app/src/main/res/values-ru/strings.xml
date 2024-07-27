@@ -491,8 +491,6 @@
     <string name="follow_system_theme">Следовать теме устройства</string>
     <string name="pixels">%d пкс</string>
     <string name="image_quality">Качество изображений</string>
-    <string name="ignore_cutouts">Игнорировать вырезы дисплея</string>
-    <string name="portrait_only">Только портрет</string>
     <string name="lang_auto">Системный</string>
     <string name="save_default">Сохранить по умолчанию</string>
     <string name="viewers_high">Зрители (по убыванию)</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">Динамическая тёмная</string>
     <string name="dynamic_light">Динамическая светлая</string>
     <string name="rounded_corners">Скруглять углы</string>
-    <string name="edge_to_edge">На весь экран</string>
     <string name="appbar_lift">Поднять панель приложения при прокрутке</string>
     <string name="bottom_nav_color">Цвет нижней навигации</string>
     <string name="dynamic_amoled">Динамическая чёрная</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

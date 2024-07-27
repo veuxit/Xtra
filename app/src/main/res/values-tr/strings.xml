@@ -491,8 +491,6 @@
     <string name="follow_system_theme">Cihaz temasına göre değiştir</string>
     <string name="pixels">%d piksel</string>
     <string name="image_quality">Resim kalitesi</string>
-    <string name="ignore_cutouts">Ekran kesiklerini yoksay</string>
-    <string name="portrait_only">Sadece portre</string>
     <string name="lang_auto">Sistem varsayılanı</string>
     <string name="save_default">Varsayılan olarak kaydet</string>
     <string name="viewers_high">İzleyici (çoktan aza)</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">Dinamik karanlık</string>
     <string name="dynamic_light">Dinamik ışık</string>
     <string name="rounded_corners">Yuvarlatılmış köşeler</string>
-    <string name="edge_to_edge">Kenardan kenara</string>
     <string name="appbar_lift">Kaydırma sırasında uygulama çubuğunu kaldır</string>
     <string name="bottom_nav_color">Alt gezinme rengi</string>
     <string name="dynamic_amoled">Dinamik siyah</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

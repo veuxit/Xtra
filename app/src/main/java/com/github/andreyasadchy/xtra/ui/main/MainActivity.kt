@@ -10,7 +10,6 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
@@ -176,6 +175,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 putBoolean(C.FIRST_LAUNCH7, false)
             }
         }
+        if (prefs.getBoolean(C.FIRST_LAUNCH8, true)) {
+            prefs.edit {
+                if (prefs.getString(C.UI_CUTOUTMODE, "0") == "1") {
+                    putBoolean(C.UI_DRAW_BEHIND_CUTOUTS, true)
+                }
+                putBoolean(C.FIRST_LAUNCH8, false)
+            }
+        }
         viewModel.integrity.observe(this) {
             if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
                 IntegrityDialog.show(supportFragmentManager)
@@ -185,8 +192,13 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setNavBarColor(isInPortraitOrientation)
+        val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val insets = if (ignoreCutouts) {
+                windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            } else {
+                windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime() or WindowInsetsCompat.Type.displayCutout())
+            }
             binding.navHostFragment.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 leftMargin = insets.left
                 rightMargin = insets.right
@@ -234,31 +246,29 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     private fun setNavBarColor(isPortrait: Boolean) {
-        if (prefs().getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-            when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = !isPortrait
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
-                    window.navigationBarColor = if (isPortrait) {
-                        Color.TRANSPARENT
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = !isPortrait
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                window.navigationBarColor = if (isPortrait) {
+                    Color.TRANSPARENT
+                } else {
+                    ContextCompat.getColor(this, if (!isLightTheme) R.color.darkScrim else R.color.lightScrim)
+                }
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                if (!isLightTheme) {
+                    window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
+                }
+            }
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.M -> {
+                @Suppress("DEPRECATION")
+                if (!isLightTheme) {
+                    if (isPortrait) {
+                        window.navigationBarColor = Color.TRANSPARENT
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                     } else {
-                        ContextCompat.getColor(this, if (!isLightTheme) R.color.darkScrim else R.color.lightScrim)
-                    }
-                }
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                    if (!isLightTheme) {
-                        window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
-                    }
-                }
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.M -> {
-                    @Suppress("DEPRECATION")
-                    if (!isLightTheme) {
-                        if (isPortrait) {
-                            window.navigationBarColor = Color.TRANSPARENT
-                            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                        } else {
-                            window.navigationBarColor = ContextCompat.getColor(this, R.color.darkScrim)
-                            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                        }
+                        window.navigationBarColor = ContextCompat.getColor(this, R.color.darkScrim)
+                        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                     }
                 }
             }
@@ -500,7 +510,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         }, null)
         binding.navBar.apply {
             if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true) && prefs.getBoolean(C.UI_THEME_MATERIAL3, true)) {
-                itemBackground = ColorDrawable(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
+                setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             }
             menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
             menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)

@@ -2,9 +2,9 @@ package com.github.andreyasadchy.xtra.util
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import android.graphics.Color
 import android.net.ConnectivityManager
 import android.os.Build
 import android.util.TypedValue
@@ -95,30 +95,11 @@ fun Activity.applyTheme() {
         isAppearanceLightStatusBars = isLightTheme
         isAppearanceLightNavigationBars = isLightTheme
     }
-    if (prefs().getBoolean(C.UI_THEME_EDGE_TO_EDGE, true)) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-        }
-    } else {
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = false
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> window.navigationBarColor = Color.TRANSPARENT
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.O -> {
-                if (!isLightTheme) {
-                    window.navigationBarColor = Color.TRANSPARENT
-                }
-            }
-        }
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        window.attributes.layoutInDisplayCutoutMode = when (prefs().getString(C.UI_CUTOUTMODE, "0")) {
-            "1" -> WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            "2" -> WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
-            else -> WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
-        }
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    @Suppress("DEPRECATION")
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
     }
 }
 
@@ -127,6 +108,14 @@ fun Context.getAlertDialogBuilder(): AlertDialog.Builder {
         MaterialAlertDialogBuilder(this)
     } else {
         AlertDialog.Builder(this)
+    }
+}
+
+fun Context.getActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is ContextWrapper -> this.baseContext.getActivity()
+        else -> null
     }
 }
 

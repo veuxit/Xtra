@@ -12,13 +12,10 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <ListPreference
-        android:defaultValue="0"
-        android:entries="@array/cutoutmodeEntries"
-        android:entryValues="@array/cutoutmodeValues"
-        android:key="ui_cutoutmode"
-        android:summary="%s"
-        android:title="@string/ignore_cutouts"
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="ui_draw_behind_cutouts"
+        android:title="@string/draw_behind_cutouts"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
