@@ -251,7 +251,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                 }
             }.attach()
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
                 collapsingToolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                     topMargin = insets.top
                 }

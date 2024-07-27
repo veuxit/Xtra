@@ -60,18 +60,24 @@ class SettingsActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val ignoreCutouts = prefs().getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             binding.toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 topMargin = insets.top
             }
+            val cutoutInsets = if (ignoreCutouts) {
+                windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            } else {
+                insets
+            }
             binding.appBar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                leftMargin = insets.left
-                rightMargin = insets.right
+                leftMargin = cutoutInsets.left
+                rightMargin = cutoutInsets.right
             }
             binding.navHostFragment.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                leftMargin = insets.left
-                rightMargin = insets.right
+                leftMargin = cutoutInsets.left
+                rightMargin = cutoutInsets.right
             }
             windowInsets
         }
@@ -170,7 +176,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
-            findPreference<ListPreference>(C.UI_CUTOUTMODE)?.apply {
+            findPreference<SwitchPreferenceCompat>(C.UI_DRAW_BEHIND_CUTOUTS)?.apply {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     setOnPreferenceChangeListener { _, _ ->
                         changed = true
@@ -375,15 +381,6 @@ class SettingsActivity : AppCompatActivity() {
                 changed = true
                 activity.recreate()
                 true
-            }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                findPreference<SwitchPreferenceCompat>(C.UI_THEME_EDGE_TO_EDGE)?.isVisible = false
-            } else {
-                findPreference<SwitchPreferenceCompat>(C.UI_THEME_EDGE_TO_EDGE)?.setOnPreferenceChangeListener { _, _ ->
-                    changed = true
-                    activity.recreate()
-                    true
-                }
             }
             findPreference<SwitchPreferenceCompat>(C.UI_THEME_APPBAR_LIFT)?.setOnPreferenceChangeListener { _, _ ->
                 changed = true

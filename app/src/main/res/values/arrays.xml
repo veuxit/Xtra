@@ -235,18 +235,6 @@
         <item>zh-CN</item>
     </string-array>
 
-    <string-array name="cutoutmodeEntries">
-        <item>@string/always</item>
-        <item>@string/portrait_only</item>
-        <item>@string/never</item>
-    </string-array>
-
-    <string-array name="cutoutmodeValues">
-        <item>1</item>
-        <item>0</item>
-        <item>2</item>
-    </string-array>
-
     <string-array name="miscValues">
         <item>0</item>
         <item>1</item>

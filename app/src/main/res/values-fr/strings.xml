@@ -491,8 +491,6 @@
     <string name="follow_system_theme">Modifier en fonction du thème de l\'appareil</string>
     <string name="pixels">%d pixels</string>
     <string name="image_quality">Qualité d\'image</string>
-    <string name="ignore_cutouts">Ignorer les découpes d\'affichage</string>
-    <string name="portrait_only">Portrait uniquement</string>
     <string name="lang_auto">Valeur par défaut du système</string>
     <string name="save_default">Enregistrer par défaut</string>
     <string name="viewers_high">Spectateurs (descendant)</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">Sombre dynamique</string>
     <string name="dynamic_light">Clair dynamique</string>
     <string name="rounded_corners">Coins arrondis</string>
-    <string name="edge_to_edge">Côte à côte</string>
     <string name="appbar_lift">Soulever la barre de l\'application lors du défilement</string>
     <string name="bottom_nav_color">Couleur de navigation du bas</string>
     <string name="dynamic_amoled">Noir dynamique</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

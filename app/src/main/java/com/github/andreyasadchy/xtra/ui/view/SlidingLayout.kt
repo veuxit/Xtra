@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
@@ -12,19 +13,23 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.LinearLayout
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
 import androidx.customview.widget.ViewDragHelper
-import androidx.media3.ui.DefaultTimeBar
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.ui.isClick
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.getActivity
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
+import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.color.MaterialColors
 
 private const val ANIMATION_DURATION = 250L
 
@@ -35,8 +40,11 @@ class SlidingLayout : LinearLayout {
     private lateinit var dragView: View
     var secondView: View? = null
     var savedInsets: Insets? = null
+    private var backgroundColor: Int? = null
+    private var backgroundVisible = true
+    private var isLightTheme: Boolean? = null
 
-    private var timeBar: DefaultTimeBar? = null
+    private var timeBar: View? = null
     private var topBound = 0
     private var bottomBound = 0
     private var minimizeThreshold = 0
@@ -64,6 +72,9 @@ class SlidingLayout : LinearLayout {
         override fun onAnimationCancel(animation: Animator) {}
         override fun onAnimationStart(animation: Animator) {
             isAnimating = true
+            if (!isMaximized) {
+                disableBackground()
+            }
         }
 
         override fun onAnimationEnd(animation: Animator) {
@@ -73,6 +84,9 @@ class SlidingLayout : LinearLayout {
             dragViewLeft = 0
             requestLayout()
             secondView?.postInvalidate()
+            if (isMaximized) {
+                enableBackground(isPortrait)
+            }
         }
     }
 
@@ -330,6 +344,42 @@ class SlidingLayout : LinearLayout {
         listeners.clear()
     }
 
+    fun updateBackgroundColor(isPortrait: Boolean) {
+        if (isMaximized) {
+            enableBackground(isPortrait)
+        } else {
+            disableBackground()
+        }
+    }
+
+    private fun enableBackground(isPortrait: Boolean) {
+        backgroundVisible = true
+        (parent as View).setBackgroundColor(
+            if (isPortrait) {
+                backgroundColor ?: if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && isLightTheme ?: context.isLightTheme.also { isLightTheme = it }) {
+                    ContextCompat.getColor(context, R.color.darkScrimOnLightSurface)
+                } else {
+                    MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface)
+                }.also { backgroundColor = it }
+            } else {
+                Color.BLACK
+            }
+        )
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            context.getActivity()?.window?.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        }
+    }
+
+    private fun disableBackground() {
+        backgroundVisible = false
+        (parent as View).setBackgroundColor(Color.TRANSPARENT)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            context.getActivity()?.window?.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        }
+    }
+
     private inner class SlidingCallback : ViewDragHelper.Callback() {
 
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
@@ -350,6 +400,15 @@ class SlidingLayout : LinearLayout {
             secondView?.let {
                 it.top = if (isPortrait) dragView.measuredHeight + top else top
                 it.bottom = height + top
+            }
+            if (isMaximized && top <= 5) {
+                if (!backgroundVisible) {
+                    enableBackground(isPortrait)
+                }
+            } else {
+                if (backgroundVisible) {
+                    disableBackground()
+                }
             }
         }
 

@@ -258,7 +258,7 @@ class SavedMediaFragment : Fragment(), Scrollable, FragmentHost {
                 }
             }, false)
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
                 toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                     topMargin = insets.top
                 }
