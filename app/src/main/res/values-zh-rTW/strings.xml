@@ -491,8 +491,6 @@
     <string name="follow_system_theme">根據裝置主題變更</string>
     <string name="pixels">%d 像素</string>
     <string name="image_quality">圖片品質</string>
-    <string name="ignore_cutouts">忽略螢幕缺口</string>
-    <string name="portrait_only">僅限縱向</string>
     <string name="lang_auto">系統預設</string>
     <string name="save_default">儲存為預設</string>
     <string name="viewers_high">觀眾數（高至低）</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">動態深色</string>
     <string name="dynamic_light">動態淺色</string>
     <string name="rounded_corners">圓角</string>
-    <string name="edge_to_edge">Edge-to-edge</string>
     <string name="appbar_lift">捲動時抬起應用程式列</string>
     <string name="bottom_nav_color">底部導覽列顏色</string>
     <string name="dynamic_amoled">動態黑色</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">Minutes to wait for stream to start</string>
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

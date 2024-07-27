@@ -491,8 +491,6 @@
     <string name="follow_system_theme">跟随系统主题</string>
     <string name="pixels">%d 像素</string>
     <string name="image_quality">图片质量</string>
-    <string name="ignore_cutouts">忽略屏幕缺口</string>
-    <string name="portrait_only">仅限纵向</string>
     <string name="lang_auto">系统默认</string>
     <string name="save_default">储存为默认</string>
     <string name="viewers_high">观众数（高至低）</string>
@@ -588,7 +586,6 @@
     <string name="dynamic_dark">动态深色</string>
     <string name="dynamic_light">动态浅色</string>
     <string name="rounded_corners">圆角</string>
-    <string name="edge_to_edge">Edge-to-edge</string>
     <string name="appbar_lift">滚动时抬起应用程序列</string>
     <string name="bottom_nav_color">底部导览列颜色</string>
     <string name="dynamic_amoled">动态黑色</string>
@@ -633,4 +630,5 @@
     <string name="download_start_wait_summary">等待直播开始的分钟数</string>
     <string name="download_end_wait">串流后的等待时间</string>
     <string name="download_end_wait_summary">在上一个串流结束后等待另一个串流开始的分钟数</string>
+    <string name="draw_behind_cutouts">Draw behind display cutouts</string>
 </resources>

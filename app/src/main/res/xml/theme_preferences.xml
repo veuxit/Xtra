@@ -47,13 +47,6 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="true"
-        android:key="ui_theme_edge_to_edge"
-        android:title="@string/edge_to_edge"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
         android:key="ui_theme_appbar_lift"
         android:title="@string/appbar_lift"
         app:iconSpaceReserved="false"
