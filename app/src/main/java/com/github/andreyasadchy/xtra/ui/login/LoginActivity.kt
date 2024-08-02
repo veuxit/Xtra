@@ -7,11 +7,9 @@ import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -21,7 +19,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
+import androidx.webkit.WebResourceErrorCompat
 import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewFeature
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivityLoginBinding
@@ -207,7 +207,7 @@ class LoginActivity : AppCompatActivity() {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             webChromeClient = WebChromeClient()
-            webViewClient = object : WebViewClient() {
+            webViewClient = object : WebViewClientCompat() {
 
                 override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && readHeaders) {
@@ -222,32 +222,48 @@ class LoginActivity : AppCompatActivity() {
                     return super.shouldInterceptRequest(view, webViewRequest)
                 }
 
-                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                    if (!readHeaders) {
-                        loginIfValidUrl(request?.url.toString(), helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !readHeaders) {
+                        loginIfValidUrl(request.url.toString(), helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
                     }
                     return super.shouldOverrideUrlLoading(view, request)
                 }
 
-                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                    super.onReceivedError(view, request, error)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (request?.isForMainFrame == true) {
-                            val errorMessage = if (error?.errorCode == ERROR_FAILED_SSL_HANDSHAKE) {
-                                getString(R.string.browser_workaround)
-                            } else {
-                                getString(R.string.error, "${error?.errorCode} ${error?.description}")
-                            }
-                            val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
-                            loadUrl("about:blank")
-                            loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    if (!WebViewFeature.isFeatureSupported(WebViewFeature.SHOULD_OVERRIDE_WITH_REDIRECTS)) {
+                        if (!readHeaders && url != null) {
+                            loginIfValidUrl(url, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
                         }
+                    }
+                    return super.shouldOverrideUrlLoading(view, url)
+                }
+
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceErrorCompat) {
+                    super.onReceivedError(view, request, error)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && request.isForMainFrame) {
+                        val errorCode = if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_RESOURCE_ERROR_GET_CODE)) {
+                            error.errorCode
+                        } else null
+                        val errorMessage = if (errorCode == ERROR_FAILED_SSL_HANDSHAKE) {
+                            getString(R.string.browser_workaround)
+                        } else {
+                            getString(R.string.error, "${errorCode ?: ""} ${
+                                if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_RESOURCE_ERROR_GET_DESCRIPTION)) {
+                                    error.description
+                                } else ""
+                            }")
+                        }
+                        val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
+                        loadUrl("about:blank")
+                        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     }
                 }
 
-                @Deprecated("Deprecated in Java")
+                @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
                 override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    super.onReceivedError(view, errorCode, description, failingUrl)
+                    if (!WebViewFeature.isFeatureSupported(WebViewFeature.RECEIVE_WEB_RESOURCE_ERROR)) {
                         val errorMessage = if (errorCode == ERROR_FAILED_SSL_HANDSHAKE) {
                             getString(R.string.browser_workaround)
                         } else {

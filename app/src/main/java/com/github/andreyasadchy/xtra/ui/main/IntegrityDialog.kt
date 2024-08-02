@@ -10,12 +10,12 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.setFragmentResult
+import androidx.webkit.WebViewClientCompat
 import com.github.andreyasadchy.xtra.databinding.DialogIntegrityBinding
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -52,7 +52,7 @@ class IntegrityDialog : DialogFragment() {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             webChromeClient = WebChromeClient()
-            webViewClient = object : WebViewClient() {
+            webViewClient = object : WebViewClientCompat() {
 
                 override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !webViewRequest.requestHeaders.entries.firstOrNull { it.key.equals("Client-Integrity", true) }?.value.isNullOrBlank()) {
