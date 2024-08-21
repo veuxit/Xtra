@@ -1,3 +1,3 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-class RecentMessagesResponse(val messages: List<ChatMessage>)
+class RecentMessagesResponse(val messages: List<String>)

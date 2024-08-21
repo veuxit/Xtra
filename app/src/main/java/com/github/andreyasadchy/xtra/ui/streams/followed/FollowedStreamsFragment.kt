@@ -52,6 +52,12 @@ class FollowedStreamsFragment : PagedListFragment(), Scrollable {
         pagingAdapter.retry()
     }
 
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

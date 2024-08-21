@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.repository
 
-import android.content.Context
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
 import kotlinx.coroutines.Dispatchers
@@ -25,9 +24,11 @@ class LocalFollowGameRepository @Inject constructor(
         localFollowsGameDao.insert(item)
     }
 
-    suspend fun deleteFollow(context: Context, item: LocalFollowGame) = withContext(Dispatchers.IO) {
-        if (!item.gameId.isNullOrBlank()) {
-            File(context.filesDir.path + File.separator + "box_art" + File.separator + "${item.gameId}.png").delete()
+    suspend fun deleteFollow(item: LocalFollowGame) = withContext(Dispatchers.IO) {
+        item.boxArt?.let {
+            if (it.isNotBlank()) {
+                File(it).delete()
+            }
         }
         localFollowsGameDao.delete(item)
     }

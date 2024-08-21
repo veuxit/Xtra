@@ -6,7 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Observer
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
@@ -27,6 +29,8 @@ import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener {
@@ -42,9 +46,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         with(binding) {
@@ -62,9 +71,33 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     if (isLoggedIn) {
                         chatView.setUsername(account.login)
                         chatView.addToAutoCompleteList(viewModel.chatters)
-                        viewModel.recentEmotes.observe(viewLifecycleOwner, Observer(chatView::setRecentEmotes))
-                        viewModel.userEmotes.observe(viewLifecycleOwner, Observer(chatView::addToAutoCompleteList))
-                        viewModel.newChatter.observe(viewLifecycleOwner) { chatView.addToAutoCompleteList(listOf(it)) }
+                        viewModel.loadRecentEmotes()
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.hasRecentEmotes.collectLatest {
+                                    if (it) {
+                                        chatView.setRecentEmotes()
+                                    }
+                                }
+                            }
+                        }
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.userEmotes.collectLatest {
+                                    chatView.addToAutoCompleteList(it)
+                                }
+                            }
+                        }
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.newChatter.collectLatest {
+                                    if (it != null) {
+                                        chatView.addToAutoCompleteList(listOf(it))
+                                        viewModel.newChatter.value = null
+                                    }
+                                }
+                            }
+                        }
                     }
                     true
                 }
@@ -79,27 +112,174 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             }
             if (enableChat) {
                 chatView.enableChatInteraction(isLive && isLoggedIn)
-                viewModel.chatMessages.observe(viewLifecycleOwner, Observer(chatView::submitList))
-                viewModel.newMessage.observe(viewLifecycleOwner) { chatView.notifyMessageAdded() }
-                viewModel.localTwitchEmotes.observe(viewLifecycleOwner, Observer(chatView::addLocalTwitchEmotes))
-                viewModel.globalStvEmotes.observe(viewLifecycleOwner, Observer(chatView::addGlobalStvEmotes))
-                viewModel.channelStvEmotes.observe(viewLifecycleOwner, Observer(chatView::addChannelStvEmotes))
-                viewModel.globalBttvEmotes.observe(viewLifecycleOwner, Observer(chatView::addGlobalBttvEmotes))
-                viewModel.channelBttvEmotes.observe(viewLifecycleOwner, Observer(chatView::addChannelBttvEmotes))
-                viewModel.globalFfzEmotes.observe(viewLifecycleOwner, Observer(chatView::addGlobalFfzEmotes))
-                viewModel.channelFfzEmotes.observe(viewLifecycleOwner, Observer(chatView::addChannelFfzEmotes))
-                viewModel.globalBadges.observe(viewLifecycleOwner, Observer(chatView::addGlobalBadges))
-                viewModel.channelBadges.observe(viewLifecycleOwner, Observer(chatView::addChannelBadges))
-                viewModel.cheerEmotes.observe(viewLifecycleOwner, Observer(chatView::addCheerEmotes))
-                viewModel.roomState.observe(viewLifecycleOwner) { chatView.notifyRoomState(it) }
-                viewModel.reloadMessages.observe(viewLifecycleOwner) { chatView.notifyEmotesLoaded() }
-                viewModel.scrollDown.observe(viewLifecycleOwner) { chatView.scrollToLastPosition() }
-                viewModel.hideRaid.observe(viewLifecycleOwner) { chatView.hideRaid() }
-                viewModel.raid.observe(viewLifecycleOwner) { onRaidUpdate(it) }
-                viewModel.raidClicked.observe(viewLifecycleOwner) { onRaidClicked() }
-                viewModel.streamLiveChanged.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateLive(it.first.live, it.first.serverTime?.times(1000), it.second) }
-                viewModel.viewerCount.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it) }
-                viewModel.title.observe(viewLifecycleOwner) { (parentFragment as? StreamPlayerFragment)?.updateTitle(it?.title, it?.gameId, null, it?.gameName) }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.chatMessages.collectLatest {
+                            chatView.submitList(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.newMessage.collectLatest {
+                            if (it) {
+                                chatView.notifyMessageAdded()
+                                viewModel.newMessage.value = false
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.localTwitchEmotes.collectLatest {
+                            chatView.addLocalTwitchEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.globalStvEmotes.collectLatest {
+                            chatView.addGlobalStvEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.channelStvEmotes.collectLatest {
+                            chatView.addChannelStvEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.globalBttvEmotes.collectLatest {
+                            chatView.addGlobalBttvEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.channelBttvEmotes.collectLatest {
+                            chatView.addChannelBttvEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.globalFfzEmotes.collectLatest {
+                            chatView.addGlobalFfzEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.channelFfzEmotes.collectLatest {
+                            chatView.addChannelFfzEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.globalBadges.collectLatest {
+                            chatView.addGlobalBadges(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.channelBadges.collectLatest {
+                            chatView.addChannelBadges(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.cheerEmotes.collectLatest {
+                            chatView.addCheerEmotes(it)
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.roomState.collectLatest {
+                            if (it != null) {
+                                chatView.notifyRoomState(it)
+                                viewModel.roomState.value = null
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.reloadMessages.collectLatest {
+                            if (it) {
+                                chatView.notifyEmotesLoaded()
+                                viewModel.reloadMessages.value = false
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.scrollDown.collectLatest {
+                            if (it) {
+                                chatView.scrollToLastPosition()
+                                viewModel.scrollDown.value = false
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.hideRaid.collectLatest {
+                            if (it) {
+                                chatView.hideRaid()
+                                viewModel.hideRaid.value = false
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.raid.collectLatest {
+                            if (it != null) {
+                                onRaidUpdate(it)
+                                viewModel.raid.value = null
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.raidClicked.collectLatest {
+                            if (it) {
+                                onRaidClicked()
+                                viewModel.raidClicked.value = false
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.playbackMessage.collectLatest {
+                            if (it != null) {
+                                if (it.live != null) {
+                                    (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it, args.getString(KEY_CHANNEL_LOGIN))
+                                }
+                                (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it.viewers)
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.streamInfo.collectLatest {
+                            if (it != null) {
+                                (parentFragment as? StreamPlayerFragment)?.updateStreamInfo(it.title, it.gameId, null, it.gameName)
+                            }
+                        }
+                    }
+                }
             }
             if (chatUrl != null) {
                 initialize()
@@ -128,7 +308,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val collectPoints = requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true)
         val notifyPoints = requireContext().prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false)
         val showRaids = requireContext().prefs().getBoolean(C.CHAT_RAIDS_SHOW, true)
-        val autoSwitchRaids = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
         val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
         val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
         val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
@@ -143,7 +322,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         if (!disableChat) {
             if (isLive) {
                 val streamId = args.getString(KEY_STREAM_ID)
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, autoSwitchRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
             } else {
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
@@ -170,8 +349,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
         val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
         val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
+        val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
+        val showClearMsg = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)
+        val showClearChat = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
         if (channelLogin != null && enableRecentMsg) {
-            viewModel.loadRecentMessages(channelLogin, recentMsgLimit.toString())
+            viewModel.loadRecentMessages(channelLogin, recentMsgLimit.toString(), showUserNotice, showClearMsg, showClearChat)
         }
     }
 
@@ -203,27 +385,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     private fun onRaidUpdate(raid: Raid) {
-        if (viewModel.raidClosed && viewModel.raidNewId) {
-            viewModel.raidAutoSwitch = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
-            viewModel.raidClosed = false
-        }
-        if (raid.openStream) {
-            if (!viewModel.raidClosed) {
-                if (viewModel.raidAutoSwitch) {
-                    if (parentFragment is BasePlayerFragment && (parentFragment as? BasePlayerFragment)?.isSleepTimerActive() != true) {
-                        onRaidClicked()
-                    }
-                } else {
-                    viewModel.raidAutoSwitch = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
+        if (!viewModel.raidClosed) {
+            if (raid.openStream) {
+                if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment && !(parentFragment as BasePlayerFragment).isSleepTimerActive()) {
+                    onRaidClicked()
                 }
                 binding.chatView.hideRaid()
             } else {
-                viewModel.raidAutoSwitch = requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true)
-                viewModel.raidClosed = false
-            }
-        } else {
-            if (!viewModel.raidClosed) {
-                binding.chatView.notifyRaid(raid, viewModel.raidNewId)
+                binding.chatView.notifyRaid(raid)
             }
         }
     }

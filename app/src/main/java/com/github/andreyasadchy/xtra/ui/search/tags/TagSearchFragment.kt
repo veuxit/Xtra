@@ -10,7 +10,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -71,28 +73,27 @@ class TagSearchFragment : PagedListFragment() {
     override fun initialize() {
         with(binding.recyclerViewLayout) {
             viewLifecycleOwner.lifecycleScope.launch {
-                viewModel.flow.collectLatest { pagingData ->
-                    pagingAdapter.submitData(pagingData)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.flow.collectLatest { pagingData ->
+                        pagingAdapter.submitData(pagingData)
+                    }
                 }
             }
             viewLifecycleOwner.lifecycleScope.launch {
-                pagingAdapter.loadStateFlow.collectLatest { loadState ->
-                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
-                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
-                    if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
-                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                        IntegrityDialog.show(childFragmentManager)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                        progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                        nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
+                        if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                            IntegrityDialog.show(childFragmentManager, "refresh")
+                        }
                     }
                 }
             }
         }
-        childFragmentManager.setFragmentResultListener("integrity", this) { _, bundle ->
-            if (bundle.getBoolean("refresh")) {
-                pagingAdapter.refresh()
-            }
-        }
         if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && TwitchApiHelper.isIntegrityTokenExpired(requireContext())) {
-            IntegrityDialog.show(childFragmentManager)
+            IntegrityDialog.show(childFragmentManager, "refresh")
         }
         with(binding) {
             searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -127,6 +128,12 @@ class TagSearchFragment : PagedListFragment() {
 
     override fun onNetworkRestored() {
         pagingAdapter.retry()
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
     }
 
     override fun onDestroyView() {

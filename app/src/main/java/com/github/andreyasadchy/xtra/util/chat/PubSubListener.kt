@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 interface PubSubListener {
     fun onPlaybackMessage(message: JSONObject)
-    fun onTitleUpdate(message: JSONObject)
+    fun onStreamInfo(message: JSONObject)
     fun onRewardMessage(message: JSONObject)
     fun onPointsEarned(message: JSONObject)
     fun onClaimAvailable()
@@ -18,7 +18,7 @@ data class PlaybackMessage(
     val serverTime: Long? = null,
     val viewers: Int? = null)
 
-data class BroadcastSettings(
+data class StreamInfo(
     val title: String? = null,
     val gameId: String? = null,
     val gameName: String? = null)

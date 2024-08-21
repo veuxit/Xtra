@@ -17,6 +17,9 @@ import androidx.core.view.marginTop
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.AppBarConfiguration
@@ -57,10 +60,12 @@ import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
-class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
+class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, IntegrityDialog.CallbackListener {
 
     private var _binding: FragmentChannelBinding? = null
     private val binding get() = _binding!!
@@ -77,9 +82,14 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         with(binding) {
@@ -115,6 +125,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                     userImage.gone()
                 }
             }
+            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
             val navController = findNavController()
             val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
             toolbar.setupWithNavController(navController, appBarConfiguration)
@@ -122,17 +133,13 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
             toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.followButton -> {
-                        viewModel.follow.value?.let {
-                            val following = it.first
-                            val errorMessage = it.second
-                            if (errorMessage.isNullOrBlank()) {
-                                if (!following) {
-                                    viewModel.saveFollowChannel(args.channelId, args.channelLogin, args.channelName, args.channelLogo)
-                                } else {
-                                    FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
-                                        viewModel.deleteFollowChannel(args.channelId)
-                                    }
+                        viewModel.isFollowing.value?.let {
+                            if (it) {
+                                FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
+                                    viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.channelId)
                                 }
+                            } else {
+                                viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.channelId, args.channelLogin, args.channelName, args.channelLogo)
                             }
                         }
                         true
@@ -159,34 +166,50 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                         true
                     }
                     R.id.download -> {
-                        if (viewModel.stream.isInitialized) {
-                            viewModel.stream.value?.let { DownloadDialog.newInstance(it).show(childFragmentManager, null) }
-                        }
+                        viewModel.stream.value?.let { DownloadDialog.newInstance(it).show(childFragmentManager, null) }
                         true
                     }
                     else -> false
                 }
             }
-            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
             if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
                 val followButton = toolbar.menu.findItem(R.id.followButton)
-                followButton.isVisible = true
-                var initialized = false
-                viewModel.follow.observe(viewLifecycleOwner) { pair ->
-                    val following = pair.first
-                    val errorMessage = pair.second
-                    if (initialized) {
-                        if (!errorMessage.isNullOrBlank()) {
-                            requireContext().shortToast(errorMessage)
-                        } else {
-                            requireContext().shortToast(requireContext().getString(if (following) R.string.now_following else R.string.unfollowed, args.channelName))
+                followButton?.isVisible = true
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.isFollowing.collectLatest {
+                            if (it != null) {
+                                followButton?.apply {
+                                    if (it) {
+                                        icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_favorite_black_24)
+                                        title = requireContext().getString(R.string.unfollow)
+                                    } else {
+                                        icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_favorite_border_black_24)
+                                        title = requireContext().getString(R.string.follow)
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        initialized = true
                     }
-                    if (errorMessage.isNullOrBlank()) {
-                        followButton.icon = ContextCompat.getDrawable(requireContext(), if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
-                        followButton.title = requireContext().getString(if (following) R.string.unfollow else R.string.follow)
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.follow.collectLatest { pair ->
+                            if (pair != null) {
+                                val following = pair.first
+                                val errorMessage = pair.second
+                                if (!errorMessage.isNullOrBlank()) {
+                                    requireContext().shortToast(errorMessage)
+                                } else {
+                                    if (following) {
+                                        requireContext().shortToast(requireContext().getString(R.string.now_following, args.channelName))
+                                    } else {
+                                        requireContext().shortToast(requireContext().getString(R.string.unfollowed, args.channelName))
+                                    }
+                                }
+                                viewModel.follow.value = null
+                            }
+                        }
                     }
                 }
             }
@@ -253,24 +276,34 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
 
     override fun initialize() {
         viewModel.loadStream(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-        viewModel.stream.observe(viewLifecycleOwner) { stream ->
-            updateStreamLayout(stream)
-            if (stream?.user != null) {
-                updateUserLayout(stream.user)
-            } else {
-                viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.stream.collectLatest { stream ->
+                    if (stream != null) {
+                        updateStreamLayout(stream)
+                        if (stream.user != null) {
+                            updateUserLayout(stream.user)
+                        } else {
+                            viewModel.loadUser(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken)
+                        }
+                    }
+                }
             }
         }
-        viewModel.user.observe(viewLifecycleOwner) { user ->
-            if (user != null) {
-                updateUserLayout(user)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.user.collectLatest { user ->
+                    if (user != null) {
+                        updateUserLayout(user)
+                    }
+                }
             }
         }
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
-        val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
-            viewModel.isFollowingChannel(args.channelId, args.channelLogin)
+            viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.channelId, args.channelLogin)
         }
     }
 
@@ -431,13 +464,34 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                 userType.gone()
             }
             if (args.updateLocal) {
-                viewModel.updateLocalUser(user)
+                viewModel.updateLocalUser(requireContext().filesDir.path, user)
             }
         }
     }
 
     override fun onNetworkRestored() {
         viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    when (callback) {
+                        "refresh" -> {
+                            viewModel.retry(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+                            val account = Account.get(requireContext())
+                            if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
+                                viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.channelId, args.channelLogin)
+                            }
+                        }
+                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.channelId, args.channelLogin, args.channelName, args.channelLogo)
+                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.channelId)
+                    }
+                }
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

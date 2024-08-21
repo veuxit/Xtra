@@ -11,7 +11,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.PlaybackException
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -35,7 +37,6 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.prefs
@@ -45,6 +46,7 @@ import com.github.andreyasadchy.xtra.util.visible
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -82,22 +84,29 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
         val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
         val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
-        viewModel.loaded.observe(viewLifecycleOwner) {
-            if (it) {
-                loaded = true
-                settings?.enable()
-                download?.enable()
-                mode?.enable()
-                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
-            } else {
-                settings?.disable()
-                download?.disable()
-                mode?.disable()
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.loaded.collectLatest {
+                    if (it) {
+                        loaded = true
+                        settings?.enable()
+                        download?.enable()
+                        mode?.enable()
+                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
+                    }
+                }
             }
         }
         if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
-            viewModel.bookmarkItem.observe(viewLifecycleOwner) {
-                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it != null)
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.isBookmarked.collectLatest {
+                        if (it != null) {
+                            (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it)
+                            viewModel.isBookmarked.value = null
+                        }
+                    }
+                }
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
@@ -119,15 +128,19 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
             }
         }
         if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
-            viewModel.gamesList.observe(viewLifecycleOwner) { list ->
-                if (list.isNotEmpty()) {
-                    if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
-                        requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
-                            visible()
-                            setOnClickListener { showVodGames() }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.gamesList.collectLatest { list ->
+                        if (!list.isNullOrEmpty()) {
+                            if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
+                                requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
+                                    visible()
+                                    setOnClickListener { showVodGames() }
+                                }
+                            }
+                            (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
                         }
                     }
-                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
                 }
             }
         }
@@ -178,34 +191,54 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
         }
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
-        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
             val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
             followButton?.visible()
-            var initialized = false
-            viewModel.follow.observe(viewLifecycleOwner) { pair ->
-                val following = pair.first
-                val errorMessage = pair.second
-                if (initialized) {
-                    if (!errorMessage.isNullOrBlank()) {
-                        requireContext().shortToast(errorMessage)
+            followButton?.setOnClickListener {
+                viewModel.isFollowing.value?.let {
+                    if (it) {
+                        FragmentUtils.showUnfollowDialog(requireContext(), video.channelName) {
+                            viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, video.channelId)
+                        }
                     } else {
-                        requireContext().shortToast(requireContext().getString(if (following) R.string.now_following else R.string.unfollowed, video.channelName))
+                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, video.channelId, video.channelLogin, video.channelName, video.channelLogo)
                     }
-                } else {
-                    initialized = true
                 }
-                if (errorMessage.isNullOrBlank()) {
-                    followButton?.setOnClickListener {
-                        if (!following) {
-                            viewModel.saveFollowChannel(video.channelId, video.channelLogin, video.channelName, video.channelLogo)
-                        } else {
-                            FragmentUtils.showUnfollowDialog(requireContext(), video.channelName) {
-                                viewModel.deleteFollowChannel(video.channelId)
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.isFollowing.collectLatest {
+                        if (it != null) {
+                            followButton?.apply {
+                                if (it) {
+                                    setImageResource(R.drawable.baseline_favorite_black_24)
+                                } else {
+                                    setImageResource(R.drawable.baseline_favorite_border_black_24)
+                                }
                             }
                         }
                     }
-                    followButton?.setImageResource(if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.follow.collectLatest { pair ->
+                        if (pair != null) {
+                            val following = pair.first
+                            val errorMessage = pair.second
+                            if (!errorMessage.isNullOrBlank()) {
+                                requireContext().shortToast(errorMessage)
+                            } else {
+                                if (following) {
+                                    requireContext().shortToast(requireContext().getString(R.string.now_following, video.channelName))
+                                } else {
+                                    requireContext().shortToast(requireContext().getString(R.string.unfollowed, video.channelName))
+                                }
+                            }
+                            viewModel.follow.value = null
+                        }
+                    }
                 }
             }
         }
@@ -224,9 +257,9 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
         super.initialize()
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
-        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(video.channelId, video.channelLogin)
+            viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, video.channelId, video.channelLogin)
         }
         if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
             viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), video.id)
@@ -254,14 +287,21 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
                 supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                 enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
             )
-            viewModel.result.observe(viewLifecycleOwner) { url ->
-                player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(
-                    PlaybackService.ITEM to video,
-                    PlaybackService.URI to url.toString(),
-                    PlaybackService.USING_PLAYLIST to true,
-                    PlaybackService.PLAYBACK_POSITION to playbackPosition,
-                    PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
-                )), Bundle.EMPTY)
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.result.collectLatest {
+                        if (it != null) {
+                            player?.sendCustomCommand(SessionCommand(PlaybackService.START_VIDEO, bundleOf(
+                                PlaybackService.ITEM to video,
+                                PlaybackService.URI to it.toString(),
+                                PlaybackService.USING_PLAYLIST to true,
+                                PlaybackService.PLAYBACK_POSITION to playbackPosition,
+                                PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
+                            )), Bundle.EMPTY)
+                            viewModel.result.value = null
+                        }
+                    }
+                }
             }
         }
     }
@@ -311,7 +351,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
     }
 
     fun saveBookmark() {
-        viewModel.saveBookmark(video)
+        viewModel.saveBookmark(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), video)
     }
 
     override fun seek(position: Long) {
@@ -319,7 +359,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
     }
 
     override fun showDownloadDialog() {
-        if (viewModel.loaded.value == true) {
+        if (viewModel.loaded.value) {
             player?.sendCustomCommand(SessionCommand(PlaybackService.GET_VIDEO_DOWNLOAD_INFO, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
                 result.addListener({
                     if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
@@ -346,6 +386,36 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
     override fun onNetworkLost() {
         if (isResumed) {
             player?.stop()
+        }
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    when (callback) {
+                        "refresh" -> {
+                            viewModel.load(
+                                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
+                                videoId = video.id,
+                                playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                                supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
+                                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
+                            )
+                            val account = Account.get(requireContext())
+                            val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+                            if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
+                                viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, video.channelId, video.channelLogin)
+                            }
+                            if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
+                                viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), video.id)
+                            }
+                        }
+                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, video.channelId, video.channelLogin, video.channelName, video.channelLogo)
+                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, video.channelId)
+                    }
+                }
+            }
         }
     }
 

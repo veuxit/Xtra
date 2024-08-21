@@ -244,6 +244,9 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     override fun onNetworkRestored() {
     }
 
+    override fun onIntegrityDialogCallback(callback: String?) {
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

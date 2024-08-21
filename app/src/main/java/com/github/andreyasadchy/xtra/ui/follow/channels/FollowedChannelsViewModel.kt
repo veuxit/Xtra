@@ -3,8 +3,6 @@ package com.github.andreyasadchy.xtra.ui.follow.channels
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -30,9 +28,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltViewModel
@@ -44,12 +44,11 @@ class FollowedChannelsViewModel @Inject constructor(
     private val sortChannelRepository: SortChannelRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
-    private val bookmarksRepository: BookmarksRepository) : ViewModel() {
+    private val bookmarksRepository: BookmarksRepository,
+    private val okHttpClient: OkHttpClient) : ViewModel() {
 
-    private val _sortText = MutableLiveData<CharSequence>()
-    val sortText: LiveData<CharSequence>
-        get() = _sortText
-
+    private val _sortText = MutableStateFlow<CharSequence?>(null)
+    val sortText: StateFlow<CharSequence?> = _sortText
     private val filter = MutableStateFlow(setUser())
 
     val sort: FollowSortEnum
@@ -66,7 +65,9 @@ class FollowedChannelsViewModel @Inject constructor(
                 localFollowsChannel = localFollowsChannel,
                 offlineRepository = offlineRepository,
                 bookmarksRepository = bookmarksRepository,
+                okHttpClient = okHttpClient,
                 coroutineScope = viewModelScope,
+                filesDir = applicationContext.filesDir.path,
                 userId = Account.get(applicationContext).id,
                 helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
                 helixToken = Account.get(applicationContext).helixToken,

@@ -135,6 +135,9 @@ class OfflinePlayerFragment : BasePlayerFragment() {
         //do nothing
     }
 
+    override fun onIntegrityDialogCallback(callback: String?) {
+    }
+
     override fun onClose() {
         if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
             player?.currentPosition?.let { position ->

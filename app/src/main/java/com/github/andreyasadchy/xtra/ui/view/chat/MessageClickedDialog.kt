@@ -12,8 +12,12 @@ import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
@@ -24,9 +28,11 @@ import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
+class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
 
     interface OnButtonClickListener {
         fun onReplyClicked(userName: String)
@@ -67,9 +73,14 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         with(binding) {
@@ -90,15 +101,27 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
                         channelId = userId,
                         targetId = if (userId != targetId) targetId else null,
                         helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                        helixToken = com.github.andreyasadchy.xtra.model.Account.get(requireContext()).helixToken,
+                        helixToken = Account.get(requireContext()).helixToken,
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                         checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-                    ).observe(viewLifecycleOwner) { user ->
-                        if (user != null) {
-                            savedUsers.add(Pair(user, targetId))
-                            updateUserLayout(user)
-                        } else {
-                            viewProfile.visible()
+                    )
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.user.collectLatest { pair ->
+                                if (pair != null) {
+                                    val user = pair.first
+                                    val error = pair.second
+                                    if (user != null) {
+                                        savedUsers.add(Pair(user, targetId))
+                                        updateUserLayout(user)
+                                        viewModel.user.value = Pair(null, false)
+                                    } else {
+                                        if (error == true) {
+                                            viewProfile.visible()
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -192,6 +215,27 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment() {
             }
             if (!userImage.isVisible && !userName.isVisible) {
                 viewProfile.visible()
+            }
+        }
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    val userId = requireArguments().getString(KEY_USERID)
+                    if (userId != null) {
+                        val targetId = requireArguments().getString(KEY_CHANNEL_ID)
+                        viewModel.loadUser(
+                            channelId = userId,
+                            targetId = if (userId != targetId) targetId else null,
+                            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
+                            helixToken = Account.get(requireContext()).helixToken,
+                            gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                            checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                        )
+                    }
+                }
             }
         }
     }

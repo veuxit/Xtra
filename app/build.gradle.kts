@@ -28,8 +28,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 34
-        versionCode = 249
-        versionName = "2.33.3"
+        versionCode = 250
+        versionName = "2.33.4"
     }
 
     buildTypes {
@@ -70,7 +70,6 @@ dependencies {
     //Architecture components
     implementation(libs.paging.runtime)
     implementation(libs.lifecycle.viewmodel)
-    implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.process)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

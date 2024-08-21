@@ -2,8 +2,6 @@ package com.github.andreyasadchy.xtra.ui.download
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.Constraints
@@ -21,14 +19,20 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,19 +40,16 @@ class DownloadViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val playerRepository: PlayerRepository,
-    private val offlineRepository: OfflineRepository) : ViewModel() {
+    private val offlineRepository: OfflineRepository,
+    private val okHttpClient: OkHttpClient) : ViewModel() {
 
-    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
-    val integrity: LiveData<Boolean>
-        get() = _integrity
+    val integrity = MutableStateFlow<String?>(null)
 
-    private val _videoInfo = MutableLiveData<VideoDownloadInfo?>()
-    val videoInfo: LiveData<VideoDownloadInfo?>
-        get() = _videoInfo
-
-    private val _qualities = MutableLiveData<Map<String, Pair<String, String>>?>()
-    val qualities: LiveData<Map<String, Pair<String, String>>?>
-        get() = _qualities
+    private val _videoInfo = MutableStateFlow<VideoDownloadInfo?>(null)
+    val videoInfo: StateFlow<VideoDownloadInfo?> = _videoInfo
+    private val _qualities = MutableStateFlow<Map<String, Pair<String, String>>?>(null)
+    val qualities: StateFlow<Map<String, Pair<String, String>>?> = _qualities
+    val dismiss = MutableStateFlow(false)
 
     fun setStream(gqlHeaders: Map<String, String>, stream: Stream, qualities: Map<String, String>?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
@@ -96,10 +97,12 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         }
-                        _qualities.postValue(map)
+                        _qualities.value = map
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                            if (integrity.value == null) {
+                                integrity.value = "refresh"
+                            }
                         } else {
                             val map = mutableMapOf<String, Pair<String, String>>()
                             default.entries.forEach {
@@ -232,12 +235,12 @@ class DownloadViewModel @Inject constructor(
                             currentPosition = 0
                         )
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                        if (e.message == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "refresh"
                         }
                         if (e is IllegalAccessException) {
                             applicationContext.toast(ContextCompat.getString(applicationContext, R.string.video_subscribers_only))
-                            _videoInfo.value = null
+                            dismiss.value = true
                         }
                     }
                 }
@@ -292,10 +295,10 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         }
-                        _qualities.postValue(map)
+                        _qualities.value = map
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                        if (e.message == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "refresh"
                         }
                     }
                 }
@@ -303,15 +306,49 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun downloadStream(stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadStream(filesDir: String, stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         GlobalScope.launch {
             with(stream) {
                 if (!channelLogin.isNullOrBlank()) {
-                    val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
-                        DownloadUtils.savePng(applicationContext, thumbnail, "thumbnails", it)
+                    val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                        thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                            File(filesDir, "thumbnails").mkdir()
+                            val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(filePath).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+
+                                }
+                            }
+                            filePath
+                        }
                     }
-                    val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
-                        DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", it)
+                    val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                        channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                            File(filesDir, "profile_pics").mkdir()
+                            val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(filePath).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+
+                                }
+                            }
+                            filePath
+                        }
                     }
                     val videoId = offlineRepository.saveVideo(OfflineVideo(
                         name = title,
@@ -349,14 +386,48 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun downloadVideo(video: Video, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
+    fun downloadVideo(filesDir: String, video: Video, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
         GlobalScope.launch {
             with(video) {
-                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, thumbnail, "thumbnails", it)
+                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "thumbnails").mkdir()
+                        val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        filePath
+                    }
                 }
-                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", it)
+                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "profile_pics").mkdir()
+                        val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        filePath
+                    }
                 }
                 val videoId = offlineRepository.saveVideo(OfflineVideo(
                     sourceUrl = url,
@@ -399,14 +470,48 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun downloadClip(clip: Clip, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadClip(filesDir: String, clip: Clip, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         GlobalScope.launch {
             with(clip) {
-                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, thumbnail, "thumbnails", it)
+                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "thumbnails").mkdir()
+                        val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        filePath
+                    }
                 }
-                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", it)
+                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "profile_pics").mkdir()
+                        val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        filePath
+                    }
                 }
                 val videoId = offlineRepository.saveVideo(OfflineVideo(
                     sourceUrl = url,

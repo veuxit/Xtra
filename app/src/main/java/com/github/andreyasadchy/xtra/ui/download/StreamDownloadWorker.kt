@@ -33,7 +33,6 @@ import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
 import com.github.andreyasadchy.xtra.util.chat.ChatUtils
@@ -62,7 +61,6 @@ import okhttp3.WebSocketListener
 import okio.appendingSink
 import okio.buffer
 import okio.sink
-import okio.use
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileInputStream
@@ -343,8 +341,26 @@ class StreamDownloadWorker @AssistedInject constructor(
                             null
                         }
                         if (stream != null) {
-                            val downloadedThumbnail = stream.id.takeIf { !it.isNullOrBlank() }?.let {
-                                DownloadUtils.savePng(applicationContext, stream.thumbnail, "thumbnails", it)
+                            val downloadedThumbnail = stream.id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                                stream.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                                    val filesDir = context.filesDir.path
+                                    File(filesDir, "thumbnails").mkdir()
+                                    val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                                    launch(Dispatchers.IO) {
+                                        try {
+                                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                                if (response.isSuccessful) {
+                                                    File(filePath).sink().buffer().use { sink ->
+                                                        sink.writeAll(response.body.source())
+                                                    }
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+
+                                        }
+                                    }
+                                    filePath
+                                }
                             }
                             offlineRepository.updateVideo(offlineVideo.apply {
                                 name = stream.title

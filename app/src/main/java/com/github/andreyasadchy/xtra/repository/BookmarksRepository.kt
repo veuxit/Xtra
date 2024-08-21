@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.repository
 
-import android.content.Context
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
@@ -19,7 +18,7 @@ class BookmarksRepository @Inject constructor(
 
     fun loadBookmarksPagingSource() = bookmarksDao.getAllPagingSource()
 
-    fun loadBookmarksLiveData() = bookmarksDao.getAllLiveData()
+    fun loadBookmarksFlow() = bookmarksDao.getAllFlow()
 
     suspend fun loadBookmarks() = withContext(Dispatchers.IO) {
         bookmarksDao.getAll()
@@ -37,12 +36,20 @@ class BookmarksRepository @Inject constructor(
         bookmarksDao.insert(item)
     }
 
-    suspend fun deleteBookmark(context: Context, item: Bookmark) = withContext(Dispatchers.IO) {
+    suspend fun deleteBookmark(item: Bookmark) = withContext(Dispatchers.IO) {
         if (!item.videoId.isNullOrBlank() && videosDao.getByVideoId(item.videoId).isEmpty()) {
-            File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${item.videoId}.png").delete()
+            item.thumbnail?.let {
+                if (it.isNotBlank()) {
+                    File(it).delete()
+                }
+            }
         }
-        if (!item.userId.isNullOrBlank() && getBookmarksByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId).isEmpty() && localFollowsChannelDao.getByUserId(item.userId) == null) {
-            File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${item.userId}.png").delete()
+        if (!item.userId.isNullOrBlank() && getBookmarksByUserId(item.userId).none { it.id != item.id } && videosDao.getByUserId(item.userId).isEmpty() && localFollowsChannelDao.getByUserId(item.userId) == null) {
+            item.userLogo?.let {
+                if (it.isNotBlank()) {
+                    File(it).delete()
+                }
+            }
         }
         bookmarksDao.delete(item)
     }

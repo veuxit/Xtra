@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.repository
 
-import android.content.Context
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
@@ -41,15 +40,23 @@ class OfflineRepository @Inject constructor(
         videosDao.insert(video)
     }
 
-    suspend fun deleteVideo(context: Context, video: OfflineVideo) = withContext(Dispatchers.IO) {
-        video.videoId?.let {
-            if (it.isNotBlank() && videosDao.getByVideoId(it).isEmpty() && bookmarksDao.getByVideoId(it) == null) {
-                File(context.filesDir.path + File.separator + "thumbnails" + File.separator + "${it}.png").delete()
+    suspend fun deleteVideo(video: OfflineVideo) = withContext(Dispatchers.IO) {
+        video.videoId?.let { id ->
+            if (id.isNotBlank() && videosDao.getByVideoId(id).none { it.id != video.id } && bookmarksDao.getByVideoId(id) == null) {
+                video.thumbnail?.let {
+                    if (it.isNotBlank()) {
+                        File(it).delete()
+                    }
+                }
             }
         }
-        video.channelId?.let {
-            if (it.isNotBlank() && getVideosByUserId(it).isEmpty() && bookmarksDao.getByUserId(it).isEmpty() && localFollowsChannelDao.getByUserId(it) == null) {
-                File(context.filesDir.path + File.separator + "profile_pics" + File.separator + "${it}.png").delete()
+        video.channelId?.let { id ->
+            if (id.isNotBlank() && getVideosByUserId(id).none { it.id != video.id } && bookmarksDao.getByUserId(id).isEmpty() && localFollowsChannelDao.getByUserId(id) == null) {
+                video.channelLogo?.let {
+                    if (it.isNotBlank()) {
+                        File(it).delete()
+                    }
+                }
             }
         }
         videosDao.delete(video)

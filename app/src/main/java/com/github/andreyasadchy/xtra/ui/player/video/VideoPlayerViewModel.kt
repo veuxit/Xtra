@@ -1,10 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.player.video
 
-import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Game
@@ -14,57 +11,59 @@ import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoPlayerViewModel @Inject constructor(
-    @ApplicationContext applicationContext: Context,
-    repository: ApiRepository,
+    private val repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
+    private val okHttpClient: OkHttpClient,
     private val playerRepository: PlayerRepository,
-    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(applicationContext, repository, localFollowsChannel) {
+    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, okHttpClient) {
 
-    var result = MutableLiveData<Uri>()
+    val result = MutableStateFlow<Uri?>(null)
 
-    val bookmarkItem = MutableLiveData<Bookmark>()
-    val gamesList = MutableLiveData<List<Game>>()
+    val isBookmarked = MutableStateFlow<Boolean?>(null)
+    val gamesList = MutableStateFlow<List<Game>?>(null)
     var shouldRetry = true
 
     fun load(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
-        viewModelScope.launch {
-            try {
-                playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
+        if (result.value == null) {
+            viewModelScope.launch {
+                try {
+                    result.value = playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
+                    }
                 }
-                null
-            }.let { result.postValue(it) }
+            }
         }
     }
 
     fun savePosition(id: Long, position: Long) {
-        if (loaded.value == true) {
+        if (loaded.value) {
             playerRepository.saveVideoPosition(VideoPosition(id, position))
         }
     }
 
     fun loadGamesList(gqlHeaders: Map<String, String>, videoId: String?) {
-        if (!gamesList.isInitialized) {
+        if (gamesList.value == null) {
             viewModelScope.launch {
                 try {
-                    val get = repository.loadVideoGames(gqlHeaders, videoId)
-                    gamesList.postValue(get)
+                    gamesList.value = repository.loadVideoGames(gqlHeaders, videoId)
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check") {
-                        _integrity.postValue(true)
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
                     }
                 }
             }
@@ -73,23 +72,58 @@ class VideoPlayerViewModel @Inject constructor(
 
     fun checkBookmark(id: String) {
         viewModelScope.launch {
-            bookmarkItem.postValue(bookmarksRepository.getBookmarkByVideoId(id))
+            isBookmarked.value = bookmarksRepository.getBookmarkByVideoId(id) != null
         }
     }
 
-    fun saveBookmark(video: Video) {
+    fun saveBookmark(filesDir: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, video: Video) {
         viewModelScope.launch {
-            if (bookmarkItem.value != null) {
-                bookmarksRepository.deleteBookmark(applicationContext, bookmarkItem.value!!)
+            val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
+            if (item != null) {
+                bookmarksRepository.deleteBookmark(item)
             } else {
-                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
+                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "thumbnails").mkdir()
+                        val path = filesDir + File.separator + "thumbnails" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(path).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        path
+                    }
                 }
-                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, video.channelLogo, "profile_pics", it)
+                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    video.channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "profile_pics").mkdir()
+                        val path = filesDir + File.separator + "profile_pics" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(path).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        path
+                    }
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(applicationContext).helixToken, TwitchApiHelper.getGQLHeaders(applicationContext)) }?.firstOrNull()
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), helixClientId, helixToken, gqlHeaders) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }

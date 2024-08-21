@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.saved.bookmarks
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -12,22 +11,29 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.VodBookmarkIgnoredUsersRepository
-import com.github.andreyasadchy.xtra.util.DownloadUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
 class BookmarksViewModel @Inject internal constructor(
-    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
     private val bookmarksRepository: BookmarksRepository,
     playerRepository: PlayerRepository,
-    private val vodBookmarkIgnoredUsersRepository: VodBookmarkIgnoredUsersRepository) : ViewModel() {
+    private val vodBookmarkIgnoredUsersRepository: VodBookmarkIgnoredUsersRepository,
+    private val okHttpClient: OkHttpClient) : ViewModel() {
+
+    val integrity = MutableStateFlow<String?>(null)
 
     val positions = playerRepository.loadVideoPositions()
-    val ignoredUsers = vodBookmarkIgnoredUsersRepository.loadUsers()
+    val ignoredUsers = vodBookmarkIgnoredUsersRepository.loadUsersFlow()
     private var updatedUsers = false
     private var updatedVideos = false
 
@@ -39,7 +45,7 @@ class BookmarksViewModel @Inject internal constructor(
 
     fun delete(bookmark: Bookmark) {
         viewModelScope.launch {
-            bookmarksRepository.deleteBookmark(applicationContext, bookmark)
+            bookmarksRepository.deleteBookmark(bookmark)
         }
     }
 
@@ -55,10 +61,9 @@ class BookmarksViewModel @Inject internal constructor(
 
     fun updateUsers(helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>) {
         if (!updatedUsers) {
-            updatedUsers = true
             viewModelScope.launch {
                 try {
-                    val allIds = bookmarksRepository.loadBookmarks().mapNotNull { bookmark -> bookmark.userId.takeUnless { it == null || ignoredUsers.value?.contains(VodBookmarkIgnoredUser(it)) == true } }
+                    val allIds = bookmarksRepository.loadBookmarks().mapNotNull { bookmark -> bookmark.userId.takeUnless { it == null || vodBookmarkIgnoredUsersRepository.loadUsers().contains(VodBookmarkIgnoredUser(it)) } }
                     if (allIds.isNotEmpty()) {
                         for (ids in allIds.chunked(100)) {
                             val users = repository.loadUserTypes(ids, helixClientId, helixToken, gqlHeaders)
@@ -78,21 +83,43 @@ class BookmarksViewModel @Inject internal constructor(
                                 }
                             }
                         }}
+                    updatedUsers = true
                 } catch (e: Exception) {
-
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "users"
+                    } else {
+                        updatedUsers = true
+                    }
                 }
             }
         }
     }
 
-    fun updateVideo(helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, videoId: String? = null) {
+    fun updateVideo(filesDir: String, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, videoId: String? = null) {
         viewModelScope.launch {
             try {
                 val video = videoId?.let { repository.loadVideo(it, helixClientId, helixToken, gqlHeaders) }
                 val bookmark = videoId?.let { bookmarksRepository.getBookmarkByVideoId(it) }
                 if (video != null && bookmark != null) {
-                    val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                        DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
+                    val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                        video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                            File(filesDir, "thumbnails").mkdir()
+                            val path = filesDir + File.separator + "thumbnails" + File.separator + id
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+
+                                }
+                            }
+                            path
+                        }
                     }
                     bookmarksRepository.updateBookmark(Bookmark(
                         videoId = bookmark.videoId,
@@ -114,14 +141,15 @@ class BookmarksViewModel @Inject internal constructor(
                     ))
                 }
             } catch (e: Exception) {
-
+                if (e.message == "failed integrity check" && integrity.value == null) {
+                    integrity.value = "video"
+                }
             }
         }
     }
 
-    fun updateVideos(helixClientId: String? = null, helixToken: String? = null) {
+    fun updateVideos(filesDir: String, helixClientId: String? = null, helixToken: String? = null) {
         if (!updatedVideos) {
-            updatedVideos = true
             viewModelScope.launch {
                 try {
                     val allIds = bookmarksRepository.loadBookmarks().mapNotNull { it.videoId }
@@ -130,7 +158,7 @@ class BookmarksViewModel @Inject internal constructor(
                             val videos = repository.loadVideos(ids, helixClientId, helixToken)
                             if (videos != null) {
                                 for (video in videos) {
-                                    val bookmark = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
+                                    val bookmark = video.id.takeIf { !it.isNullOrBlank() }?.let { bookmarksRepository.getBookmarkByVideoId(it) }
                                     if (bookmark != null && (bookmark.userId != video.channelId ||
                                                 bookmark.userLogin != video.channelLogin ||
                                                 bookmark.userName != video.channelName ||
@@ -138,7 +166,24 @@ class BookmarksViewModel @Inject internal constructor(
                                                 bookmark.createdAt != video.uploadDate ||
                                                 bookmark.type != video.type ||
                                                 bookmark.duration != video.duration)) {
-                                        val downloadedThumbnail = DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", video.id)
+                                        val downloadedThumbnail = video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                                            File(filesDir, "thumbnails").mkdir()
+                                            val path = filesDir + File.separator + "thumbnails" + File.separator + video.id
+                                            viewModelScope.launch(Dispatchers.IO) {
+                                                try {
+                                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                                        if (response.isSuccessful) {
+                                                            File(path).sink().buffer().use { sink ->
+                                                                sink.writeAll(response.body.source())
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+
+                                                }
+                                            }
+                                            path
+                                        }
                                         bookmarksRepository.updateBookmark(Bookmark(
                                             videoId = bookmark.videoId,
                                             userId = video.channelId ?: bookmark.userId,
