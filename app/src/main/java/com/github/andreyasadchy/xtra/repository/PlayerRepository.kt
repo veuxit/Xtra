@@ -2,8 +2,6 @@ package com.github.andreyasadchy.xtra.repository
 
 import android.net.Uri
 import androidx.core.net.toUri
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.map
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.api.UsherApi
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
@@ -31,7 +29,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
-import okio.use
 import org.json.JSONObject
 import retrofit2.Response
 import java.net.InetSocketAddress
@@ -209,7 +206,7 @@ class PlayerRepository @Inject constructor(
         return stringBuilder.toString().toUri()
     }
 
-    suspend fun loadRecentMessages(channelLogin: String, limit: String): Response<RecentMessagesResponse> = withContext(Dispatchers.IO) {
+    suspend fun loadRecentMessages(channelLogin: String, limit: String): RecentMessagesResponse = withContext(Dispatchers.IO) {
         misc.getRecentMessages(channelLogin, limit)
     }
 
@@ -237,7 +234,11 @@ class PlayerRepository @Inject constructor(
         misc.getFfzEmotes(channelId)
     }
 
-    fun loadRecentEmotes() = recentEmotes.getAll()
+    fun loadRecentEmotesFlow() = recentEmotes.getAllFlow()
+
+    suspend fun loadRecentEmotes(): List<RecentEmote> = withContext(Dispatchers.IO) {
+        recentEmotes.getAll()
+    }
 
     suspend fun insertRecentEmotes(emotes: Collection<RecentEmote>) = withContext(Dispatchers.IO) {
         val listSize = emotes.size
@@ -249,9 +250,7 @@ class PlayerRepository @Inject constructor(
         recentEmotes.ensureMaxSizeAndInsert(list)
     }
 
-    fun loadVideoPositions(): LiveData<Map<Long, Long>> = videoPositions.getAll().map { list ->
-        list.associate { it.id to it.position }
-    }
+    fun loadVideoPositions() = videoPositions.getAll()
 
     fun saveVideoPosition(position: VideoPosition) {
         GlobalScope.launch {

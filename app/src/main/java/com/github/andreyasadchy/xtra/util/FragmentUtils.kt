@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.fragment.app.FragmentManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerGamesDialog
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
@@ -57,7 +56,7 @@ object FragmentUtils {
         PlayerGamesDialog.newInstance(gamesList).show(fragmentManager, "closeOnPip")
     }
 
-    fun showPlayerViewerListDialog(fragmentManager: FragmentManager, login: String, repository: ApiRepository) {
-        PlayerViewerListDialog.newInstance(login, repository).show(fragmentManager, "closeOnPip")
+    fun showPlayerViewerListDialog(fragmentManager: FragmentManager, login: String) {
+        PlayerViewerListDialog.newInstance(login).show(fragmentManager, "closeOnPip")
     }
 }

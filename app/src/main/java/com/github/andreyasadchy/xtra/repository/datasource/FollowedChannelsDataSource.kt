@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
-import android.content.Context
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.R
@@ -14,18 +13,25 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 
 class FollowedChannelsDataSource(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
+    private val okHttpClient: OkHttpClient,
     private val coroutineScope: CoroutineScope,
+    private val filesDir: String,
     private val userId: String?,
     private val helixClientId: String?,
     private val helixToken: String?,
@@ -118,8 +124,7 @@ class FollowedChannelsDataSource(
                                 if (item != null) {
                                     if (item.followLocal) {
                                         if (item.profileImageUrl == null || item.profileImageUrl?.contains("image_manager_disk_cache") == true) {
-                                            val appContext = XtraApp.INSTANCE.applicationContext
-                                            item.channelId?.let { id -> user.profileImageUrl?.let { profileImageUrl -> updateLocalUser(appContext, id, profileImageUrl) } }
+                                            updateLocalUser(item.channelId, user.profileImageUrl)
                                         }
                                     } else {
                                         if (item.profileImageUrl == null) {
@@ -229,8 +234,7 @@ class FollowedChannelsDataSource(
                     if (item != null) {
                         if (item.followLocal) {
                             if (item.profileImageUrl == null || item.profileImageUrl?.contains("image_manager_disk_cache") == true) {
-                                val appContext = XtraApp.INSTANCE.applicationContext
-                                item.channelId?.let { id -> user.profileImageUrl?.let { profileImageUrl -> updateLocalUser(appContext, id, profileImageUrl) } }
+                                updateLocalUser(item.channelId, user.profileImageUrl)
                             }
                         } else {
                             if (item.profileImageUrl == null) {
@@ -245,22 +249,43 @@ class FollowedChannelsDataSource(
         return list
     }
 
-    private fun updateLocalUser(context: Context, userId: String, profileImageURL: String) {
-        coroutineScope.launch {
-            try {
-                val downloadedLogo = DownloadUtils.savePng(context, TwitchApiHelper.getTemplateUrl(profileImageURL, "profileimage"), "profile_pics", userId)
-                localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.updateFollow(it.apply {
-                    channelLogo = downloadedLogo }) }
-                for (i in offlineRepository.getVideosByUserId(userId)) {
-                    offlineRepository.updateVideo(i.apply {
-                        channelLogo = downloadedLogo })
-                }
-                for (i in bookmarksRepository.getBookmarksByUserId(userId)) {
-                    bookmarksRepository.updateBookmark(i.apply {
-                        userLogo = downloadedLogo })
-                }
-            } catch (e: Exception) {
+    private fun updateLocalUser(userId: String?, profileImageURL: String?) {
+        if (!userId.isNullOrBlank()) {
+            coroutineScope.launch {
+                profileImageURL.takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "profileimage") }?.let {
+                    File(filesDir, "profile_pics").mkdir()
+                    val path = filesDir + File.separator + "profile_pics" + File.separator + userId
+                    coroutineScope.launch(Dispatchers.IO) {
+                        try {
+                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    File(path).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body()!!.source())
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
 
+                        }
+                    }
+                    path
+                }?.let { downloadedLogo ->
+                    localFollowsChannel.getFollowByUserId(userId)?.let {
+                        localFollowsChannel.updateFollow(it.apply {
+                            channelLogo = downloadedLogo
+                        })
+                    }
+                    offlineRepository.getVideosByUserId(userId).forEach {
+                        offlineRepository.updateVideo(it.apply {
+                            channelLogo = downloadedLogo
+                        })
+                    }
+                    bookmarksRepository.getBookmarksByUserId(userId).forEach {
+                        bookmarksRepository.updateBookmark(it.apply {
+                            userLogo = downloadedLogo
+                        })
+                    }
+                }
             }
         }
     }

@@ -5,7 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -23,6 +25,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -57,8 +60,12 @@ class FollowedChannelsFragment : PagedListFragment(), Scrollable, Sortable, Foll
                 saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, false)
             ).show(childFragmentManager, null)
         }
-        viewModel.sortText.observe(viewLifecycleOwner) {
-            sortBar.sortText.text = it
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sortText.collectLatest {
+                    sortBar.sortText.text = it
+                }
+            }
         }
     }
 
@@ -82,6 +89,12 @@ class FollowedChannelsFragment : PagedListFragment(), Scrollable, Sortable, Foll
 
     override fun onNetworkRestored() {
         pagingAdapter.retry()
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
     }
 
     override fun onDestroyView() {

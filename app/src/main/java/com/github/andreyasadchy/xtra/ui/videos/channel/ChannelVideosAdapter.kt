@@ -76,7 +76,7 @@ class ChannelVideosAdapter(
                         )
                     }
                     val getDuration = item.duration?.let { TwitchApiHelper.getDuration(it) }
-                    val position = item.id?.toLongOrNull()?.let { positions?.get(it) }
+                    val position = item.id?.toLongOrNull()?.let { id -> positions?.find { it.id == id }?.position }
                     root.setOnClickListener {
                         (fragment.activity as MainActivity).startVideo(item, position?.toDouble())
                     }

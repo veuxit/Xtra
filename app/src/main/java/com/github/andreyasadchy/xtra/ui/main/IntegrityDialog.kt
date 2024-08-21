@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.main
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.Context
 import android.content.DialogInterface
 import android.os.Build
 import android.os.Bundle
@@ -14,7 +15,6 @@ import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.setFragmentResult
 import androidx.webkit.WebViewClientCompat
 import com.github.andreyasadchy.xtra.databinding.DialogIntegrityBinding
 import com.github.andreyasadchy.xtra.util.C
@@ -25,8 +25,18 @@ import org.json.JSONObject
 
 class IntegrityDialog : DialogFragment() {
 
+    interface CallbackListener {
+        fun onIntegrityDialogCallback(callback: String?)
+    }
+
     private var _binding: DialogIntegrityBinding? = null
     private val binding get() = _binding!!
+    private var listener: CallbackListener? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        listener = parentFragment as? CallbackListener
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -71,7 +81,7 @@ class IntegrityDialog : DialogFragment() {
                                 }
                             ).toString())
                         }
-                        setFragmentResult("integrity", bundleOf("refresh" to true))
+                        listener?.onIntegrityDialogCallback(requireArguments().getString(KEY_CALLBACK))
                         dismiss()
                     }
                     return super.shouldInterceptRequest(view, webViewRequest)
@@ -93,8 +103,13 @@ class IntegrityDialog : DialogFragment() {
     }
 
     companion object {
-        fun show(fragmentManager: FragmentManager) {
-            IntegrityDialog().show(fragmentManager, null)
+        private const val KEY_CALLBACK = "callback"
+
+        fun show(fragmentManager: FragmentManager, callback: String? = null) {
+            IntegrityDialog().apply {
+                arguments = bundleOf(KEY_CALLBACK to callback)
+                show(fragmentManager, null)
+            }
         }
     }
 }

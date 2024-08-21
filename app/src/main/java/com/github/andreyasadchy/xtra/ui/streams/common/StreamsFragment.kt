@@ -20,6 +20,7 @@ import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
 import com.github.andreyasadchy.xtra.ui.streams.StreamsAdapter
 import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
@@ -88,6 +89,13 @@ class StreamsFragment : PagedListFragment(), Scrollable, Sortable, StreamsSortDi
 
     override fun onNetworkRestored() {
         pagingAdapter.retry()
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        (parentFragment as? IntegrityDialog.CallbackListener)?.onIntegrityDialogCallback("refresh")
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
     }
 
     override fun onDestroyView() {

@@ -1,8 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.player
 
-import android.content.Context
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.Account
@@ -10,35 +7,37 @@ import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.SingleLiveEvent
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 import java.util.Timer
 import kotlin.concurrent.schedule
 
 
 abstract class PlayerViewModel(
-    protected val applicationContext: Context,
-    val repository: ApiRepository,
-    private val localFollowsChannel: LocalFollowChannelRepository) : ViewModel() {
+    private val repository: ApiRepository,
+    private val localFollowsChannel: LocalFollowChannelRepository,
+    private val okHttpClient: OkHttpClient) : ViewModel() {
+
+    val integrity = MutableStateFlow<String?>(null)
 
     var started = false
     var background = false
     var pipMode = false
     var playerMode = PlayerMode.NORMAL
-    val loaded = MutableLiveData<Boolean>()
-    val follow = MutableLiveData<Pair<Boolean, String?>>()
-
-    protected val _integrity by lazy { SingleLiveEvent<Boolean>() }
-    val integrity: LiveData<Boolean>
-        get() = _integrity
+    val loaded = MutableStateFlow(false)
+    private val _isFollowing = MutableStateFlow<Boolean?>(null)
+    val isFollowing: StateFlow<Boolean?> = _isFollowing
+    val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
 
     private var timer: Timer? = null
-    private val _sleepTimer = MutableLiveData<Boolean>()
-    val sleepTimer: LiveData<Boolean>
-        get() = _sleepTimer
+    val sleepTimer = MutableStateFlow(false)
     private var timerEndTime = 0L
     val timerTimeLeft
         get() = timerEndTime - System.currentTimeMillis()
@@ -53,7 +52,7 @@ abstract class PlayerViewModel(
             timer = Timer().apply {
                 timerEndTime = System.currentTimeMillis() + duration
                 schedule(duration) {
-                    _sleepTimer.postValue(true)
+                    sleepTimer.value = true
                 }
             }
         }
@@ -63,14 +62,10 @@ abstract class PlayerViewModel(
         timer?.cancel()
     }
 
-    fun isFollowingChannel(channelId: String?, channelLogin: String?) {
-        if (!follow.isInitialized) {
+    fun isFollowingChannel(helixClientId: String?, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
+        if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
-                    val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-                    val account = Account.get(applicationContext)
-                    val helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
                     val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
                             (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
@@ -81,57 +76,84 @@ abstract class PlayerViewModel(
                             localFollowsChannel.getFollowByUserId(it)
                         } != null
                     }
-                    follow.postValue(Pair(isFollowing, null))
+                    _isFollowing.value = isFollowing
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check") {
-                        _integrity.postValue(true)
-                    }
+
                 }
             }
         }
     }
 
-    fun saveFollowChannel(userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
+    fun saveFollowChannel(filesDir: String, gqlHeaders: Map<String, String>, setting: Int, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
         viewModelScope.launch {
-            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.followUser(gqlHeaders, userId)
-                    follow.postValue(Pair(true, errorMessage))
+                    if (!errorMessage.isNullOrBlank()) {
+                        if (errorMessage == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "follow"
+                        } else {
+                            follow.value = Pair(true, errorMessage)
+                        }
+                    } else {
+                        _isFollowing.value = true
+                        follow.value = Pair(true, errorMessage)
+                    }
                 } else {
-                    if (userId != null) {
-                        val downloadedLogo = DownloadUtils.savePng(applicationContext, channelLogo, "profile_pics", userId)
+                    if (!userId.isNullOrBlank()) {
+                        val downloadedLogo = channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                            File(filesDir, "profile_pics").mkdir()
+                            val path = filesDir + File.separator + "profile_pics" + File.separator + userId
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body()!!.source())
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+
+                                }
+                            }
+                            path
+                        }
                         localFollowsChannel.saveFollow(LocalFollowChannel(userId, userLogin, userName, downloadedLogo))
-                        follow.postValue(Pair(true, null))
+                        _isFollowing.value = true
+                        follow.value = Pair(true, null)
                     }
                 }
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
-                }
+
             }
         }
     }
 
-    fun deleteFollowChannel(userId: String?) {
+    fun deleteFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?) {
         viewModelScope.launch {
-            val setting = applicationContext.prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     val errorMessage = repository.unfollowUser(gqlHeaders, userId)
-                    follow.postValue(Pair(false, errorMessage))
+                    if (!errorMessage.isNullOrBlank()) {
+                        if (errorMessage == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "unfollow"
+                        } else {
+                            follow.value = Pair(false, errorMessage)
+                        }
+                    } else {
+                        _isFollowing.value = false
+                        follow.value = Pair(false, errorMessage)
+                    }
                 } else {
                     if (userId != null) {
-                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(applicationContext, it) }
-                        follow.postValue(Pair(false, null))
+                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(it) }
+                        _isFollowing.value = false
+                        follow.value = Pair(false, null)
                     }
                 }
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
-                }
+
             }
         }
     }

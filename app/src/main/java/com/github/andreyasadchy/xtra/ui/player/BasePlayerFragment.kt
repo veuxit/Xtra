@@ -72,10 +72,11 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 
-abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener {
+abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener, IntegrityDialog.CallbackListener {
 
     private lateinit var controllerFuture: ListenableFuture<MediaController>
     protected val player: MediaController?
@@ -164,7 +165,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     if (view != null) {
                         val available = tracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT } != null
                         setSubtitles(available = available)
-                        if (!tracks.isEmpty && viewModel.loaded.value != true) {
+                        if (!tracks.isEmpty && !viewModel.loaded.value) {
                             viewModel.loaded.value = true
                         }
                     }
@@ -256,9 +257,14 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
             WindowInsetsCompat.CONSUMED
         }
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         val activity = requireActivity() as MainActivity
@@ -411,12 +417,19 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
         if (this !is ClipPlayerFragment) {
-            viewModel.sleepTimer.observe(viewLifecycleOwner) {
-                onMinimize()
-                onClose()
-                activity.closePlayer()
-                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
-                    lockScreen()
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.sleepTimer.collectLatest {
+                        if (it) {
+                            onMinimize()
+                            onClose()
+                            activity.closePlayer()
+                            if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
+                                lockScreen()
+                            }
+                            viewModel.sleepTimer.value = false
+                        }
+                    }
                 }
             }
             if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {

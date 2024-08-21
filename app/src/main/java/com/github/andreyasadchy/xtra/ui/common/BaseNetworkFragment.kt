@@ -1,10 +1,16 @@
 package com.github.andreyasadchy.xtra.ui.common
 
 import android.os.Bundle
+import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.ui.main.MainViewModel
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 abstract class BaseNetworkFragment : Fragment() {
 
@@ -35,6 +41,39 @@ abstract class BaseNetworkFragment : Fragment() {
         }
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        if (enableNetworkCheck) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    mainViewModel.isNetworkAvailable.collectLatest { online ->
+                        if (online != null) {
+                            if (online) {
+                                if (!lastIsOnlineState) {
+                                    shouldRestore = if (isResumed) {
+                                        if (isInitialized) {
+                                            onNetworkRestored()
+                                        } else {
+                                            init()
+                                        }
+                                        false
+                                    } else {
+                                        true
+                                    }
+                                }
+                            } else {
+                                if (isInitialized) {
+                                    onNetworkLost()
+                                }
+                            }
+                            lastIsOnlineState = online
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (enableNetworkCheck) {
@@ -42,36 +81,12 @@ abstract class BaseNetworkFragment : Fragment() {
                 if (created || lastIsOnlineState) {
                     init()
                 }
-                mainViewModel.isNetworkAvailable.observe(viewLifecycleOwner) {
-                    val isOnline = it.peekContent()
-                    if (isOnline) {
-                        if (!lastIsOnlineState) {
-                            shouldRestore = if (isResumed) {
-                                if (isInitialized) {
-                                    onNetworkRestored()
-                                } else {
-                                    init()
-                                }
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                    } else {
-                        if (isInitialized) {
-                            onNetworkLost()
-                        }
-                    }
-                    lastIsOnlineState = isOnline
-                }
             } else if (shouldRestore && lastIsOnlineState) {
                 onNetworkRestored()
                 shouldRestore = false
             }
         } else {
-            if (!isInitialized) {
-                initialize()
-            }
+            initialize()
         }
     }
 

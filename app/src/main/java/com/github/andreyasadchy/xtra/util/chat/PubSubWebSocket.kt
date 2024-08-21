@@ -154,7 +154,7 @@ class PubSubWebSocket(
                         if (topic != null && messageType != null) {
                             when {
                                 topic.startsWith("video-playback-by-id") -> listener.onPlaybackMessage(message)
-                                topic.startsWith("broadcast-settings-update") && messageType.startsWith("broadcast_settings_update") -> listener.onTitleUpdate(message)
+                                topic.startsWith("broadcast-settings-update") && messageType.startsWith("broadcast_settings_update") -> listener.onStreamInfo(message)
                                 topic.startsWith("community-points-channel") && messageType.startsWith("reward-redeemed") -> listener.onRewardMessage(message)
                                 topic.startsWith("community-points-user") -> {
                                     when {

@@ -28,7 +28,7 @@ android {
         minSdk = 16
         targetSdk = 34
         versionCode = 121
-        versionName = "2.33.3"
+        versionName = "2.33.4"
     }
 
     buildTypes {
@@ -97,7 +97,6 @@ dependencies {
     //Architecture components
     implementation(libs.paging.runtime)
     //implementation(libs.lifecycle.viewmodel)
-    implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.process)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

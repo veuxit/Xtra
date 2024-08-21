@@ -16,8 +16,8 @@ object PubSubUtils {
         }
     }
 
-    fun parseTitleUpdate(message: JSONObject): BroadcastSettings {
-        return BroadcastSettings(
+    fun parseStreamInfo(message: JSONObject): StreamInfo {
+        return StreamInfo(
             title = if (!message.isNull("status")) message.optString("status").takeIf { it.isNotBlank() } else null,
             gameId = if (!message.isNull("game_id")) message.optInt("game_id").takeIf { it > 0 }?.toString() else null,
             gameName = if (!message.isNull("game")) message.optString("game").takeIf { it.isNotBlank() } else null,

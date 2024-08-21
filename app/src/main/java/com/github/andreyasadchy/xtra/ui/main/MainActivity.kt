@@ -29,6 +29,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentTransaction
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.navigation.NavController
@@ -68,6 +71,8 @@ import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
@@ -188,9 +193,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 putBoolean(C.FIRST_LAUNCH8, false)
             }
         }
-        viewModel.integrity.observe(this) {
-            if (prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(supportFragmentManager)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(supportFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         applyTheme()
@@ -231,17 +241,22 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         val notInitialized = savedInstanceState == null
         initNavigation()
         var flag = notInitialized && !isNetworkAvailable
-        viewModel.isNetworkAvailable.observe(this) {
-            it.getContentIfNotHandled()?.let { online ->
-                if (online) {
-                    if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                        viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), TwitchApiHelper.getGQLHeaders(this, true), this)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.newNetworkStatus.collectLatest { online ->
+                    if (online != null) {
+                        if (online) {
+                            if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
+                                viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                            }
+                        }
+                        if (flag) {
+                            shortToast(if (online) R.string.connection_restored else R.string.no_connection)
+                        } else {
+                            flag = true
+                        }
+                        viewModel.newNetworkStatus.value = null
                     }
-                }
-                if (flag) {
-                    shortToast(if (online) R.string.connection_restored else R.string.no_connection)
-                } else {
-                    flag = true
                 }
             }
         }
@@ -352,9 +367,16 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     if (!id.isNullOrBlank()) {
                         viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        viewModel.video.observe(this) { video ->
-                            if (video != null && !video.id.isNullOrBlank()) {
-                                startVideo(video, offset, offset != null)
+                        lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.video.collectLatest { video ->
+                                    if (video != null) {
+                                        if (!video.id.isNullOrBlank()) {
+                                            startVideo(video, offset, offset != null)
+                                        }
+                                        viewModel.video.value = null
+                                    }
+                                }
                             }
                         }
                     }
@@ -363,9 +385,16 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
                         viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        viewModel.clip.observe(this) { clip ->
-                            if (clip != null && !clip.id.isNullOrBlank()) {
-                                startClip(clip)
+                        lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.clip.collectLatest { clip ->
+                                    if (clip != null) {
+                                        if (!clip.id.isNullOrBlank()) {
+                                            startClip(clip)
+                                        }
+                                        viewModel.clip.value = null
+                                    }
+                                }
                             }
                         }
                     }
@@ -374,9 +403,16 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
                         viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        viewModel.clip.observe(this) { clip ->
-                            if (clip != null && !clip.id.isNullOrBlank()) {
-                                startClip(clip)
+                        lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.clip.collectLatest { clip ->
+                                    if (clip != null) {
+                                        if (!clip.id.isNullOrBlank()) {
+                                            startClip(clip)
+                                        }
+                                        viewModel.clip.value = null
+                                    }
+                                }
                             }
                         }
                     }
@@ -419,15 +455,22 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!login.isNullOrBlank()) {
                         viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        viewModel.user.observe(this) { user ->
-                            if (user != null && (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank())) {
-                                playerFragment?.minimize()
-                                navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                                    channelId = user.channelId,
-                                    channelLogin = user.channelLogin,
-                                    channelName = user.channelName,
-                                    channelLogo = user.channelLogo,
-                                ))
+                        lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.user.collectLatest { user ->
+                                    if (user != null) {
+                                        if (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank()) {
+                                            playerFragment?.minimize()
+                                            navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                                channelId = user.channelId,
+                                                channelLogin = user.channelLogin,
+                                                channelName = user.channelName,
+                                                channelLogo = user.channelLogo,
+                                            ))
+                                        }
+                                        viewModel.user.value = null
+                                    }
+                                }
                             }
                         }
                     }

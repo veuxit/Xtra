@@ -1,43 +1,77 @@
 package com.github.andreyasadchy.xtra.ui.videos
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.buffer
+import okio.sink
+import java.io.File
 
 abstract class BaseVideosViewModel(
-    protected val applicationContext: Context,
     playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val repository: ApiRepository) : ViewModel() {
+    private val repository: ApiRepository,
+    private val okHttpClient: OkHttpClient) : ViewModel() {
 
     val positions = playerRepository.loadVideoPositions()
-    val bookmarks = bookmarksRepository.loadBookmarksLiveData()
+    val bookmarks = bookmarksRepository.loadBookmarksFlow()
 
-    fun saveBookmark(video: Video) {
+    fun saveBookmark(filesDir: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, video: Video) {
         viewModelScope.launch {
             val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
-                bookmarksRepository.deleteBookmark(applicationContext, item)
+                bookmarksRepository.deleteBookmark(item)
             } else {
-                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, video.thumbnail, "thumbnails", it)
+                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "thumbnails").mkdir()
+                        val path = filesDir + File.separator + "thumbnails" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(path).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body()!!.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        path
+                    }
                 }
-                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let {
-                    DownloadUtils.savePng(applicationContext, video.channelLogo, "profile_pics", it)
+                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    video.channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                        File(filesDir, "profile_pics").mkdir()
+                        val path = filesDir + File.separator + "profile_pics" + File.separator + id
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(path).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body()!!.source())
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+
+                            }
+                        }
+                        path
+                    }
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(applicationContext).helixToken, TwitchApiHelper.getGQLHeaders(applicationContext)) }?.firstOrNull()
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), helixClientId, helixToken, gqlHeaders) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }

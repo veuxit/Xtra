@@ -7,13 +7,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.os.bundleOf
-import androidx.lifecycle.MutableLiveData
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentViewerListBinding
 import com.github.andreyasadchy.xtra.model.ui.ChannelViewerList
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
@@ -22,19 +23,19 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 
 @AndroidEntryPoint
-class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepository) : ExpandingBottomSheetDialogFragment() {
+class PlayerViewerListDialog : ExpandingBottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
 
     companion object {
 
         private const val LOGIN = "login"
 
-        fun newInstance(login: String, repository: ApiRepository): PlayerViewerListDialog {
-            return PlayerViewerListDialog(repository).apply {
+        fun newInstance(login: String): PlayerViewerListDialog {
+            return PlayerViewerListDialog().apply {
                 arguments = bundleOf(LOGIN to login)
             }
         }
@@ -42,6 +43,7 @@ class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepo
 
     private var _binding: FragmentViewerListBinding? = null
     private val binding get() = _binding!!
+    private val viewModel: PlayerViewerListViewModel by viewModels()
 
     private val moderatorsListItems = mutableListOf<String>()
     private var moderatorsListOffset = 0
@@ -58,95 +60,86 @@ class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepo
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
-            loadViewerList()
-            viewerList.observe(viewLifecycleOwner) { fullList ->
-                if (fullList != null) {
-                    if (fullList.broadcasters.isNotEmpty()) {
-                        broadcasterText.visible()
-                        broadcasterList.visible()
-                        broadcasterList.adapter = Adapter(context, fullList.broadcasters)
-                    } else {
-                        broadcasterText.gone()
-                        broadcasterList.gone()
-                    }
-                    if (fullList.moderators.isNotEmpty()) {
-                        moderatorsText.visible()
-                        moderatorsList.apply {
-                            visible()
-                            adapter = Adapter(context, moderatorsListItems)
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.integrity.collectLatest {
+                        if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                            IntegrityDialog.show(childFragmentManager, it)
+                            viewModel.integrity.value = "done"
                         }
-                        loadItems(fullList, moderatorsList)
-                    } else {
-                        moderatorsText.gone()
-                        moderatorsList.gone()
                     }
-                    if (fullList.vips.isNotEmpty()) {
-                        vipsText.visible()
-                        vipsList.apply {
-                            visible()
-                            adapter = Adapter(context, vipsListItems)
-                        }
-                        if (fullList.moderators.size <= 100) {
-                            loadItems(fullList, vipsList)
-                        }
-                    } else {
-                        vipsText.gone()
-                        vipsList.gone()
-                    }
-                    if (fullList.viewers.isNotEmpty()) {
-                        viewersText.visible()
-                        viewersList.apply {
-                            visible()
-                            adapter = Adapter(context, viewerListItems)
-                        }
-                        if ((fullList.moderators.size + fullList.vips.size) <= 100) {
-                            loadItems(fullList, viewersList)
-                        }
-                    } else {
-                        viewersText.gone()
-                        viewersList.gone()
-                    }
-                    if (fullList.count != null) {
-                        userCount.visible()
-                        userCount.text = requireContext().getString(R.string.user_count, TwitchApiHelper.formatCount(requireContext(), fullList.count))
-                    } else {
-                        userCount.gone()
-                    }
-                    scrollView.viewTreeObserver.addOnScrollChangedListener {
-                        if (!scrollView.canScrollVertically(1)) {
-                            when {
-                                moderatorsListOffset != fullList.moderators.size -> loadItems(fullList, moderatorsList)
-                                vipsListOffset != fullList.vips.size -> loadItems(fullList, vipsList)
-                                viewerListOffset != fullList.viewers.size -> loadItems(fullList, viewersList)
+                }
+            }
+            viewModel.loadViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.viewerList.collectLatest { fullList ->
+                        if (fullList != null) {
+                            if (fullList.broadcasters.isNotEmpty()) {
+                                broadcasterText.visible()
+                                broadcasterList.visible()
+                                broadcasterList.adapter = Adapter(context, fullList.broadcasters)
+                            } else {
+                                broadcasterText.gone()
+                                broadcasterList.gone()
+                            }
+                            if (fullList.moderators.isNotEmpty()) {
+                                moderatorsText.visible()
+                                moderatorsList.apply {
+                                    visible()
+                                    adapter = Adapter(context, moderatorsListItems)
+                                }
+                                loadItems(fullList, moderatorsList)
+                            } else {
+                                moderatorsText.gone()
+                                moderatorsList.gone()
+                            }
+                            if (fullList.vips.isNotEmpty()) {
+                                vipsText.visible()
+                                vipsList.apply {
+                                    visible()
+                                    adapter = Adapter(context, vipsListItems)
+                                }
+                                if (fullList.moderators.size <= 100) {
+                                    loadItems(fullList, vipsList)
+                                }
+                            } else {
+                                vipsText.gone()
+                                vipsList.gone()
+                            }
+                            if (fullList.viewers.isNotEmpty()) {
+                                viewersText.visible()
+                                viewersList.apply {
+                                    visible()
+                                    adapter = Adapter(context, viewerListItems)
+                                }
+                                if ((fullList.moderators.size + fullList.vips.size) <= 100) {
+                                    loadItems(fullList, viewersList)
+                                }
+                            } else {
+                                viewersText.gone()
+                                viewersList.gone()
+                            }
+                            if (fullList.count != null) {
+                                userCount.visible()
+                                userCount.text = requireContext().getString(R.string.user_count, TwitchApiHelper.formatCount(requireContext(), fullList.count))
+                            } else {
+                                userCount.gone()
+                            }
+                            scrollView.viewTreeObserver.addOnScrollChangedListener {
+                                if (!scrollView.canScrollVertically(1)) {
+                                    when {
+                                        moderatorsListOffset != fullList.moderators.size -> loadItems(fullList, moderatorsList)
+                                        vipsListOffset != fullList.vips.size -> loadItems(fullList, vipsList)
+                                        viewerListOffset != fullList.viewers.size -> loadItems(fullList, viewersList)
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
-
-    private val viewerList = MutableLiveData<ChannelViewerList?>()
-    private var isLoading = false
-
-    private fun loadViewerList(): MutableLiveData<ChannelViewerList?> {
-        if (!isLoading) {
-            isLoading = true
-            viewerList.value = null
-            lifecycleScope.launch {
-                try {
-                    val get = repository.loadChannelViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
-                    viewerList.postValue(get)
-                } catch (e: Exception) {
-                    if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && e.message == "failed integrity check") {
-                        IntegrityDialog.show(childFragmentManager)
-                    }
-                } finally {
-                    isLoading = false
-                }
-            }
-        }
-        return viewerList
     }
 
     private fun loadItems(fullList: ChannelViewerList, recyclerView: RecyclerView) {
@@ -174,6 +167,16 @@ class PlayerViewerListDialog @Inject constructor(private val repository: ApiRepo
                     viewersList.adapter?.let { it.notifyItemRangeChanged(it.itemCount - add, add) }
                 }
                 else -> {}
+            }
+        }
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.loadViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
+                }
             }
         }
     }

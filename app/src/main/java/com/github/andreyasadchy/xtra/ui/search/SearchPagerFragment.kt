@@ -11,7 +11,9 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -36,6 +38,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -61,9 +64,14 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         with(binding) {
@@ -126,17 +134,22 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                                 if (!result.isNullOrBlank()) {
                                     userResult = Pair(checkedId, result)
                                     viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
-                                    viewModel.userResult.observe(viewLifecycleOwner) {
-                                        if (it != null) {
-                                            if (!it.first.isNullOrBlank()) {
-                                                requireContext().getAlertDialogBuilder().apply {
-                                                    setTitle(it.first)
-                                                    setMessage(it.second)
-                                                    setNegativeButton(getString(android.R.string.cancel), null)
-                                                    setPositiveButton(getString(R.string.view_profile)) { _, _ -> viewUserResult() }
-                                                }.show()
-                                            } else {
-                                                viewUserResult()
+                                    viewLifecycleOwner.lifecycleScope.launch {
+                                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                            viewModel.userResult.collectLatest {
+                                                if (it != null) {
+                                                    if (!it.first.isNullOrBlank()) {
+                                                        requireContext().getAlertDialogBuilder().apply {
+                                                            setTitle(it.first)
+                                                            setMessage(it.second)
+                                                            setNegativeButton(getString(android.R.string.cancel), null)
+                                                            setPositiveButton(getString(R.string.view_profile)) { _, _ -> viewUserResult() }
+                                                        }.show()
+                                                    } else {
+                                                        viewUserResult()
+                                                    }
+                                                    viewModel.userResult.value = null
+                                                }
                                             }
                                         }
                                     }

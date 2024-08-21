@@ -4,21 +4,13 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Environment
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 object DownloadUtils {
 
@@ -82,29 +74,6 @@ object DownloadUtils {
             list.add(Storage(i, name, storagePath))
         }
         return list
-    }
-
-    suspend fun savePng(context: Context, url: String?, folder: String, fileName: String): String {
-        withContext(Dispatchers.IO) {
-            try {
-                Glide.with(context)
-                    .asBitmap()
-                    .load(url)
-                    .into(object: CustomTarget<Bitmap>() {
-                        override fun onLoadCleared(placeholder: Drawable?) {}
-
-                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            File(context.filesDir, folder).mkdir()
-                            FileOutputStream(context.filesDir.path + File.separator + folder + File.separator + "$fileName.png").use {
-                                resource.compress(Bitmap.CompressFormat.PNG, 100, it)
-                            }
-                        }
-                    })
-            } catch (e: Exception) {
-
-            }
-        }
-        return File(context.filesDir.path + File.separator + folder + File.separator + "$fileName.png").absolutePath
     }
 
     data class Storage(

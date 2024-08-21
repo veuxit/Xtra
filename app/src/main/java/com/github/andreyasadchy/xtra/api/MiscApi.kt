@@ -1,10 +1,21 @@
 package com.github.andreyasadchy.xtra.api
 
-import com.github.andreyasadchy.xtra.model.chat.*
+import com.github.andreyasadchy.xtra.model.chat.BttvChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.BttvGlobalResponse
+import com.github.andreyasadchy.xtra.model.chat.FfzChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.FfzGlobalResponse
+import com.github.andreyasadchy.xtra.model.chat.RecentMessagesResponse
+import com.github.andreyasadchy.xtra.model.chat.StvChannelResponse
+import com.github.andreyasadchy.xtra.model.chat.StvGlobalResponse
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface MiscApi {
 
@@ -18,7 +29,7 @@ interface MiscApi {
     suspend fun postUrl(@Url url: String, @Body body: RequestBody): Response<Unit>
 
     @GET("https://recent-messages.robotty.de/api/v2/recent-messages/{channelLogin}")
-    suspend fun getRecentMessages(@Path("channelLogin") channelLogin: String, @Query("limit") limit: String): Response<RecentMessagesResponse>
+    suspend fun getRecentMessages(@Path("channelLogin") channelLogin: String, @Query("limit") limit: String): RecentMessagesResponse
 
     @GET("https://7tv.io/v3/emote-sets/global")
     suspend fun getGlobalStvEmotes(): Response<StvGlobalResponse>

@@ -6,11 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.search.Searchable
@@ -44,7 +47,7 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(it)
+            viewModel.saveBookmark(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), it)
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -52,28 +55,27 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
     override fun initialize() {
         with(binding) {
             viewLifecycleOwner.lifecycleScope.launch {
-                viewModel.flow.collectLatest { pagingData ->
-                    pagingAdapter.submitData(pagingData)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.flow.collectLatest { pagingData ->
+                        pagingAdapter.submitData(pagingData)
+                    }
                 }
             }
             viewLifecycleOwner.lifecycleScope.launch {
-                pagingAdapter.loadStateFlow.collectLatest { loadState ->
-                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
-                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
-                    if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
-                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                        IntegrityDialog.show(childFragmentManager)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                        progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                        nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
+                        if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                            IntegrityDialog.show(childFragmentManager, "refresh")
+                        }
                     }
                 }
             }
         }
-        childFragmentManager.setFragmentResultListener("integrity", this) { _, bundle ->
-            if (bundle.getBoolean("refresh")) {
-                pagingAdapter.refresh()
-            }
-        }
         if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && TwitchApiHelper.isIntegrityTokenExpired(requireContext())) {
-            IntegrityDialog.show(childFragmentManager)
+            IntegrityDialog.show(childFragmentManager, "refresh")
         }
         initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
     }
@@ -84,6 +86,12 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
 
     override fun onNetworkRestored() {
         pagingAdapter.retry()
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
     }
 
     override fun onDestroyView() {

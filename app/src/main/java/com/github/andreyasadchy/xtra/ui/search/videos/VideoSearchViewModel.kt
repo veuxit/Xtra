@@ -18,21 +18,25 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
+    repository: ApiRepository,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
-    repository: ApiRepository,
-    private val graphQLRepository: GraphQLRepository, ) : BaseVideosViewModel(applicationContext, playerRepository, bookmarksRepository, repository) {
+    okHttpClient: OkHttpClient,
+    private val graphQLRepository: GraphQLRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
-    val query = MutableStateFlow("")
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow = query.flatMapLatest { query ->
+    val flow = _query.flatMapLatest { query ->
         Pager(
             PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         ) {
@@ -46,8 +50,8 @@ class VideoSearchViewModel @Inject constructor(
     }.cachedIn(viewModelScope)
 
     fun setQuery(newQuery: String) {
-        if (query.value != newQuery) {
-            query.value = newQuery
+        if (_query.value != newQuery) {
+            _query.value = newQuery
         }
     }
 }

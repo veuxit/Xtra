@@ -3,8 +3,6 @@ package com.github.andreyasadchy.xtra.ui.videos.followed
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -30,24 +28,25 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltViewModel
 class FollowedVideosViewModel @Inject constructor(
-    @ApplicationContext applicationContext: Context,
+    @ApplicationContext private val applicationContext: Context,
     repository: ApiRepository,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
+    okHttpClient: OkHttpClient,
     private val graphQLRepository: GraphQLRepository,
-    private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(applicationContext, playerRepository, bookmarksRepository, repository) {
+    private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
-    private val _sortText = MutableLiveData<CharSequence>()
-    val sortText: LiveData<CharSequence>
-        get() = _sortText
-
+    private val _sortText = MutableStateFlow<CharSequence?>(null)
+    val sortText: StateFlow<CharSequence?> = _sortText
     private val filter = MutableStateFlow(setUser())
 
     val sort: VideoSortEnum

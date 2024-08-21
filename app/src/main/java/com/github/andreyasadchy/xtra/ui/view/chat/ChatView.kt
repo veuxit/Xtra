@@ -70,7 +70,7 @@ class ChatView : ConstraintLayout {
     private var isChatTouched = false
     private var showFlexbox = false
 
-    private var hasRecentEmotes: Boolean? = null
+    private var hasRecentEmotes = false
 
     private var autoCompleteList = mutableListOf<Any>()
     private var autoCompleteAdapter: AutoCompleteAdapter? = null
@@ -182,11 +182,9 @@ class ChatView : ConstraintLayout {
 
     fun notifyRoomState(roomState: RoomState) {
         with(binding) {
-            if (roomState.emote != null) {
-                when (roomState.emote) {
-                    "0" -> textEmote.gone()
-                    "1" -> textEmote.visible()
-                }
+            when (roomState.emote) {
+                "0" -> textEmote.gone()
+                "1" -> textEmote.visible()
             }
             if (roomState.followers != null) {
                 when (roomState.followers) {
@@ -201,11 +199,9 @@ class ChatView : ConstraintLayout {
                     }
                 }
             }
-            if (roomState.unique != null) {
-                when (roomState.unique) {
-                    "0" -> textUnique.gone()
-                    "1" -> textUnique.visible()
-                }
+            when (roomState.unique) {
+                "0" -> textUnique.gone()
+                "1" -> textUnique.visible()
             }
             if (roomState.slow != null) {
                 when (roomState.slow) {
@@ -216,11 +212,9 @@ class ChatView : ConstraintLayout {
                     }
                 }
             }
-            if (roomState.subs != null) {
-                when (roomState.subs) {
-                    "0" -> textSubs.gone()
-                    "1" -> textSubs.visible()
-                }
+            when (roomState.subs) {
+                "0" -> textSubs.gone()
+                "1" -> textSubs.visible()
             }
             if (textEmote.isGone && textFollowers.isGone && textUnique.isGone && textSlow.isGone && textSubs.isGone) {
                 showFlexbox = false
@@ -233,19 +227,16 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    fun notifyRaid(raid: Raid, newId: Boolean) {
+    fun notifyRaid(raid: Raid) {
         with(binding) {
-            if (newId) {
-                raidLayout.visible()
-                raidLayout.setOnClickListener { callback?.onRaidClicked() }
-                raidImage.visible()
-                raidImage.loadImage(fragment, raid.targetLogo, circle = true)
-                raidText.visible()
-                raidClose.visible()
-                raidClose.setOnClickListener {
-                    callback?.onRaidClose()
-                    hideRaid()
-                }
+            raidLayout.visible()
+            raidLayout.setOnClickListener { callback?.onRaidClicked() }
+            raidImage.visible()
+            raidImage.loadImage(fragment, raid.targetLogo, circle = true)
+            raidText.visible()
+            raidClose.visible()
+            raidClose.setOnClickListener {
+                hideRaid()
             }
             raidText.text = context.getString(R.string.raid_text, raid.targetName, raid.viewerCount)
         }
@@ -258,6 +249,7 @@ class ChatView : ConstraintLayout {
             raidText.gone()
             raidClose.gone()
         }
+        callback?.onRaidClose()
     }
 
     fun scrollToLastPosition() {
@@ -273,10 +265,8 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    fun setRecentEmotes(list: List<Emote>?) {
-        if (!list.isNullOrEmpty()) {
-            hasRecentEmotes = true
-        }
+    fun setRecentEmotes() {
+        hasRecentEmotes = true
     }
 
     fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
@@ -443,7 +433,7 @@ class ChatView : ConstraintLayout {
                 emotes.setOnClickListener {
                     //TODO add animation
                     if (emoteMenu.isGone) {
-                        if (hasRecentEmotes != true && viewPager.currentItem == 0) {
+                        if (!hasRecentEmotes && viewPager.currentItem == 0) {
                             viewPager.setCurrentItem(1, false)
                         }
                         toggleEmoteMenu(true)

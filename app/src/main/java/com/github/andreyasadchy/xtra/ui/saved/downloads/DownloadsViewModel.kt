@@ -28,7 +28,6 @@ import okio.appendingSink
 import okio.buffer
 import okio.sink
 import okio.source
-import okio.use
 import java.io.File
 import java.io.FileFilter
 import java.io.FileInputStream
@@ -699,7 +698,7 @@ class DownloadsViewModel @Inject internal constructor(
             }.invokeOnCompletion {
                 videosInUse.remove(video)
                 viewModelScope.launch(Dispatchers.IO) {
-                    repository.deleteVideo(applicationContext, video)
+                    repository.deleteVideo(video)
                 }
             }
         }
