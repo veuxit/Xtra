@@ -2,8 +2,6 @@ package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
 import android.content.Intent
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
@@ -17,12 +15,11 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.Event
-import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -32,13 +29,10 @@ class MainViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val authRepository: AuthRepository) : ViewModel() {
 
-    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
-    val integrity: LiveData<Boolean>
-        get() = _integrity
+    val integrity = MutableStateFlow<String?>(null)
 
-    private val _isNetworkAvailable = MutableLiveData<Event<Boolean>>()
-    val isNetworkAvailable: LiveData<Event<Boolean>>
-        get() = _isNetworkAvailable
+    val newNetworkStatus = MutableStateFlow<Boolean?>(null)
+    val isNetworkAvailable = MutableStateFlow<Boolean?>(null)
 
     var isPlayerMaximized = false
         private set
@@ -46,15 +40,9 @@ class MainViewModel @Inject constructor(
     var isPlayerOpened = false
         private set
 
-    private val _video = MutableLiveData<Video?>()
-    val video: MutableLiveData<Video?>
-        get() = _video
-    private val _clip = MutableLiveData<Clip?>()
-    val clip: MutableLiveData<Clip?>
-        get() = _clip
-    private val _user = MutableLiveData<User?>()
-    val user: MutableLiveData<User?>
-        get() = _user
+    val video = MutableStateFlow<Video?>(null)
+    val clip = MutableStateFlow<Clip?>(null)
+    val user = MutableStateFlow<User?>(null)
 
     fun onMaximize() {
         isPlayerMaximized = true
@@ -75,45 +63,49 @@ class MainViewModel @Inject constructor(
     }
 
     fun setNetworkAvailable(available: Boolean) {
-        if (_isNetworkAvailable.value?.peekContent() != available) {
-            _isNetworkAvailable.value = Event(available)
+        if (isNetworkAvailable.value != available) {
+            isNetworkAvailable.value = available
+            newNetworkStatus.value = available
         }
     }
 
     fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        _video.value = null
-        viewModelScope.launch {
-            try {
-                repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _video.postValue(it) }
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
+        if (video.value == null) {
+            viewModelScope.launch {
+                try {
+                    video.value = repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders, checkIntegrity)
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
+                    }
                 }
             }
         }
     }
 
     fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        _clip.value = null
-        viewModelScope.launch {
-            try {
-                repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders, checkIntegrity)?.let { _clip.postValue(it) }
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
+        if (clip.value == null) {
+            viewModelScope.launch {
+                try {
+                    clip.value = repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders, checkIntegrity)
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
+                    }
                 }
             }
         }
     }
 
     fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        _user.value = null
-        viewModelScope.launch {
-            try {
-                repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)?.let { _user.postValue(it) }
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    _integrity.postValue(true)
+        if (user.value == null) {
+            viewModelScope.launch {
+                try {
+                    user.value = repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
+                } catch (e: Exception) {
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
+                    }
                 }
             }
         }

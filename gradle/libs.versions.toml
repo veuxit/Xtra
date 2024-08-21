@@ -1,8 +1,8 @@
 [versions]
-android-gradle-plugin = "8.5.1"
+android-gradle-plugin = "8.5.2"
 apollo = "3.8.5"
 appcompat = "1.7.0"
-checker-qual = "3.45.0"
+checker-qual = "3.46.0"
 coil = "2.7.0"
 constraintlayout = "2.1.4"
 core = "1.13.1"
@@ -13,24 +13,24 @@ fragment = "1.8.2"
 glide = "4.16.0"
 glide-webpdecoder = "2.6.4.16.0"
 gson = "2.11.0"
-hilt = "2.51.1"
+hilt = "2.52"
 hilt-extension-compiler = "1.2.0"
 hilt-work = "1.2.0"
-kotlin = "2.0.0"
-ksp = "2.0.0-1.0.22"
+kotlin = "2.0.10"
+ksp = "2.0.10-1.0.24"
 lifecycle = "2.8.4"
 material = "1.12.0"
 media3 = "1.4.0"
 navigation = "2.7.7"
 okhttp = "5.0.0-alpha.14"
 okio = "3.9.0"
-paging = "3.3.1"
+paging = "3.3.2"
 preference = "1.2.1"
 retrofit = "2.11.0"
 room = "2.6.1"
 swiperefreshlayout = "1.1.0"
 webkit = "1.11.0"
-work = "2.9.0"
+work = "2.9.1"
 
 [libraries]
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
@@ -53,7 +53,6 @@ hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-extension-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-extension-compiler" }
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
-lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycle" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 material = { module = "com.google.android.material:material", version.ref = "material" }

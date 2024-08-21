@@ -12,6 +12,9 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.AppBarConfiguration
@@ -33,6 +36,7 @@ import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
@@ -41,9 +45,11 @@ import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
+class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, IntegrityDialog.CallbackListener {
 
     private var _binding: FragmentMediaPagerBinding? = null
     private val binding get() = _binding!!
@@ -66,14 +72,20 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.integrity.observe(viewLifecycleOwner) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
         with(binding) {
             val activity = requireActivity() as MainActivity
             val account = Account.get(activity)
+            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
             val navController = findNavController()
             val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
             toolbar.setupWithNavController(navController, appBarConfiguration)
@@ -82,17 +94,13 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
             toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.followButton -> {
-                        viewModel.follow.value?.let {
-                            val following = it.first
-                            val errorMessage = it.second
-                            if (errorMessage.isNullOrBlank()) {
-                                if (!following) {
-                                    viewModel.saveFollowGame(args.gameId, args.gameSlug, args.gameName)
-                                } else {
-                                    FragmentUtils.showUnfollowDialog(requireContext(), args.gameName) {
-                                        viewModel.deleteFollowGame(args.gameId)
-                                    }
+                        viewModel.isFollowing.value?.let {
+                            if (it) {
+                                FragmentUtils.showUnfollowDialog(requireContext(), args.gameName) {
+                                    viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId)
                                 }
+                            } else {
+                                viewModel.saveFollowGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account.helixToken, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameSlug, args.gameName)
                             }
                         }
                         true
@@ -121,25 +129,44 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
                     else -> false
                 }
             }
-            if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+            if (setting < 2) {
                 val followButton = toolbar.menu.findItem(R.id.followButton)
-                followButton.isVisible = true
-                var initialized = false
-                viewModel.follow.observe(viewLifecycleOwner) { pair ->
-                    val following = pair.first
-                    val errorMessage = pair.second
-                    if (initialized) {
-                        if (!errorMessage.isNullOrBlank()) {
-                            requireContext().shortToast(errorMessage)
-                        } else {
-                            requireContext().shortToast(requireContext().getString(if (following) R.string.now_following else R.string.unfollowed, args.gameName))
+                followButton?.isVisible = true
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.isFollowing.collectLatest {
+                            if (it != null) {
+                                followButton?.apply {
+                                    if (it) {
+                                        icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_favorite_black_24)
+                                        title = requireContext().getString(R.string.unfollow)
+                                    } else {
+                                        icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_favorite_border_black_24)
+                                        title = requireContext().getString(R.string.follow)
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        initialized = true
                     }
-                    if (errorMessage.isNullOrBlank()) {
-                        followButton.icon = ContextCompat.getDrawable(requireContext(), if (following) R.drawable.baseline_favorite_black_24 else R.drawable.baseline_favorite_border_black_24)
-                        followButton.title = requireContext().getString(if (following) R.string.unfollow else R.string.follow)
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.follow.collectLatest { pair ->
+                            if (pair != null) {
+                                val following = pair.first
+                                val errorMessage = pair.second
+                                if (!errorMessage.isNullOrBlank()) {
+                                    requireContext().shortToast(errorMessage)
+                                } else {
+                                    if (following) {
+                                        requireContext().shortToast(requireContext().getString(R.string.now_following, args.gameName))
+                                    } else {
+                                        requireContext().shortToast(requireContext().getString(R.string.unfollowed, args.gameName))
+                                    }
+                                }
+                                viewModel.follow.value = null
+                            }
+                        }
                     }
                 }
             }
@@ -195,11 +222,12 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
     }
 
     override fun initialize() {
-        if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-            viewModel.isFollowingGame(args.gameId, args.gameName)
+        val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+        if (setting < 2) {
+            viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
         }
         if (args.updateLocal) {
-            viewModel.updateLocalGame(args.gameId, args.gameName)
+            viewModel.updateLocalGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), args.gameId, args.gameName)
         }
     }
 
@@ -209,6 +237,25 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost {
     }
 
     override fun onNetworkRestored() {
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    when (callback) {
+                        "refresh" -> {
+                            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+                            if (setting < 2) {
+                                viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
+                            }
+                        }
+                        "follow" -> viewModel.saveFollowGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId, args.gameSlug, args.gameName)
+                        "unfollow" -> viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId)
+                    }
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {

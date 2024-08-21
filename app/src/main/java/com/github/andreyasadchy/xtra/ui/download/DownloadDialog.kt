@@ -21,6 +21,9 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
@@ -37,10 +40,12 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 @AndroidEntryPoint
-class DownloadDialog : DialogFragment() {
+class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
 
     companion object {
         private const val KEY_STREAM = "stream"
@@ -84,11 +89,40 @@ class DownloadDialog : DialogFragment() {
         _binding = DialogVideoDownloadBinding.inflate(layoutInflater)
         val builder = requireContext().getAlertDialogBuilder()
             .setView(binding.root)
-        viewModel.integrity.observe(this) {
-            if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                IntegrityDialog.show(childFragmentManager)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.integrity.collectLatest {
+                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        IntegrityDialog.show(childFragmentManager, it)
+                        viewModel.integrity.value = "done"
+                    }
+                }
             }
         }
+        init()
+        with(binding.storageSelectionContainer) {
+            val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.let {
+                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        sharedPath = it.toString()
+                        directory.visible()
+                        directory.text = it.path?.substringAfter("/tree/")?.removeSuffix(":")
+                    }
+                }
+            }
+            selectDirectory.setOnClickListener {
+                resultLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, sharedPath)
+                    }
+                })
+            }
+        }
+        return builder.create()
+    }
+
+    private fun init() {
         val args = requireArguments()
         val stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requireArguments().getParcelable(KEY_STREAM, Stream::class.java)
@@ -97,9 +131,13 @@ class DownloadDialog : DialogFragment() {
             requireArguments().getParcelable(KEY_STREAM)
         }
         if (stream != null) {
-            viewModel.qualities.observe(this) {
-                if (!it.isNullOrEmpty()) {
-                    initStream(stream, it)
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.qualities.collectLatest {
+                        if (!it.isNullOrEmpty()) {
+                            initStream(stream, it)
+                        }
+                    }
                 }
             }
             viewModel.setStream(
@@ -124,14 +162,25 @@ class DownloadDialog : DialogFragment() {
                 requireArguments().getParcelable(KEY_VIDEO)
             }
             if (video != null) {
-                viewModel.videoInfo.observe(this) {
-                    if (it != null) {
-                        val qualities = viewModel.qualities.value
-                        if (!qualities.isNullOrEmpty()) {
-                            initVideo(video, qualities, it)
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.videoInfo.collectLatest {
+                            if (it != null) {
+                                val qualities = viewModel.qualities.value
+                                if (!qualities.isNullOrEmpty()) {
+                                    initVideo(video, qualities, it)
+                                }
+                            }
                         }
-                    } else {
-                        dismiss()
+                    }
+                }
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.dismiss.collectLatest {
+                            if (it) {
+                                dismiss()
+                            }
+                        }
                     }
                 }
                 viewModel.setVideo(
@@ -155,9 +204,13 @@ class DownloadDialog : DialogFragment() {
                     args.getParcelable(KEY_CLIP)
                 }
                 if (clip != null) {
-                    viewModel.qualities.observe(this) {
-                        if (!it.isNullOrEmpty()) {
-                            initClip(clip, it)
+                    lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.qualities.collectLatest {
+                                if (!it.isNullOrEmpty()) {
+                                    initClip(clip, it)
+                                }
+                            }
                         }
                     }
                     viewModel.setClip(
@@ -173,29 +226,9 @@ class DownloadDialog : DialogFragment() {
                 }
             }
         }
-        with(binding.storageSelectionContainer) {
-            val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == Activity.RESULT_OK) {
-                    result.data?.data?.let {
-                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        sharedPath = it.toString()
-                        directory.visible()
-                        directory.text = it.path?.substringAfter("/tree/")?.removeSuffix(":")
-                    }
-                }
-            }
-            selectDirectory.setOnClickListener {
-                resultLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, sharedPath)
-                    }
-                })
-            }
-        }
-        return builder.create()
     }
 
-    private fun init(qualities: Map<String, Pair<String, String>>) {
+    private fun initDialog(qualities: Map<String, Pair<String, String>>) {
         with(binding.storageSelectionContainer) {
             storage = DownloadUtils.getAvailableStorage(requireContext())
             if (DownloadUtils.isExternalStorageAvailable) {
@@ -265,7 +298,7 @@ class DownloadDialog : DialogFragment() {
     private fun initStream(stream: Stream, qualities: Map<String, Pair<String, String>>) {
         with(binding) {
             layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.timeLayout && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
-            init(qualities)
+            initDialog(qualities)
             download.setOnClickListener {
                 val quality = qualities.getValue(spinner.editText?.text.toString())
                 val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
@@ -273,7 +306,7 @@ class DownloadDialog : DialogFragment() {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    viewModel.downloadStream(stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    viewModel.downloadStream(requireContext().filesDir.path, stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {
@@ -293,7 +326,7 @@ class DownloadDialog : DialogFragment() {
         with(binding) {
             with(videoInfo) {
                 layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
-                init(qualities)
+                initDialog(qualities)
                 val defaultFrom = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
                 val totalTime = DateUtils.formatElapsedTime(totalDuration / 1000L)
                 val defaultTo = totalTime.let { if (it.length != 5) it else "00:$it" }
@@ -319,7 +352,7 @@ class DownloadDialog : DialogFragment() {
                             val downloadChat = downloadChat.isChecked
                             val downloadChatEmotes = downloadChatEmotes.isChecked
                             if (!path.isNullOrBlank()) {
-                                viewModel.downloadVideo(video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                                viewModel.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                                 requireContext().prefs().edit {
                                     putInt(C.DOWNLOAD_LOCATION, location)
                                     if (location == 0) {
@@ -358,7 +391,7 @@ class DownloadDialog : DialogFragment() {
     private fun initClip(clip: Clip, qualities: Map<String, Pair<String, String>>) {
         with(binding) {
             layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.timeLayout && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
-            init(qualities)
+            initDialog(qualities)
             download.setOnClickListener {
                 val quality = qualities.getValue(spinner.editText?.text.toString())
                 val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
@@ -366,7 +399,7 @@ class DownloadDialog : DialogFragment() {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    viewModel.downloadClip(clip, quality.second, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    viewModel.downloadClip(requireContext().filesDir.path, clip, quality.second, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {
@@ -419,6 +452,16 @@ class DownloadDialog : DialogFragment() {
                 lengthBeforeEdit = length
             }
         })
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        if (callback == "refresh") {
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    init()
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {

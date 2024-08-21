@@ -1,9 +1,13 @@
 package com.github.andreyasadchy.xtra.db
 
-import androidx.lifecycle.LiveData
 import androidx.paging.PagingSource
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookmarksDao {
@@ -12,7 +16,7 @@ interface BookmarksDao {
     fun getAllPagingSource(): PagingSource<Int, Bookmark>
 
     @Query("SELECT * FROM bookmarks")
-    fun getAllLiveData(): LiveData<List<Bookmark>>
+    fun getAllFlow(): Flow<List<Bookmark>>
 
     @Query("SELECT * FROM bookmarks")
     fun getAll(): List<Bookmark>

@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
@@ -28,10 +29,11 @@ class ChannelSearchViewModel @Inject constructor(
     private val helix: HelixApi,
     private val apolloClient: ApolloClient) : ViewModel() {
 
-    val query = MutableStateFlow("")
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow = query.flatMapLatest { query ->
+    val flow = _query.flatMapLatest { query ->
         Pager(
             PagingConfig(pageSize = 15, prefetchDistance = 5, initialLoadSize = 15)
         ) {
@@ -49,8 +51,8 @@ class ChannelSearchViewModel @Inject constructor(
     }.cachedIn(viewModelScope)
 
     fun setQuery(newQuery: String) {
-        if (query.value != newQuery) {
-            query.value = newQuery
+        if (_query.value != newQuery) {
+            _query.value = newQuery
         }
     }
 }

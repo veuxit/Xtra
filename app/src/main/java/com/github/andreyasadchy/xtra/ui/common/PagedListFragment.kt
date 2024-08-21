@@ -1,7 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.common
 
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
@@ -16,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-abstract class PagedListFragment : BaseNetworkFragment() {
+abstract class PagedListFragment : BaseNetworkFragment(), IntegrityDialog.CallbackListener {
 
     fun <T : Any, VH : RecyclerView.ViewHolder> setAdapter(recyclerView: RecyclerView, adapter: PagingDataAdapter<T, VH>) {
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
@@ -53,20 +55,24 @@ abstract class PagedListFragment : BaseNetworkFragment() {
     fun <T : Any, VH : RecyclerView.ViewHolder> initializeAdapter(binding: CommonRecyclerViewLayoutBinding, pagingAdapter: PagingDataAdapter<T, VH>, flow: Flow<PagingData<T>>, enableSwipeRefresh: Boolean = true, enableScrollTopButton: Boolean = true) {
         with(binding) {
             viewLifecycleOwner.lifecycleScope.launch {
-                flow.collectLatest { pagingData ->
-                    pagingAdapter.submitData(pagingData)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    flow.collectLatest { pagingData ->
+                        pagingAdapter.submitData(pagingData)
+                    }
                 }
             }
             viewLifecycleOwner.lifecycleScope.launch {
-                pagingAdapter.loadStateFlow.collectLatest { loadState ->
-                    progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
-                    if (enableSwipeRefresh) {
-                        swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount != 0
-                    }
-                    nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0
-                    if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
-                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
-                        IntegrityDialog.show(childFragmentManager)
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    pagingAdapter.loadStateFlow.collectLatest { loadState ->
+                        progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
+                        if (enableSwipeRefresh) {
+                            swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount != 0
+                        }
+                        nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0
+                        if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                            IntegrityDialog.show(childFragmentManager, "refresh")
+                        }
                     }
                 }
             }
@@ -87,13 +93,8 @@ abstract class PagedListFragment : BaseNetworkFragment() {
                 }
             }
         }
-        childFragmentManager.setFragmentResultListener("integrity", this) { _, bundle ->
-            if (bundle.getBoolean("refresh")) {
-                pagingAdapter.refresh()
-            }
-        }
         if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && TwitchApiHelper.isIntegrityTokenExpired(requireContext())) {
-            IntegrityDialog.show(childFragmentManager)
+            IntegrityDialog.show(childFragmentManager, "refresh")
         }
     }
 }

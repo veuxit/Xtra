@@ -8,9 +8,6 @@ import android.util.JsonToken
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
@@ -30,9 +27,7 @@ import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
 import com.github.andreyasadchy.xtra.ui.player.ChatReplayManagerLocal
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.BroadcastSettings
 import com.github.andreyasadchy.xtra.util.chat.ChatListener
 import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
@@ -48,13 +43,16 @@ import com.github.andreyasadchy.xtra.util.chat.PubSubListener
 import com.github.andreyasadchy.xtra.util.chat.PubSubUtils
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Raid
+import com.github.andreyasadchy.xtra.util.chat.RecentMessageUtils
 import com.github.andreyasadchy.xtra.util.chat.RoomState
+import com.github.andreyasadchy.xtra.util.chat.StreamInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import okio.use
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
@@ -71,92 +69,70 @@ class ChatViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val okHttpClient: OkHttpClient) : ViewModel(), ChatView.ChatViewCallback {
 
-    private val _integrity by lazy { SingleLiveEvent<Boolean>() }
-    val integrity: LiveData<Boolean>
-        get() = _integrity
+    val integrity = MutableStateFlow<String?>(null)
 
-    val recentEmotes: LiveData<List<Emote>> by lazy {
-        MediatorLiveData<List<Emote>>().apply {
-            addSource(userEmotes) { user ->
-                removeSource(userEmotes)
-                addSource(_otherEmotes) { other ->
-                    removeSource(_otherEmotes)
-                    addSource(playerRepository.loadRecentEmotes()) { recent ->
-                        value = recent.mapNotNull { emote -> (user + other).find { it.name == emote.name } }
-                    }
-                }
-            }
-        }
-    }
-    val userEmotes = MutableLiveData<List<Emote>>()
-    private val _otherEmotes = MutableLiveData<List<Emote>>()
-    val otherEmotes: LiveData<List<Emote>>
-        get() = _otherEmotes
-
+    val recentEmotes by lazy { playerRepository.loadRecentEmotesFlow() }
+    val hasRecentEmotes = MutableStateFlow(false)
+    private val _userEmotes = MutableStateFlow<List<Emote>?>(null)
+    val userEmotes: StateFlow<List<Emote>?> = _userEmotes
     private var loadedUserEmotes = false
-    val localTwitchEmotes = MutableLiveData<List<TwitchEmote>>()
-    val globalStvEmotes = MutableLiveData<List<Emote>?>()
-    val channelStvEmotes = MutableLiveData<List<Emote>>()
-    val globalBttvEmotes = MutableLiveData<List<Emote>?>()
-    val channelBttvEmotes = MutableLiveData<List<Emote>>()
-    val globalFfzEmotes = MutableLiveData<List<Emote>?>()
-    val channelFfzEmotes = MutableLiveData<List<Emote>>()
-    val globalBadges = MutableLiveData<List<TwitchBadge>?>()
-    val channelBadges = MutableLiveData<List<TwitchBadge>>()
-    val cheerEmotes = MutableLiveData<List<CheerEmote>>()
-    val roomState = MutableLiveData<RoomState>()
-    private var showRaids = false
-    val raid = MutableLiveData<Raid>()
-    val raidClicked = MutableLiveData<Boolean>()
-    var raidAutoSwitch = false
-    var raidNewId = true
+    private val _localTwitchEmotes = MutableStateFlow<List<TwitchEmote>?>(null)
+    val localTwitchEmotes: StateFlow<List<TwitchEmote>?> = _localTwitchEmotes
+    private val _globalStvEmotes = MutableStateFlow<List<Emote>?>(null)
+    val globalStvEmotes: StateFlow<List<Emote>?> = _globalStvEmotes
+    private val _channelStvEmotes = MutableStateFlow<List<Emote>?>(null)
+    val channelStvEmotes: StateFlow<List<Emote>?> = _channelStvEmotes
+    private val _globalBttvEmotes = MutableStateFlow<List<Emote>?>(null)
+    val globalBttvEmotes: StateFlow<List<Emote>?> = _globalBttvEmotes
+    private val _channelBttvEmotes = MutableStateFlow<List<Emote>?>(null)
+    val channelBttvEmotes: StateFlow<List<Emote>?> = _channelBttvEmotes
+    private val _globalFfzEmotes = MutableStateFlow<List<Emote>?>(null)
+    val globalFfzEmotes: StateFlow<List<Emote>?> = _globalFfzEmotes
+    private val _channelFfzEmotes = MutableStateFlow<List<Emote>?>(null)
+    val channelFfzEmotes: StateFlow<List<Emote>?> = _channelFfzEmotes
+    private val _globalBadges = MutableStateFlow<List<TwitchBadge>?>(null)
+    val globalBadges: StateFlow<List<TwitchBadge>?> = _globalBadges
+    private val _channelBadges = MutableStateFlow<List<TwitchBadge>?>(null)
+    val channelBadges: StateFlow<List<TwitchBadge>?> = _channelBadges
+    private val _cheerEmotes = MutableStateFlow<List<CheerEmote>?>(null)
+    val cheerEmotes: StateFlow<List<CheerEmote>?> = _cheerEmotes
+
+    val roomState = MutableStateFlow<RoomState?>(null)
+    val raid = MutableStateFlow<Raid?>(null)
+    val raidClicked = MutableStateFlow(false)
     var raidClosed = false
-    val viewerCount = MutableLiveData<Int?>()
-    val title = MutableLiveData<BroadcastSettings?>()
-    val streamLiveChanged = MutableLiveData<Pair<PlaybackMessage, String?>>()
+    private val _streamInfo = MutableStateFlow<StreamInfo?>(null)
+    val streamInfo: StateFlow<StreamInfo?> = _streamInfo
+    private val _playbackMessage = MutableStateFlow<PlaybackMessage?>(null)
+    val playbackMessage: StateFlow<PlaybackMessage?> = _playbackMessage
     var streamId: String? = null
     private val rewardList = mutableListOf<ChatMessage>()
 
-    private val _reloadMessages by lazy { SingleLiveEvent<Boolean>() }
-    val reloadMessages: LiveData<Boolean>
-        get() = _reloadMessages
-    private val _scrollDown by lazy { SingleLiveEvent<Boolean>() }
-    val scrollDown: LiveData<Boolean>
-        get() = _scrollDown
-    private val _hideRaid by lazy { SingleLiveEvent<Boolean>() }
-    val hideRaid: LiveData<Boolean>
-        get() = _hideRaid
+    val reloadMessages = MutableStateFlow(false)
+    val scrollDown = MutableStateFlow(false)
+    val hideRaid = MutableStateFlow(false)
 
     private var messageLimit = 600
-    private val _chatMessages by lazy {
-        MutableLiveData<MutableList<ChatMessage>>().apply { value = Collections.synchronizedList(ArrayList(messageLimit + 1)) }
-    }
-    val chatMessages: LiveData<MutableList<ChatMessage>>
-        get() = _chatMessages
-    private val _newMessage by lazy { MutableLiveData<ChatMessage>() }
-    val newMessage: LiveData<ChatMessage>
-        get() = _newMessage
+    private val _chatMessages = MutableStateFlow<MutableList<ChatMessage>>(Collections.synchronizedList(ArrayList(messageLimit + 1)))
+    val chatMessages: StateFlow<MutableList<ChatMessage>> = _chatMessages
+    val newMessage = MutableStateFlow(false)
 
     var chat: ChatController? = null
 
-    private val _newChatter by lazy { SingleLiveEvent<Chatter>() }
-    val newChatter: LiveData<Chatter>
-        get() = _newChatter
+    val newChatter = MutableStateFlow<Chatter?>(null)
 
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
+    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int,emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
         if (chat == null && channelLogin != null) {
             this.messageLimit = messageLimit
             this.streamId = streamId
-            this.showRaids = showRaids
-            raidAutoSwitch = autoSwitchRaids
-            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
+            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
             chat?.start()
             loadEmotes(helixClientId, account.helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
             if (enableRecentMsg) {
-                loadRecentMessages(channelLogin, recentMsgLimit)
+                loadRecentMessages(channelLogin, recentMsgLimit, showUserNotice, showClearMsg, showClearChat)
             }
             if (isLoggedIn) {
                 (chat as? LiveChatController)?.loadUserEmotes()
@@ -164,7 +140,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, localUri: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
+    fun startReplay(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, localUri: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int,emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
         if (chat == null) {
             this.messageLimit = messageLimit
             chat = VideoChatController(gqlHeaders, videoId, startTime, localUri, getCurrentPosition, getCurrentSpeed, helixClientId, helixToken, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
@@ -188,12 +164,10 @@ class ChatViewModel @Inject constructor(
     }
 
     override fun onRaidClicked() {
-        raidAutoSwitch = false
-        raidClicked.postValue(true)
+        raidClicked.value = true
     }
 
     override fun onRaidClose() {
-        raidAutoSwitch = false
         raidClosed = true
     }
 
@@ -205,22 +179,26 @@ class ChatViewModel @Inject constructor(
     private fun loadEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
         savedGlobalBadges.also { saved ->
             if (!saved.isNullOrEmpty()) {
-                globalBadges.value = saved
-                _reloadMessages.value = true
+                _globalBadges.value = saved
+                if (!reloadMessages.value) {
+                    reloadMessages.value = true
+                }
             } else {
                 viewModelScope.launch {
                     try {
                         repository.loadGlobalBadges(helixClientId, helixToken, gqlHeaders, emoteQuality, checkIntegrity).let { badges ->
                             if (badges.isNotEmpty()) {
                                 savedGlobalBadges = badges
-                                globalBadges.value = badges
-                                _reloadMessages.value = true
+                                _globalBadges.value = badges
+                                if (!reloadMessages.value) {
+                                    reloadMessages.value = true
+                                }
                             }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to load global badges", e)
-                        if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                        if (e.message == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "refresh"
                         }
                     }
                 }
@@ -230,16 +208,10 @@ class ChatViewModel @Inject constructor(
             savedGlobalStvEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    globalStvEmotes.postValue(saved)
-                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                        addAll(saved)
-                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                    })
-                    _reloadMessages.value = true
+                    _globalStvEmotes.value = saved
+                    if (!reloadMessages.value) {
+                        reloadMessages.value = true
+                    }
                 } else {
                     viewModelScope.launch {
                         try {
@@ -247,16 +219,10 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalStvEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    globalStvEmotes.postValue(emotes)
-                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                        addAll(emotes)
-                                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                    })
-                                    _reloadMessages.value = true
+                                    _globalStvEmotes.value = emotes
+                                    if (!reloadMessages.value) {
+                                        reloadMessages.value = true
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -271,16 +237,10 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadStvEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                channelStvEmotes.postValue(it)
-                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                    addAll(it)
-                                    channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                })
-                                _reloadMessages.value = true
+                                _channelStvEmotes.value = it
+                                if (!reloadMessages.value) {
+                                    reloadMessages.value = true
+                                }
                             }
                         }
                     } catch (e: Exception) {
@@ -293,16 +253,10 @@ class ChatViewModel @Inject constructor(
             savedGlobalBttvEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    globalBttvEmotes.postValue(saved)
-                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                        addAll(saved)
-                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                    })
-                    _reloadMessages.value = true
+                    _globalBttvEmotes.value = saved
+                    if (!reloadMessages.value) {
+                        reloadMessages.value = true
+                    }
                 } else {
                     viewModelScope.launch {
                         try {
@@ -310,16 +264,10 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalBttvEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    globalBttvEmotes.postValue(emotes)
-                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        addAll(emotes)
-                                        globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                    })
-                                    _reloadMessages.value = true
+                                    _globalBttvEmotes.value = emotes
+                                    if (!reloadMessages.value) {
+                                        reloadMessages.value = true
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -334,16 +282,10 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                channelBttvEmotes.postValue(it)
-                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                    channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    addAll(it)
-                                    channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                })
-                                _reloadMessages.value = true
+                                _channelBttvEmotes.value = it
+                                if (!reloadMessages.value) {
+                                    reloadMessages.value = true
+                                }
                             }
                         }
                     } catch (e: Exception) {
@@ -356,16 +298,10 @@ class ChatViewModel @Inject constructor(
             savedGlobalFfzEmotes.also { saved ->
                 if (!saved.isNullOrEmpty()) {
                     (chat as? LiveChatController)?.addEmotes(saved)
-                    globalFfzEmotes.postValue(saved)
-                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                        addAll(saved)
-                    })
-                    _reloadMessages.value = true
+                    _globalFfzEmotes.value = saved
+                    if (!reloadMessages.value) {
+                        reloadMessages.value = true
+                    }
                 } else {
                     viewModelScope.launch {
                         try {
@@ -373,16 +309,10 @@ class ChatViewModel @Inject constructor(
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalFfzEmotes = emotes
                                     (chat as? LiveChatController)?.addEmotes(emotes)
-                                    globalFfzEmotes.postValue(emotes)
-                                    _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                        channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        channelFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                        globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                        addAll(emotes)
-                                    })
-                                    _reloadMessages.value = true
+                                    _globalFfzEmotes.value = emotes
+                                    if (!reloadMessages.value) {
+                                        reloadMessages.value = true
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -397,16 +327,10 @@ class ChatViewModel @Inject constructor(
                         playerRepository.loadFfzEmotes(channelId).body()?.emotes?.let {
                             if (it.isNotEmpty()) {
                                 (chat as? LiveChatController)?.addEmotes(it)
-                                channelFfzEmotes.postValue(it)
-                                _otherEmotes.postValue(mutableListOf<Emote>().apply {
-                                    channelStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    channelBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    addAll(it)
-                                    globalStvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalBttvEmotes.value?.let { emotes -> addAll(emotes) }
-                                    globalFfzEmotes.value?.let { emotes -> addAll(emotes) }
-                                })
-                                _reloadMessages.value = true
+                                _channelFfzEmotes.value = it
+                                if (!reloadMessages.value) {
+                                    reloadMessages.value = true
+                                }
                             }
                         }
                     } catch (e: Exception) {
@@ -420,14 +344,16 @@ class ChatViewModel @Inject constructor(
                 try {
                     repository.loadChannelBadges(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, checkIntegrity).let {
                         if (it.isNotEmpty()) {
-                            channelBadges.postValue(it)
-                            _reloadMessages.value = true
+                            _channelBadges.value = it
+                            if (!reloadMessages.value) {
+                                reloadMessages.value = true
+                            }
                         }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to load badges for channel $channelId", e)
-                    if (e.message == "failed integrity check") {
-                        _integrity.postValue(true)
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
                     }
                 }
             }
@@ -435,28 +361,55 @@ class ChatViewModel @Inject constructor(
                 try {
                     repository.loadCheerEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, animateGifs, checkIntegrity).let {
                         if (it.isNotEmpty()) {
-                            cheerEmotes.postValue(it)
-                            _reloadMessages.value = true
+                            _cheerEmotes.value = it
+                            if (!reloadMessages.value) {
+                                reloadMessages.value = true
+                            }
                         }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to load cheermotes for channel $channelId", e)
-                    if (e.message == "failed integrity check") {
-                        _integrity.postValue(true)
+                    if (e.message == "failed integrity check" && integrity.value == null) {
+                        integrity.value = "refresh"
                     }
                 }
             }
         }
     }
 
-    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String) {
+    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean) {
         viewModelScope.launch {
             try {
-                playerRepository.loadRecentMessages(channelLogin, recentMsgLimit).body()?.messages?.let {
-                    if (it.isNotEmpty()) {
-                        _chatMessages.postValue(_chatMessages.value?.apply { addAll(0, it) })
-                        _scrollDown.postValue(true)
-                        _reloadMessages.value = true
+                val list = mutableListOf<ChatMessage>()
+                playerRepository.loadRecentMessages(channelLogin, recentMsgLimit).messages.forEach { message ->
+                    when {
+                        message.contains("PRIVMSG") -> RecentMessageUtils.parseChatMessage(message, false)
+                        message.contains("USERNOTICE") -> {
+                            if (showUserNotice) {
+                                RecentMessageUtils.parseChatMessage(message, true)
+                            } else null
+                        }
+                        message.contains("CLEARMSG") -> {
+                            if (showClearMsg) {
+                                RecentMessageUtils.parseClearMessage(applicationContext, message)
+                            } else null
+                        }
+                        message.contains("CLEARCHAT") -> {
+                            if (showClearChat) {
+                                RecentMessageUtils.parseClearChat(applicationContext, message)
+                            } else null
+                        }
+                        message.contains("NOTICE") -> RecentMessageUtils.parseNotice(applicationContext, message)
+                        else -> null
+                    }?.let { list.add(it) }
+                }
+                if (list.isNotEmpty()) {
+                    _chatMessages.value.addAll(0, list)
+                    if (!scrollDown.value) {
+                        scrollDown.value = true
+                    }
+                    if (!reloadMessages.value) {
+                        reloadMessages.value = true
                     }
                 }
             } catch (e: Exception) {
@@ -486,6 +439,12 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun loadRecentEmotes() {
+        viewModelScope.launch {
+            hasRecentEmotes.value = playerRepository.loadRecentEmotes().isNotEmpty()
+        }
+    }
+
     inner class LiveChatController(
         private val useChatWebSocket: Boolean,
         private val useSSL: Boolean,
@@ -503,6 +462,7 @@ class ChatViewModel @Inject constructor(
         private val showClearChat: Boolean,
         private val collectPoints: Boolean,
         private val notifyPoints: Boolean,
+        private val showRaids: Boolean,
         private val useApiCommands: Boolean,
         private val useApiChatMessages: Boolean,
         private val useEventSubChat: Boolean,
@@ -527,7 +487,7 @@ class ChatViewModel @Inject constructor(
             if (displayName != null && !chatters.containsKey(displayName)) {
                 val chatter = Chatter(displayName)
                 chatters[displayName] = chatter
-                _newChatter.postValue(chatter)
+                newChatter.value = chatter
             }
         }
 
@@ -537,8 +497,8 @@ class ChatViewModel @Inject constructor(
                     try {
                         sendCommand(message)
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                        if (e.message == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "refresh"
                         }
                     }
                 } else {
@@ -647,12 +607,14 @@ class ChatViewModel @Inject constructor(
             val result = ChatUtils.parseNotice(applicationContext, message)
             onMessage(result.first)
             if (result.second) {
-                _hideRaid.postValue(true)
+                if (!hideRaid.value) {
+                    hideRaid.value = true
+                }
             }
         }
 
         override fun onRoomState(message: String) {
-            roomState.postValue(ChatUtils.parseRoomState(message))
+            roomState.value = ChatUtils.parseRoomState(message)
         }
 
         fun loadUserEmotes() {
@@ -666,14 +628,14 @@ class ChatViewModel @Inject constructor(
                         url4x = it.url4x,
                         format = it.format
                     ) })
-                    userEmotes.postValue(saved.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                    _userEmotes.value = saved.sortedByDescending { it.ownerId == channelId }.map { Emote(
                         name = it.name,
                         url1x = it.url1x,
                         url2x = it.url2x,
                         url3x = it.url3x,
                         url4x = it.url4x,
                         format = it.format
-                    ) })
+                    ) }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank()) {
                         viewModelScope.launch {
@@ -689,21 +651,21 @@ class ChatViewModel @Inject constructor(
                                             url4x = it.url4x,
                                             format = it.format
                                         ) })
-                                        userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                                        _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
                                             name = it.name,
                                             url1x = it.url1x,
                                             url2x = it.url2x,
                                             url3x = it.url3x,
                                             url4x = it.url4x,
                                             format = it.format
-                                        ) })
+                                        ) }
                                         loadedUserEmotes = true
                                     }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to load user emotes", e)
-                                if (e.message == "failed integrity check") {
-                                    _integrity.postValue(true)
+                                if (e.message == "failed integrity check" && integrity.value == null) {
+                                    integrity.value = "refresh"
                                 }
                             }
                         }
@@ -731,14 +693,14 @@ class ChatViewModel @Inject constructor(
                                 url4x = it.url4x,
                                 format = it.format
                             ) })
-                            userEmotes.postValue(sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
+                            _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
                                 name = it.name,
                                 url1x = it.url1x,
                                 url2x = it.url2x,
                                 url3x = it.url3x,
                                 url4x = it.url4x,
                                 format = it.format
-                            ) })
+                            ) }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to load emote sets", e)
@@ -774,14 +736,13 @@ class ChatViewModel @Inject constructor(
                             isAction = true,
                         ))
                     }
-                    streamLiveChanged.postValue(Pair(playbackMessage, channelLogin))
                 }
-                viewerCount.postValue(playbackMessage.viewers)
+                _playbackMessage.value = playbackMessage
             }
         }
 
-        override fun onTitleUpdate(message: JSONObject) {
-            title.postValue(PubSubUtils.parseTitleUpdate(message))
+        override fun onStreamInfo(message: JSONObject) {
+            _streamInfo.value = PubSubUtils.parseStreamInfo(message)
         }
 
         private fun onRewardMessage(message: ChatMessage) {
@@ -848,8 +809,8 @@ class ChatViewModel @Inject constructor(
                     try {
                         repository.loadClaimPoints(gqlHeaders, channelId, channelLogin)
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") {
-                            _integrity.postValue(true)
+                        if (e.message == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "refresh"
                         }
                     }
                 }
@@ -866,22 +827,22 @@ class ChatViewModel @Inject constructor(
 
         override fun onRaidUpdate(message: JSONObject, openStream: Boolean) {
             PubSubUtils.onRaidUpdate(message, openStream)?.let {
-                raidNewId = it.raidId != usedRaidId
-                raid.postValue(it)
-                if (raidNewId) {
+                if (it.raidId != usedRaidId) {
                     usedRaidId = it.raidId
+                    raidClosed = false
                     if (collectPoints && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         viewModelScope.launch {
                             try {
                                 repository.loadJoinRaid(gqlHeaders, it.raidId)
                             } catch (e: Exception) {
-                                if (e.message == "failed integrity check") {
-                                    _integrity.postValue(true)
+                                if (e.message == "failed integrity check" && integrity.value == null) {
+                                    integrity.value = "refresh"
                                 }
                             }
                         }
                     }
                 }
+                raid.value = it
             }
         }
 
@@ -922,7 +883,7 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onRoomState(json: JSONObject, timestamp: String?) {
-            roomState.postValue(EventSubUtils.parseRoomState(json))
+            roomState.value = EventSubUtils.parseRoomState(json)
         }
 
         fun addEmotes(list: List<Emote>) {
@@ -940,15 +901,17 @@ class ChatViewModel @Inject constructor(
                 pubSub?.disconnect()
                 usedRaidId = null
                 onRaidClose()
-                _chatMessages.postValue(
-                    mutableListOf(ChatMessage(
+                _chatMessages.value = arrayListOf(
+                    ChatMessage(
                         message = ContextCompat.getString(applicationContext, R.string.disconnected),
                         color = "#999999",
                         isAction = true,
-                    ))
+                    )
                 )
-                _hideRaid.postValue(true)
-                roomState.postValue(RoomState("0", "-1", "0", "0", "0"))
+                if (!hideRaid.value) {
+                    hideRaid.value = true
+                }
+                roomState.value = RoomState("0", "-1", "0", "0", "0")
             }
         }
 
@@ -1412,7 +1375,7 @@ class ChatViewModel @Inject constructor(
                 readChatFile(chatUrl)
             } else {
                 if (!videoId.isNullOrBlank()) {
-                    chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, getCurrentSpeed, this, { _chatMessages.postValue(ArrayList()) }, { _integrity.postValue(true) }, viewModelScope).apply { start() }
+                    chatReplayManager = ChatReplayManager(gqlHeaders, repository, videoId, startTime, getCurrentPosition, getCurrentSpeed, this, { _chatMessages.value = ArrayList() }, { if (integrity.value == null) integrity.value = "refresh" }, viewModelScope).apply { start() }
                 }
             }
         }
@@ -1798,10 +1761,10 @@ class ChatViewModel @Inject constructor(
                             } while (token != JsonToken.END_DOCUMENT)
                         }
                     }
-                    localTwitchEmotes.postValue(twitchEmotes)
-                    channelBadges.postValue(twitchBadges)
-                    cheerEmotes.postValue(cheerEmotesList)
-                    channelStvEmotes.postValue(emotes)
+                    _localTwitchEmotes.value = twitchEmotes
+                    _channelBadges.value = twitchBadges
+                    _cheerEmotes.value = cheerEmotesList
+                    _channelStvEmotes.value = emotes
                     if (emotes.isEmpty()) {
                         viewModelScope.launch {
                             loadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
@@ -1809,7 +1772,7 @@ class ChatViewModel @Inject constructor(
                     }
                     if (messages.isNotEmpty()) {
                         viewModelScope.launch {
-                            chatReplayManagerLocal = ChatReplayManagerLocal(messages, startTimeMs, getCurrentPosition, getCurrentSpeed, this@VideoChatController, { _chatMessages.postValue(ArrayList()) }, viewModelScope).apply { start() }
+                            chatReplayManagerLocal = ChatReplayManagerLocal(messages, startTimeMs, getCurrentPosition, getCurrentSpeed, this@VideoChatController, { _chatMessages.value = ArrayList() }, viewModelScope).apply { start() }
                         }
                     }
                 } catch (e: Exception) {
@@ -1869,8 +1832,8 @@ class ChatViewModel @Inject constructor(
         abstract fun stop()
 
         override fun onMessage(message: ChatMessage) {
-            _chatMessages.value?.add(message)
-            _newMessage.postValue(message)
+            _chatMessages.value.add(message)
+            newMessage.value = true
         }
     }
 

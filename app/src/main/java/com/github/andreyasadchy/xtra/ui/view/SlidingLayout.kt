@@ -401,13 +401,15 @@ class SlidingLayout : LinearLayout {
                 it.top = if (isPortrait) dragView.measuredHeight + top else top
                 it.bottom = height + top
             }
-            if (isMaximized && top <= 5) {
-                if (!backgroundVisible) {
-                    enableBackground(isPortrait)
-                }
-            } else {
-                if (backgroundVisible) {
-                    disableBackground()
+            if (!isAnimating) {
+                if (isMaximized && top <= 10) {
+                    if (!backgroundVisible) {
+                        enableBackground(isPortrait)
+                    }
+                } else {
+                    if (backgroundVisible) {
+                        disableBackground()
+                    }
                 }
             }
         }

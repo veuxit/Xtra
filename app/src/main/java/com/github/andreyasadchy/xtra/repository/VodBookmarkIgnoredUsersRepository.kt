@@ -11,7 +11,11 @@ import javax.inject.Singleton
 class VodBookmarkIgnoredUsersRepository @Inject constructor(
     private val vodBookmarkIgnoredUsersDao: VodBookmarkIgnoredUsersDao) {
 
-    fun loadUsers() = vodBookmarkIgnoredUsersDao.getAll()
+    fun loadUsersFlow() = vodBookmarkIgnoredUsersDao.getAllFlow()
+
+    suspend fun loadUsers() = withContext(Dispatchers.IO) {
+        vodBookmarkIgnoredUsersDao.getAll()
+    }
 
     suspend fun getUserById(id: String) = withContext(Dispatchers.IO) {
         vodBookmarkIgnoredUsersDao.getById(id)

@@ -5,13 +5,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.databinding.SortBarBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
@@ -19,14 +22,17 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
+import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -49,7 +55,7 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(it)
+            viewModel.saveBookmark(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), it)
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -70,8 +76,12 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
                 saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_VIDEOS, false)
             ).show(childFragmentManager, null)
         }
-        viewModel.sortText.observe(viewLifecycleOwner) {
-            sortBar.sortText.text = it
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sortText.collectLatest {
+                    sortBar.sortText.text = it
+                }
+            }
         }
     }
 
@@ -97,6 +107,13 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
 
     override fun onNetworkRestored() {
         pagingAdapter.retry()
+    }
+
+    override fun onIntegrityDialogCallback(callback: String?) {
+        (parentFragment as? IntegrityDialog.CallbackListener)?.onIntegrityDialogCallback("refresh")
+        if (callback == "refresh") {
+            pagingAdapter.refresh()
+        }
     }
 
     override fun onDestroyView() {

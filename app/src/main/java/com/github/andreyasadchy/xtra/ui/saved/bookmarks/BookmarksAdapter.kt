@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentVideosListItemBinding
+import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -51,9 +52,9 @@ class BookmarksAdapter(
         holder.bind(getItem(position))
     }
 
-    private var positions: Map<Long, Long>? = null
+    private var positions: List<VideoPosition>? = null
 
-    fun setVideoPositions(positions: Map<Long, Long>) {
+    fun setVideoPositions(positions: List<VideoPosition>) {
         this.positions = positions
         if (itemCount != 0) {
             notifyDataSetChanged()
@@ -101,7 +102,7 @@ class BookmarksAdapter(
                         )
                     }
                     val getDuration = item.duration?.let { TwitchApiHelper.getDuration(it) }
-                    val position = item.videoId?.toLongOrNull()?.let { positions?.get(it) }
+                    val position = item.videoId?.toLongOrNull()?.let { id -> positions?.find { it.id == id }?.position }
                     val ignore = ignored?.find { it.user_id == item.userId } != null
                     val userType = item.userType ?: item.userBroadcasterType
                     root.setOnClickListener {
