@@ -121,7 +121,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 }
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.newMessage.collectLatest {
+                        viewModel.newMessage.collect {
                             if (it) {
                                 chatView.notifyMessageAdded()
                                 viewModel.newMessage.value = false
