@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">在啟動時驗證權杖</string>
     <string name="tokens">權杖</string>
     <string name="download_limit">下載並行限制</string>
-    <string name="show_conscrypt_error_toast">顯示 Conscrypt 錯誤浮動式訊息</string>
     <string name="followed_only">僅已關注</string>
     <string name="api_gql2">GQL 客戶端 ID 2</string>
     <string name="api_gql_token2">GQL 權杖 2</string>

@@ -1,6 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.player
 
+import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
+import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.util.chat.OnChatMessageReceivedListener
@@ -59,9 +61,51 @@ class ChatReplayManager @Inject constructor(
                 } else {
                     repository.loadVideoMessages(gqlHeaders, videoId, cursor = cursor)
                 }
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                val comments = response.data!!.video.comments
+                val messages = comments.edges.mapNotNull { comment ->
+                    comment.node.let { item ->
+                        item.message?.let { message ->
+                            val chatMessage = StringBuilder()
+                            val emotes = message.fragments?.mapNotNull { fragment ->
+                                fragment.text?.let { text ->
+                                    fragment.emote?.emoteID?.let { id ->
+                                        TwitchEmote(
+                                            id = id,
+                                            begin = chatMessage.codePointCount(0, chatMessage.length),
+                                            end = chatMessage.codePointCount(0, chatMessage.length) + text.lastIndex
+                                        )
+                                    }.also { chatMessage.append(text) }
+                                }
+                            }
+                            val badges = message.userBadges?.mapNotNull { badge ->
+                                badge.setID?.let { setId ->
+                                    badge.version?.let { version ->
+                                        Badge(
+                                            setId = setId,
+                                            version = version,
+                                        )
+                                    }
+                                }
+                            }
+                            VideoChatMessage(
+                                id = item.id,
+                                offsetSeconds = item.contentOffsetSeconds,
+                                userId = item.commenter?.id,
+                                userLogin = item.commenter?.login,
+                                userName = item.commenter?.displayName,
+                                message = chatMessage.toString(),
+                                color = message.userColor,
+                                emotes = emotes,
+                                badges = badges,
+                                fullMsg = item.toString()
+                            )
+                        }
+                    }
+                }
                 messageJob?.cancel()
-                list.addAll(response.data)
-                cursor = if (response.hasNextPage != false) response.cursor else null
+                list.addAll(messages)
+                cursor = if (comments.pageInfo?.hasNextPage != false) comments.edges.lastOrNull()?.cursor else null
                 isLoading = false
                 startJob()
             } catch (e: Exception) {

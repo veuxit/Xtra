@@ -10,7 +10,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortGame
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
@@ -81,8 +80,7 @@ class GameVideosViewModel @Inject constructor(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(applicationContext).helixToken,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                     helixPeriod = period,
                     helixBroadcastTypes = broadcastType,
                     helixLanguage = language?.lowercase(),
@@ -131,7 +129,7 @@ class GameVideosViewModel @Inject constructor(
                 VideoSortEnum.TIME.value -> VideoSortEnum.TIME
                 else -> VideoSortEnum.VIEWS
             },
-            period = if (Account.get(applicationContext).helixToken.isNullOrBlank()) {
+            period = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) {
                 VideoPeriodEnum.WEEK
             } else {
                 when (sortValues?.videoPeriod) {
@@ -160,14 +158,14 @@ class GameVideosViewModel @Inject constructor(
                 sortValues?.apply {
                     this.saveSort = true
                     videoSort = sort.value
-                    if (!Account.get(applicationContext).helixToken.isNullOrBlank()) videoPeriod = period.value
+                    if (!TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) videoPeriod = period.value
                     videoType = type.value
                     videoLanguageIndex = languageIndex
                 } ?: args.gameId?.let { SortGame(
                     id = it,
                     saveSort = true,
                     videoSort = sort.value,
-                    videoPeriod = if (Account.get(applicationContext).helixToken.isNullOrBlank()) null else period.value,
+                    videoPeriod = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) null else period.value,
                     videoType = type.value,
                     videoLanguageIndex = languageIndex)
                 }
@@ -186,13 +184,13 @@ class GameVideosViewModel @Inject constructor(
                 val sortDefaults = sortGameRepository.getById("default")
                 (sortDefaults?.apply {
                     videoSort = sort.value
-                    if (!Account.get(applicationContext).helixToken.isNullOrBlank()) videoPeriod = period.value
+                    if (!TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) videoPeriod = period.value
                     videoType = type.value
                     videoLanguageIndex = languageIndex
                 } ?: SortGame(
                     id = "default",
                     videoSort = sort.value,
-                    videoPeriod = if (Account.get(applicationContext).helixToken.isNullOrBlank()) null else period.value,
+                    videoPeriod = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) null else period.value,
                     videoType = type.value,
                     videoLanguageIndex = languageIndex
                 )).let { sortGameRepository.save(it) }

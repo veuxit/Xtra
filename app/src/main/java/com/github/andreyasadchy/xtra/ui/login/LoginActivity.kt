@@ -82,7 +82,9 @@ class LoginActivity : AppCompatActivity() {
             }
             windowInsets
         }
-        val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
+        val helixHeaders = TwitchApiHelper.getHelixHeaders(this)
+        val helixClientId = helixHeaders[C.HEADER_CLIENT_ID]
+        val helixToken = helixHeaders[C.HEADER_TOKEN]?.removePrefix("Bearer ")
         val account = Account.get(this)
         if (account !is NotLoggedIn) {
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(this, true)
@@ -91,14 +93,15 @@ class LoginActivity : AppCompatActivity() {
             TwitchApiHelper.checkedValidation = false
             Account.set(this, null)
             prefs().edit {
+                putString(C.TOKEN, null)
                 putString(C.GQL_HEADERS, null)
                 putLong(C.INTEGRITY_EXPIRATION, 0)
                 putString(C.GQL_TOKEN2, null)
             }
             lifecycleScope.launch {
-                if (!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank()) {
+                if (!helixClientId.isNullOrBlank() && !helixToken.isNullOrBlank()) {
                     try {
-                        repository.revoke(helixClientId, account.helixToken)
+                        repository.revoke(helixClientId, helixToken)
                     } catch (e: Exception) {
 
                     }
@@ -296,7 +299,10 @@ class LoginActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 if (!helixToken.isNullOrBlank()) {
                     TwitchApiHelper.checkedValidation = true
-                    Account.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken))
+                    Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
+                    prefs().edit {
+                        putString(C.TOKEN, helixToken)
+                    }
                 }
                 setResult(RESULT_OK)
                 finish()
@@ -324,7 +330,10 @@ class LoginActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         if (!helixToken.isNullOrBlank()) {
                             TwitchApiHelper.checkedValidation = true
-                            Account.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken))
+                            Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
+                            prefs().edit {
+                                putString(C.TOKEN, helixToken)
+                            }
                         }
                         setResult(RESULT_OK)
                         finish()
@@ -363,7 +372,7 @@ class LoginActivity : AppCompatActivity() {
                                     }
                                     if ((apiSetting == 0 && tokens.count() == 2) || (apiSetting == 1) || (apiSetting == 2)) {
                                         TwitchApiHelper.checkedValidation = true
-                                        Account.set(this@LoginActivity, LoggedIn(userId, userLogin, helixToken))
+                                        Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
                                         if (!gqlToken.isNullOrBlank()) {
                                             prefs().edit {
                                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
@@ -375,6 +384,11 @@ class LoginActivity : AppCompatActivity() {
                                                 } else {
                                                     putString(C.GQL_TOKEN2, gqlToken)
                                                 }
+                                            }
+                                        }
+                                        if (!helixToken.isNullOrBlank()) {
+                                            prefs().edit {
+                                                putString(C.TOKEN, helixToken)
                                             }
                                         }
                                         setResult(RESULT_OK)

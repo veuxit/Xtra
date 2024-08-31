@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
@@ -75,8 +76,6 @@ android {
             "com.squareup.okhttp3:okhttp:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
             "com.squareup.retrofit2:retrofit:2.6.4",
-            "com.squareup.retrofit2:converter-gson:2.6.4",
-            "com.google.code.gson:gson:2.9.1",
         ))
     }
 }
@@ -112,8 +111,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson)
-    implementation(libs.gson)
+    implementation(libs.retrofit.converter.serialization)
+    implementation(libs.serialization.json)
     implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)

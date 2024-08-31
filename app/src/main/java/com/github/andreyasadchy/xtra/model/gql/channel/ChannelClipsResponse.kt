@@ -1,0 +1,59 @@
+package com.github.andreyasadchy.xtra.model.gql.channel
+
+import com.github.andreyasadchy.xtra.model.gql.Error
+import com.github.andreyasadchy.xtra.model.gql.PageInfo
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ChannelClipsResponse(
+    val errors: List<Error>? = null,
+    val data: Data? = null,
+) {
+    @Serializable
+    data class Data(
+        val user: Channel,
+    )
+
+    @Serializable
+    data class Channel(
+        val clips: Clips? = null,
+    )
+
+    @Serializable
+    data class Clips(
+        val edges: List<Item>,
+        val pageInfo: PageInfo? = null,
+    )
+
+    @Serializable
+    data class Item(
+        val node: Clip,
+        val cursor: String? = null,
+    )
+
+    @Serializable
+    data class Clip(
+        val slug: String? = null,
+        val broadcaster: User? = null,
+        val game: Game? = null,
+        val title: String? = null,
+        val viewCount: Int? = null,
+        val createdAt: String? = null,
+        val thumbnailURL: String? = null,
+        val durationSeconds: Double? = null,
+    )
+
+    @Serializable
+    data class User(
+        val id: String? = null,
+        val login: String? = null,
+        val displayName: String? = null,
+        val profileImageURL: String? = null,
+    )
+
+    @Serializable
+    data class Game(
+        val id: String? = null,
+        val name: String? = null,
+    )
+}

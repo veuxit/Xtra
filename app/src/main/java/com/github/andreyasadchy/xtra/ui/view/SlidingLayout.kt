@@ -365,7 +365,7 @@ class SlidingLayout : LinearLayout {
                 Color.BLACK
             }
         )
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             @Suppress("DEPRECATION")
             context.getActivity()?.window?.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         }
@@ -374,7 +374,7 @@ class SlidingLayout : LinearLayout {
     private fun disableBackground() {
         backgroundVisible = false
         (parent as View).setBackgroundColor(Color.TRANSPARENT)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             @Suppress("DEPRECATION")
             context.getActivity()?.window?.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         }

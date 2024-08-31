@@ -53,7 +53,7 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowGame(filesDir: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, setting: Int, gameId: String?, gameSlug: String?, gameName: String?) {
+    fun saveFollowGame(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, setting: Int, gameId: String?, gameSlug: String?, gameName: String?) {
         viewModelScope.launch {
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
@@ -74,7 +74,7 @@ class GamePagerViewModel @Inject constructor(
                         val path = filesDir + File.separator + "box_art" + File.separator + gameId
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                repository.loadGameBoxArt(gameId, helixClientId, helixToken, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
+                                repository.loadGameBoxArt(gameId, helixHeaders, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
                                     okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                         if (response.isSuccessful) {
                                             File(path).sink().buffer().use { sink ->
@@ -126,7 +126,7 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalGame(filesDir: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, gameId: String?, gameName: String?) {
+    fun updateLocalGame(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, gameId: String?, gameName: String?) {
         if (!updatedLocalGame) {
             updatedLocalGame = true
             if (!gameId.isNullOrBlank()) {
@@ -135,7 +135,7 @@ class GamePagerViewModel @Inject constructor(
                     val path = filesDir + File.separator + "box_art" + File.separator + gameId
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            repository.loadGameBoxArt(gameId, helixClientId, helixToken, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
+                            repository.loadGameBoxArt(gameId, helixHeaders, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
                                 okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                     if (response.isSuccessful) {
                                         File(path).sink().buffer().use { sink ->

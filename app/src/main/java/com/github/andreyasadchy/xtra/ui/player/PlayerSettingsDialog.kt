@@ -75,7 +75,7 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment() {
                     }
                 }
                 if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                    val isLoggedIn = !Account.get(requireContext()).login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !Account.get(requireContext()).helixToken.isNullOrBlank())
+                    val isLoggedIn = !Account.get(requireContext()).login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                     if (isLoggedIn && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_BAR, true)) {
                         menuChatBar.visible()
                         if (requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {

@@ -7,7 +7,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.datasource.SearchGamesDataSource
 import com.github.andreyasadchy.xtra.util.C
@@ -37,8 +36,7 @@ class GameSearchViewModel @Inject constructor(
         ) {
             SearchGamesDataSource(
                 query = query,
-                helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(applicationContext).helixToken,
+                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                 helixApi = helix,
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlApi = graphQLRepository,

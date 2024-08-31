@@ -14,8 +14,8 @@ import javax.inject.Singleton
 class AuthRepository @Inject constructor(
     private val api: IdApi) {
 
-    suspend fun validate(tokenWithPrefix: String): ValidationResponse? = withContext(Dispatchers.IO) {
-        api.validateToken(tokenWithPrefix)
+    suspend fun validate(token: String): ValidationResponse = withContext(Dispatchers.IO) {
+        api.validateToken(token)
     }
 
     suspend fun revoke(clientId: String, token: String) = withContext(Dispatchers.IO) {

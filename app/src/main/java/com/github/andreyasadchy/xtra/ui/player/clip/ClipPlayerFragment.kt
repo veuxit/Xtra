@@ -38,7 +38,6 @@ import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.enable
-import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.common.util.concurrent.MoreExecutors
@@ -242,7 +241,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != clip.channelId || account.login != clip.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, clip.channelId, clip.channelLogin)
+            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, clip.channelId, clip.channelLogin)
         }
     }
 
@@ -328,7 +327,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                             val account = Account.get(requireContext())
                             val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
                             if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != clip.channelId || account.login != clip.channelLogin) || setting == 1)) {
-                                viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, clip.channelId, clip.channelLogin)
+                                viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, clip.channelId, clip.channelLogin)
                             }
                         }
                         "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, clip.channelId, clip.channelLogin, clip.channelName, clip.channelLogo)

@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">Validar tokens al inicio</string>
     <string name="tokens">Tokens</string>
     <string name="download_limit">Límite de descarga paralela</string>
-    <string name="show_conscrypt_error_toast">Mostrar el brindis de error de Conscrypt</string>
     <string name="followed_only">Sólo seguido</string>
     <string name="api_gql2">Identificación de cliente GQL 2</string>
     <string name="api_gql_token2">Token GQL 2</string>

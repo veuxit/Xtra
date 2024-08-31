@@ -2,7 +2,6 @@ package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.util.Base64
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -75,12 +74,12 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadStream(stream: Stream, loop: Boolean, helixClientId: String?, account: Account, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadStream(stream: Stream, loop: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (loop) {
             viewModelScope.launch {
                 while (isActive) {
                     try {
-                        updateStream(stream, helixClientId, account.helixToken, gqlHeaders, checkIntegrity)
+                        updateStream(stream, helixHeaders, gqlHeaders, checkIntegrity)
                         delay(300000L)
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
@@ -93,7 +92,7 @@ class StreamPlayerViewModel @Inject constructor(
         } else if (stream.viewerCount == null) {
             viewModelScope.launch {
                 try {
-                    updateStream(stream, helixClientId, account.helixToken, gqlHeaders, checkIntegrity)
+                    updateStream(stream, helixHeaders, gqlHeaders, checkIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "stream"
@@ -103,8 +102,8 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateStream(stream: Stream, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        repository.loadStream(stream.channelId, stream.channelLogin, helixClientId, helixToken, gqlHeaders, checkIntegrity).let {
+    private suspend fun updateStream(stream: Stream, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+        repository.loadStream(stream.channelId, stream.channelLogin, helixHeaders, gqlHeaders, checkIntegrity).let {
             this.stream.value = stream.copy(
                 id = if (!it?.id.isNullOrBlank()) {
                     it?.id

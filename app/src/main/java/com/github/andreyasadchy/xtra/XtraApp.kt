@@ -8,11 +8,8 @@ import androidx.multidex.MultiDex
 import androidx.work.Configuration
 import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
-import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TlsSocketFactory
-import com.github.andreyasadchy.xtra.util.prefs
-import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
@@ -38,10 +35,8 @@ class XtraApp : Application(), Configuration.Provider {
         super.onCreate()
         try {
             Security.insertProviderAt(Conscrypt.newProvider(), 1)
-        } catch (e: VerifyError) {
-            if (prefs().getBoolean(C.DEBUG_SHOW_CONSCRYPT_ERROR_TOAST, true)) {
-                toast("Conscrypt VerifyError")
-            }
+        } catch (e: Exception) {
+
         }
         val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
             init(null as KeyStore?)

@@ -228,5 +228,4 @@ object C {
     const val ENABLE_INTEGRITY = "enable_integrity"
     const val USE_WEBVIEW_INTEGRITY = "use_webview_integrity"
     const val GET_ALL_GQL_HEADERS = "get_all_gql_headers"
-    const val DEBUG_SHOW_CONSCRYPT_ERROR_TOAST = "debug_show_conscrypt_error_toast"
 }

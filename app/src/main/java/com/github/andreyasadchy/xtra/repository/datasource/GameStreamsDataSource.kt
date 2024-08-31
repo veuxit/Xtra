@@ -2,24 +2,18 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
 
 class GameStreamsDataSource(
     private val gameId: String?,
     private val gameSlug: String?,
     private val gameName: String?,
-    private val helixClientId: String?,
-    private val helixToken: String?,
+    private val helixHeaders: Map<String, String>,
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val gqlQuerySort: StreamSort?,
@@ -36,31 +30,31 @@ class GameStreamsDataSource(
         return try {
             val response = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> { api = C.GQL; gqlLoad(params) }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> { api = C.GQL; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
-                            C.HELIX -> if (!helixToken.isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                             C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                             C.GQL -> { api = C.GQL; gqlLoad(params) }
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
-                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                        if (e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -79,66 +73,111 @@ class GameStreamsDataSource(
     }
 
     private suspend fun helixLoad(params: LoadParams<Int>): List<Stream> {
-        val get = helixApi.getStreams(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+        val response = helixApi.getStreams(
+            headers = helixHeaders,
             gameId = gameId,
             limit = params.loadSize,
             offset = offset
         )
-        val list = mutableListOf<Stream>()
-        get.data.let { list.addAll(it) }
-        val ids = mutableListOf<String>()
-        for (i in list) {
-            i.channelId?.let { ids.add(it) }
+        val users = response.data.mapNotNull { it.channelId }.let {
+            helixApi.getUsers(
+                headers = helixHeaders,
+                ids = it
+            ).data
         }
-        if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = ids).data
-            for (i in users) {
-                val items = list.filter { it.channelId == i.channelId }
-                for (item in items) {
-                    item.profileImageUrl = i.profileImageUrl
-                }
-            }
+        val list = response.data.map {
+            Stream(
+                id = it.id,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                gameId = gameId,
+                gameName = gameName,
+                type = it.type,
+                title = it.title,
+                viewerCount = it.viewerCount,
+                startedAt = it.startedAt,
+                thumbnailUrl = it.thumbnailUrl,
+                profileImageUrl = it.channelId?.let { id ->
+                    users.find { user -> user.channelId == id }?.profileImageUrl
+                },
+                tags = it.tags
+            )
         }
-        offset = get.cursor
+        offset = response.pagination?.cursor
         return list
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Stream> {
-        val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryGameStreams(
+        val response = gqlApi.loadQueryGameStreams(
             headers = gqlHeaders,
-            query = context.resources.openRawResource(R.raw.gamestreams).bufferedReader().use { it.readText() },
-            variables = JsonObject().apply {
-                addProperty("id", if (!gameId.isNullOrBlank()) gameId else null)
-                addProperty("name", if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null)
-                addProperty("sort", gqlQuerySort.toString())
-                val tagsArray = JsonArray()
-                tags?.forEach {
-                    tagsArray.add(it)
-                }
-                add("tags", tagsArray)
-                addProperty("first", params.loadSize)
-                addProperty("after", offset)
-            })
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data.onEach {
-            it.gameId = gameId
-            it.gameName = gameName
+            id = if (!gameId.isNullOrBlank()) gameId else null,
+            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) gameSlug else null,
+            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null,
+            sort = gqlQuerySort?.toString(),
+            tags = tags,
+            first = params.loadSize,
+            after = offset
+        )
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
+        val data = response.data!!.game!!.streams!!
+        val items = data.edges!!
+        val list = items.mapNotNull { item ->
+            item?.node?.let {
+                Stream(
+                    id = it.id,
+                    channelId = it.broadcaster?.id,
+                    channelLogin = it.broadcaster?.login,
+                    channelName = it.broadcaster?.displayName,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    type = it.type,
+                    title = it.broadcaster?.broadcastSettings?.title,
+                    viewerCount = it.viewersCount,
+                    startedAt = it.createdAt?.toString(),
+                    thumbnailUrl = it.previewImageURL,
+                    profileImageUrl = it.broadcaster?.profileImageURL,
+                    tags = it.freeformTags?.mapNotNull { tag -> tag.name }
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor?.toString()
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Stream> {
-        val get = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort?.value, tags, params.loadSize, offset)
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data.onEach {
-            it.gameId = gameId
-            it.gameSlug = gameSlug
-            it.gameName = gameName
+        val response = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort?.value, tags, params.loadSize, offset)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
+        val data = response.data!!.game.streams
+        val items = data.edges
+        val list = items.map { item ->
+            item.node.let {
+                Stream(
+                    id = it.id,
+                    channelId = it.broadcaster?.id,
+                    channelLogin = it.broadcaster?.login,
+                    channelName = it.broadcaster?.displayName,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    type = it.type,
+                    title = it.title,
+                    viewerCount = it.viewersCount,
+                    thumbnailUrl = it.previewImageURL,
+                    profileImageUrl = it.broadcaster?.profileImageURL,
+                    tags = it.freeformTags?.mapNotNull { tag -> tag.name }
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     override fun getRefreshKey(state: PagingState<Int, Stream>): Int? {

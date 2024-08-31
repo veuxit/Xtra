@@ -1,3 +1,8 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-class RecentMessagesResponse(val messages: List<String>)
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class RecentMessagesResponse(
+    val messages: List<String>
+)

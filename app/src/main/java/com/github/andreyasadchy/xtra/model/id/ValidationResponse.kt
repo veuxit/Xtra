@@ -1,12 +1,13 @@
 package com.github.andreyasadchy.xtra.model.id
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-class ValidationResponse(
-        @SerializedName("client_id")
-        val clientId: String?,
-        @SerializedName("login")
-        val login: String?,
-        @SerializedName("user_id")
-        val userId: String?)
-
+@Serializable
+data class ValidationResponse(
+    @SerialName("client_id")
+    val clientId: String,
+    val login: String? = null,
+    @SerialName("user_id")
+    val userId: String? = null
+)

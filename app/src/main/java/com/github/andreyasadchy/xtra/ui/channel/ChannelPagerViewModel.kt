@@ -46,11 +46,11 @@ class ChannelPagerViewModel @Inject constructor(
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user
 
-    fun loadStream(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadStream(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (_stream.value == null) {
             viewModelScope.launch {
                 try {
-                    _stream.value = repository.loadUserChannelPage(args.channelId, args.channelLogin, helixClientId, helixToken, gqlHeaders, checkIntegrity)
+                    _stream.value = repository.loadUserChannelPage(args.channelId, args.channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
                 } catch (e: Exception) {
 
                 }
@@ -58,36 +58,36 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun loadUser(helixClientId: String?, helixToken: String?) {
+    fun loadUser(helixHeaders: Map<String, String>) {
         if (_user.value == null) {
-            if (!helixToken.isNullOrBlank()) {
+            if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        _user.value = repository.loadUser(args.channelId, args.channelLogin, helixClientId, helixToken)
+                        _user.value = repository.loadUser(args.channelId, args.channelLogin, helixHeaders)
                     } catch (e: Exception) {}
                 }
             }
         }
     }
 
-    fun retry(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun retry(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (_stream.value == null) {
-            loadStream(helixClientId, helixToken, gqlHeaders, checkIntegrity)
+            loadStream(helixHeaders, gqlHeaders, checkIntegrity)
         } else {
             if (_stream.value?.user == null && _user.value == null) {
-                loadUser(helixClientId, helixToken)
+                loadUser(helixHeaders)
             }
         }
     }
 
-    fun isFollowingChannel(helixClientId: String?, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(helixHeaders: Map<String, String>, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
                     val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        if ((!helixClientId.isNullOrBlank() && !account.helixToken.isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
+                        if ((!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
                             (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
-                            repository.loadUserFollowing(helixClientId, account.helixToken, channelId, account.id, gqlHeaders, channelLogin)
+                            repository.loadUserFollowing(helixHeaders, channelId, account.id, gqlHeaders, channelLogin)
                         } else false
                     } else {
                         channelId?.let {

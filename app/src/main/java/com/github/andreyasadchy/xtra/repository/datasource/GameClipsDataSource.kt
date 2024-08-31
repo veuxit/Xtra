@@ -2,26 +2,20 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
 
 class GameClipsDataSource(
     private val gameId: String?,
     private val gameSlug: String?,
     private val gameName: String?,
-    private val helixClientId: String?,
-    private val helixToken: String?,
-    private val started_at: String?,
-    private val ended_at: String?,
+    private val helixHeaders: Map<String, String>,
+    private val startedAt: String?,
+    private val endedAt: String?,
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val gqlQueryLanguages: List<Language>?,
@@ -38,31 +32,31 @@ class GameClipsDataSource(
         return try {
             val response = try {
                 when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> if (gqlQueryLanguages.isNullOrEmpty()) { api = C.GQL; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> if (gqlQueryLanguages.isNullOrEmpty()) { api = C.GQL; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(2)?.second) {
-                            C.HELIX -> if (!helixToken.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                             C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                             C.GQL -> if (gqlQueryLanguages.isNullOrEmpty()) { api = C.GQL; gqlLoad(params) } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
-                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                        if (e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -81,69 +75,118 @@ class GameClipsDataSource(
     }
 
     private suspend fun helixLoad(params: LoadParams<Int>): List<Clip> {
-        val get = helixApi.getClips(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+        val response = helixApi.getClips(
+            headers = helixHeaders,
             gameId = gameId,
-            started_at = started_at,
-            ended_at = ended_at,
+            startedAt = startedAt,
+            endedAt = endedAt,
             limit = params.loadSize,
             cursor = offset
         )
-        val list = mutableListOf<Clip>()
-        get.data.let { list.addAll(it) }
-        val userIds = mutableListOf<String>()
-        for (i in list) {
-            i.channelId?.let { userIds.add(it) }
+        val users = response.data.mapNotNull { it.channelId }.let {
+            helixApi.getUsers(
+                headers = helixHeaders,
+                ids = it
+            ).data
         }
-        if (userIds.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = userIds).data
-            for (i in users) {
-                val items = list.filter { it.channelId == i.channelId }
-                for (item in items) {
-                    item.channelLogin = i.channelLogin
-                    item.profileImageUrl = i.profileImageUrl
-                }
+        val list = response.data.map {
+            val user = it.channelId?.let { id ->
+                users.find { user -> user.channelId == id }
             }
+            Clip(
+                id = it.id,
+                channelId = it.channelId,
+                channelLogin = user?.channelLogin,
+                channelName = it.channelName,
+                videoId = it.videoId,
+                vodOffset = it.vodOffset,
+                gameId = gameId,
+                gameSlug = gameSlug,
+                gameName = gameName,
+                title = it.title,
+                viewCount = it.viewCount,
+                uploadDate = it.createdAt,
+                duration = it.duration,
+                thumbnailUrl = it.thumbnailUrl,
+                profileImageUrl = user?.profileImageUrl,
+            )
         }
-        offset = get.cursor
+        offset = response.pagination?.cursor
         return list
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Clip> {
-        val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryGameClips(
+        val response = gqlApi.loadQueryGameClips(
             headers = gqlHeaders,
-            query = context.resources.openRawResource(R.raw.gameclips).bufferedReader().use { it.readText() },
-            variables = JsonObject().apply {
-                addProperty("id", if (!gameId.isNullOrBlank()) gameId else null)
-                addProperty("name", if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null)
-                val languagesArray = JsonArray()
-                gqlQueryLanguages?.forEach {
-                    languagesArray.add(it.toString())
-                }
-                add("languages", languagesArray)
-                addProperty("sort", gqlQueryPeriod.toString())
-                addProperty("first", params.loadSize)
-                addProperty("after", offset)
-            })
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data.onEach {
-            it.gameId = gameId
-            it.gameName = gameName
+            id = if (!gameId.isNullOrBlank()) gameId else null,
+            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) gameSlug else null,
+            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null,
+            languages = gqlQueryLanguages?.map { it.toString() },
+            sort = gqlQueryPeriod?.toString(),
+            first = params.loadSize,
+            after = offset
+        )
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
+        val data = response.data!!.game!!.clips!!
+        val items = data.edges!!
+        val list = items.mapNotNull { item ->
+            item?.node?.let {
+                Clip(
+                    id = it.slug,
+                    channelId = it.broadcaster?.id,
+                    channelLogin = it.broadcaster?.login,
+                    channelName = it.broadcaster?.displayName,
+                    videoId = it.video?.id,
+                    vodOffset = it.videoOffsetSeconds,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.createdAt?.toString(),
+                    duration = it.durationSeconds?.toDouble(),
+                    thumbnailUrl = it.thumbnailURL,
+                    profileImageUrl = it.broadcaster?.profileImageURL,
+                    videoAnimatedPreviewURL = it.video?.animatedPreviewURL
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor?.toString()
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Clip> {
-        val get = gqlApi.loadGameClips(gqlHeaders, gameSlug, gqlPeriod, params.loadSize, offset)
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data.onEach {
-            it.gameId = gameId
-            it.gameSlug = gameSlug
-            it.gameName = gameName
+        val response = gqlApi.loadGameClips(gqlHeaders, gameSlug, gqlPeriod, params.loadSize, offset)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
+        val data = response.data!!.game.clips
+        val items = data.edges
+        val list = items.map { item ->
+            item.node.let {
+                Clip(
+                    id = it.slug,
+                    channelId = it.broadcaster?.id,
+                    channelLogin = it.broadcaster?.login,
+                    channelName = it.broadcaster?.displayName,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.createdAt,
+                    duration = it.durationSeconds,
+                    thumbnailUrl = it.thumbnailURL,
+                    profileImageUrl = it.broadcaster?.profileImageURL,
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     override fun getRefreshKey(state: PagingState<Int, Clip>): Int? {

@@ -2,12 +2,10 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
-import com.google.gson.JsonObject
 
 class SearchVideosDataSource(
     private val query: String,
@@ -28,7 +26,7 @@ class SearchVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
@@ -36,7 +34,7 @@ class SearchVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -54,24 +52,72 @@ class SearchVideosDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQuerySearchVideos(
+        val response = gqlApi.loadQuerySearchVideos(
             headers = gqlHeaders,
-            query = context.resources.openRawResource(R.raw.searchvideos).bufferedReader().use { it.readText() },
-            variables = JsonObject().apply {
-                addProperty("query", query)
-                addProperty("first", params.loadSize)
-                addProperty("after", offset)
-            })
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data
+            query = query,
+            first = params.loadSize,
+            after = offset
+        )
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.searchFor!!.videos!!
+        val list = data.items!!.map {
+            Video(
+                id = it.id,
+                channelId = it.owner?.id,
+                channelLogin = it.owner?.login,
+                channelName = it.owner?.displayName,
+                type = it.broadcastType?.toString(),
+                title = it.title,
+                viewCount = it.viewCount,
+                uploadDate = it.createdAt?.toString(),
+                duration = it.lengthSeconds?.toString(),
+                thumbnailUrl = it.previewThumbnailURL,
+                gameId = it.game?.id,
+                gameSlug = it.game?.slug,
+                gameName = it.game?.displayName,
+                profileImageUrl = it.owner?.profileImageURL,
+                tags = it.contentTags?.map { tag ->
+                    Tag(
+                        id = tag.id,
+                        name = tag.localizedName
+                    )
+                },
+                animatedPreviewURL =  it.animatedPreviewURL
+            )
+        }
+        offset = data.cursor
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     private suspend fun gqlLoad(): List<Video> {
-        val get = gqlApi.loadSearchVideos(gqlHeaders, query, offset)
-        offset = get.cursor
-        return get.data
+        val response = gqlApi.loadSearchVideos(gqlHeaders, query, offset)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.searchFor.videos
+        val list = data.edges.map { item ->
+            item.item.let {
+                Video(
+                    id = it.id,
+                    channelId = it.owner?.id,
+                    channelLogin = it.owner?.login,
+                    channelName = it.owner?.displayName,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.createdAt,
+                    duration = it.lengthSeconds?.toString(),
+                    thumbnailUrl = it.previewThumbnailURL,
+                    gameId = it.game?.id,
+                    gameSlug = it.game?.slug,
+                    gameName = it.game?.displayName,
+                )
+            }
+        }
+        offset = data.cursor
+        return list
     }
 
     override fun getRefreshKey(state: PagingState<Int, Video>): Int? {

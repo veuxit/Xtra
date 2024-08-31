@@ -258,9 +258,6 @@ object TwitchApiHelper {
         return DateUtils.formatDateTime(context, date, format)
     }
 
-    fun addTokenPrefixHelix(token: String) = "Bearer $token"
-    fun addTokenPrefixGQL(token: String) = "OAuth $token"
-
     fun formatViewsCount(context: Context, count: Int): String {
         return if (count > 1000 && context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)) {
             context.getString(R.string.views, formatCountIfMoreThanAThousand(count))
@@ -299,6 +296,9 @@ object TwitchApiHelper {
         return if (hasDecimal) "${truncated / 10.0}$suffix" else "${truncated / 10}$suffix"
     }
 
+    fun addTokenPrefixGQL(token: String) = "OAuth $token"
+    fun addTokenPrefixHelix(token: String) = "Bearer $token"
+
     fun getGQLHeaders(context: Context, includeToken: Boolean = false): Map<String, String> {
         return mutableMapOf<String, String>().apply {
             if (context.prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
@@ -324,6 +324,21 @@ object TwitchApiHelper {
                             put(C.HEADER_TOKEN, addTokenPrefixGQL(it))
                         }
                     }
+                }
+            }
+        }
+    }
+
+    fun getHelixHeaders(context: Context): Map<String, String> {
+        return mutableMapOf<String, String>().apply {
+            context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")?.let {
+                if (it.isNotBlank()) {
+                    put(C.HEADER_CLIENT_ID, it)
+                }
+            }
+            context.prefs().getString(C.TOKEN, null)?.let {
+                if (it.isNotBlank()) {
+                    put(C.HEADER_TOKEN, addTokenPrefixHelix(it))
                 }
             }
         }

@@ -2,15 +2,12 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
 
 class FollowedVideosDataSource(
     private val gqlHeaders: Map<String, String>,
@@ -32,7 +29,7 @@ class FollowedVideosDataSource(
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref.elementAt(1)?.second) {
                         C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
@@ -40,7 +37,7 @@ class FollowedVideosDataSource(
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     listOf()
                 }
             }
@@ -58,30 +55,85 @@ class FollowedVideosDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val context = XtraApp.INSTANCE.applicationContext
-        val get = gqlApi.loadQueryUserFollowedVideos(
+        val response = gqlApi.loadQueryUserFollowedVideos(
             headers = gqlHeaders,
-            query = context.resources.openRawResource(R.raw.userfollowedvideos).bufferedReader().use { it.readText() },
-            variables = JsonObject().apply {
-                addProperty("sort", gqlQuerySort.toString())
-                val typeArray = JsonArray()
-                gqlQueryType?.let {
-                    typeArray.add(it.toString())
-                }
-                add("type", typeArray)
-                addProperty("first", params.loadSize)
-                addProperty("after", offset)
-            })
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data
+            sort = gqlQuerySort?.toString(),
+            type = gqlQueryType?.let { listOf(it.toString()) },
+            first = params.loadSize,
+            after = offset
+        )
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.user!!.followedVideos!!
+        val items = data.edges!!
+        val list = items.mapNotNull { item ->
+            item?.node?.let {
+                Video(
+                    id = it.id,
+                    channelId = it.owner?.id,
+                    channelLogin = it.owner?.login,
+                    channelName = it.owner?.displayName,
+                    gameId = it.game?.id,
+                    gameSlug = it.game?.slug,
+                    gameName = it.game?.displayName,
+                    type = it.broadcastType?.toString(),
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.createdAt?.toString(),
+                    duration = it.lengthSeconds?.toString(),
+                    thumbnailUrl = it.previewThumbnailURL,
+                    profileImageUrl = it.owner?.profileImageURL,
+                    tags = it.contentTags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    },
+                    animatedPreviewURL =  it.animatedPreviewURL
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor?.toString()
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val get = gqlApi.loadFollowedVideos(gqlHeaders, params.loadSize, offset)
-        offset = get.cursor
-        nextPage = get.hasNextPage ?: true
-        return get.data
+        val response = gqlApi.loadFollowedVideos(gqlHeaders, params.loadSize, offset)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.currentUser.followedVideos
+        val items = data.edges
+        val list = items.map { item ->
+            item.node.let {
+                Video(
+                    id = it.id,
+                    channelId = it.owner?.id,
+                    channelLogin = it.owner?.login,
+                    channelName = it.owner?.displayName,
+                    gameId = it.game?.id,
+                    gameName = it.game?.displayName,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.publishedAt,
+                    duration = it.lengthSeconds?.toString(),
+                    thumbnailUrl = it.previewThumbnailURL,
+                    profileImageUrl = it.owner?.profileImageURL,
+                    tags = it.contentTags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    },
+                    animatedPreviewURL =  it.animatedPreviewURL
+                )
+            }
+        }
+        offset = items.lastOrNull()?.cursor
+        nextPage = data.pageInfo?.hasNextPage ?: true
+        return list
     }
 
     override fun getRefreshKey(state: PagingState<Int, Video>): Int? {

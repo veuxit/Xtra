@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     if (online != null) {
                         if (online) {
                             if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                                viewModel.validate(prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                                viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
                             }
                         }
                         if (flag) {
@@ -366,7 +366,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadVideo(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                        viewModel.loadVideo(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.video.collectLatest { video ->
@@ -384,7 +384,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 url.contains("/clip/") -> {
                     val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                        viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.clip.collectLatest { clip ->
@@ -402,7 +402,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 url.contains("clips.twitch.tv/") -> {
                     val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                        viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.clip.collectLatest { clip ->
@@ -454,7 +454,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 else -> {
                     val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                     if (!login.isNullOrBlank()) {
-                        viewModel.loadUser(login, prefs.getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(this).helixToken, TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                        viewModel.loadUser(login, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
                         lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.user.collectLatest { user ->

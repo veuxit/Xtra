@@ -17,12 +17,12 @@ class MessageClickedViewModel @Inject constructor(private val repository: ApiRep
     val user = MutableStateFlow<Pair<User?, Boolean?>?>(null)
     private var isLoading = false
 
-    fun loadUser(channelId: String, targetId: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadUser(channelId: String, targetId: String? = null, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (user.value == null && !isLoading) {
             isLoading = true
             viewModelScope.launch {
                 try {
-                    val u = repository.loadUserMessageClicked(channelId = channelId, targetId = targetId, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
+                    val u = repository.loadUserMessageClicked(channelId = channelId, targetId = targetId, helixHeaders = helixHeaders, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
                     user.value = Pair(u, u == null)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {

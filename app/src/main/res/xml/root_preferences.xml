@@ -676,11 +676,4 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="debug_show_conscrypt_error_toast"
-        android:title="@string/show_conscrypt_error_toast"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
 </androidx.preference.PreferenceScreen>

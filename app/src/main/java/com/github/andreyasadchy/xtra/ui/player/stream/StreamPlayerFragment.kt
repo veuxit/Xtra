@@ -255,7 +255,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
-            viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, stream.channelId, stream.channelLogin)
+            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, stream.channelId, stream.channelLogin)
         }
     }
 
@@ -271,8 +271,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 loop = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
                         !requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
                         (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                account = account,
+                helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                 checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
             )
@@ -626,7 +625,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                             val account = Account.get(requireContext())
                             val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
                             if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
-                                viewModel.isFollowingChannel(requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, stream.channelId, stream.channelLogin)
+                                viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, stream.channelId, stream.channelLogin)
                             }
                         }
                         "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo)

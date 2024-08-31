@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
@@ -55,13 +54,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             }
         }
         pagingAdapter = BookmarksAdapter(this, {
-            viewModel.updateVideo(
-                filesDir = requireContext().filesDir.path,
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                videoId = it
-            )
+            viewModel.updateVideo(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
         }, {
             if (DownloadUtils.hasStoragePermission(requireActivity())) {
                 DownloadDialog.newInstance(it).show(childFragmentManager, null)
@@ -114,18 +107,11 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                     }
                 }
             }
-            viewModel.updateUsers(
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-            )
+            viewModel.updateUsers(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()))
         }
-        if (!Account.get(requireContext()).helixToken.isNullOrBlank()) {
-            viewModel.updateVideos(
-                filesDir = requireContext().filesDir.path,
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-            )
+        val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
+        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            viewModel.updateVideos(requireContext().filesDir.path, helixHeaders)
         }
     }
 
@@ -142,8 +128,7 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     when (callback) {
                         "users" -> viewModel.updateUsers(
-                            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                            helixToken = Account.get(requireContext()).helixToken,
+                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                         )
                     }
