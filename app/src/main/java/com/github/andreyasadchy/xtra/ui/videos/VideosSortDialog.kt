@@ -11,7 +11,6 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideosSortBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.ALL
@@ -29,6 +28,7 @@ import com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.game.GameVideosFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 
 class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
@@ -103,7 +103,7 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
                     saveSort.gone()
                 }
                 is GameVideosFragment -> {
-                    if (Account.get(requireContext()).helixToken.isNullOrBlank()) {
+                    if (TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) {
                         period.gone()
                     }
                     saveSort.text = requireContext().getString(R.string.save_sort_game)

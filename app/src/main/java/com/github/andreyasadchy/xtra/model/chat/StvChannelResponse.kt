@@ -1,3 +1,10 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-class StvChannelResponse(val emotes: List<Emote>)
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class StvChannelResponse(
+    @SerialName("emote_set")
+    val emoteSet: StvGlobalResponse
+)

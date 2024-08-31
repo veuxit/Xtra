@@ -10,12 +10,10 @@ import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class SearchGamesDataSource(
     private val query: String,
-    private val helixClientId: String?,
-    private val helixToken: String?,
+    private val helixHeaders: Map<String, String>,
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val gqlApi: GraphQLRepository,
@@ -30,31 +28,31 @@ class SearchGamesDataSource(
         return try {
             val response = if (query.isBlank()) listOf() else try {
                 when (apiPref?.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                     C.GQL -> { api = C.GQL; gqlLoad() }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
                     when (apiPref?.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                         C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                         C.GQL -> { api = C.GQL; gqlLoad() }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref?.elementAt(2)?.second) {
-                            C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                             C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
                             C.GQL -> { api = C.GQL; gqlLoad() }
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
-                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                        if (e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
                 }
@@ -73,56 +71,83 @@ class SearchGamesDataSource(
     }
 
     private suspend fun helixLoad(params: LoadParams<Int>): List<Game> {
-        val get = helixApi.getSearchGames(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+        val response = helixApi.getSearchGames(
+            headers = helixHeaders,
             query = query,
             limit = params.loadSize,
             offset = offset
         )
-        offset = get.cursor
-        return get.data
+        val list = response.data.map {
+            Game(
+                gameId = it.id,
+                gameName = it.name,
+                boxArtUrl = it.boxArtUrl,
+            )
+        }
+        offset = response.pagination?.cursor
+        return list
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Game> {
-        val get2 = apolloClient.newBuilder().apply { gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) } }.build().query(SearchGamesQuery(
+        val response = apolloClient.newBuilder().apply {
+            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
+        }.build().query(SearchGamesQuery(
             query = query,
             first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
         )).execute()
-        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-        val get1 = get2.data!!.searchCategories!!
-        val get = get1.edges!!
-        val list = mutableListOf<Game>()
-        for (edge in get) {
-            edge.node?.let { i ->
-                val tags = mutableListOf<Tag>()
-                i.tags?.forEach { tag ->
-                    tags.add(Tag(
-                        id = tag.id,
-                        name = tag.localizedName
-                    ))
-                }
-                list.add(Game(
-                    gameId = i.id,
-                    gameSlug = i.slug,
-                    gameName = i.displayName,
-                    boxArtUrl = i.boxArtURL,
-                    viewersCount = i.viewersCount ?: 0, // returns null if 0
-                    broadcastersCount = i.broadcastersCount ?: 0, // returns null if 0
-                    tags = tags
-                ))
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.searchCategories!!
+        val list = data.edges!!.mapNotNull { item ->
+            item.node?.let {
+                Game(
+                    gameId = it.id,
+                    gameSlug = it.slug,
+                    gameName = it.displayName,
+                    boxArtUrl = it.boxArtURL,
+                    viewersCount = it.viewersCount ?: 0,
+                    broadcastersCount = it.broadcastersCount ?: 0,
+                    tags = it.tags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    }
+                )
             }
         }
-        offset = get1.edges.lastOrNull()?.cursor?.toString()
-        nextPage = get1.pageInfo?.hasNextPage ?: true
+        offset = data.edges.lastOrNull()?.cursor?.toString()
+        nextPage = data.pageInfo?.hasNextPage ?: true
         return list
     }
 
     private suspend fun gqlLoad(): List<Game> {
-        val get = gqlApi.loadSearchGames(gqlHeaders, query, offset)
-        offset = get.cursor
-        return get.data
+        val response = gqlApi.loadSearchGames(gqlHeaders, query, offset)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        val data = response.data!!.searchFor.games
+        val list = data.edges.map { item ->
+            item.item.let {
+                Game(
+                    gameId = it.id,
+                    gameSlug = it.slug,
+                    gameName = it.displayName,
+                    boxArtUrl = it.boxArtURL,
+                    viewersCount = it.viewersCount ?: 0,
+                    tags = it.tags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    }
+                )
+            }
+        }
+        offset = data.cursor
+        return list
     }
 
     override fun getRefreshKey(state: PagingState<Int, Game>): Int? {

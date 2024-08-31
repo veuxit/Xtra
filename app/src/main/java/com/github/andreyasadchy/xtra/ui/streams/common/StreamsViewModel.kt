@@ -9,7 +9,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GameStreamsDataSource
@@ -51,8 +50,7 @@ class StreamsViewModel @Inject constructor(
         ) {
             if (args.gameId == null && args.gameSlug == null && args.gameName == null) {
                 StreamsDataSource(
-                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(applicationContext).helixToken,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                     helixApi = helix,
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     tags = args.tags?.toList(),
@@ -66,8 +64,7 @@ class StreamsViewModel @Inject constructor(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(applicationContext).helixToken,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                     helixApi = helix,
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQuerySort = when (filter.sort) {

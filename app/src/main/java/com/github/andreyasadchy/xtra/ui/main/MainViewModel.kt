@@ -69,11 +69,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadVideo(videoId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadVideo(videoId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (video.value == null) {
             viewModelScope.launch {
                 try {
-                    video.value = repository.loadVideo(videoId, helixClientId, helixToken, gqlHeaders, checkIntegrity)
+                    video.value = repository.loadVideo(videoId, helixHeaders, gqlHeaders, checkIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refresh"
@@ -83,11 +83,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadClip(clipId: String?, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadClip(clipId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (clip.value == null) {
             viewModelScope.launch {
                 try {
-                    clip.value = repository.loadClip(clipId, helixClientId, helixToken, gqlHeaders, checkIntegrity)
+                    clip.value = repository.loadClip(clipId, helixHeaders, gqlHeaders, checkIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refresh"
@@ -97,11 +97,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadUser(login: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadUser(login: String? = null, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (user.value == null) {
             viewModelScope.launch {
                 try {
-                    user.value = repository.loadCheckUser(channelLogin = login, helixClientId = helixClientId, helixToken = helixToken, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
+                    user.value = repository.loadCheckUser(channelLogin = login, helixHeaders = helixHeaders, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refresh"
@@ -111,16 +111,17 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun validate(helixClientId: String?, gqlHeaders: Map<String, String>, activity: Activity) {
+    fun validate(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, activity: Activity) {
         val account = Account.get(activity)
         if (account is NotValidated) {
             viewModelScope.launch {
                 try {
-                    if (!account.helixToken.isNullOrBlank()) {
-                        val response = authRepository.validate(TwitchApiHelper.addTokenPrefixHelix(account.helixToken))
-                        if (!response?.clientId.isNullOrBlank() && response?.clientId == helixClientId) {
-                            if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken))
+                    val helixToken = helixHeaders[C.HEADER_TOKEN]
+                    if (!helixToken.isNullOrBlank()) {
+                        val response = authRepository.validate(helixToken)
+                        if (response.clientId.isNotBlank() && response.clientId == helixHeaders[C.HEADER_CLIENT_ID]) {
+                            if ((!response.userId.isNullOrBlank() && response.userId != account.id) || (!response.login.isNullOrBlank() && response.login != account.login)) {
+                                Account.set(activity, LoggedIn(response.userId?.nullIfEmpty() ?: account.id, response.login?.nullIfEmpty() ?: account.login))
                             }
                         } else {
                             throw IllegalStateException("401")
@@ -129,15 +130,15 @@ class MainViewModel @Inject constructor(
                     val gqlToken = gqlHeaders[C.HEADER_TOKEN]
                     if (!gqlToken.isNullOrBlank()) {
                         val response = authRepository.validate(gqlToken)
-                        if (!response?.clientId.isNullOrBlank() && response?.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
-                            if ((!response?.userId.isNullOrBlank() && response?.userId != account.id) || (!response?.login.isNullOrBlank() && response?.login != account.login)) {
-                                Account.set(activity, LoggedIn(response?.userId?.nullIfEmpty() ?: account.id, response?.login?.nullIfEmpty() ?: account.login, account.helixToken))
+                        if (response.clientId.isNotBlank() && response.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
+                            if ((!response.userId.isNullOrBlank() && response.userId != account.id) || (!response.login.isNullOrBlank() && response.login != account.login)) {
+                                Account.set(activity, LoggedIn(response.userId?.nullIfEmpty() ?: account.id, response.login?.nullIfEmpty() ?: account.login))
                             }
                         } else {
                             throw IllegalStateException("401")
                         }
                     }
-                    if (!account.helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
+                    if (!helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
                         Account.validated()
                     }
                 } catch (e: Exception) {

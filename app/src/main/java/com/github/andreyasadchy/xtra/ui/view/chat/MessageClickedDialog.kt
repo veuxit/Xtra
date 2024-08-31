@@ -17,7 +17,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
@@ -100,8 +99,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                     viewModel.loadUser(
                         channelId = userId,
                         targetId = if (userId != targetId) targetId else null,
-                        helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                        helixToken = Account.get(requireContext()).helixToken,
+                        helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                         checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                     )
@@ -229,8 +227,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                         viewModel.loadUser(
                             channelId = userId,
                             targetId = if (userId != targetId) targetId else null,
-                            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                            helixToken = Account.get(requireContext()).helixToken,
+                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                             checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                         )

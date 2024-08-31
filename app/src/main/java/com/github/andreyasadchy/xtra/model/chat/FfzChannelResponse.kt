@@ -1,3 +1,8 @@
 package com.github.andreyasadchy.xtra.model.chat
 
-class FfzChannelResponse(val emotes: List<Emote>)
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class FfzChannelResponse(
+    val sets: Map<String, FfzResponse>,
+)

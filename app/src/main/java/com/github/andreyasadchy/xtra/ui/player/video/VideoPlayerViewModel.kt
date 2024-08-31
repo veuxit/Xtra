@@ -76,7 +76,7 @@ class VideoPlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveBookmark(filesDir: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, video: Video) {
+    fun saveBookmark(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, video: Video) {
         viewModelScope.launch {
             val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
@@ -123,7 +123,7 @@ class VideoPlayerViewModel @Inject constructor(
                     }
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), helixClientId, helixToken, gqlHeaders) }?.firstOrNull()
+                    video.channelId?.let { repository.loadUserTypes(listOf(it), helixHeaders, gqlHeaders) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }

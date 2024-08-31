@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">Başlangıçta tokenleri doğrula</string>
     <string name="tokens">Tokenler</string>
     <string name="download_limit">Eşzamanlı indirme sınırı</string>
-    <string name="show_conscrypt_error_toast">Conscrypt hata mesajını göster</string>
     <string name="followed_only">Sadece takip edilen</string>
     <string name="api_gql2">GQL istemci kimliği 2</string>
     <string name="api_gql_token2">GQL token 2</string>

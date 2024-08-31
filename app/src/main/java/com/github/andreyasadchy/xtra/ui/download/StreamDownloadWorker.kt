@@ -22,7 +22,6 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
@@ -332,8 +331,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                             repository.loadStream(
                                 channelId = offlineVideo.channelId,
                                 channelLogin = channelLogin,
-                                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                                helixToken = Account.get(context).helixToken,
+                                helixHeaders = TwitchApiHelper.getHelixHeaders(context),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
                                 checkIntegrity = false
                             )
@@ -631,21 +629,20 @@ class StreamDownloadWorker @AssistedInject constructor(
             }
             val downloadEmotes = offlineVideo.downloadChatEmotes
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
-            val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-            val helixToken = Account.get(context).helixToken
+            val helixHeaders = TwitchApiHelper.getHelixHeaders(context)
             val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
             val channelId = offlineVideo.channelId
             val badgeList = mutableListOf<TwitchBadge>().apply {
                 if (downloadEmotes) {
-                    val channelBadges = try { repository.loadChannelBadges(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                    val channelBadges = try { repository.loadChannelBadges(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
                     addAll(channelBadges)
-                    val globalBadges = try { repository.loadGlobalBadges(helixClientId, helixToken, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                    val globalBadges = try { repository.loadGlobalBadges(helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
                     addAll(globalBadges.filter { badge -> badge.setId !in channelBadges.map { it.setId } })
                 }
             }
             val cheerEmoteList = if (downloadEmotes) {
                 try {
-                    repository.loadCheerEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
+                    repository.loadCheerEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
                 } catch (e: Exception) {
                     emptyList()
                 }
@@ -653,13 +650,13 @@ class StreamDownloadWorker @AssistedInject constructor(
             val emoteList = mutableListOf<Emote>().apply {
                 if (downloadEmotes) {
                     if (channelId != null) {
-                        try { playerRepository.loadStvEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                        try { playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                        try { playerRepository.loadFfzEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadStvEmotes(channelId)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadBttvEmotes(channelId)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadFfzEmotes(channelId)) } catch (e: Exception) {}
                     }
-                    try { playerRepository.loadGlobalStvEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                    try { playerRepository.loadGlobalBttvEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                    try { playerRepository.loadGlobalFfzEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalStvEmotes()) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalBttvEmotes()) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalFfzEmotes()) } catch (e: Exception) {}
                 }
             }
             chatFileWriter = if (isShared) {

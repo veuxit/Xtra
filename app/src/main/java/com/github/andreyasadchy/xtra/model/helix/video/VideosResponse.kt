@@ -1,5 +1,10 @@
 package com.github.andreyasadchy.xtra.model.helix.video
 
-import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.helix.Pagination
+import kotlinx.serialization.Serializable
 
-data class VideosResponse(val data: List<Video>, val cursor: String?)
+@Serializable
+data class VideosResponse(
+    val data: List<Video>,
+    val pagination: Pagination? = null,
+)

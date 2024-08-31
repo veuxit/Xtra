@@ -1,5 +1,10 @@
 package com.github.andreyasadchy.xtra.model.helix.clip
 
-import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.helix.Pagination
+import kotlinx.serialization.Serializable
 
-data class ClipsResponse(val data: List<Clip>, val cursor: String?)
+@Serializable
+data class ClipsResponse(
+    val data: List<Clip>,
+    val pagination: Pagination? = null,
+)

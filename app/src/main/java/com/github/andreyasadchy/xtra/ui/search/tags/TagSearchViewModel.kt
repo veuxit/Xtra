@@ -8,7 +8,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.datasource.TagsDataSourceGQL
+import com.github.andreyasadchy.xtra.repository.datasource.TagsDataSource
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,7 +33,7 @@ class TagSearchViewModel @Inject constructor(
         Pager(
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
-            TagsDataSourceGQL(
+            TagsDataSource(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 getGameTags = args.getGameTags,
                 query = query,

@@ -1,7 +1,10 @@
 package com.github.andreyasadchy.xtra.model.id
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-class DeviceCodeResponse(
-        @SerializedName("device_code")
-        val deviceCode: String?)
+@Serializable
+data class DeviceCodeResponse(
+    @SerialName("device_code")
+    val deviceCode: String
+)

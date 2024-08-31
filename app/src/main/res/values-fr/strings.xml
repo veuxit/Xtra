@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">Valider les jetons au démarrage</string>
     <string name="tokens">Jetons</string>
     <string name="download_limit">Limite de téléchargement simultané</string>
-    <string name="show_conscrypt_error_toast">Afficher le message d\'erreur toast Conscrypt</string>
     <string name="followed_only">Suivis seulement</string>
     <string name="api_gql2">Identifiant client GQL 2</string>
     <string name="api_gql_token2">Jeton GQL 2</string>

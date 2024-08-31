@@ -23,17 +23,23 @@ class FollowedGamesDataSource(
         return try {
             val response = try {
                 val list = mutableListOf<Game>()
-                for (i in localFollowsGame.loadFollows()) {
-                    list.add(Game(gameId = i.gameId, gameSlug = i.gameSlug, gameName = i.gameName, boxArtUrl = i.boxArt, followLocal = true))
+                localFollowsGame.loadFollows().forEach {
+                    list.add(Game(
+                        gameId = it.gameId,
+                        gameSlug = it.gameSlug,
+                        gameName = it.gameName,
+                        boxArtUrl = it.boxArt,
+                        followLocal = true
+                    ))
                 }
-                val remote = try {
+                try {
                     when (apiPref.elementAt(0)?.second) {
                         C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
                         C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
-                    if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
                         when (apiPref.elementAt(1)?.second) {
                             C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
@@ -41,27 +47,25 @@ class FollowedGamesDataSource(
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
-                        if (checkIntegrity && e.message == "failed integrity check") return LoadResult.Error(e)
+                        if (e.message == "failed integrity check") return LoadResult.Error(e)
                         listOf()
                     }
-                }
-                if (remote.isNotEmpty()) {
-                    for (i in remote) {
-                        val item = list.find { it.gameId == i.gameId }
-                        if (item == null) {
-                            i.followAccount = true
-                            list.add(i)
-                        } else {
-                            item.followAccount = true
-                            item.viewersCount = i.viewersCount
-                            item.broadcastersCount = i.broadcastersCount
-                            item.tags = i.tags
-                        }
+                }.forEach { game ->
+                    val item = list.find { it.gameId == game.gameId }
+                    if (item == null) {
+                        game.followAccount = true
+                        list.add(game)
+                    } else {
+                        item.followAccount = true
+                        item.viewersCount = game.viewersCount
+                        item.broadcastersCount = game.broadcastersCount
+                        item.tags = game.tags
                     }
                 }
                 list.sortBy { it.gameName }
                 list
             } catch (e: Exception) {
+                if (e.message == "failed integrity check") return LoadResult.Error(e)
                 listOf()
             }
             LoadResult.Page(
@@ -75,39 +79,55 @@ class FollowedGamesDataSource(
     }
 
     private suspend fun gqlQueryLoad(): List<Game> {
-        val get2 = apolloClient.newBuilder().apply {
+        val response = apolloClient.newBuilder().apply {
             gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
         }.build().query(UserFollowedGamesQuery(
             first = Optional.Present(100)
         )).execute()
-        get2.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-        val get1 = get2.data!!.user!!.followedGames!!
-        val get = get1.nodes!!
-        val list = mutableListOf<Game>()
-        for (i in get) {
-            val tags = mutableListOf<Tag>()
-            i?.tags?.forEach { tag ->
-                tags.add(Tag(
-                    id = tag.id,
-                    name = tag.localizedName
-                ))
-            }
-            list.add(Game(
-                gameId = i?.id,
-                gameSlug = i?.slug,
-                gameName = i?.displayName,
-                boxArtUrl = i?.boxArtURL,
-                viewersCount = i?.viewersCount,
-                broadcastersCount = i?.broadcastersCount,
-                tags = tags
-            ))
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
-        return list
+        return response.data!!.user!!.followedGames!!.nodes!!.mapNotNull { item ->
+            item?.let {
+                Game(
+                    gameId = it.id,
+                    gameSlug = it.slug,
+                    gameName = it.displayName,
+                    boxArtUrl = it.boxArtURL,
+                    viewersCount = it.viewersCount,
+                    broadcastersCount = it.broadcastersCount,
+                    tags = it.tags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    }
+                )
+            }
+        }
     }
 
     private suspend fun gqlLoad(): List<Game> {
-        val get = gqlApi.loadFollowedGames(gqlHeaders, 100)
-        return get.data
+        val response = gqlApi.loadFollowedGames(gqlHeaders, 100)
+        if (checkIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
+        return response.data!!.currentUser.followedGames.nodes.map { item ->
+            item.let {
+                Game(
+                    gameId = it.id,
+                    gameName = it.displayName,
+                    boxArtUrl = it.boxArtURL,
+                    viewersCount = it.viewersCount ?: 0,
+                    tags = it.tags?.map { tag ->
+                        Tag(
+                            id = tag.id,
+                            name = tag.localizedName
+                        )
+                    }
+                )
+            }
+        }
     }
 
     override fun getRefreshKey(state: PagingState<Int, Game>): Int? {

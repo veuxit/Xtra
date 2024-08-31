@@ -273,9 +273,9 @@ class DownloadViewModel @Inject constructor(
                         val urls = if (skipAccessToken <= 1 && !clip.thumbnailUrl.isNullOrBlank()) {
                             TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
                         } else {
-                            graphQLRepository.loadClipUrls(
-                                headers = gqlHeaders,
-                                slug = clip.id
+                            playerRepository.loadClipUrls(
+                                gqlHeaders = gqlHeaders,
+                                clipId = clip.id
                             ) ?: if (skipAccessToken == 2 && !clip.thumbnailUrl.isNullOrBlank()) {
                                 TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
                             } else null

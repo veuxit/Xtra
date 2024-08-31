@@ -100,7 +100,7 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                                     viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId)
                                 }
                             } else {
-                                viewModel.saveFollowGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), account.helixToken, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameSlug, args.gameName)
+                                viewModel.saveFollowGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameSlug, args.gameName)
                             }
                         }
                         true
@@ -227,7 +227,7 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
             viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
         }
         if (args.updateLocal) {
-            viewModel.updateLocalGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), args.gameId, args.gameName)
+            viewModel.updateLocalGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), args.gameId, args.gameName)
         }
     }
 
@@ -250,7 +250,7 @@ class GamePagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                                 viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
                             }
                         }
-                        "follow" -> viewModel.saveFollowGame(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId, args.gameSlug, args.gameName)
+                        "follow" -> viewModel.saveFollowGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId, args.gameSlug, args.gameName)
                         "unfollow" -> viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId)
                     }
                 }

@@ -1,5 +1,37 @@
 package com.github.andreyasadchy.xtra.model.gql.chat
 
-import com.github.andreyasadchy.xtra.model.chat.EmoteCard
+import com.github.andreyasadchy.xtra.model.gql.Error
+import kotlinx.serialization.Serializable
 
-data class EmoteCardResponse(val data: EmoteCard?)
+@Serializable
+data class EmoteCardResponse(
+    val errors: List<Error>? = null,
+    val data: Data? = null,
+) {
+    @Serializable
+    data class Data(
+        val emote: Emote,
+    )
+
+    @Serializable
+    data class Emote(
+        val id: String? = null,
+        val token: String? = null,
+        val type: String? = null,
+        val subscriptionTier: String? = null,
+        val bitsBadgeTierSummary: Tier? = null,
+        val owner: User? = null,
+    )
+
+    @Serializable
+    data class Tier(
+        val threshold: Int? = null,
+    )
+
+    @Serializable
+    data class User(
+        val id: String? = null,
+        val login: String? = null,
+        val displayName: String? = null,
+    )
+}
