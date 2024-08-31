@@ -85,7 +85,7 @@ class EventSubWebSocket(
                             return
                         } else {
                             if (handledMessageIds.size > 200) {
-                                handledMessageIds.removeFirst()
+                                handledMessageIds.removeAt(0)
                             }
                             handledMessageIds.add(messageId)
                         }
