@@ -61,7 +61,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             val channelId = args.getString(KEY_CHANNEL_ID)
             val isLive = args.getBoolean(KEY_IS_LIVE)
             val account = Account.get(requireContext())
-            val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank())
+            val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
             val chatUrl = args.getString(KEY_CHAT_URL)
             val enableChat = when {
                 requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) -> false
@@ -114,7 +114,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 chatView.enableChatInteraction(isLive && isLoggedIn)
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.chatMessages.collectLatest {
+                        viewModel.chatMessages.collect {
                             chatView.submitList(it)
                         }
                     }
@@ -293,13 +293,13 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
         val channelName = args.getString(KEY_CHANNEL_NAME)
         val account = Account.get(requireContext())
-        val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !account.helixToken.isNullOrBlank())
+        val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
+        val isLoggedIn = !account.login.isNullOrBlank() && (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank())
         val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
         val useChatWebSocket = requireContext().prefs().getBoolean(C.CHAT_USE_WEBSOCKET, false)
         val useSSL = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
         val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
-        val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
         val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
         val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
@@ -322,7 +322,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         if (!disableChat) {
             if (isLive) {
                 val streamId = args.getString(KEY_STREAM_ID)
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixClientId, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
             } else {
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
@@ -330,7 +330,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     val startTime = args.getInt(KEY_START_TIME)
                     val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
                     val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
-                    viewModel.startReplay(helixClientId, account.helixToken, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+                    viewModel.startReplay(helixHeaders, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
                 }
             }
         }
@@ -360,8 +360,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     fun reloadEmotes() {
         val channelId = requireArguments().getString(KEY_CHANNEL_ID)
         val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
-        val helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-        val helixToken = Account.get(requireContext()).helixToken
+        val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
         val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext())
         val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
@@ -369,7 +368,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
         val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-        viewModel.reloadEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+        viewModel.reloadEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
     }
 
     fun updatePosition(position: Long) {

@@ -1,7 +1,10 @@
 package com.github.andreyasadchy.xtra.model.id
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-class TokenResponse(
-        @SerializedName("access_token")
-        val token: String?)
+@Serializable
+data class TokenResponse(
+    @SerialName("access_token")
+    val token: String
+)

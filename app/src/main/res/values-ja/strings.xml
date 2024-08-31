@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">起動時にトークンを検証</string>
     <string name="tokens">トークン</string>
     <string name="download_limit">同時ダウンロード制限</string>
-    <string name="show_conscrypt_error_toast">Conscrypt エラーのトーストの表示</string>
     <string name="followed_only">[フォロー中] タブのみ</string>
     <string name="api_gql2">GQL クライアント ID 2</string>
     <string name="api_gql_token2">GQL トークン 2</string>

@@ -22,13 +22,13 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesResponse
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -40,8 +40,6 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import com.github.andreyasadchy.xtra.util.prefs
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
@@ -57,6 +55,17 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.appendingSink
@@ -88,6 +97,9 @@ class VideoDownloadWorker @AssistedInject constructor(
 
     @Inject
     lateinit var okHttpClient: OkHttpClient
+
+    @Inject
+    lateinit var json: Json
 
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var offlineVideo: OfflineVideo
@@ -591,22 +603,21 @@ class VideoDownloadWorker @AssistedInject constructor(
                     }
                     val downloadEmotes = offlineVideo.downloadChatEmotes
                     val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
-                    val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi")
-                    val helixToken = Account.get(context).helixToken
+                    val helixHeaders = TwitchApiHelper.getGQLHeaders(context)
                     val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
                     val channelId = offlineVideo.channelId
                     val channelLogin = offlineVideo.channelLogin
                     val badgeList = mutableListOf<TwitchBadge>().apply {
                         if (downloadEmotes) {
-                            val channelBadges = try { repository.loadChannelBadges(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                            val channelBadges = try { repository.loadChannelBadges(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
                             addAll(channelBadges)
-                            val globalBadges = try { repository.loadGlobalBadges(helixClientId, helixToken, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                            val globalBadges = try { repository.loadGlobalBadges(helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
                             addAll(globalBadges.filter { badge -> badge.setId !in channelBadges.map { it.setId } })
                         }
                     }
                     val cheerEmoteList = if (downloadEmotes) {
                         try {
-                            repository.loadCheerEmotes(helixClientId, helixToken, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
+                            repository.loadCheerEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
                         } catch (e: Exception) {
                             emptyList()
                         }
@@ -614,13 +625,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                     val emoteList = mutableListOf<Emote>().apply {
                         if (downloadEmotes) {
                             if (channelId != null) {
-                                try { playerRepository.loadStvEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                                try { playerRepository.loadBttvEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                                try { playerRepository.loadFfzEmotes(channelId).body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
+                                try { addAll(playerRepository.loadStvEmotes(channelId)) } catch (e: Exception) {}
+                                try { addAll(playerRepository.loadBttvEmotes(channelId)) } catch (e: Exception) {}
+                                try { addAll(playerRepository.loadFfzEmotes(channelId)) } catch (e: Exception) {}
                             }
-                            try { playerRepository.loadGlobalStvEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                            try { playerRepository.loadGlobalBttvEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
-                            try { playerRepository.loadGlobalFfzEmotes().body()?.emotes?.let { addAll(it) } } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadGlobalStvEmotes()) } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadGlobalBttvEmotes()) } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadGlobalFfzEmotes()) } catch (e: Exception) {}
                         }
                     }
                     if (isShared) {
@@ -648,15 +659,19 @@ class VideoDownloadWorker @AssistedInject constructor(
                             }
                             var cursor: String? = null
                             do {
-                                val get = if (cursor == null) {
+                                val response = if (cursor == null) {
                                     graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, offset = if (resumed) savedOffset else startTimeSeconds)
                                 } else {
                                     graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, cursor = cursor)
                                 }
+                                val messageObjects = response.jsonObject["data"]?.jsonObject?.get("video")?.jsonObject?.get("comments")?.jsonObject?.get("edges")?.jsonArray?.mapNotNull {
+                                    it.jsonObject["node"]?.jsonObject
+                                } ?: emptyList()
+                                val data = json.decodeFromJsonElement<VideoMessagesResponse>(response).data!!.video.comments
                                 val comments = if (cursor == null && resumed) {
                                     writer.beginObject().also { position += 1 }
                                     val list = mutableListOf<JsonObject>()
-                                    get.data.forEach { json ->
+                                    messageObjects.forEach { json ->
                                         StringReader(json.toString()).use { string ->
                                             JsonReader(string).use { reader ->
                                                 readMessageObject(reader)?.let {
@@ -670,8 +685,8 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         }
                                     }
                                     list
-                                } else get.data
-                                cursor = get.cursor
+                                } else messageObjects
+                                cursor = data.edges.lastOrNull()?.cursor
                                 if (comments.isNotEmpty()) {
                                     writer.name("comments".also { position += it.length + 4 })
                                     writer.beginArray().also { position += 1 }
@@ -686,17 +701,47 @@ class VideoDownloadWorker @AssistedInject constructor(
                                     writer.endArray().also { if (empty) { position += 1 } }
                                 }
                                 if (downloadEmotes) {
+                                    val words = mutableListOf<String>()
+                                    val emoteIds = mutableListOf<String>()
+                                    val badges = mutableListOf<Badge>()
+                                    data.edges.mapNotNull { comment ->
+                                        comment.node.let { item ->
+                                            item.message?.let { message ->
+                                                val chatMessage = StringBuilder()
+                                                message.fragments?.mapNotNull { fragment ->
+                                                    fragment.text?.let { text ->
+                                                        fragment.emote?.emoteID.also { chatMessage.append(text) }
+                                                    }
+                                                }?.let { emoteIds.addAll(it) }
+                                                message.userBadges?.mapNotNull { badge ->
+                                                    badge.setID?.let { setId ->
+                                                        badge.version?.let { version ->
+                                                            Badge(
+                                                                setId = setId,
+                                                                version = version,
+                                                            )
+                                                        }
+                                                    }
+                                                }?.let { badges.addAll(it) }
+                                                chatMessage.toString().split(" ").forEach {
+                                                    if (!words.contains(it)) {
+                                                        words.add(it)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     val twitchEmotes = mutableListOf<TwitchEmote>()
                                     val twitchBadges = mutableListOf<TwitchBadge>()
                                     val cheerEmotes = mutableListOf<CheerEmote>()
                                     val emotes = mutableListOf<Emote>()
-                                    get.emotes.forEach {
+                                    emoteIds.forEach {
                                         if (!savedTwitchEmotes.contains(it)) {
                                             savedTwitchEmotes.add(it)
                                             twitchEmotes.add(TwitchEmote(id = it))
                                         }
                                     }
-                                    get.badges.forEach {
+                                    badges.forEach {
                                         val pair = Pair(it.setId, it.version)
                                         if (!savedBadges.contains(pair)) {
                                             savedBadges.add(pair)
@@ -706,7 +751,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             }
                                         }
                                     }
-                                    get.words.forEach { word ->
+                                    words.forEach { word ->
                                         if (!savedEmotes.contains(word)) {
                                             val bitsCount = word.takeLastWhile { it.isDigit() }
                                             val cheerEmote = if (bitsCount.isNotEmpty()) {
@@ -822,14 +867,15 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         writer.endArray().also { position += 1 }
                                     }
                                 }
-                                if (get.lastOffsetSeconds != null) {
+                                val lastOffsetSeconds = data.edges.lastOrNull()?.node?.contentOffsetSeconds
+                                if (lastOffsetSeconds != null) {
                                     offlineRepository.updateVideo(offlineVideo.apply {
-                                        chatProgress = get.lastOffsetSeconds - startTimeSeconds
+                                        chatProgress = lastOffsetSeconds - startTimeSeconds
                                         chatBytes = position
-                                        chatOffsetSeconds = get.lastOffsetSeconds
+                                        chatOffsetSeconds = lastOffsetSeconds
                                     })
                                 }
-                            } while (get.lastOffsetSeconds?.let { it < endTimeSeconds } != false && !get.cursor.isNullOrBlank() && get.hasNextPage != false)
+                            } while (lastOffsetSeconds?.let { it < endTimeSeconds } != false && !data.edges.lastOrNull()?.cursor.isNullOrBlank() && data.pageInfo?.hasNextPage != false)
                             writer.endObject().also { position += 1 }
                         }
                     }
@@ -841,14 +887,14 @@ class VideoDownloadWorker @AssistedInject constructor(
     private fun writeJsonElement(key: String?, value: JsonElement, writer: JsonWriter): Long {
         var position = 0L
         if (key != "__typename") {
-            when {
-                value.isJsonObject -> {
+            when (value) {
+                is JsonObject -> {
                     if (key != null) {
                         writer.name(key.also { position += it.length + 3 })
                     }
                     writer.beginObject().also { position += 1 }
                     var empty = true
-                    value.asJsonObject.entrySet().forEach {
+                    value.jsonObject.entries.forEach {
                         val length = writeJsonElement(it.key, it.value, writer)
                         if (length > 0L) {
                             position += length + 1
@@ -857,13 +903,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                     }
                     writer.endObject().also { if (empty) { position += 1 } }
                 }
-                value.isJsonArray -> {
+                is JsonArray -> {
                     if (key != null) {
                         writer.name(key.also { position += it.length + 3 })
                     }
                     writer.beginArray().also { position += 1 }
                     var empty = true
-                    value.asJsonArray.forEach {
+                    value.jsonArray.forEach {
                         val length = writeJsonElement(null, it, writer)
                         if (length > 0L) {
                             position += length + 1
@@ -872,25 +918,26 @@ class VideoDownloadWorker @AssistedInject constructor(
                     }
                     writer.endArray().also { if (empty) { position += 1 } }
                 }
-                value.isJsonPrimitive -> {
-                    when {
-                        value.asJsonPrimitive.isString -> {
+                is JsonPrimitive -> {
+                    if (value !is JsonNull) {
+                        if (value.isString) {
                             if (key != null) {
                                 writer.name(key.also { position += it.length + 3 })
                             }
-                            writer.value(value.asString.also { position += it.toByteArray().size + it.count { c -> c == '"' || c == '\\' } + 2 })
-                        }
-                        value.asJsonPrimitive.isBoolean -> {
-                            if (key != null) {
-                                writer.name(key.also { position += it.length + 3 })
+                            writer.value(value.content.also { position += it.toByteArray().size + it.count { c -> c == '"' || c == '\\' } + 2 })
+                        } else {
+                            value.intOrNull?.let { int ->
+                                if (key != null) {
+                                    writer.name(key.also { position += it.length + 3 })
+                                }
+                                writer.value(int.also { position += it.toString().length })
                             }
-                            writer.value(value.asBoolean.also { position += it.toString().length })
-                        }
-                        value.asJsonPrimitive.isNumber -> {
-                            if (key != null) {
-                                writer.name(key.also { position += it.length + 3 })
+                            value.booleanOrNull?.let { boolean ->
+                                if (key != null) {
+                                    writer.name(key.also { position += it.length + 3 })
+                                }
+                                writer.value(boolean.also { position += it.toString().length })
                             }
-                            writer.value(value.asNumber.also { position += it.toString().length })
                         }
                     }
                 }

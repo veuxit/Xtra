@@ -21,8 +21,7 @@ import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesDataResponse
-import com.github.andreyasadchy.xtra.model.ui.ChannelViewerList
+import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesResponse
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -30,10 +29,15 @@ import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.type.BadgeImageSize
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,259 +57,410 @@ class ApiRepository @Inject constructor(
         }.build()
     }
 
-    suspend fun loadGameBoxArt(gameId: String, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>): String? = withContext(Dispatchers.IO) {
+    suspend fun loadGameBoxArt(gameId: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>): String? = withContext(Dispatchers.IO) {
         try {
-            getApolloClient(gqlHeaders).query(GameBoxArtQuery(Optional.Present(gameId))).execute().data?.game?.boxArtURL
+            getApolloClient(gqlHeaders).query(GameBoxArtQuery(Optional.Present(gameId))).execute().data!!.game?.boxArtURL
         } catch (e: Exception) {
             helix.getGames(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = listOf(gameId)
-            ).data.firstOrNull()?.boxArt
+            ).data.firstOrNull()?.boxArtUrl
         }
     }
 
-    suspend fun loadStream(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
+    suspend fun loadStream(channelId: String?, channelLogin: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
         try {
-            val get1 = getApolloClient(gqlHeaders).query(UsersStreamQuery(
+            val response = getApolloClient(gqlHeaders).query(UsersStreamQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(listOf(channelId)) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(listOf(channelLogin)) else Optional.Absent,
             )).execute()
-            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            val get = get1.data?.users?.firstOrNull()
-            if (get != null) {
-                Stream(id = get.stream?.id, channelId = channelId, channelLogin = get.login, channelName = get.displayName, gameId = get.stream?.game?.id,
-                    gameSlug = get.stream?.game?.slug, gameName = get.stream?.game?.displayName, type = get.stream?.type,
-                    title = get.stream?.broadcaster?.broadcastSettings?.title, viewerCount = get.stream?.viewersCount,
-                    startedAt = get.stream?.createdAt?.toString(), thumbnailUrl = get.stream?.previewImageURL, profileImageUrl = get.profileImageURL)
-            } else null
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.users?.firstOrNull()?.let {
+                Stream(
+                    id = it.stream?.id,
+                    channelId = channelId,
+                    channelLogin = it.login,
+                    channelName = it.displayName,
+                    gameId = it.stream?.game?.id,
+                    gameSlug = it.stream?.game?.slug,
+                    gameName = it.stream?.game?.displayName,
+                    type = it.stream?.type,
+                    title = it.stream?.broadcaster?.broadcastSettings?.title,
+                    viewerCount = it.stream?.viewersCount,
+                    startedAt = it.stream?.createdAt?.toString(),
+                    thumbnailUrl = it.stream?.previewImageURL,
+                    profileImageUrl = it.profileImageURL,
+                    tags = it.stream?.freeformTags?.mapNotNull { tag -> tag.name }
+                )
+            }
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             try {
                 helix.getStreams(
-                    clientId = helixClientId,
-                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                    headers = helixHeaders,
                     ids = channelId?.let { listOf(it) },
                     logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-                ).data.firstOrNull()
+                ).data.firstOrNull()?.let {
+                    Stream(
+                        id = it.id,
+                        channelId = it.channelId,
+                        channelLogin = it.channelLogin,
+                        channelName = it.channelName,
+                        gameId = it.gameId,
+                        gameName = it.gameName,
+                        type = it.type,
+                        title = it.title,
+                        viewerCount = it.viewerCount,
+                        startedAt = it.startedAt,
+                        thumbnailUrl = it.thumbnailUrl,
+                        tags = it.tags
+                    )
+                }
             } catch (e: Exception) {
-                gql.loadViewerCount(gqlHeaders, channelLogin).data
+                val response = gql.loadViewerCount(gqlHeaders, channelLogin)
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.user.stream?.let {
+                    Stream(
+                        id = it.id,
+                        viewerCount = it.viewersCount
+                    )
+                }
             }
         }
     }
 
-    suspend fun loadVideo(videoId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean = false): Video? = withContext(Dispatchers.IO) {
+    suspend fun loadVideo(videoId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean = false): Video? = withContext(Dispatchers.IO) {
         try {
-            val get1 = getApolloClient(gqlHeaders).query(VideoQuery(Optional.Present(videoId))).execute()
-            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            val get = get1.data
-            if (get != null) {
-                Video(id = videoId, channelId = get.video?.owner?.id, channelLogin = get.video?.owner?.login, channelName = get.video?.owner?.displayName,
-                    profileImageUrl = get.video?.owner?.profileImageURL, title = get.video?.title, uploadDate = get.video?.createdAt?.toString(), thumbnailUrl = get.video?.previewThumbnailURL,
-                    type = get.video?.broadcastType?.toString(), duration = get.video?.lengthSeconds?.toString(), animatedPreviewURL = get.video?.animatedPreviewURL)
-            } else null
+            val response = getApolloClient(gqlHeaders).query(VideoQuery(Optional.Present(videoId))).execute()
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.let { item ->
+                item.video?.let {
+                    Video(
+                        id = videoId,
+                        channelId = it.owner?.id,
+                        channelLogin = it.owner?.login,
+                        channelName = it.owner?.displayName,
+                        type = it.broadcastType?.toString(),
+                        title = it.title,
+                        uploadDate = it.createdAt?.toString(),
+                        duration = it.lengthSeconds?.toString(),
+                        thumbnailUrl = it.previewThumbnailURL,
+                        profileImageUrl = it.owner?.profileImageURL,
+                        animatedPreviewURL =  it.animatedPreviewURL,
+                    )
+                }
+            }
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             helix.getVideos(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = videoId?.let { listOf(it) }
-            ).data.firstOrNull()
+            ).data.firstOrNull()?.let {
+                Video(
+                    id = it.id,
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.uploadDate,
+                    duration = it.duration,
+                    thumbnailUrl = it.thumbnailUrl,
+                )
+            }
         }
     }
 
-    suspend fun loadVideos(ids: List<String>, helixClientId: String?, helixToken: String?): List<Video>? = withContext(Dispatchers.IO) {
+    suspend fun loadVideos(ids: List<String>, helixHeaders: Map<String, String>): List<Video> = withContext(Dispatchers.IO) {
         helix.getVideos(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+            headers = helixHeaders,
             ids = ids
-        ).data
+        ).data.map {
+            Video(
+                id = it.id,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                title = it.title,
+                viewCount = it.viewCount,
+                uploadDate = it.uploadDate,
+                duration = it.duration,
+                thumbnailUrl = it.thumbnailUrl,
+            )
+        }
     }
 
-    suspend fun loadClip(clipId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Clip? = withContext(Dispatchers.IO) {
+    suspend fun loadClip(clipId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Clip? = withContext(Dispatchers.IO) {
         try {
             val user = try {
-                gql.loadClipData(gqlHeaders, clipId).data
+                gql.loadClipData(gqlHeaders, clipId).data?.clip
             } catch (e: Exception) {
                 null
             }
-            val video = gql.loadClipVideo(gqlHeaders, clipId).data
-            Clip(id = clipId, channelId = user?.channelId, channelLogin = user?.channelLogin, channelName = user?.channelName,
-                profileImageUrl = user?.profileImageUrl, videoId = video?.videoId, duration = video?.duration, vodOffset = video?.vodOffset ?: user?.vodOffset)
+            val response = gql.loadClipVideo(gqlHeaders, clipId)
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            val clip = response.data?.clip
+            Clip(
+                id = clipId,
+                channelId = user?.broadcaster?.id,
+                channelLogin = user?.broadcaster?.login,
+                channelName = user?.broadcaster?.displayName,
+                profileImageUrl = user?.broadcaster?.profileImageURL,
+                videoId = clip?.video?.id,
+                duration = clip?.durationSeconds,
+                vodOffset = clip?.videoOffsetSeconds ?: user?.videoOffsetSeconds
+            )
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             helix.getClips(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = clipId?.let { listOf(it) }
-            ).data.firstOrNull()
+            ).data.firstOrNull()?.let {
+                Clip(
+                    id = it.id,
+                    channelId = it.channelId,
+                    channelName = it.channelName,
+                    videoId = it.videoId,
+                    vodOffset = it.vodOffset,
+                    gameId = it.gameId,
+                    title = it.title,
+                    viewCount = it.viewCount,
+                    uploadDate = it.createdAt,
+                    duration = it.duration,
+                    thumbnailUrl = it.thumbnailUrl,
+                )
+            }
         }
     }
 
-    suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
+    suspend fun loadUserChannelPage(channelId: String?, channelLogin: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): Stream? = withContext(Dispatchers.IO) {
         try {
-            val get = getApolloClient(gqlHeaders).query(UserChannelPageQuery(
+            val response = getApolloClient(gqlHeaders).query(UserChannelPageQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             )).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.user?.let { i ->
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.user?.let {
                 Stream(
-                    id = i.stream?.id,
-                    channelId = i.id,
-                    channelLogin = i.login,
-                    channelName = i.displayName,
-                    gameId = i.stream?.game?.id,
-                    gameSlug = i.stream?.game?.slug,
-                    gameName = i.stream?.game?.displayName,
-                    type = i.stream?.type,
-                    title = i.stream?.title,
-                    viewerCount = i.stream?.viewersCount,
-                    startedAt = i.stream?.createdAt?.toString(),
-                    thumbnailUrl = i.stream?.previewImageURL,
-                    profileImageUrl = i.profileImageURL,
+                    id = it.stream?.id,
+                    channelId = it.id,
+                    channelLogin = it.login,
+                    channelName = it.displayName,
+                    gameId = it.stream?.game?.id,
+                    gameSlug = it.stream?.game?.slug,
+                    gameName = it.stream?.game?.displayName,
+                    type = it.stream?.type,
+                    title = it.stream?.title,
+                    viewerCount = it.stream?.viewersCount,
+                    startedAt = it.stream?.createdAt?.toString(),
+                    thumbnailUrl = it.stream?.previewImageURL,
+                    profileImageUrl = it.profileImageURL,
                     user = User(
-                        channelId = i.id,
-                        channelLogin = i.login,
-                        channelName = i.displayName,
+                        channelId = it.id,
+                        channelLogin = it.login,
+                        channelName = it.displayName,
                         type = when {
-                            i.roles?.isStaff == true -> "staff"
-                            i.roles?.isSiteAdmin == true -> "admin"
-                            i.roles?.isGlobalMod == true -> "global_mod"
+                            it.roles?.isStaff == true -> "staff"
+                            it.roles?.isSiteAdmin == true -> "admin"
+                            it.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
                         },
                         broadcasterType = when {
-                            i.roles?.isPartner == true -> "partner"
-                            i.roles?.isAffiliate == true -> "affiliate"
+                            it.roles?.isPartner == true -> "partner"
+                            it.roles?.isAffiliate == true -> "affiliate"
                             else -> null
                         },
-                        profileImageUrl = i.profileImageURL,
-                        createdAt = i.createdAt?.toString(),
-                        followersCount = i.followers?.totalCount,
-                        bannerImageURL = i.bannerImageURL,
-                        lastBroadcast = i.lastBroadcast?.startedAt?.toString()
+                        profileImageUrl = it.profileImageURL,
+                        createdAt = it.createdAt?.toString(),
+                        followersCount = it.followers?.totalCount,
+                        bannerImageURL = it.bannerImageURL,
+                        lastBroadcast = it.lastBroadcast?.startedAt?.toString()
                     )
                 )
             }
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             helix.getStreams(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data.firstOrNull()
+            ).data.firstOrNull()?.let {
+                Stream(
+                    id = it.id,
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    gameId = it.gameId,
+                    gameName = it.gameName,
+                    type = it.type,
+                    title = it.title,
+                    viewerCount = it.viewerCount,
+                    startedAt = it.startedAt,
+                    thumbnailUrl = it.thumbnailUrl,
+                    tags = it.tags
+                )
+            }
         }
     }
 
-    suspend fun loadUser(channelId: String?, channelLogin: String?, helixClientId: String?, helixToken: String?): User? = withContext(Dispatchers.IO) {
+    suspend fun loadUser(channelId: String?, channelLogin: String?, helixHeaders: Map<String, String>): User? = withContext(Dispatchers.IO) {
         helix.getUsers(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+            headers = helixHeaders,
             ids = channelId?.let { listOf(it) },
             logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-        ).data.firstOrNull()
+        ).data.firstOrNull()?.let {
+            User(
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                type = it.type,
+                broadcasterType = it.broadcasterType,
+                profileImageUrl = it.profileImageUrl,
+                createdAt = it.createdAt,
+            )
+        }
     }
 
-    suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
+    suspend fun loadCheckUser(channelId: String? = null, channelLogin: String? = null, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
         try {
-            val get = getApolloClient(gqlHeaders).query(UserQuery(
+            val response = getApolloClient(gqlHeaders).query(UserQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             )).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.user?.let { i ->
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.user?.let {
                 User(
-                    channelId = i.id,
-                    channelLogin = i.login,
-                    channelName = i.displayName,
-                    profileImageUrl = i.profileImageURL
+                    channelId = it.id,
+                    channelLogin = it.login,
+                    channelName = it.displayName,
+                    profileImageUrl = it.profileImageURL
                 )
             }
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data.firstOrNull()
+            ).data.firstOrNull()?.let {
+                User(
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    type = it.type,
+                    broadcasterType = it.broadcasterType,
+                    profileImageUrl = it.profileImageUrl,
+                    createdAt = it.createdAt,
+                )
+            }
         }
     }
 
-    suspend fun loadUserMessageClicked(channelId: String? = null, channelLogin: String? = null, targetId: String?, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
+    suspend fun loadUserMessageClicked(channelId: String? = null, channelLogin: String? = null, targetId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean): User? = withContext(Dispatchers.IO) {
         try {
-            val get = getApolloClient(gqlHeaders).query(UserMessageClickedQuery(
+            val response = getApolloClient(gqlHeaders).query(UserMessageClickedQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
                 targetId = Optional.Present(targetId)
             )).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.user?.let { i ->
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.user?.let {
                 User(
-                    channelId = i.id,
-                    channelLogin = i.login,
-                    channelName = i.displayName,
-                    profileImageUrl = i.profileImageURL,
-                    bannerImageURL = i.bannerImageURL,
-                    createdAt = i.createdAt?.toString(),
-                    followedAt = i.follow?.followedAt?.toString()
+                    channelId = it.id,
+                    channelLogin = it.login,
+                    channelName = it.displayName,
+                    profileImageUrl = it.profileImageURL,
+                    bannerImageURL = it.bannerImageURL,
+                    createdAt = it.createdAt?.toString(),
+                    followedAt = it.follow?.followedAt?.toString()
                 )
             }
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = channelId?.let { listOf(it) },
                 logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
-            ).data.firstOrNull()
+            ).data.firstOrNull()?.let {
+                User(
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    type = it.type,
+                    broadcasterType = it.broadcasterType,
+                    profileImageUrl = it.profileImageUrl,
+                    createdAt = it.createdAt,
+                )
+            }
         }
     }
 
-    suspend fun loadUserTypes(ids: List<String>, helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>): List<User>? = withContext(Dispatchers.IO) {
+    suspend fun loadUserTypes(ids: List<String>, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>): List<User>? = withContext(Dispatchers.IO) {
         try {
-            getApolloClient(gqlHeaders).query(UsersTypeQuery(Optional.Present(ids))).execute().data?.users?.let { get ->
-                val list = mutableListOf<User>()
-                for (i in get) {
-                    list.add(User(
-                        channelId = i?.id,
+            val response = getApolloClient(gqlHeaders).query(UsersTypeQuery(Optional.Present(ids))).execute()
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            response.data!!.users?.mapNotNull {
+                if (it != null) {
+                    User(
+                        channelId = it.id,
                         broadcasterType = when {
-                            i?.roles?.isPartner == true -> "partner"
-                            i?.roles?.isAffiliate == true -> "affiliate"
+                            it.roles?.isPartner == true -> "partner"
+                            it.roles?.isAffiliate == true -> "affiliate"
                             else -> null
                         },
                         type = when {
-                            i?.roles?.isStaff == true -> "staff"
-                            i?.roles?.isSiteAdmin == true -> "admin"
-                            i?.roles?.isGlobalMod == true -> "global_mod"
+                            it.roles?.isStaff == true -> "staff"
+                            it.roles?.isSiteAdmin == true -> "admin"
+                            it.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
                         }
-                    ))
-                }
-                list
+                    )
+                } else null
             }
         } catch (e: Exception) {
             helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 ids = ids
-            ).data
+            ).data.map {
+                User(
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    type = it.type,
+                    broadcasterType = it.broadcasterType,
+                    profileImageUrl = it.profileImageUrl,
+                    createdAt = it.createdAt,
+                )
+            }
         }
     }
 
-    suspend fun loadGlobalBadges(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalBadges(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
-            val badges = mutableListOf<TwitchBadge>()
-            val get1 = getApolloClient(gqlHeaders).query(BadgesQuery(Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute()
-            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            val get = get1.data
-            get?.badges?.forEach {
+            val response = getApolloClient(gqlHeaders).query(BadgesQuery(Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute()
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.badges?.mapNotNull {
                 if (it != null) {
                     it.setID?.let { setId ->
                         it.version?.let { version ->
                             it.imageURL?.let { url ->
-                                badges.add(TwitchBadge(
+                                TwitchBadge(
                                     setId = setId,
                                     version = version,
                                     url1x = url,
@@ -313,43 +468,74 @@ class ApiRepository @Inject constructor(
                                     url3x = url,
                                     url4x = url,
                                     title = it.title
-                                ))
+                                )
                             }
                         }
                     }
-                }
-            }
-            badges
+                } else null
+            } ?: emptyList()
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             try {
-                gql.loadChatBadges(gqlHeaders, "").global
+                val response = gql.loadChatBadges(gqlHeaders, "")
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.badges?.mapNotNull {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = it.image1x,
+                                url2x = it.image2x,
+                                url3x = it.image4x,
+                                url4x = it.image4x,
+                                title = it.title,
+                            )
+                        }
+                    }
+                } ?: emptyList()
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") throw e
+                if (e.message == "failed integrity check") throw e
                 helix.getGlobalBadges(
-                    clientId = helixClientId,
-                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }
-                ).data
+                    headers = helixHeaders
+                ).data.mapNotNull { set ->
+                    set.setId?.let { setId ->
+                        set.versions?.mapNotNull {
+                            it.id?.let { version ->
+                                TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url1x = it.url1x,
+                                    url2x = it.url2x,
+                                    url3x = it.url4x,
+                                    url4x = it.url4x
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
             }
         }
     }
 
-    suspend fun loadChannelBadges(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
+    suspend fun loadChannelBadges(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
-            val badges = mutableListOf<TwitchBadge>()
-            val get1 = getApolloClient(gqlHeaders).query(UserBadgesQuery(
+            val response = getApolloClient(gqlHeaders).query(UserBadgesQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
                 quality = Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL})
             )).execute()
-            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            val get = get1.data
-            get?.user?.broadcastBadges?.forEach {
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.user?.broadcastBadges?.mapNotNull {
                 if (it != null) {
                     it.setID?.let { setId ->
                         it.version?.let { version ->
                             it.imageURL?.let { url ->
-                                badges.add(TwitchBadge(
+                                TwitchBadge(
                                     setId = setId,
                                     version = version,
                                     url1x = url,
@@ -357,257 +543,369 @@ class ApiRepository @Inject constructor(
                                     url3x = url,
                                     url4x = url,
                                     title = it.title
-                                ))
+                                )
                             }
                         }
                     }
-                }
-            }
-            badges
+                } else null
+            } ?: emptyList()
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             try {
-                gql.loadChatBadges(gqlHeaders, channelLogin).channel
+                val response = gql.loadChatBadges(gqlHeaders, channelLogin)
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.badges?.mapNotNull {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = it.image1x,
+                                url2x = it.image2x,
+                                url3x = it.image4x,
+                                url4x = it.image4x,
+                                title = it.title,
+                            )
+                        }
+                    }
+                } ?: emptyList()
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") throw e
+                if (e.message == "failed integrity check") throw e
                 helix.getChannelBadges(
-                    clientId = helixClientId,
-                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                    headers = helixHeaders,
                     userId = channelId
-                ).data
+                ).data.mapNotNull { set ->
+                    set.setId?.let { setId ->
+                        set.versions?.mapNotNull {
+                            it.id?.let { version ->
+                                TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url1x = it.url1x,
+                                    url2x = it.url2x,
+                                    url3x = it.url4x,
+                                    url4x = it.url4x
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
             }
         }
     }
 
-    suspend fun loadCheerEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadCheerEmotes(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<CheerEmote>()
-            val get1 = getApolloClient(gqlHeaders).query(UserCheerEmotesQuery(
+            val response = getApolloClient(gqlHeaders).query(UserCheerEmotesQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
             )).execute()
-            get1.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            val get = get1.data
-            get?.cheerConfig?.displayConfig?.let { config ->
-                config.backgrounds?.let {
-                    val background = config.backgrounds.find { it == "dark" } ?: config.backgrounds.last()
-                    config.colors?.let {
-                        val colors = config.colors
-                        config.scales?.let {
-                            val scale = config.scales
-                            config.types?.let {
-                                val type = if (animateGifs) {
-                                    config.types.find { it.animation == "animated" } ?: config.types.find { it.animation == "static" }
-                                } else {
-                                    config.types.find { it.animation == "static" }
-                                } ?: config.types.first()
-                                if (type.animation != null && type.extension != null) {
-                                    get.cheerConfig.groups?.forEach { group ->
-                                        group.templateURL?.let { template ->
-                                            group.nodes?.forEach { emote ->
-                                                emote.prefix?.let { prefix ->
-                                                    emote.tiers?.forEach { tier ->
-                                                        val item = colors.find { it.bits == tier?.bits }
-                                                        if (item?.bits != null) {
-                                                            val url = template
-                                                                .replaceFirst("PREFIX", prefix.lowercase())
-                                                                .replaceFirst("BACKGROUND", background)
-                                                                .replaceFirst("ANIMATION", type.animation)
-                                                                .replaceFirst("TIER", item.bits.toString())
-                                                                .replaceFirst("EXTENSION", type.extension)
-                                                            emotes.add(CheerEmote(
-                                                                name = prefix,
-                                                                url1x = (scale.find { it.startsWith("1") })?.let { url.replaceFirst("SCALE", it) } ?: scale.last(),
-                                                                url2x = (scale.find { it.startsWith("2") })?.let { url.replaceFirst("SCALE", it) },
-                                                                url3x = (scale.find { it.startsWith("3") })?.let { url.replaceFirst("SCALE", it) },
-                                                                url4x = (scale.find { it.startsWith("4") })?.let { url.replaceFirst("SCALE", it) },
-                                                                format = if (type.animation == "animated") "gif" else null,
-                                                                isAnimated = type.animation == "animated",
-                                                                minBits = item.bits,
-                                                                color = item.color
-                                                            ))
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    get.user?.cheer?.cheerGroups?.forEach { group ->
-                                        group.templateURL?.let { template ->
-                                            group.nodes?.forEach { emote ->
-                                                emote.prefix?.let { prefix ->
-                                                    emote.tiers?.forEach { tier ->
-                                                        val item = colors.find { it.bits == tier?.bits }
-                                                        if (item?.bits != null) {
-                                                            val url = template
-                                                                .replaceFirst("PREFIX", prefix.lowercase())
-                                                                .replaceFirst("BACKGROUND", background)
-                                                                .replaceFirst("ANIMATION", type.animation)
-                                                                .replaceFirst("TIER", item.bits.toString())
-                                                                .replaceFirst("EXTENSION", type.extension)
-                                                            emotes.add(CheerEmote(
-                                                                name = prefix,
-                                                                url1x = (scale.find { it.startsWith("1") })?.let { url.replaceFirst("SCALE", it) } ?: scale.last(),
-                                                                url2x = (scale.find { it.startsWith("2") })?.let { url.replaceFirst("SCALE", it) },
-                                                                url3x = (scale.find { it.startsWith("3") })?.let { url.replaceFirst("SCALE", it) },
-                                                                url4x = (scale.find { it.startsWith("4") })?.let { url.replaceFirst("SCALE", it) },
-                                                                format = if (type.animation == "animated") "gif" else null,
-                                                                isAnimated = type.animation == "animated",
-                                                                minBits = item.bits,
-                                                                color = item.color
-                                                            ))
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+            if (checkIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.cheerConfig?.displayConfig?.let { config ->
+                val background = config.backgrounds?.find { it == "dark" } ?: config.backgrounds?.lastOrNull() ?: ""
+                val format = if (animateGifs) {
+                    config.types?.find { it.animation == "animated" } ?: config.types?.find { it.animation == "static" }
+                } else {
+                    config.types?.find { it.animation == "static" }
+                } ?: config.types?.lastOrNull()
+                val scale1x = config.scales?.find { it.startsWith("1") } ?: config.scales?.lastOrNull() ?: ""
+                val scale2x = config.scales?.find { it.startsWith("2") } ?: scale1x
+                val scale3x = config.scales?.find { it.startsWith("3") } ?: scale2x
+                val scale4x = config.scales?.find { it.startsWith("4") } ?: scale3x
+                response.data!!.cheerConfig?.groups?.mapNotNull { group ->
+                    group.nodes?.mapNotNull { emote ->
+                        emote.tiers?.mapNotNull { tier ->
+                            config.colors?.find { it.bits == tier?.bits }?.let { item ->
+                                val url = group.templateURL!!
+                                    .replaceFirst("PREFIX", emote.prefix!!.lowercase())
+                                    .replaceFirst("TIER", item.bits!!.toString())
+                                    .replaceFirst("BACKGROUND", background)
+                                    .replaceFirst("ANIMATION", format?.animation ?: "")
+                                    .replaceFirst("EXTENSION", format?.extension ?: "")
+                                CheerEmote(
+                                    name = emote.prefix,
+                                    url1x = url.replaceFirst("SCALE", scale1x),
+                                    url2x = url.replaceFirst("SCALE", scale2x),
+                                    url3x = url.replaceFirst("SCALE", scale3x),
+                                    url4x = url.replaceFirst("SCALE", scale4x),
+                                    format = if (format?.animation == "animated") "gif" else null,
+                                    isAnimated = format?.animation == "animated",
+                                    minBits = item.bits,
+                                    color = item.color
+                                )
                             }
                         }
-                    }
-                }
+                    }?.flatten()
+                }?.flatten()?.let { emotes.addAll(it) }
+                response.data!!.user?.cheer?.cheerGroups?.mapNotNull { group ->
+                    group.nodes?.mapNotNull { emote ->
+                        emote.tiers?.mapNotNull { tier ->
+                            config.colors?.find { it.bits == tier?.bits }?.let { item ->
+                                val url = group.templateURL!!
+                                    .replaceFirst("PREFIX", emote.prefix!!.lowercase())
+                                    .replaceFirst("TIER", item.bits!!.toString())
+                                    .replaceFirst("BACKGROUND", background)
+                                    .replaceFirst("ANIMATION", format?.animation ?: "")
+                                    .replaceFirst("EXTENSION", format?.extension ?: "")
+                                CheerEmote(
+                                    name = emote.prefix,
+                                    url1x = url.replaceFirst("SCALE", scale1x),
+                                    url2x = url.replaceFirst("SCALE", scale2x),
+                                    url3x = url.replaceFirst("SCALE", scale3x),
+                                    url4x = url.replaceFirst("SCALE", scale4x),
+                                    format = if (format?.animation == "animated") "gif" else null,
+                                    isAnimated = format?.animation == "animated",
+                                    minBits = item.bits,
+                                    color = item.color
+                                )
+                            }
+                        }
+                    }?.flatten()
+                }?.flatten()?.let { emotes.addAll(it) }
             }
             emotes
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             try {
-                gql.loadCheerEmotes(gqlHeaders, channelLogin, animateGifs)
-            } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") throw e
-                val data = mutableListOf<CheerEmote>()
-                helix.getCheerEmotes(
-                    clientId = helixClientId,
-                    token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
-                    userId = channelId
-                ).data.filter { it.theme == "dark" && if (animateGifs) it.format == "animated" else it.format != "animated" }.forEach { emote ->
-                    data.add(CheerEmote(
-                        name = emote.name,
-                        url1x = emote.urls["1"],
-                        url2x = emote.urls["2"],
-                        url3x = emote.urls["3"],
-                        url4x = emote.urls["4"],
-                        format = if (emote.format == "animated") "gif" else null,
-                        isAnimated = emote.format == "animated",
-                        minBits = emote.minBits,
-                        color = emote.color
-                    ))
+                val emotes = mutableListOf<CheerEmote>()
+                val response = gql.loadGlobalCheerEmotes(gqlHeaders)
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
                 }
-                data
+                response.data!!.cheerConfig.displayConfig.let { config ->
+                    val background = config.backgrounds?.find { it == "dark" } ?: config.backgrounds?.lastOrNull() ?: ""
+                    val format = if (animateGifs) {
+                        config.types?.find { it.animation == "animated" } ?: config.types?.find { it.animation == "static" }
+                    } else {
+                        config.types?.find { it.animation == "static" }
+                    } ?: config.types?.lastOrNull()
+                    val scale1x = config.scales?.find { it.startsWith("1") } ?: config.scales?.lastOrNull() ?: ""
+                    val scale2x = config.scales?.find { it.startsWith("2") } ?: scale1x
+                    val scale3x = config.scales?.find { it.startsWith("3") } ?: scale2x
+                    val scale4x = config.scales?.find { it.startsWith("4") } ?: scale3x
+                    response.data.cheerConfig.groups.map { group ->
+                        group.nodes.map { emote ->
+                            emote.tiers.mapNotNull { tier ->
+                                config.colors.find { it.bits == tier.bits }?.let { item ->
+                                    val url = group.templateURL
+                                        .replaceFirst("PREFIX", emote.prefix.lowercase())
+                                        .replaceFirst("TIER", item.bits.toString())
+                                        .replaceFirst("BACKGROUND", background)
+                                        .replaceFirst("ANIMATION", format?.animation ?: "")
+                                        .replaceFirst("EXTENSION", format?.extension ?: "")
+                                    CheerEmote(
+                                        name = emote.prefix,
+                                        url1x = url.replaceFirst("SCALE", scale1x),
+                                        url2x = url.replaceFirst("SCALE", scale2x),
+                                        url3x = url.replaceFirst("SCALE", scale3x),
+                                        url4x = url.replaceFirst("SCALE", scale4x),
+                                        format = if (format?.animation == "animated") "gif" else null,
+                                        isAnimated = format?.animation == "animated",
+                                        minBits = item.bits,
+                                        color = item.color,
+                                    )
+                                }
+                            }
+                        }.flatten()
+                    }.flatten().let { emotes.addAll(it) }
+                    gql.loadChannelCheerEmotes(gqlHeaders, channelLogin).data?.channel?.cheer?.cheerGroups?.map { group ->
+                        group.nodes.map { emote ->
+                            emote.tiers.mapNotNull { tier ->
+                                config.colors.find { it.bits == tier.bits }?.let { item ->
+                                    val url = group.templateURL
+                                        .replaceFirst("PREFIX", emote.prefix.lowercase())
+                                        .replaceFirst("TIER", item.bits.toString())
+                                        .replaceFirst("BACKGROUND", background)
+                                        .replaceFirst("ANIMATION", format?.animation ?: "")
+                                        .replaceFirst("EXTENSION", format?.extension ?: "")
+                                    CheerEmote(
+                                        name = emote.prefix,
+                                        url1x = url.replaceFirst("SCALE", scale1x),
+                                        url2x = url.replaceFirst("SCALE", scale2x),
+                                        url3x = url.replaceFirst("SCALE", scale3x),
+                                        url4x = url.replaceFirst("SCALE", scale4x),
+                                        format = if (format?.animation == "animated") "gif" else null,
+                                        isAnimated = format?.animation == "animated",
+                                        minBits = item.bits,
+                                        color = item.color,
+                                    )
+                                }
+                            }
+                        }.flatten()
+                    }?.flatten()?.let { emotes.addAll(it) }
+                }
+                emotes
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") throw e
+                helix.getCheerEmotes(
+                    headers = helixHeaders,
+                    userId = channelId
+                ).data.map { set ->
+                    set.tiers.mapNotNull { tier ->
+                        tier.images.let { it.dark ?: it.light }?.let { formats ->
+                            if (animateGifs) {
+                                formats.animated ?: formats.static
+                            } else {
+                                formats.static
+                            }?.let { urls ->
+                                CheerEmote(
+                                    name = set.prefix,
+                                    url1x = urls.url1x,
+                                    url2x = urls.url2x,
+                                    url3x = urls.url3x,
+                                    url4x = urls.url4x,
+                                    format = if (urls == formats.animated) "gif" else null,
+                                    isAnimated = urls == formats.animated,
+                                    minBits = tier.minBits,
+                                    color = tier.color
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
             }
         }
     }
 
-    suspend fun loadUserEmotes(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, userId: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
+    suspend fun loadUserEmotes(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, userId: String?, animateGifs: Boolean, checkIntegrity: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
             if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
             val emotes = mutableListOf<TwitchEmote>()
             var offset: String? = null
             do {
-                val get = gql.loadUserEmotes(gqlHeaders, channelId, offset)
-                offset = get.cursor
-                get.data.let { emotes.addAll(it) }
-            } while (!get.cursor.isNullOrBlank() && get.hasNextPage == true)
+                val response = gql.loadUserEmotes(gqlHeaders, channelId, offset)
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                val sets = response.data!!.channel.self.availableEmoteSetsPaginated
+                val items = sets.edges
+                items.map { item ->
+                    item.node.let { set ->
+                        set.emotes.mapNotNull { emote ->
+                            emote.token?.let { token ->
+                                TwitchEmote(
+                                    id = emote.id,
+                                    name = token.removePrefix("\\").replace("?\\", ""),
+                                    setId = emote.setID,
+                                    ownerId = set.owner?.id
+                                )
+                            }
+                        }
+                    }
+                }.flatten().let { emotes.addAll(it) }
+                offset = items.lastOrNull()?.cursor
+            } while (!items.lastOrNull()?.cursor.isNullOrBlank() && sets.pageInfo?.hasNextPage == true)
             emotes
         } catch (e: Exception) {
-            if (checkIntegrity && e.message == "failed integrity check") throw e
+            if (e.message == "failed integrity check") throw e
             try {
                 if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
-                val emotes = mutableListOf<TwitchEmote>()
-                val get = getApolloClient(gqlHeaders).query(UserEmotesQuery()).execute()
-                get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-                get.data?.user?.emoteSets?.forEach { set ->
-                    set.emotes?.forEach { emote ->
+                val response = getApolloClient(gqlHeaders).query(UserEmotesQuery()).execute()
+                if (checkIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.user?.emoteSets?.mapNotNull { set ->
+                    set.emotes?.mapNotNull { emote ->
                         if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
-                            emotes.add(TwitchEmote(
+                            TwitchEmote(
                                 id = emote.id,
                                 name = emote.token.removePrefix("\\").replace("?\\", ""),
                                 setId = emote.setID,
                                 ownerId = emote.owner?.id
-                            ))
-                        }
+                            )
+                        } else null
                     }
-                }
-                emotes
+                }?.flatten() ?: emptyList()
             } catch (e: Exception) {
-                if (checkIntegrity && e.message == "failed integrity check") throw e
+                if (e.message == "failed integrity check") throw e
                 val emotes = mutableListOf<TwitchEmote>()
                 var offset: String? = null
                 do {
-                    val get = helix.getUserEmotes(
-                        clientId = helixClientId,
-                        token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                    val response = helix.getUserEmotes(
+                        headers = helixHeaders,
                         userId = userId,
                         channelId = channelId,
                         offset = offset
                     )
-                    offset = get.cursor
-                    get.data.forEach { emote ->
-                        val format = (if (animateGifs) {
-                            emote.formats.find { it == "animated" } ?: emote.formats.find { it == "static" }
-                        } else {
-                            emote.formats.find { it == "static" }
-                        } ?: emote.formats.first())
-                        val theme = (emote.themes.find { it == "dark" } ?: emote.themes.last())
-                        val url = emote.template
-                            .replaceFirst("{{id}}", emote.id)
-                            .replaceFirst("{{format}}", format)
-                            .replaceFirst("{{theme_mode}}", theme)
-                        emotes.add(TwitchEmote(
-                            name = emote.name,
-                            url1x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                            url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                            url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                            url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                            format = if (format == "animated") "gif" else null,
-                            setId = emote.setId,
-                            ownerId = emote.ownerId
-                        ))
-                    }
-                } while (!get.cursor.isNullOrBlank())
+                    response.data.mapNotNull { emote ->
+                        emote.id?.let { id ->
+                            val format = if (animateGifs) {
+                                emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                            } else {
+                                emote.format?.find { it == "static" }
+                            } ?: emote.format?.firstOrNull() ?: ""
+                            val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                            val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                            val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                            val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                            val url = response.template
+                                .replaceFirst("{{id}}", id)
+                                .replaceFirst("{{format}}", format)
+                                .replaceFirst("{{theme_mode}}", theme)
+                            TwitchEmote(
+                                name = emote.name,
+                                url1x = url.replaceFirst("{{scale}}", scale1x),
+                                url2x = url.replaceFirst("{{scale}}", scale2x),
+                                url3x = url.replaceFirst("{{scale}}", scale3x),
+                                url4x = url.replaceFirst("{{scale}}", scale3x),
+                                format = if (format == "animated") "gif" else null,
+                                setId = emote.setId,
+                                ownerId = emote.ownerId
+                            )
+                        }
+                    }.let { emotes.addAll(it) }
+                    offset = response.pagination?.cursor
+                } while (!response.pagination?.cursor.isNullOrBlank())
                 emotes
             }
         }
     }
 
-    suspend fun loadEmotesFromSet(helixClientId: String?, helixToken: String?, setIds: List<String>, animateGifs: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
-        val data = mutableListOf<TwitchEmote>()
-        helix.getEmotesFromSet(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+    suspend fun loadEmotesFromSet(helixHeaders: Map<String, String>, setIds: List<String>, animateGifs: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
+        val response = helix.getEmotesFromSet(
+            headers = helixHeaders,
             setIds = setIds
-        ).data.forEach { emote ->
-            val format = (if (animateGifs) {
-                emote.formats.find { it == "animated" } ?: emote.formats.find { it == "static" }
-            } else {
-                emote.formats.find { it == "static" }
-            } ?: emote.formats.first())
-            val theme = (emote.themes.find { it == "dark" } ?: emote.themes.last())
-            val url = emote.template
-                .replaceFirst("{{id}}", emote.id)
-                .replaceFirst("{{format}}", format)
-                .replaceFirst("{{theme_mode}}", theme)
-            data.add(TwitchEmote(
-                name = emote.name,
-                url1x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                url2x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                url3x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                url4x = url.replaceFirst("{{scale}}", (emote.scales.find { it.startsWith("3") } ?: emote.scales.find { it.startsWith("2") } ?: emote.scales.find { it.startsWith("1") } ?: emote.scales.last())),
-                format = if (format == "animated") "gif" else null,
-                setId = emote.setId,
-                ownerId = emote.ownerId
-            ))
+        )
+        response.data.mapNotNull { emote ->
+            emote.id?.let { id ->
+                val format = if (animateGifs) {
+                    emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                } else {
+                    emote.format?.find { it == "static" }
+                } ?: emote.format?.firstOrNull() ?: ""
+                val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                val url = response.template
+                    .replaceFirst("{{id}}", id)
+                    .replaceFirst("{{format}}", format)
+                    .replaceFirst("{{theme_mode}}", theme)
+                TwitchEmote(
+                    name = emote.name,
+                    url1x = url.replaceFirst("{{scale}}", scale1x),
+                    url2x = url.replaceFirst("{{scale}}", scale2x),
+                    url3x = url.replaceFirst("{{scale}}", scale3x),
+                    url4x = url.replaceFirst("{{scale}}", scale3x),
+                    format = if (format == "animated") "gif" else null,
+                    setId = emote.setId,
+                    ownerId = emote.ownerId
+                )
+            }
         }
-        data
     }
 
-    suspend fun loadUserFollowing(helixClientId: String?, helixToken: String?, targetId: String?, userId: String?, gqlHeaders: Map<String, String>, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
+    suspend fun loadUserFollowing(helixHeaders: Map<String, String>, targetId: String?, userId: String?, gqlHeaders: Map<String, String>, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gql.loadFollowingUser(gqlHeaders, targetLogin).following else throw Exception()
+            if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gql.loadFollowingUser(gqlHeaders, targetLogin).data?.user?.self?.follower != null else throw Exception()
         } catch (e: Exception) {
             helix.getUserFollows(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 targetId = targetId,
                 userId = userId
             ).data.firstOrNull()?.channelId == targetId
@@ -615,35 +913,32 @@ class ApiRepository @Inject constructor(
     }
 
     suspend fun loadGameFollowing(gqlHeaders: Map<String, String>, gameName: String?): Boolean = withContext(Dispatchers.IO) {
-        gql.loadFollowingGame(gqlHeaders, gameName).following
+        gql.loadFollowingGame(gqlHeaders, gameName).data?.game?.self?.follow != null
     }
 
-    suspend fun loadVideoMessages(gqlHeaders: Map<String, String>, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse = withContext(Dispatchers.IO) {
+    suspend fun loadVideoMessages(gqlHeaders: Map<String, String>, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesResponse = withContext(Dispatchers.IO) {
         gql.loadVideoMessages(gqlHeaders, videoId, offset, cursor)
     }
 
     suspend fun loadVideoGames(gqlHeaders: Map<String, String>, videoId: String?): List<Game> = withContext(Dispatchers.IO) {
-        gql.loadVideoGames(gqlHeaders, videoId).data
-    }
-
-    suspend fun loadChannelViewerList(gqlHeaders: Map<String, String>, channelLogin: String?): ChannelViewerList = withContext(Dispatchers.IO) {
-        gql.loadChannelViewerList(gqlHeaders, channelLogin).data
-    }
-
-    suspend fun loadClaimPoints(gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
-        val claimId = gql.loadChannelPointsContext(gqlHeaders, channelLogin).availableClaimId
-        gql.loadClaimPoints(gqlHeaders, channelId, claimId).also { response ->
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
+        val response = gql.loadVideoGames(gqlHeaders, videoId)
+        response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        response.data!!.video.moments.edges.map { item ->
+            item.node.let {
+                Game(
+                    gameId = it.details?.game?.id,
+                    gameName = it.details?.game?.displayName,
+                    boxArtUrl = it.details?.game?.boxArtURL,
+                    vodPosition = it.positionMilliseconds,
+                    vodDuration = it.durationMilliseconds,
+                )
             }
         }
     }
 
     suspend fun loadJoinRaid(gqlHeaders: Map<String, String>, raidId: String?) = withContext(Dispatchers.IO) {
         gql.loadJoinRaid(gqlHeaders, raidId).also { response ->
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-            }
+            response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
     }
 
@@ -658,14 +953,14 @@ class ApiRepository @Inject constructor(
                     val spadeRegex = Regex("\"spade_url\":\"(.*?)\"")
                     val spadeUrl = spadeRegex.find(settingsResponse)?.groups?.get(1)?.value
                     if (!spadeUrl.isNullOrBlank()) {
-                        val json = JsonObject().apply {
-                            addProperty("event", "minute-watched")
-                            add("properties", JsonObject().apply {
-                                addProperty("channel_id", channelId)
-                                addProperty("broadcast_id", streamId)
-                                addProperty("player", "site")
-                                addProperty("user_id", userId?.toLong())
-                            })
+                        val json = buildJsonObject {
+                            put("event", "minute-watched")
+                            putJsonObject("properties") {
+                                put("channel_id", channelId)
+                                put("broadcast_id", streamId)
+                                put("player", "site")
+                                put("user_id", userId?.toLong())
+                            }
                         }
                         val spadeRequest = Base64.encodeToString(json.toString().toByteArray(), Base64.NO_WRAP).toRequestBody()
                         misc.postUrl(spadeUrl, spadeRequest)
@@ -678,35 +973,35 @@ class ApiRepository @Inject constructor(
     }
 
     suspend fun followUser(gqlHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowUser(gqlHeaders, userId).error
+        gql.loadFollowUser(gqlHeaders, userId).errors?.firstOrNull()?.message
     }
 
     suspend fun unfollowUser(gqlHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowUser(gqlHeaders, userId).error
+        gql.loadUnfollowUser(gqlHeaders, userId).errors?.firstOrNull()?.message
     }
 
     suspend fun followGame(gqlHeaders: Map<String, String>, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowGame(gqlHeaders, gameId).error
+        gql.loadFollowGame(gqlHeaders, gameId).errors?.firstOrNull()?.message
     }
 
     suspend fun unfollowGame(gqlHeaders: Map<String, String>, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowGame(gqlHeaders, gameId).error
+        gql.loadUnfollowGame(gqlHeaders, gameId).errors?.firstOrNull()?.message
     }
 
-    suspend fun createChatEventSubSubscription(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, type: String?, sessionId: String?): String? = withContext(Dispatchers.IO) {
-        val json = JsonObject().apply {
-            addProperty("type", type)
-            addProperty("version", "1")
-            add("condition", JsonObject().apply {
-                addProperty("broadcaster_user_id", channelId)
-                addProperty("user_id", userId)
-            })
-            add("transport", JsonObject().apply {
-                addProperty("method", "websocket")
-                addProperty("session_id", sessionId)
-            })
+    suspend fun createChatEventSubSubscription(helixHeaders: Map<String, String>, userId: String?, channelId: String?, type: String?, sessionId: String?): String? = withContext(Dispatchers.IO) {
+        val json = buildJsonObject {
+            put("type", type)
+            put("version", "1")
+            putJsonObject("condition") {
+                put("broadcaster_user_id", channelId)
+                put("user_id", userId)
+            }
+            putJsonObject("transport") {
+                put("method", "websocket")
+                put("session_id", sessionId)
+            }
         }
-        val response = helix.createEventSubSubscription(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        val response = helix.createEventSubSubscription(helixHeaders, json)
         if (response.isSuccessful) {
             null
         } else {
@@ -714,13 +1009,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(helixClientId: String?, helixToken: String?, userId: String?, channelId: String?, message: String?): String? = withContext(Dispatchers.IO) {
-        val json = JsonObject().apply {
-            addProperty("broadcaster_id", channelId)
-            addProperty("sender_id", userId)
-            addProperty("message", message)
+    suspend fun sendMessage(helixHeaders: Map<String, String>, userId: String?, channelId: String?, message: String?): String? = withContext(Dispatchers.IO) {
+        val json = buildJsonObject {
+            put("broadcaster_id", channelId)
+            put("sender_id", userId)
+            put("message", message)
         }
-        val response = helix.sendMessage(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        val response = helix.sendMessage(helixHeaders, json)
         if (response.isSuccessful) {
             null
         } else {
@@ -728,19 +1023,17 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun sendAnnouncement(helixHeaders: Map<String, String>, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.sendAnnouncement(gqlHeaders, channelId, message, color).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
-            val json = JsonObject().apply {
-                addProperty("message", message)
-                color?.let { addProperty("color", it) }
+            val json = buildJsonObject {
+                put("message", message)
+                color?.let { put("color", it) }
             }
-            helix.sendAnnouncement(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+            helix.sendAnnouncement(helixHeaders, channelId, userId, json)
         }
         if (response.isSuccessful) {
             null
@@ -749,27 +1042,24 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun banUser(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun banUser(helixHeaders: Map<String, String>, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.banUser(gqlHeaders, channelId, targetLogin, duration, reason).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            val json = JsonObject().apply {
-                add("data", JsonObject().apply {
-                    duration?.toIntOrNull()?.let { addProperty("duration", it) }
-                    addProperty("reason", reason)
-                    addProperty("user_id", targetId)
-                })
+            val json = buildJsonObject {
+                putJsonObject("data") {
+                    duration?.toIntOrNull()?.let { put("duration", it) }
+                    put("reason", reason)
+                    put("user_id", targetId)
+                }
             }
-            helix.banUser(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+            helix.banUser(helixHeaders, channelId, userId, json)
         }
         if (response.isSuccessful) {
             null
@@ -778,20 +1068,17 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun unbanUser(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun unbanUser(helixHeaders: Map<String, String>, userId: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.unbanUser(gqlHeaders, channelId, targetLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.unbanUser(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, targetId)
+            helix.unbanUser(helixHeaders, channelId, userId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -800,8 +1087,8 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteMessages(helixClientId: String?, helixToken: String?, channelId: String?, userId: String?, messageId: String? = null): String? = withContext(Dispatchers.IO) {
-        val response = helix.deleteMessages(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, messageId)
+    suspend fun deleteMessages(helixHeaders: Map<String, String>, channelId: String?, userId: String?, messageId: String? = null): String? = withContext(Dispatchers.IO) {
+        val response = helix.deleteMessages(helixHeaders, channelId, userId, messageId)
         if (response.isSuccessful) {
             null
         } else {
@@ -809,15 +1096,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun updateChatColor(helixClientId: String?, helixToken: String?, userId: String?, gqlHeaders: Map<String, String>, color: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun updateChatColor(helixHeaders: Map<String, String>, userId: String?, gqlHeaders: Map<String, String>, color: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.updateChatColor(gqlHeaders, color).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
-            helix.updateChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, color)
+            helix.updateChatColor(helixHeaders, userId, color)
         }
         if (response.isSuccessful) {
             null
@@ -826,39 +1111,39 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun getChatColor(helixClientId: String?, helixToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
-        val response = helix.getChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId)
+    suspend fun getChatColor(helixHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
+        val response = helix.getChatColor(helixHeaders, userId)
         if (response.isSuccessful) {
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("color")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+            response.body()?.jsonObject?.get("data")?.jsonArray?.firstOrNull()?.jsonObject?.get("color")?.jsonPrimitive?.contentOrNull
         } else {
             response.errorBody()?.string()
         }
     }
 
-    suspend fun startCommercial(helixClientId: String?, helixToken: String?, channelId: String?, length: String?): String? = withContext(Dispatchers.IO) {
-        val json = JsonObject().apply {
-            addProperty("broadcaster_id", channelId)
-            addProperty("length", length?.toIntOrNull())
+    suspend fun startCommercial(helixHeaders: Map<String, String>, channelId: String?, length: String?): String? = withContext(Dispatchers.IO) {
+        val json = buildJsonObject {
+            put("broadcaster_id", channelId)
+            put("length", length?.toIntOrNull())
         }
-        val response = helix.startCommercial(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+        val response = helix.startCommercial(helixHeaders, json)
         if (response.isSuccessful) {
-            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("data")?.takeIf { it.isJsonArray }?.asJsonArray?.first()?.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString
+            response.body()?.jsonObject?.get("data")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
         } else {
             response.errorBody()?.string()
         }
     }
 
-    suspend fun updateChatSettings(helixClientId: String?, helixToken: String?, channelId: String?, userId: String?, emote: Boolean? = null, followers: Boolean? = null, followersDuration: String? = null, slow: Boolean? = null, slowDuration: Int? = null, subs: Boolean? = null, unique: Boolean? = null): String? = withContext(Dispatchers.IO) {
-        val json = JsonObject().apply {
-            emote?.let { addProperty("emote_mode", it) }
-            followers?.let { addProperty("follower_mode", it) }
-            followersDuration?.toIntOrNull()?.let { addProperty("follower_mode_duration", it) }
-            slow?.let { addProperty("slow_mode", it) }
-            slowDuration?.let { addProperty("slow_mode_wait_time", it) }
-            subs?.let { addProperty("subscriber_mode", it) }
-            unique?.let { addProperty("unique_chat_mode", it) }
+    suspend fun updateChatSettings(helixHeaders: Map<String, String>, channelId: String?, userId: String?, emote: Boolean? = null, followers: Boolean? = null, followersDuration: String? = null, slow: Boolean? = null, slowDuration: Int? = null, subs: Boolean? = null, unique: Boolean? = null): String? = withContext(Dispatchers.IO) {
+        val json = buildJsonObject {
+            emote?.let { put("emote_mode", it) }
+            followers?.let { put("follower_mode", it) }
+            followersDuration?.toIntOrNull()?.let { put("follower_mode_duration", it) }
+            slow?.let { put("slow_mode", it) }
+            slowDuration?.let { put("slow_mode_wait_time", it) }
+            subs?.let { put("subscriber_mode", it) }
+            unique?.let { put("unique_chat_mode", it) }
         }
-        val response = helix.updateChatSettings(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, userId, json)
+        val response = helix.updateChatSettings(helixHeaders, channelId, userId, json)
         if (response.isSuccessful) {
             null
         } else {
@@ -866,19 +1151,17 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun createStreamMarker(helixClientId: String?, helixToken: String?, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun createStreamMarker(helixHeaders: Map<String, String>, channelId: String?, gqlHeaders: Map<String, String>, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.createStreamMarker(gqlHeaders, channelLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
-            val json = JsonObject().apply {
-                addProperty("user_id", channelId)
-                description?.let { addProperty("description", it) }
+            val json = buildJsonObject {
+                put("user_id", channelId)
+                description?.let { put("description", it) }
             }
-            helix.createStreamMarker(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, json)
+            helix.createStreamMarker(helixHeaders, json)
         }
         if (response.isSuccessful) {
             null
@@ -889,27 +1172,25 @@ class ApiRepository @Inject constructor(
 
     suspend fun getModerators(gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = gql.getModerators(gqlHeaders, channelLogin)
+        response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         if (response.isSuccessful) {
-            response.body()?.data?.map { it.channelLogin }.toString()
+            response.body()?.data?.user?.mods?.edges?.map { it.node.login }.toString()
         } else {
             response.errorBody()?.string()
         }
     }
 
-    suspend fun addModerator(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun addModerator(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.addModerator(gqlHeaders, channelId, targetLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.addModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+            helix.addModerator(helixHeaders, channelId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -918,20 +1199,17 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun removeModerator(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun removeModerator(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.removeModerator(gqlHeaders, channelId, targetLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.removeModerator(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+            helix.removeModerator(helixHeaders, channelId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -940,27 +1218,23 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun startRaid(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, checkIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
+    suspend fun startRaid(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?, checkIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             val targetId = loadCheckUser(
                 channelLogin = targetLogin,
-                helixClientId = helixClientId,
-                helixToken = helixToken,
+                helixHeaders = helixHeaders,
                 gqlHeaders = gqlHeaders,
                 checkIntegrity = checkIntegrity
             )?.channelId
             gql.startRaid(gqlHeaders, channelId, targetId).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.startRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+            helix.startRaid(helixHeaders, channelId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -969,15 +1243,13 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun cancelRaid(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun cancelRaid(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.cancelRaid(gqlHeaders, channelId).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
-            helix.cancelRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId)
+            helix.cancelRaid(helixHeaders, channelId)
         }
         if (response.isSuccessful) {
             response.body().toString()
@@ -988,27 +1260,25 @@ class ApiRepository @Inject constructor(
 
     suspend fun getVips(gqlHeaders: Map<String, String>, channelLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = gql.getVips(gqlHeaders, channelLogin)
+        response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         if (response.isSuccessful) {
-            response.body()?.data?.map { it.channelLogin }.toString()
+            response.body()?.data?.user?.vips?.edges?.map { it.node.login }.toString()
         } else {
             response.errorBody()?.string()
         }
     }
 
-    suspend fun addVip(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun addVip(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.addVip(gqlHeaders, channelId, targetLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.addVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+            helix.addVip(helixHeaders, channelId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -1017,20 +1287,17 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun removeVip(helixClientId: String?, helixToken: String?, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun removeVip(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             gql.removeVip(gqlHeaders, channelId, targetLogin).also { response ->
-                response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.get("errors")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { item ->
-                    item.takeIf { it.isJsonObject }?.asJsonObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.takeIf { it.isString }?.asString?.let { if (it == "failed integrity check") throw Exception(it) }
-                }
+                response.body()?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         } else {
             val targetId = helix.getUsers(
-                clientId = helixClientId,
-                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+                headers = helixHeaders,
                 logins = targetLogin?.let { listOf(it) }
             ).data.firstOrNull()?.channelId
-            helix.removeVip(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId, targetId)
+            helix.removeVip(helixHeaders, channelId, targetId)
         }
         if (response.isSuccessful) {
             null
@@ -1039,16 +1306,15 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun sendWhisper(helixClientId: String?, helixToken: String?, userId: String?, targetLogin: String?, message: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun sendWhisper(helixHeaders: Map<String, String>, userId: String?, targetLogin: String?, message: String?): String? = withContext(Dispatchers.IO) {
         val targetId = helix.getUsers(
-            clientId = helixClientId,
-            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
+            headers = helixHeaders,
             logins = targetLogin?.let { listOf(it) }
         ).data.firstOrNull()?.channelId
-        val json = JsonObject().apply {
-            addProperty("message", message)
+        val json = buildJsonObject {
+            put("message", message)
         }
-        val response = helix.sendWhisper(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, targetId, json)
+        val response = helix.sendWhisper(helixHeaders, userId, targetId, json)
         if (response.isSuccessful) {
             null
         } else {
@@ -1058,9 +1324,9 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserResult(channelId: String? = null, channelLogin: String? = null, gqlHeaders: Map<String, String>): Pair<String?, String?>? = withContext(Dispatchers.IO) {
         if (!channelId.isNullOrBlank()) {
-            val get = getApolloClient(gqlHeaders).query(UserResultIDQuery(channelId)).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.userResultByID?.let {
+            val response = getApolloClient(gqlHeaders).query(UserResultIDQuery(channelId)).execute()
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            response.data!!.userResultByID?.let {
                 when {
                     it.onUser != null -> Pair(null, null)
                     it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)
@@ -1069,9 +1335,9 @@ class ApiRepository @Inject constructor(
                 }
             }
         } else if (!channelLogin.isNullOrBlank()) {
-            val get = getApolloClient(gqlHeaders).query(UserResultLoginQuery(channelLogin)).execute()
-            get.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            get.data?.userResultByLogin?.let {
+            val response = getApolloClient(gqlHeaders).query(UserResultLoginQuery(channelLogin)).execute()
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            response.data!!.userResultByLogin?.let {
                 when {
                     it.onUser != null -> Pair(null, null)
                     it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)

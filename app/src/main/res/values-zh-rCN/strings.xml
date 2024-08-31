@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">在启动时验证令牌</string>
     <string name="tokens">令牌</string>
     <string name="download_limit">下载并行限制</string>
-    <string name="show_conscrypt_error_toast">显示 Conscrypt 错误浮动式信息</string>
     <string name="followed_only">仅已关注</string>
     <string name="api_gql2">GQL 客户端 ID 2</string>
     <string name="api_gql_token2">GQL 令牌 2</string>

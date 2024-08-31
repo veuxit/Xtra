@@ -12,7 +12,6 @@ import androidx.paging.cachedIn
 import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.offline.SortChannel
 import com.github.andreyasadchy.xtra.model.offline.SortGame
 import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
@@ -86,10 +85,9 @@ class ClipsViewModel @Inject constructor(
                 ChannelClipsDataSource(
                     channelId = args.channelId,
                     channelLogin = args.channelLogin,
-                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(applicationContext).helixToken,
-                    started_at = started,
-                    ended_at = ended,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    startedAt = started,
+                    endedAt = ended,
                     helixApi = helix,
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryPeriod = gqlQueryPeriod,
@@ -111,10 +109,9 @@ class ClipsViewModel @Inject constructor(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixClientId = applicationContext.prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                    helixToken = Account.get(applicationContext).helixToken,
-                    started_at = started,
-                    ended_at = ended,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    startedAt = started,
+                    endedAt = ended,
                     helixApi = helix,
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryLanguages = langList.ifEmpty { null },

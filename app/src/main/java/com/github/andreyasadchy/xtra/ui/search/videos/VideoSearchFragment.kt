@@ -13,7 +13,6 @@ import androidx.paging.LoadState
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.search.Searchable
@@ -47,7 +46,7 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext().filesDir.path, requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"), Account.get(requireContext()).helixToken, TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.saveBookmark(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }

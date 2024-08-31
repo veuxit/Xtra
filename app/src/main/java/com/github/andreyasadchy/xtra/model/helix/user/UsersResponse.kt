@@ -1,5 +1,8 @@
 package com.github.andreyasadchy.xtra.model.helix.user
 
-import com.github.andreyasadchy.xtra.model.ui.User
+import kotlinx.serialization.Serializable
 
-data class UsersResponse(val data: List<User>)
+@Serializable
+data class UsersResponse(
+    val data: List<User>,
+)

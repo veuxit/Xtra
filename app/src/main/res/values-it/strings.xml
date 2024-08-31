@@ -515,7 +515,6 @@
     <string name="api_validate_tokens">Convalida token all\'avvio</string>
     <string name="tokens">Token</string>
     <string name="download_limit">Limite di download simultanei</string>
-    <string name="show_conscrypt_error_toast">Mostra toast errore Conscrypt</string>
     <string name="followed_only">Solo seguiti</string>
     <string name="api_gql2">ID client GQL 2</string>
     <string name="api_gql_token2">Token GQL 2</string>
