@@ -23,14 +23,14 @@ android {
         }
     }
     namespace = "com.github.andreyasadchy.xtra"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
-        targetSdk = 34
-        versionCode = 250
-        versionName = "2.33.5"
+        targetSdk = 35
+        versionCode = 251
+        versionName = "2.34.0"
     }
 
     buildTypes {
