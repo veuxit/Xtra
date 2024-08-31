@@ -79,7 +79,7 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <com.google.android.flexbox.FlexboxLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/tagsLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -90,8 +90,6 @@
             android:layout_marginRight="10dp"
             android:layout_marginBottom="7dp"
             android:visibility="gone"
-            app:flexWrap="wrap"
-            app:justifyContent="space_around"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

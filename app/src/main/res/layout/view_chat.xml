@@ -128,18 +128,25 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <com.google.android.flexbox.FlexboxLayout
-        android:id="@+id/flexbox"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/chatStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/chatStatus"
         android:visibility="gone"
-        app:flexWrap="wrap"
-        app:justifyContent="space_evenly"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible">
+
+        <androidx.constraintlayout.helper.widget.Flow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:constraint_referenced_ids="textEmote,textFollowers,textUnique,textSlow,textSubs"
+            app:flow_wrapMode="chain"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/textEmote"
@@ -190,7 +197,7 @@
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:visibility="gone"
             tools:visibility="visible" />
-    </com.google.android.flexbox.FlexboxLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/raidLayout"
@@ -206,7 +213,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/flexbox"
+        app:layout_constraintTop_toBottomOf="@id/chatStatus"
         tools:visibility="visible">
 
         <ImageView
