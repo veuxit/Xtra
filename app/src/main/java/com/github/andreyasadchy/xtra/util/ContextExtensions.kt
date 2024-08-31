@@ -95,8 +95,7 @@ fun Activity.applyTheme() {
         isAppearanceLightStatusBars = isLightTheme
         isAppearanceLightNavigationBars = isLightTheme
     }
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {

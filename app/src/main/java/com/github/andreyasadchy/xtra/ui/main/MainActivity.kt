@@ -270,6 +270,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             when {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = !isPortrait
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                    @Suppress("DEPRECATION")
                     window.navigationBarColor = if (isPortrait) {
                         Color.TRANSPARENT
                     } else {
@@ -277,6 +278,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     }
                 }
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                    @Suppress("DEPRECATION")
                     if (!isLightTheme) {
                         window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
                     }
