@@ -64,7 +64,6 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.preference.ktx)
     implementation(libs.swiperefreshlayout)
-    implementation(libs.flexbox)
     implementation(libs.draglistview)
 
     //Architecture components

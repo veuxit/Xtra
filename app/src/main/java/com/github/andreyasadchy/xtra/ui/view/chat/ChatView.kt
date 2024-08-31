@@ -68,7 +68,7 @@ class ChatView : ConstraintLayout {
     private lateinit var adapter: ChatAdapter
 
     private var isChatTouched = false
-    private var showFlexbox = false
+    private var showChatStatus = false
 
     private var hasRecentEmotes = false
 
@@ -137,9 +137,9 @@ class ChatView : ConstraintLayout {
                         super.onScrollStateChanged(recyclerView, newState)
                         isChatTouched = newState == RecyclerView.SCROLL_STATE_DRAGGING
                         btnDown.isVisible = shouldShowButton()
-                        if (showFlexbox && flexbox.isGone) {
-                            flexbox.visible()
-                            flexbox.postDelayed({ flexbox.gone() }, 5000)
+                        if (showChatStatus && chatStatus.isGone) {
+                            chatStatus.visible()
+                            chatStatus.postDelayed({ chatStatus.gone() }, 5000)
                         }
                     }
                 })
@@ -217,12 +217,12 @@ class ChatView : ConstraintLayout {
                 "1" -> textSubs.visible()
             }
             if (textEmote.isGone && textFollowers.isGone && textUnique.isGone && textSlow.isGone && textSubs.isGone) {
-                showFlexbox = false
-                flexbox.gone()
+                showChatStatus = false
+                chatStatus.gone()
             } else {
-                showFlexbox = true
-                flexbox.visible()
-                flexbox.postDelayed({ flexbox.gone() }, 5000)
+                showChatStatus = true
+                chatStatus.visible()
+                chatStatus.postDelayed({ chatStatus.gone() }, 5000)
             }
         }
     }
