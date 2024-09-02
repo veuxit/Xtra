@@ -645,4 +645,5 @@
     <string name="download_end_wait">Wait time after stream</string>
     <string name="download_end_wait_summary">Minutes to wait for another stream to start after previous one has ended</string>
     <string name="draw_behind_cutouts">Draw behind display cutouts</string>
+    <string name="text_size">Text size</string>
 </resources>

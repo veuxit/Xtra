@@ -630,4 +630,5 @@
     <string name="download_end_wait">Время ожидания после стрима</string>
     <string name="download_end_wait_summary">Количество минут до начала следующего стрима после завершения предыдущего</string>
     <string name="draw_behind_cutouts">Отрисовка под вырезом в дисплее</string>
+    <string name="text_size">Text size</string>
 </resources>
