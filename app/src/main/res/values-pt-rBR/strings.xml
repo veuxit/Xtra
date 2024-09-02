@@ -630,4 +630,5 @@
     <string name="download_end_wait">Tempo de espera após a transmissão</string>
     <string name="download_end_wait_summary">Minutos a esperar para outra transmissão começar após a anterior ter terminado</string>
     <string name="draw_behind_cutouts">Desenhar atrás dos recortes de exibição</string>
+    <string name="text_size">Text size</string>
 </resources>

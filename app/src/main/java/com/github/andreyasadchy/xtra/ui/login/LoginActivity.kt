@@ -40,6 +40,7 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.slider.Slider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import okhttp3.MediaType
@@ -49,6 +50,7 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.regex.Pattern
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
@@ -154,6 +156,7 @@ class LoginActivity : AppCompatActivity() {
         val gqlRedirect = prefs().getString(C.GQL_REDIRECT2, "https://www.twitch.tv/")
         with(binding) {
             webViewContainer.visible()
+            textZoom.visible()
             havingTrouble.setOnClickListener {
                 this@LoginActivity.getAlertDialogBuilder()
                     .setMessage(getString(R.string.login_problem_solution))
@@ -168,14 +171,15 @@ class LoginActivity : AppCompatActivity() {
                     }
                     .setNeutralButton(R.string.to_enter_url) { _, _ ->
                         val editText = EditText(this@LoginActivity).apply {
-                            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                                val margin = convertDpToPixels(10f)
-                                setMargins(margin, 0, margin, 0)
-                            }
+                            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                         }
-                        val dialog = this@LoginActivity.getAlertDialogBuilder()
+                        this@LoginActivity.getAlertDialogBuilder()
                             .setTitle(R.string.enter_url)
-                            .setView(editText)
+                            .setView(LinearLayout(this@LoginActivity).apply {
+                                addView(editText)
+                                val padding = convertDpToPixels(20f)
+                                setPadding(padding, 0, padding, 0)
+                            })
                             .setPositiveButton(R.string.log_in) { _, _ ->
                                 val text = editText.text
                                 if (text.isNotEmpty()) {
@@ -186,9 +190,25 @@ class LoginActivity : AppCompatActivity() {
                             }
                             .setNegativeButton(android.R.string.cancel, null)
                             .show()
-                        dialog.window?.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                     }
                     .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+            textZoom.setOnClickListener {
+                val slider = Slider(this@LoginActivity).apply {
+                    value = (webView.settings.textZoom.toFloat() / 100)
+                }
+                this@LoginActivity.getAlertDialogBuilder()
+                    .setTitle(getString(R.string.text_size))
+                    .setView(LinearLayout(this@LoginActivity).apply {
+                        addView(slider)
+                        val padding = convertDpToPixels(10f)
+                        setPadding(padding, 0, padding, 0)
+                    })
+                    .setPositiveButton(getString(android.R.string.ok)) { _, _ ->
+                        webView.settings.textZoom = (slider.value * 100).roundToInt()
+                    }
+                    .setNegativeButton(getString(android.R.string.cancel), null)
                     .show()
             }
             clearCookies()
@@ -205,8 +225,6 @@ class LoginActivity : AppCompatActivity() {
             }
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.loadWithOverviewMode = true
-            settings.useWideViewPort = true
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             webChromeClient = WebChromeClient()
@@ -295,6 +313,7 @@ class LoginActivity : AppCompatActivity() {
                 val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?client_id=${gqlClientId}&device_code=${deviceCode}&force_verify=true&redirect_uri=${gqlRedirect}&response_type=device_grant_trigger&scope=channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read"
                 binding.webView.loadUrl(gqlAuthUrl)
                 binding.webViewContainer.visible()
+                binding.textZoom.visible()
                 binding.progressBar.gone()
             } catch (e: Exception) {
                 if (!helixToken.isNullOrBlank()) {
@@ -344,6 +363,7 @@ class LoginActivity : AppCompatActivity() {
                 val matcher = tokenPattern.matcher(url)
                 if (matcher.find()) {
                     webViewContainer.gone()
+                    textZoom.gone()
                     progressBar.visible()
                     val token = matcher.group(1)
                     if (!token.isNullOrBlank() && !tokens.contains(token)) {
@@ -407,6 +427,7 @@ class LoginActivity : AppCompatActivity() {
                                     helixToken = null
                                     gqlToken = null
                                     webViewContainer.visible()
+                                    textZoom.visible()
                                     progressBar.gone()
                                     if ((prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0) == 1) {
                                         if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
