@@ -252,9 +252,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.raidClicked.collectLatest {
-                            if (it) {
-                                onRaidClicked()
-                                viewModel.raidClicked.value = false
+                            if (it != null) {
+                                onRaidClicked(it)
+                                viewModel.raidClicked.value = null
                             }
                         }
                     }
@@ -387,7 +387,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         if (!viewModel.raidClosed) {
             if (raid.openStream) {
                 if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment && !(parentFragment as BasePlayerFragment).isSleepTimerActive()) {
-                    onRaidClicked()
+                    onRaidClicked(raid)
                 }
                 binding.chatView.hideRaid()
             } else {
@@ -396,15 +396,13 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         }
     }
 
-    private fun onRaidClicked() {
-        viewModel.raid.value?.let {
-            (requireActivity() as MainActivity).startStream(Stream(
-                channelId = it.targetId,
-                channelLogin = it.targetLogin,
-                channelName = it.targetName,
-                profileImageUrl = it.targetProfileImage,
-            ))
-        }
+    private fun onRaidClicked(raid: Raid) {
+        (requireActivity() as MainActivity).startStream(Stream(
+            channelId = raid.targetId,
+            channelLogin = raid.targetLogin,
+            channelName = raid.targetName,
+            profileImageUrl = raid.targetProfileImage,
+        ))
     }
 
     fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()
