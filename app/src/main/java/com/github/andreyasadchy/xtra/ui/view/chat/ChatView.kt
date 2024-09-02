@@ -58,7 +58,7 @@ class ChatView : ConstraintLayout {
 
     interface ChatViewCallback {
         fun send(message: CharSequence)
-        fun onRaidClicked()
+        fun onRaidClicked(raid: Raid)
         fun onRaidClose()
     }
 
@@ -230,7 +230,7 @@ class ChatView : ConstraintLayout {
     fun notifyRaid(raid: Raid) {
         with(binding) {
             raidLayout.visible()
-            raidLayout.setOnClickListener { callback?.onRaidClicked() }
+            raidLayout.setOnClickListener { callback?.onRaidClicked(raid) }
             raidImage.visible()
             raidImage.loadImage(fragment, raid.targetLogo, circle = true)
             raidText.visible()

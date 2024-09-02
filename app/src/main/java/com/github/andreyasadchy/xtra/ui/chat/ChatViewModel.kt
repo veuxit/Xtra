@@ -101,7 +101,7 @@ class ChatViewModel @Inject constructor(
 
     val roomState = MutableStateFlow<RoomState?>(null)
     val raid = MutableStateFlow<Raid?>(null)
-    val raidClicked = MutableStateFlow(false)
+    val raidClicked = MutableStateFlow<Raid?>(null)
     var raidClosed = false
     private val _streamInfo = MutableStateFlow<StreamInfo?>(null)
     val streamInfo: StateFlow<StreamInfo?> = _streamInfo
@@ -165,8 +165,8 @@ class ChatViewModel @Inject constructor(
         chat?.send(message)
     }
 
-    override fun onRaidClicked() {
-        raidClicked.value = true
+    override fun onRaidClicked(raid: Raid) {
+        raidClicked.value = raid
     }
 
     override fun onRaidClose() {
