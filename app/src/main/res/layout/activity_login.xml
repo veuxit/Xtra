@@ -19,6 +19,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ImageButton
+        android:id="@+id/textZoom"
+        android:layout_width="43dp"
+        android:layout_height="43dp"
+        android:background="?android:selectableItemBackground"
+        android:src="@drawable/baseline_settings_black_24"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="?attr/colorControlNormal"
+        tools:visibility="visible" />
+
     <LinearLayout
         android:id="@+id/webViewContainer"
         android:layout_width="match_parent"

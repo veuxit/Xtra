@@ -630,4 +630,5 @@
     <string name="download_end_wait">串流后的等待时间</string>
     <string name="download_end_wait_summary">在上一个串流结束后等待另一个串流开始的分钟数</string>
     <string name="draw_behind_cutouts">Draw behind display cutouts</string>
+    <string name="text_size">Text size</string>
 </resources>
