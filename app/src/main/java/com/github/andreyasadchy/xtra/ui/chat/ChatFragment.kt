@@ -122,9 +122,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.newMessage.collect {
-                            if (it) {
+                            if (it != null) {
                                 chatView.notifyMessageAdded()
-                                viewModel.newMessage.value = false
+                                viewModel.newMessage.value = null
                             }
                         }
                     }

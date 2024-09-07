@@ -177,7 +177,7 @@ class ChatView : ConstraintLayout {
     }
 
     fun notifyEmotesLoaded() {
-        adapter.messages?.size?.let { adapter.notifyItemRangeChanged(it - 40, 40) }
+        adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) }
     }
 
     fun notifyRoomState(roomState: RoomState) {
