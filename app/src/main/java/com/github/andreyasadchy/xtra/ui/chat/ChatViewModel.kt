@@ -117,7 +117,7 @@ class ChatViewModel @Inject constructor(
     private var messageLimit = 600
     private val _chatMessages = MutableStateFlow<MutableList<ChatMessage>>(Collections.synchronizedList(ArrayList(messageLimit + 1)))
     val chatMessages: StateFlow<MutableList<ChatMessage>> = _chatMessages
-    val newMessage = MutableStateFlow(false)
+    val newMessage = MutableStateFlow<ChatMessage?>(null)
 
     var chat: ChatController? = null
 
@@ -406,12 +406,12 @@ class ChatViewModel @Inject constructor(
                     }?.let { list.add(it) }
                 }
                 if (list.isNotEmpty()) {
-                    _chatMessages.value.addAll(0, list)
+                    _chatMessages.value = mutableListOf<ChatMessage>().apply {
+                        addAll(list)
+                        addAll(_chatMessages.value)
+                    }
                     if (!scrollDown.value) {
                         scrollDown.value = true
-                    }
-                    if (!reloadMessages.value) {
-                        reloadMessages.value = true
                     }
                 }
             } catch (e: Exception) {
@@ -1810,7 +1810,7 @@ class ChatViewModel @Inject constructor(
 
         override fun onMessage(message: ChatMessage) {
             _chatMessages.value.add(message)
-            newMessage.value = true
+            newMessage.value = message
         }
     }
 
