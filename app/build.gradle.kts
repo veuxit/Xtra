@@ -70,6 +70,8 @@ android {
             "androidx.media3:media3-exoplayer-hls:1.2.1",
             "androidx.media3:media3-session:1.2.1",
             "androidx.media3:media3-ui:1.2.1",
+            "androidx.navigation:navigation-fragment:2.7.7",
+            "androidx.navigation:navigation-ui:2.7.7",
             "androidx.paging:paging-runtime:3.3.0-alpha02",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "androidx.work:work-runtime:2.9.1",
