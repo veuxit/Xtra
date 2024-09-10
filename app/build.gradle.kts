@@ -72,6 +72,7 @@ android {
             "androidx.media3:media3-ui:1.2.1",
             "androidx.paging:paging-runtime:3.3.0-alpha02",
             "androidx.webkit:webkit:1.9.0-alpha01",
+            "androidx.work:work-runtime:2.9.1",
             "com.google.android.material:material:1.11.0",
             "com.squareup.okhttp3:okhttp:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
