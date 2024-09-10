@@ -47,6 +47,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -96,7 +97,7 @@ class StreamDownloadWorker @AssistedInject constructor(
         offlineVideo = firstVideo
         offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_WAITING_FOR_STREAM })
         setForeground(createForegroundInfo(false, firstVideo))
-        return withContext(Dispatchers.IO) {
+        return runBlocking {
             val path = offlineVideo.downloadPath!!
             val channelLogin = offlineVideo.channelLogin!!
             val quality = offlineVideo.quality
