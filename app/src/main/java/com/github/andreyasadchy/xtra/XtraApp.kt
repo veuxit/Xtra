@@ -16,6 +16,7 @@ import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 
@@ -53,6 +54,7 @@ class XtraApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
+            .setWorkerCoroutineContext(Dispatchers.IO)
             .setWorkerFactory(workerFactory)
             .build()
 
