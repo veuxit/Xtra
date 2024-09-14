@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 35
-        versionCode = 254
-        versionName = "2.34.3"
+        versionCode = 255
+        versionName = "2.34.4"
     }
 
     buildTypes {
@@ -85,6 +85,7 @@ dependencies {
     //Misc
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.tls)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.serialization)
     implementation(libs.serialization.json)
