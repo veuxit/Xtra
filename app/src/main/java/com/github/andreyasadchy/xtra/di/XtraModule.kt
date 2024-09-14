@@ -1,8 +1,11 @@
 package com.github.andreyasadchy.xtra.di
 
+import android.app.Application
+import android.os.Build
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.network.okHttpClient
 import com.github.andreyasadchy.xtra.BuildConfig
+import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.GraphQLApi
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.api.IdApi
@@ -16,6 +19,8 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.tls.HandshakeCertificates
+import okhttp3.tls.decodeCertificatePem
 import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -105,10 +110,24 @@ class XtraModule {
 
     @Singleton
     @Provides
-    fun providesOkHttpClient(): OkHttpClient {
+    fun providesOkHttpClient(application: Application): OkHttpClient {
         val builder = OkHttpClient.Builder().apply {
             if (BuildConfig.DEBUG) {
                 addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+            }
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) {
+                try {
+                    val certificate = application.resources.openRawResource(R.raw.isrgrootx1).bufferedReader().use {
+                        it.readText()
+                    }.decodeCertificatePem()
+                    val certificates = HandshakeCertificates.Builder()
+                        .addTrustedCertificate(certificate)
+                        .addPlatformTrustedCertificates()
+                        .build()
+                    sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
+                } catch (e: Exception) {
+
+                }
             }
             connectTimeout(5, TimeUnit.MINUTES)
             writeTimeout(5, TimeUnit.MINUTES)

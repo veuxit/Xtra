@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 121
-        versionName = "2.34.3"
+        versionName = "2.34.4"
     }
 
     buildTypes {
@@ -85,6 +85,7 @@ dependencies {
     //Misc
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.tls)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.serialization)
     implementation(libs.serialization.json)
