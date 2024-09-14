@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.34.3"
+        versionName = "2.34.4"
     }
 
     buildTypes {
@@ -77,6 +77,7 @@ android {
             "androidx.work:work-runtime:2.9.1",
             "com.google.android.material:material:1.11.0",
             "com.squareup.okhttp3:okhttp:3.12.13",
+            "com.squareup.okhttp3:okhttp-tls:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
             "com.squareup.retrofit2:retrofit:2.6.4",
         ))
@@ -113,6 +114,7 @@ dependencies {
     //Misc
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.tls)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.serialization)
     implementation(libs.serialization.json)
