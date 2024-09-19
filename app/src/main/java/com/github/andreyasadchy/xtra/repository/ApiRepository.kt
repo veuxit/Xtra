@@ -785,7 +785,12 @@ class ApiRepository @Inject constructor(
                             emote.token?.let { token ->
                                 TwitchEmote(
                                     id = emote.id,
-                                    name = token.removePrefix("\\").replace("?\\", ""),
+                                    name = if (emote.type == "SMILIES") {
+                                        token.replace("\\", "").replace("?", "")
+                                            .replace("&lt;", "<").replace("&gt;", ">")
+                                            .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                            .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                    } else token,
                                     setId = emote.setID,
                                     ownerId = set.owner?.id
                                 )
@@ -811,7 +816,12 @@ class ApiRepository @Inject constructor(
                         if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
                             TwitchEmote(
                                 id = emote.id,
-                                name = emote.token.removePrefix("\\").replace("?\\", ""),
+                                name = if (emote.type == "SMILIES") {
+                                    emote.token.replace("\\", "").replace("?", "")
+                                        .replace("&lt;", "<").replace("&gt;", ">")
+                                        .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                        .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                } else emote.token,
                                 setId = emote.setID,
                                 ownerId = emote.owner?.id
                             )
@@ -830,30 +840,37 @@ class ApiRepository @Inject constructor(
                         offset = offset
                     )
                     response.data.mapNotNull { emote ->
-                        emote.id?.let { id ->
-                            val format = if (animateGifs) {
-                                emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
-                            } else {
-                                emote.format?.find { it == "static" }
-                            } ?: emote.format?.firstOrNull() ?: ""
-                            val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
-                            val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
-                            val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
-                            val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
-                            val url = response.template
-                                .replaceFirst("{{id}}", id)
-                                .replaceFirst("{{format}}", format)
-                                .replaceFirst("{{theme_mode}}", theme)
-                            TwitchEmote(
-                                name = emote.name,
-                                url1x = url.replaceFirst("{{scale}}", scale1x),
-                                url2x = url.replaceFirst("{{scale}}", scale2x),
-                                url3x = url.replaceFirst("{{scale}}", scale3x),
-                                url4x = url.replaceFirst("{{scale}}", scale3x),
-                                format = if (format == "animated") "gif" else null,
-                                setId = emote.setId,
-                                ownerId = emote.ownerId
-                            )
+                        emote.name?.let { name ->
+                            emote.id?.let { id ->
+                                val format = if (animateGifs) {
+                                    emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                                } else {
+                                    emote.format?.find { it == "static" }
+                                } ?: emote.format?.firstOrNull() ?: ""
+                                val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                                val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                                val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                                val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                                val url = response.template
+                                    .replaceFirst("{{id}}", id)
+                                    .replaceFirst("{{format}}", format)
+                                    .replaceFirst("{{theme_mode}}", theme)
+                                TwitchEmote(
+                                    name = if (emote.type == "smilies") {
+                                        name.replace("\\", "").replace("?", "")
+                                            .replace("&lt;", "<").replace("&gt;", ">")
+                                            .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                            .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                    } else name,
+                                    url1x = url.replaceFirst("{{scale}}", scale1x),
+                                    url2x = url.replaceFirst("{{scale}}", scale2x),
+                                    url3x = url.replaceFirst("{{scale}}", scale3x),
+                                    url4x = url.replaceFirst("{{scale}}", scale3x),
+                                    format = if (format == "animated") "gif" else null,
+                                    setId = emote.setId,
+                                    ownerId = emote.ownerId
+                                )
+                            }
                         }
                     }.let { emotes.addAll(it) }
                     offset = response.pagination?.cursor
@@ -869,30 +886,37 @@ class ApiRepository @Inject constructor(
             setIds = setIds
         )
         response.data.mapNotNull { emote ->
-            emote.id?.let { id ->
-                val format = if (animateGifs) {
-                    emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
-                } else {
-                    emote.format?.find { it == "static" }
-                } ?: emote.format?.firstOrNull() ?: ""
-                val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
-                val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
-                val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
-                val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
-                val url = response.template
-                    .replaceFirst("{{id}}", id)
-                    .replaceFirst("{{format}}", format)
-                    .replaceFirst("{{theme_mode}}", theme)
-                TwitchEmote(
-                    name = emote.name,
-                    url1x = url.replaceFirst("{{scale}}", scale1x),
-                    url2x = url.replaceFirst("{{scale}}", scale2x),
-                    url3x = url.replaceFirst("{{scale}}", scale3x),
-                    url4x = url.replaceFirst("{{scale}}", scale3x),
-                    format = if (format == "animated") "gif" else null,
-                    setId = emote.setId,
-                    ownerId = emote.ownerId
-                )
+            emote.name?.let { name ->
+                emote.id?.let { id ->
+                    val format = if (animateGifs) {
+                        emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                    } else {
+                        emote.format?.find { it == "static" }
+                    } ?: emote.format?.firstOrNull() ?: ""
+                    val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                    val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                    val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                    val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                    val url = response.template
+                        .replaceFirst("{{id}}", id)
+                        .replaceFirst("{{format}}", format)
+                        .replaceFirst("{{theme_mode}}", theme)
+                    TwitchEmote(
+                        name = if (emote.type == "smilies") {
+                            name.replace("\\", "").replace("?", "")
+                                .replace("&lt;", "<").replace("&gt;", ">")
+                                .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                        } else name,
+                        url1x = url.replaceFirst("{{scale}}", scale1x),
+                        url2x = url.replaceFirst("{{scale}}", scale2x),
+                        url3x = url.replaceFirst("{{scale}}", scale3x),
+                        url4x = url.replaceFirst("{{scale}}", scale3x),
+                        format = if (format == "animated") "gif" else null,
+                        setId = emote.setId,
+                        ownerId = emote.ownerId
+                    )
+                }
             }
         }
     }
