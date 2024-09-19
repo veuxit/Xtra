@@ -38,6 +38,7 @@ import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.slider.Slider
 import dagger.hilt.android.AndroidEntryPoint
@@ -92,7 +93,7 @@ class LoginActivity : AppCompatActivity() {
             val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
             TwitchApiHelper.checkedValidation = false
             Account.set(this, null)
-            prefs().edit {
+            tokenPrefs().edit {
                 putString(C.TOKEN, null)
                 putString(C.GQL_HEADERS, null)
                 putLong(C.INTEGRITY_EXPIRATION, 0)
@@ -317,7 +318,7 @@ class LoginActivity : AppCompatActivity() {
                 if (!helixToken.isNullOrBlank()) {
                     TwitchApiHelper.checkedValidation = true
                     Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
-                    prefs().edit {
+                    tokenPrefs().edit {
                         putString(C.TOKEN, helixToken)
                     }
                 }
@@ -348,7 +349,7 @@ class LoginActivity : AppCompatActivity() {
                         if (!helixToken.isNullOrBlank()) {
                             TwitchApiHelper.checkedValidation = true
                             Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
-                            prefs().edit {
+                            tokenPrefs().edit {
                                 putString(C.TOKEN, helixToken)
                             }
                         }
@@ -392,7 +393,7 @@ class LoginActivity : AppCompatActivity() {
                                         TwitchApiHelper.checkedValidation = true
                                         Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
                                         if (!gqlToken.isNullOrBlank()) {
-                                            prefs().edit {
+                                            tokenPrefs().edit {
                                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                                     putLong(C.INTEGRITY_EXPIRATION, 0)
                                                     putString(C.GQL_HEADERS, JSONObject(mapOf(
@@ -405,7 +406,7 @@ class LoginActivity : AppCompatActivity() {
                                             }
                                         }
                                         if (!helixToken.isNullOrBlank()) {
-                                            prefs().edit {
+                                            tokenPrefs().edit {
                                                 putString(C.TOKEN, helixToken)
                                             }
                                         }

@@ -30,6 +30,8 @@ private fun getConnectivityManager(context: Context) = context.getSystemService(
 
 fun Context.prefs(): SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
 
+fun Context.tokenPrefs(): SharedPreferences = getSharedPreferences("prefs2", Context.MODE_PRIVATE)
+
 fun Context.convertDpToPixels(dp: Float) =  TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, this.resources.displayMetrics).toInt()
 
 fun Context.convertPixelsToDp(pixels: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, pixels, this.resources.displayMetrics).toInt()

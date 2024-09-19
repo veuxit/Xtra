@@ -66,6 +66,7 @@ import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -186,6 +187,26 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     putBoolean(C.UI_DRAW_BEHIND_CUTOUTS, true)
                 }
                 putBoolean(C.FIRST_LAUNCH8, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH9, true)) {
+            tokenPrefs().edit {
+                putString(C.USER_ID, prefs.getString(C.USER_ID, null))
+                putString(C.USERNAME, prefs.getString(C.USERNAME, null))
+                putString(C.TOKEN, prefs.getString(C.TOKEN, null))
+                putString(C.GQL_TOKEN2, prefs.getString(C.GQL_TOKEN2, null))
+                putString(C.GQL_HEADERS, prefs.getString(C.GQL_HEADERS, null))
+                putLong(C.INTEGRITY_EXPIRATION, prefs.getLong(C.INTEGRITY_EXPIRATION, 0))
+            }
+            prefs.edit {
+                remove(C.USER_ID)
+                remove(C.USERNAME)
+                remove(C.TOKEN)
+                remove(C.GQL_TOKEN)
+                remove(C.GQL_TOKEN2)
+                remove(C.GQL_HEADERS)
+                remove(C.INTEGRITY_EXPIRATION)
+                putBoolean(C.FIRST_LAUNCH9, false)
             }
         }
         lifecycleScope.launch {

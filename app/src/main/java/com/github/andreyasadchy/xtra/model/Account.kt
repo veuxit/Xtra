@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 
 sealed class Account(val id: String?,
                      val login: String?) {
@@ -13,7 +13,7 @@ sealed class Account(val id: String?,
         private var account: Account? = null
 
         fun get(context: Context): Account {
-            return account ?: with(context.prefs()) {
+            return account ?: with(context.tokenPrefs()) {
                 val helixToken = TwitchApiHelper.getHelixHeaders(context)[C.HEADER_TOKEN].takeUnless { it.isNullOrBlank() }
                 val gqlToken = TwitchApiHelper.getGQLHeaders(context, true)[C.HEADER_TOKEN].takeUnless { it.isNullOrBlank() }
                 if (!helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
@@ -32,7 +32,7 @@ sealed class Account(val id: String?,
 
         fun set(context: Context, account: Account?) {
             this.account = account
-            context.prefs().edit {
+            context.tokenPrefs().edit {
                 if (account != null) {
                     putString(C.USER_ID, account.id)
                     putString(C.USERNAME, account.login)

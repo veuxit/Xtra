@@ -20,6 +20,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import org.json.JSONObject
 
 class IntegrityDialog : DialogFragment() {
@@ -60,7 +61,7 @@ class IntegrityDialog : DialogFragment() {
 
                 override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
                     if (!webViewRequest.requestHeaders.entries.firstOrNull { it.key.equals("Client-Integrity", true) }?.value.isNullOrBlank()) {
-                        context.prefs().edit {
+                        context.tokenPrefs().edit {
                             putLong(C.INTEGRITY_EXPIRATION, System.currentTimeMillis() + 57600000)
                             putString(C.GQL_HEADERS, JSONObject(
                                 if (context.prefs().getBoolean(C.GET_ALL_GQL_HEADERS, false)) {
