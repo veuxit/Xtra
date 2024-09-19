@@ -631,4 +631,6 @@
     <string name="download_end_wait_summary">Minuten, die gewartet werden soll, bis ein weiterer Stream startet, nachdem der vorherige beendet wurde</string>
     <string name="draw_behind_cutouts">Hinter Displayausschnitten zeichnen</string>
     <string name="text_size">Text size</string>
+    <string name="backup_settings">Backup settings and data</string>
+    <string name="restore_settings">Restore settings and data</string>
 </resources>
