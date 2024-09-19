@@ -2,8 +2,10 @@ package com.github.andreyasadchy.xtra.ui.settings
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.ContentResolver
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,6 +14,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
@@ -29,6 +33,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
+import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.SeekBarPreference
@@ -40,11 +45,14 @@ import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
+import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.google.android.material.appbar.AppBarLayout
 import com.woxthebox.draglistview.DragItemAdapter
 import com.woxthebox.draglistview.DragListView
@@ -93,14 +101,86 @@ class SettingsActivity : AppCompatActivity() {
     class SettingsFragment : MaterialPreferenceFragment() {
 
         private val viewModel: SettingsViewModel by viewModels()
-
         private var changed = false
+        private var backupResultLauncher: ActivityResultLauncher<Intent>? = null
+        private var restoreResultLauncher: ActivityResultLauncher<Intent>? = null
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
             changed = savedInstanceState?.getBoolean(KEY_CHANGED) == true
             if (changed) {
                 requireActivity().setResult(Activity.RESULT_OK)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                backupResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        result.data?.data?.let {
+                            viewModel.backupSettings(it.toString())
+                        }
+                    }
+                }
+            } else {
+                backupResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        result.data?.data?.let {
+                            val isShared = it.scheme == ContentResolver.SCHEME_CONTENT
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && isShared) {
+                                val storage = DownloadUtils.getAvailableStorage(requireContext())
+                                val uri = Uri.decode(it.path).substringAfter("/document/")
+                                val storageName = uri.substringBefore(":")
+                                val storagePath = if (storageName.equals("primary", true)) {
+                                    storage.firstOrNull()
+                                } else {
+                                    if (storage.size >= 2) {
+                                        storage.lastOrNull()
+                                    } else {
+                                        storage.firstOrNull()
+                                    }
+                                }?.path?.substringBefore("/Android/data") ?: "/storage/emulated/0"
+                                val path = uri.substringAfter(":").substringBeforeLast("/")
+                                val fullUri = "$storagePath/$path"
+                                viewModel.backupSettings(fullUri)
+                            } else {
+                                it.path?.substringBeforeLast("/")?.let { uri -> viewModel.backupSettings(uri) }
+                            }
+                        }
+                    }
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                restoreResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        val list = mutableListOf<String>()
+                        result.data?.clipData?.let { clipData ->
+                            for (i in 0 until clipData.itemCount) {
+                                val item = clipData.getItemAt(i)
+                                item.uri?.let {
+                                    list.add(it.toString())
+                                }
+                            }
+                        } ?: result.data?.data?.let {
+                            list.add(it.toString())
+                        }
+                        viewModel.restoreSettings(list)
+                    }
+                }
+            } else {
+                restoreResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        val list = mutableListOf<String>()
+                        result.data?.clipData?.let { clipData ->
+                            for (i in 0 until clipData.itemCount) {
+                                val item = clipData.getItemAt(i)
+                                item.uri?.path?.let {
+                                    list.add(it)
+                                }
+                            }
+                        } ?: result.data?.data?.path?.let {
+                            list.add(it)
+                        }
+                        viewModel.restoreSettings(list)
+                    }
+                }
             }
         }
 
@@ -273,6 +353,58 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
                 viewModel.importDownloads()
                 true
+            }
+
+            findPreference<Preference>("backup_settings")?.setOnPreferenceClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    backupResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                } else {
+                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                        backupResultLauncher?.launch(intent)
+                    } else {
+                        requireContext().toast(R.string.no_file_manager_found)
+                    }
+                }
+                true
+            }
+
+            findPreference<Preference>("restore_settings")?.setOnPreferenceClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    restoreResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    })
+                } else {
+                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        }
+                    }
+                    if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                        restoreResultLauncher?.launch(intent)
+                    } else {
+                        requireContext().toast(R.string.no_file_manager_found)
+                    }
+                }
+                true
+            }
+
+            findPreference<EditTextPreference>("gql_headers")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.GQL_HEADERS, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.GQL_HEADERS, newValue.toString())
+                    }
+                    true
+                }
             }
 
             findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
@@ -739,6 +871,50 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.api_token_preferences, rootKey)
+
+            findPreference<EditTextPreference>("user_id")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.USER_ID, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.USER_ID, newValue.toString())
+                    }
+                    true
+                }
+            }
+
+            findPreference<EditTextPreference>("username")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.USERNAME, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.USERNAME, newValue.toString())
+                    }
+                    true
+                }
+            }
+
+            findPreference<EditTextPreference>("token")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.TOKEN, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.TOKEN, newValue.toString())
+                    }
+                    true
+                }
+            }
+
+            findPreference<EditTextPreference>("gql_token2")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.GQL_TOKEN2, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.GQL_TOKEN2, newValue.toString())
+                    }
+                    true
+                }
+            }
         }
     }
 }

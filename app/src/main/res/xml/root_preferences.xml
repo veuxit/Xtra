@@ -620,6 +620,18 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <Preference
+        android:key="backup_settings"
+        android:title="@string/backup_settings"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <Preference
+        android:key="restore_settings"
+        android:title="@string/restore_settings"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <PreferenceCategory android:title="@string/settings_debug" app:iconSpaceReserved="false"/>
     <SwitchPreferenceCompat
         android:defaultValue="false"

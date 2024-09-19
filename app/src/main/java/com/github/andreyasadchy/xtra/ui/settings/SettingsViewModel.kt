@@ -1,30 +1,42 @@
 package com.github.andreyasadchy.xtra.ui.settings
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.JsonReader
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.sqlite.db.SimpleSQLiteQuery
+import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okio.buffer
+import okio.sink
+import okio.source
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlin.math.max
+import kotlin.system.exitProcess
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
-    private val offlineRepository: OfflineRepository) : ViewModel() {
+    private val offlineRepository: OfflineRepository,
+    private val appDatabase: AppDatabase) : ViewModel() {
 
     fun deletePositions() {
         viewModelScope.launch {
@@ -196,6 +208,87 @@ class SettingsViewModel @Inject constructor(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    fun backupSettings(url: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val directory = DocumentFile.fromTreeUri(applicationContext, url.substringBefore("/document/").toUri())
+                if (directory != null) {
+                    val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
+                    (directory.findFile(preferences.name) ?: directory.createFile("", preferences.name))?.let {
+                        applicationContext.contentResolver.openOutputStream(it.uri)!!.sink().buffer().use { sink ->
+                            sink.writeAll(preferences.source().buffer())
+                        }
+                    }
+                    appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
+                        it.moveToPosition(-1)
+                    }
+                    val database = applicationContext.getDatabasePath("database")
+                    (directory.findFile(database.name) ?: directory.createFile("", database.name))?.let {
+                        applicationContext.contentResolver.openOutputStream(it.uri)!!.sink().buffer().use { sink ->
+                            sink.writeAll(database.source().buffer())
+                        }
+                    }
+                }
+            } else {
+                val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
+                File(url, preferences.name).sink().buffer().use { sink ->
+                    sink.writeAll(preferences.source().buffer())
+                }
+                appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
+                    it.moveToPosition(-1)
+                }
+                val database = applicationContext.getDatabasePath("database")
+                File(url, database.name).sink().buffer().use { sink ->
+                    sink.writeAll(database.source().buffer())
+                }
+            }
+        }
+    }
+
+    fun restoreSettings(list: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                list.take(2).forEach { url ->
+                    if (url.endsWith(".xml")) {
+                        File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").sink().buffer().use { sink ->
+                            sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
+                        }
+                    } else {
+                        val database = applicationContext.getDatabasePath("database")
+                        File(database.parent, "database-shm").delete()
+                        File(database.parent, "database-wal").delete()
+                        database.sink().buffer().use { sink ->
+                            sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
+                        }
+                        applicationContext.startActivity(Intent(applicationContext, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        })
+                        exitProcess(0)
+                    }
+                }
+            } else {
+                list.take(2).forEach { url ->
+                    if (url.endsWith(".xml")) {
+                        File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").sink().buffer().use { sink ->
+                            sink.writeAll(File(url).source().buffer())
+                        }
+                    } else {
+                        val database = applicationContext.getDatabasePath("database")
+                        File(database.parent, "database-shm").delete()
+                        File(database.parent, "database-wal").delete()
+                        database.sink().buffer().use { sink ->
+                            sink.writeAll(File(url).source().buffer())
+                        }
+                        applicationContext.startActivity(Intent(applicationContext, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        })
+                        exitProcess(0)
                     }
                 }
             }

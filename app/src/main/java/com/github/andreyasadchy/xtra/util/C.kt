@@ -43,6 +43,7 @@ object C {
     const val FIRST_LAUNCH6 = "first_launch6"
     const val FIRST_LAUNCH7 = "first_launch7"
     const val FIRST_LAUNCH8 = "first_launch8"
+    const val FIRST_LAUNCH9 = "first_launch9"
     const val LANDSCAPE_CHAT_WIDTH = "landscape_chat_width"
     const val KEY_CHAT_OPENED = "key_chat_opened"
     const val KEY_CHAT_BAR_VISIBLE = "key_chat_bar_visible"
