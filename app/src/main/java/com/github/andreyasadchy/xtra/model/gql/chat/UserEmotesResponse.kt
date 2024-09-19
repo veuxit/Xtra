@@ -47,6 +47,7 @@ data class UserEmotesResponse(
         val token: String? = null,
         val id: String? = null,
         val setID: String? = null,
+        val type: String? = null,
     )
 
     @Serializable

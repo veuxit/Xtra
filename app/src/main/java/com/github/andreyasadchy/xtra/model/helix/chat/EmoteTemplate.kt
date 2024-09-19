@@ -15,4 +15,6 @@ data class EmoteTemplate(
     val setId: String? = null,
     @SerialName("owner_id")
     val ownerId: String? = null,
+    @SerialName("emote_type")
+    val type: String? = null,
 )
