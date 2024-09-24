@@ -1,7 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.settings
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.JsonReader
 import androidx.core.content.ContextCompat
@@ -15,15 +17,26 @@ import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okio.buffer
 import okio.sink
 import okio.source
+import okio.use
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -36,7 +49,11 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
-    private val appDatabase: AppDatabase) : ViewModel() {
+    private val appDatabase: AppDatabase,
+    private val okHttpClient: OkHttpClient,
+    private val json: Json) : ViewModel() {
+
+    val updateUrl = MutableSharedFlow<String?>()
 
     fun deletePositions() {
         viewModelScope.launch {
@@ -209,6 +226,47 @@ class SettingsViewModel @Inject constructor(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    fun checkUpdates(url: String, lastChecked: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            updateUrl.emit(
+                try {
+                    json.decodeFromString<JsonObject>(
+                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { it.body()!!.string() }
+                    )["assets"]?.jsonArray?.find {
+                        it.jsonObject.getValue("content_type").jsonPrimitive.contentOrNull == "application/vnd.android.package-archive"
+                    }?.jsonObject?.let { obj ->
+                        obj.getValue("updated_at").jsonPrimitive.contentOrNull?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
+                            if (it > lastChecked) {
+                                obj.getValue("browser_download_url").jsonPrimitive.contentOrNull
+                            } else null
+                        }
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+            )
+        }
+    }
+
+    fun downloadUpdate(url: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                if (response.isSuccessful) {
+                    val packageInstaller = applicationContext.packageManager.packageInstaller
+                    val sessionId = packageInstaller.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
+                    val session = packageInstaller.openSession(sessionId)
+                    session.openWrite("package", 0, -1).sink().buffer().use { sink ->
+                        sink.writeAll(response.body()!!.source())
+                    }
+                    session.commit(PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MainActivity::class.java).apply {
+                        setAction(MainActivity.INTENT_INSTALL_UPDATE)
+                    }, PendingIntent.FLAG_MUTABLE).intentSender)
+                    session.close()
                 }
             }
         }

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
@@ -24,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -63,6 +65,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
 import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
@@ -85,6 +88,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         const val INTENT_OPEN_DOWNLOADS_TAB = 0
         const val INTENT_OPEN_DOWNLOADED_VIDEO = 1
         const val INTENT_OPEN_PLAYER = 2
+
+        const val INTENT_INSTALL_UPDATE = "com.github.andreyasadchy.xtra.INSTALL_UPDATE"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -214,6 +219,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 putBoolean(C.FIRST_LAUNCH9, false)
             }
         }
+        if (tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) <= 0L) {
+            tokenPrefs().edit {
+                putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
+            }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
@@ -270,6 +280,13 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                             if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
                                 viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
                             }
+                            if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                                (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
+                                viewModel.checkUpdates(
+                                    prefs.getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/api16",
+                                    tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
+                                )
+                            }
                         }
                         if (flag) {
                             shortToast(if (online) R.string.connection_restored else R.string.no_connection)
@@ -277,6 +294,38 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                             flag = true
                         }
                         viewModel.newNetworkStatus.value = null
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.updateUrl.collectLatest {
+                    if (it != null) {
+                        getAlertDialogBuilder()
+                            .setTitle(getString(R.string.update_available))
+                            .setMessage(getString(R.string.update_message))
+                            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || prefs.getBoolean(C.UPDATE_USE_BROWSER, false)) {
+                                    val intent = Intent(Intent.ACTION_VIEW, it.toUri())
+                                    if (intent.resolveActivity(packageManager) != null) {
+                                        tokenPrefs().edit {
+                                            putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
+                                        }
+                                        startActivity(intent)
+                                    } else {
+                                        toast(R.string.no_browser_found)
+                                    }
+                                } else {
+                                    viewModel.downloadUpdate(it)
+                                }
+                            }
+                            .setNegativeButton(getString(R.string.no)) { _, _ ->
+                                tokenPrefs().edit {
+                                    putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
+                                }
+                            }
+                            .show()
                     }
                 }
             }
@@ -500,17 +549,34 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 }
             }
         } else {
-            when (intent?.getIntExtra(KEY_CODE, -1)) {
-                INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
-                INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
+            if (intent?.action == INTENT_INSTALL_UPDATE) {
+                val extras = intent.extras
+                if (extras?.getInt(PackageInstaller.EXTRA_STATUS) == PackageInstaller.STATUS_PENDING_USER_ACTION) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                        extras.getParcelable(Intent.EXTRA_INTENT, Intent::class.java)
                     } else {
                         @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(KEY_VIDEO)!!
+                        extras.getParcelable(Intent.EXTRA_INTENT)
+                    }?.let {
+                        tokenPrefs().edit {
+                            putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
+                        }
+                        startActivity(it)
                     }
-                )
-                INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
+                }
+            } else {
+                when (intent?.getIntExtra(KEY_CODE, -1)) {
+                    INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
+                    INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                        } else {
+                            @Suppress("DEPRECATION")
+                            intent.getParcelableExtra(KEY_VIDEO)!!
+                        }
+                    )
+                    INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
+                }
             }
         }
     }
