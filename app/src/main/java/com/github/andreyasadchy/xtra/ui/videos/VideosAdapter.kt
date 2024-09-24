@@ -29,6 +29,7 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
+import com.github.andreyasadchy.xtra.util.FragmentUtils
 
 class VideosAdapter(
     private val fragment: Fragment,
@@ -211,6 +212,7 @@ class VideosAdapter(
                                 when(it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.bookmark -> saveBookmark(item)
+                                    R.id.share -> FragmentUtils.shareLink(context, "https://twitch.tv/videos/${item.id}", item.title)
                                     else -> menu.close()
                                 }
                                 true
