@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,15 +20,21 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val repository: ApiRepository,
-    private val authRepository: AuthRepository) : ViewModel() {
+    private val authRepository: AuthRepository,
+    private val okHttpClient: OkHttpClient,
+    private val json: Json) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

@@ -29,6 +29,7 @@ import java.util.TimeZone
 object TwitchApiHelper {
 
     var checkedValidation = false
+    var checkedUpdates = false
 
     fun getTemplateUrl(url: String?, type: String): String? {
         if ((url == null)||(url == "")||(url.startsWith("https://vod-secure.twitch.tv/_404/404_processing")))

@@ -20,6 +20,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import okio.buffer
 import okio.sink
 import okio.source
@@ -35,7 +37,9 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
-    private val appDatabase: AppDatabase) : ViewModel() {
+    private val appDatabase: AppDatabase,
+    private val okHttpClient: OkHttpClient,
+    private val json: Json) : ViewModel() {
 
     fun deletePositions() {
         viewModelScope.launch {
