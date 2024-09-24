@@ -649,4 +649,13 @@
     <string name="backup_settings">Backup settings and data</string>
     <string name="restore_settings">Restore settings and data</string>
     <string name="share">Share</string>
+    <string name="check_updates">Check for updates</string>
+    <string name="no_updates_found">No updates found</string>
+    <string name="update_available">Update available</string>
+    <string name="update_message">Download latest update?</string>
+    <string name="update_url">Update check url</string>
+    <string name="update_using_browser">Open update link in browser</string>
+    <string name="auto_check_updates">Check for updates on startup</string>
+    <string name="update_check_frequency">Update check frequency</string>
+    <string name="update_check_frequency_summary">Every %s days</string>
 </resources>

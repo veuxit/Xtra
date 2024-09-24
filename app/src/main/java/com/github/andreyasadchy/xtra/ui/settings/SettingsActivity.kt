@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.content.res.use
+import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -27,6 +28,9 @@ import androidx.core.widget.NestedScrollView
 import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -46,13 +50,17 @@ import com.github.andreyasadchy.xtra.util.DisplayUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.google.android.material.appbar.AppBarLayout
 import com.woxthebox.draglistview.DragItemAdapter
 import com.woxthebox.draglistview.DragListView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -156,6 +164,36 @@ class SettingsActivity : AppCompatActivity() {
                 } else {
                     appBar.setLiftable(false)
                     appBar.background = null
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.updateUrl.collectLatest {
+                        if (it != null) {
+                            requireActivity().getAlertDialogBuilder()
+                                .setTitle(getString(R.string.update_available))
+                                .setMessage(getString(R.string.update_message))
+                                .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                    if (requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false)) {
+                                        val intent = Intent(Intent.ACTION_VIEW, it.toUri())
+                                        if (intent.resolveActivity(requireContext().packageManager) != null) {
+                                            requireContext().tokenPrefs().edit {
+                                                putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
+                                            }
+                                            requireContext().startActivity(intent)
+                                        } else {
+                                            requireContext().toast(R.string.no_browser_found)
+                                        }
+                                    } else {
+                                        viewModel.downloadUpdate(it)
+                                    }
+                                }
+                                .setNegativeButton(getString(R.string.no), null)
+                                .show()
+                        } else {
+                            requireContext().toast(R.string.no_updates_found)
+                        }
+                    }
                 }
             }
         }
@@ -300,6 +338,22 @@ class SettingsActivity : AppCompatActivity() {
 
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
                 viewModel.importDownloads()
+                true
+            }
+
+            findPreference<EditTextPreference>("update_check_frequency")?.apply {
+                summary = getString(R.string.update_check_frequency_summary, text)
+                setOnPreferenceChangeListener { _, newValue ->
+                    summary = getString(R.string.update_check_frequency_summary, newValue)
+                    true
+                }
+            }
+
+            findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
+                viewModel.checkUpdates(
+                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/latest",
+                    requireContext().tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
+                )
                 true
             }
 
