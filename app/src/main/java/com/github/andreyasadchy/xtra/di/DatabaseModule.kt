@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
+import com.github.andreyasadchy.xtra.db.ShownNotificationsDao
 import com.github.andreyasadchy.xtra.db.SortChannelDao
 import com.github.andreyasadchy.xtra.db.SortGameDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
@@ -18,6 +19,7 @@ import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.SortGameRepository
 import com.github.andreyasadchy.xtra.repository.VodBookmarkIgnoredUsersRepository
@@ -61,6 +63,10 @@ class DatabaseModule {
 
     @Singleton
     @Provides
+    fun providesShownNotificationsRepository(shownNotificationsDao: ShownNotificationsDao): ShownNotificationsRepository = ShownNotificationsRepository(shownNotificationsDao)
+
+    @Singleton
+    @Provides
     fun providesVideosDao(database: AppDatabase): VideosDao = database.videos()
 
     @Singleton
@@ -94,6 +100,10 @@ class DatabaseModule {
     @Singleton
     @Provides
     fun providesSortGameDao(database: AppDatabase): SortGameDao = database.sortGameDao()
+
+    @Singleton
+    @Provides
+    fun providesShownNotificationsDao(database: AppDatabase): ShownNotificationsDao = database.shownNotificationsDao()
 
     @Singleton
     @Provides
@@ -244,6 +254,11 @@ class DatabaseModule {
                                 db.execSQL("INSERT INTO videos1 (url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, bytes, downloadPath, fromTime, toTime, status, type, videoId, quality, downloadChat, downloadChatEmotes, chatProgress, maxChatProgress, chatBytes, chatOffsetSeconds, chatUrl, playlistToFile, live, id) SELECT url, source_url, source_start_position, name, channel_id, channel_login, channel_name, channel_logo, thumbnail, gameId, gameSlug, gameName, duration, upload_date, download_date, last_watch_position, progress, max_progress, max_progress, downloadPath, fromTime, toTime, status, type, videoId, quality, downloadChat, downloadChatEmotes, chatProgress, maxChatProgress, chatBytes, chatOffsetSeconds, chatUrl, playlistToFile, 0, id FROM videos")
                                 db.execSQL("DROP TABLE videos")
                                 db.execSQL("ALTER TABLE videos1 RENAME TO videos")
+                            }
+                        },
+                        object : Migration(26, 27) {
+                            override fun migrate(db: SupportSQLiteDatabase) {
+                                db.execSQL("CREATE TABLE IF NOT EXISTS shown_notifications (channelId TEXT NOT NULL, startedAt INTEGER NOT NULL, PRIMARY KEY (channelId))")
                             }
                         },
                     )
