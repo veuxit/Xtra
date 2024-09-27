@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.settings
 
+import android.Manifest
 import android.app.Activity
 import android.content.ComponentName
 import android.content.ContentResolver
@@ -18,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
 import androidx.core.content.edit
 import androidx.core.content.res.use
 import androidx.core.net.toUri
@@ -46,6 +48,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
@@ -168,7 +171,12 @@ class SettingsActivity : AppCompatActivity() {
                         } ?: result.data?.data?.let {
                             list.add(it.toString())
                         }
-                        viewModel.restoreSettings(list)
+                        viewModel.restoreSettings(
+                            list = list,
+                            gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                            userId = Account.get(requireContext()).id
+                        )
                     }
                 }
             } else {
@@ -185,7 +193,12 @@ class SettingsActivity : AppCompatActivity() {
                         } ?: result.data?.data?.path?.let {
                             list.add(it)
                         }
-                        viewModel.restoreSettings(list)
+                        viewModel.restoreSettings(
+                            list = list,
+                            gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                            userId = Account.get(requireContext()).id
+                        )
                     }
                 }
             }
@@ -446,6 +459,20 @@ class SettingsActivity : AppCompatActivity() {
                         requireContext().toast(R.string.no_file_manager_found)
                     }
                 }
+                true
+            }
+
+            findPreference<SwitchPreferenceCompat>("live_notifications_enabled")?.setOnPreferenceChangeListener { _, newValue ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+                }
+                viewModel.toggleNotifications(
+                    enabled = newValue as Boolean,
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                    userId = Account.get(requireContext()).id
+                )
                 true
             }
 

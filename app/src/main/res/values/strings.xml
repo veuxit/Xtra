@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name" translatable="false">Xtra</string>
     <string name="notification_downloads_channel_id" translatable="false">xtra_downloads_channel</string>
+    <string name="notification_live_channel_id" translatable="false">xtra_live_channel</string>
     <string name="lang_de" translatable="false">Deutsch</string>
     <string name="lang_en" translatable="false">English</string>
     <string name="lang_es" translatable="false">Español</string>
@@ -658,4 +659,7 @@
     <string name="auto_check_updates">Check for updates on startup</string>
     <string name="update_check_frequency">Update check frequency</string>
     <string name="update_check_frequency_summary">Every %s days</string>
+    <string name="notification_live_channel_title">Live notifications</string>
+    <string name="live_notification">%s is live</string>
+    <string name="live_notifications">Live notifications</string>
 </resources>

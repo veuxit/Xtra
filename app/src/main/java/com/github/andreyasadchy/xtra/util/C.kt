@@ -225,6 +225,7 @@ object C {
     const val UPDATE_CHECK_ENABLED = "update_check_enabled"
     const val UPDATE_CHECK_FREQUENCY = "update_check_frequency"
     const val UPDATE_USE_BROWSER = "update_use_browser"
+    const val LIVE_NOTIFICATIONS_ENABLED = "live_notifications_enabled"
     const val DEBUG_CHAT_FULLMSG = "debug_chat_fullmsg"
     const val DEBUG_SECONDVIEW = "debug_secondview"
     const val DEBUG_API_COMMANDS = "debug_api_commands"
