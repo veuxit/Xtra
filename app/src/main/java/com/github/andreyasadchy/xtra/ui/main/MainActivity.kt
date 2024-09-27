@@ -82,6 +82,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         const val INTENT_OPEN_DOWNLOADS_TAB = 0
         const val INTENT_OPEN_DOWNLOADED_VIDEO = 1
         const val INTENT_OPEN_PLAYER = 2
+
+        const val INTENT_LIVE_NOTIFICATION = "com.github.andreyasadchy.xtra.LIVE_NOTIFICATION"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -356,116 +358,118 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW) {
-            val url = intent.data.toString()
-            when {
-                url.contains("twitch.tv/videos/") -> {
-                    val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                    val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
-                    if (!id.isNullOrBlank()) {
-                        viewModel.loadVideo(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.video.collectLatest { video ->
-                                    if (video != null) {
-                                        if (!video.id.isNullOrBlank()) {
-                                            startVideo(video, offset, offset != null)
+        when (intent?.action) {
+            Intent.ACTION_VIEW -> {
+                val url = intent.data.toString()
+                when {
+                    url.contains("twitch.tv/videos/") -> {
+                        val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                        val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
+                        if (!id.isNullOrBlank()) {
+                            viewModel.loadVideo(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            lifecycleScope.launch {
+                                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.video.collectLatest { video ->
+                                        if (video != null) {
+                                            if (!video.id.isNullOrBlank()) {
+                                                startVideo(video, offset, offset != null)
+                                            }
+                                            viewModel.video.value = null
                                         }
-                                        viewModel.video.value = null
                                     }
                                 }
                             }
                         }
                     }
-                }
-                url.contains("/clip/") -> {
-                    val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                    if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.clip.collectLatest { clip ->
-                                    if (clip != null) {
-                                        if (!clip.id.isNullOrBlank()) {
-                                            startClip(clip)
+                    url.contains("/clip/") -> {
+                        val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                        if (!id.isNullOrBlank()) {
+                            viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            lifecycleScope.launch {
+                                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.clip.collectLatest { clip ->
+                                        if (clip != null) {
+                                            if (!clip.id.isNullOrBlank()) {
+                                                startClip(clip)
+                                            }
+                                            viewModel.clip.value = null
                                         }
-                                        viewModel.clip.value = null
                                     }
                                 }
                             }
                         }
                     }
-                }
-                url.contains("clips.twitch.tv/") -> {
-                    val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                    if (!id.isNullOrBlank()) {
-                        viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.clip.collectLatest { clip ->
-                                    if (clip != null) {
-                                        if (!clip.id.isNullOrBlank()) {
-                                            startClip(clip)
+                    url.contains("clips.twitch.tv/") -> {
+                        val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                        if (!id.isNullOrBlank()) {
+                            viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            lifecycleScope.launch {
+                                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.clip.collectLatest { clip ->
+                                        if (clip != null) {
+                                            if (!clip.id.isNullOrBlank()) {
+                                                startClip(clip)
+                                            }
+                                            viewModel.clip.value = null
                                         }
-                                        viewModel.clip.value = null
                                     }
                                 }
                             }
                         }
                     }
-                }
-                url.contains("twitch.tv/directory/category/") -> {
-                    val slug = url.substringAfter("twitch.tv/directory/category/").takeIf { it.isNotBlank() }?.substringBefore("/")
-                    if (!slug.isNullOrBlank()) {
-                        playerFragment?.minimize()
-                        navController.navigate(
-                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
-                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                    gameSlug = slug
-                                )
-                            } else {
-                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                    gameSlug = slug
-                                )
-                            }
-                        )
+                    url.contains("twitch.tv/directory/category/") -> {
+                        val slug = url.substringAfter("twitch.tv/directory/category/").takeIf { it.isNotBlank() }?.substringBefore("/")
+                        if (!slug.isNullOrBlank()) {
+                            playerFragment?.minimize()
+                            navController.navigate(
+                                if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                    GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                        gameSlug = slug
+                                    )
+                                } else {
+                                    GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                        gameSlug = slug
+                                    )
+                                }
+                            )
+                        }
                     }
-                }
-                url.contains("twitch.tv/directory/game/") -> {
-                    val name = url.substringAfter("twitch.tv/directory/game/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                    if (!name.isNullOrBlank()) {
-                        playerFragment?.minimize()
-                        navController.navigate(
-                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
-                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                    gameName = Uri.decode(name)
-                                )
-                            } else {
-                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                    gameName = Uri.decode(name)
-                                )
-                            }
-                        )
+                    url.contains("twitch.tv/directory/game/") -> {
+                        val name = url.substringAfter("twitch.tv/directory/game/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                        if (!name.isNullOrBlank()) {
+                            playerFragment?.minimize()
+                            navController.navigate(
+                                if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                    GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                        gameName = Uri.decode(name)
+                                    )
+                                } else {
+                                    GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                        gameName = Uri.decode(name)
+                                    )
+                                }
+                            )
+                        }
                     }
-                }
-                else -> {
-                    val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                    if (!login.isNullOrBlank()) {
-                        viewModel.loadUser(login, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
-                        lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.user.collectLatest { user ->
-                                    if (user != null) {
-                                        if (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank()) {
-                                            playerFragment?.minimize()
-                                            navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                                                channelId = user.channelId,
-                                                channelLogin = user.channelLogin,
-                                                channelName = user.channelName,
-                                                channelLogo = user.channelLogo,
-                                            ))
+                    else -> {
+                        val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
+                        if (!login.isNullOrBlank()) {
+                            viewModel.loadUser(login, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            lifecycleScope.launch {
+                                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.user.collectLatest { user ->
+                                        if (user != null) {
+                                            if (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank()) {
+                                                playerFragment?.minimize()
+                                                navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                                    channelId = user.channelId,
+                                                    channelLogin = user.channelLogin,
+                                                    channelName = user.channelName,
+                                                    channelLogo = user.channelLogo,
+                                                ))
+                                            }
+                                            viewModel.user.value = null
                                         }
-                                        viewModel.user.value = null
                                     }
                                 }
                             }
@@ -473,18 +477,29 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     }
                 }
             }
-        } else {
-            when (intent?.getIntExtra(KEY_CODE, -1)) {
-                INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
-                INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
+            INTENT_LIVE_NOTIFICATION -> {
+                startStream(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                        intent.getParcelableExtra(KEY_VIDEO, Stream::class.java)!!
                     } else {
                         @Suppress("DEPRECATION")
                         intent.getParcelableExtra(KEY_VIDEO)!!
                     }
                 )
-                INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
+            }
+            else -> {
+                when (intent?.getIntExtra(KEY_CODE, -1)) {
+                    INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
+                    INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                        } else {
+                            @Suppress("DEPRECATION")
+                            intent.getParcelableExtra(KEY_VIDEO)!!
+                        }
+                    )
+                    INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
+                }
             }
         }
     }

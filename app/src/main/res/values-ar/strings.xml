@@ -643,4 +643,7 @@
     <string name="auto_check_updates">Check for updates on startup</string>
     <string name="update_check_frequency">Update check frequency</string>
     <string name="update_check_frequency_summary">Every %s days</string>
+    <string name="notification_live_channel_title">Live notifications</string>
+    <string name="live_notification">%s is live</string>
+    <string name="live_notifications">Live notifications</string>
 </resources>

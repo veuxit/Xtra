@@ -9,11 +9,22 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.apollographql.apollo3.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
+import com.github.andreyasadchy.xtra.ui.main.LiveNotificationWorker
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +39,7 @@ import okio.source
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.system.exitProcess
@@ -37,6 +49,10 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
+    private val shownNotificationsRepository: ShownNotificationsRepository,
+    private val localFollowsChannel: LocalFollowChannelRepository,
+    private val apolloClient: ApolloClient,
+    private val helixApi: HelixApi,
     private val appDatabase: AppDatabase,
     private val okHttpClient: OkHttpClient,
     private val json: Json) : ViewModel() {
@@ -240,13 +256,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>) {
+    fun restoreSettings(list: List<String>, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, userId: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             list.take(2).forEach { url ->
                 if (url.endsWith(".xml")) {
                     File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").sink().buffer().use { sink ->
                         sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
                     }
+                    val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
+                        it.readText()
+                    }
+                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders, userId)
                 } else {
                     val database = applicationContext.getDatabasePath("database")
                     File(database.parent, "database-shm").delete()
@@ -259,6 +279,28 @@ class SettingsViewModel @Inject constructor(
                     })
                     exitProcess(0)
                 }
+            }
+        }
+    }
+
+    fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, userId: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (enabled) {
+                shownNotificationsRepository.getNewStreams(localFollowsChannel, gqlHeaders, apolloClient, helixHeaders, userId, helixApi)
+                WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+                    "live_notifications",
+                    ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+                    PeriodicWorkRequestBuilder<LiveNotificationWorker>(15, TimeUnit.MINUTES)
+                        .setInitialDelay(1, TimeUnit.MINUTES)
+                        .setConstraints(
+                            Constraints.Builder()
+                                .setRequiredNetworkType(NetworkType.CONNECTED)
+                                .build()
+                        )
+                        .build()
+                )
+            } else {
+                WorkManager.getInstance(applicationContext).cancelUniqueWork("live_notifications")
             }
         }
     }

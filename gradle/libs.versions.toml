@@ -1,5 +1,5 @@
 [versions]
-android-gradle-plugin = "8.6.0"
+android-gradle-plugin = "8.6.1"
 apollo = "3.8.5"
 appcompat = "1.7.0"
 checker-qual = "3.47.0"
