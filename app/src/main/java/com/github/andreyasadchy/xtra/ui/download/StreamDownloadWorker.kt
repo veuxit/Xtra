@@ -894,10 +894,10 @@ class StreamDownloadWorker @AssistedInject constructor(
             setContentText(offlineVideo.channelName)
             setSmallIcon(android.R.drawable.stat_sys_download)
             setOngoing(true)
-            setContentIntent(PendingIntent.getActivity(context, REQUEST_CODE_DOWNLOAD,
+            setContentIntent(PendingIntent.getActivity(context, offlineVideo.id,
                 Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(MainActivity.KEY_CODE, MainActivity.INTENT_OPEN_DOWNLOADS_TAB)
+                    action = MainActivity.INTENT_OPEN_DOWNLOADS_TAB
                 }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             addAction(android.R.drawable.ic_delete, ContextCompat.getString(context, R.string.stop), WorkManager.getInstance(context).createCancelPendingIntent(id))
         }.build()
@@ -909,8 +909,6 @@ class StreamDownloadWorker @AssistedInject constructor(
     }
 
     companion object {
-        private const val REQUEST_CODE_DOWNLOAD = 0
-
         const val GROUP_KEY = "com.github.andreyasadchy.xtra.DOWNLOADS"
 
         const val KEY_VIDEO_ID = "KEY_VIDEO_ID"
