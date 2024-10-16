@@ -9,7 +9,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.37.0"
+        versionName = "2.37.1"
     }
 
     buildTypes {
