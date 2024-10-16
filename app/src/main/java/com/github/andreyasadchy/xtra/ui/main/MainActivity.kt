@@ -76,14 +76,12 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     companion object {
-        const val KEY_CODE = "code"
         const val KEY_VIDEO = "video"
 
-        const val INTENT_OPEN_DOWNLOADS_TAB = 0
-        const val INTENT_OPEN_DOWNLOADED_VIDEO = 1
-        const val INTENT_OPEN_PLAYER = 2
-
         const val INTENT_LIVE_NOTIFICATION = "com.github.andreyasadchy.xtra.LIVE_NOTIFICATION"
+        const val INTENT_OPEN_DOWNLOADS_TAB = "com.github.andreyasadchy.xtra.OPEN_DOWNLOADS_TAB"
+        const val INTENT_OPEN_DOWNLOADED_VIDEO = "com.github.andreyasadchy.xtra.OPEN_DOWNLOADED_VIDEO"
+        const val INTENT_OPEN_PLAYER = "com.github.andreyasadchy.xtra.OPEN_PLAYER"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -487,20 +485,24 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     }
                 )
             }
-            else -> {
-                when (intent?.getIntExtra(KEY_CODE, -1)) {
-                    INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) R.id.savedPagerFragment else R.id.savedMediaFragment
-                    INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
-                        } else {
-                            @Suppress("DEPRECATION")
-                            intent.getParcelableExtra(KEY_VIDEO)!!
-                        }
-                    )
-                    INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
+            INTENT_OPEN_DOWNLOADS_TAB -> {
+                binding.navBar.selectedItemId = if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
+                    R.id.savedPagerFragment
+                } else {
+                    R.id.savedMediaFragment
                 }
             }
+            INTENT_OPEN_DOWNLOADED_VIDEO -> {
+                startOfflineVideo(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(KEY_VIDEO, OfflineVideo::class.java)!!
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(KEY_VIDEO)!!
+                    }
+                )
+            }
+            INTENT_OPEN_PLAYER -> playerFragment?.maximize() //TODO if was closed need to reopen
         }
     }
 
