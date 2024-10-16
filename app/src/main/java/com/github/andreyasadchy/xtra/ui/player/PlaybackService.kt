@@ -286,7 +286,7 @@ class PlaybackService : MediaSessionService() {
             .setSessionActivity(PendingIntent.getActivity(this, REQUEST_CODE_RESUME,
                 Intent(this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(MainActivity.KEY_CODE, MainActivity.INTENT_OPEN_PLAYER)
+                    action = MainActivity.INTENT_OPEN_PLAYER
                 }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             )
             .setCallback(object : MediaSession.Callback {
