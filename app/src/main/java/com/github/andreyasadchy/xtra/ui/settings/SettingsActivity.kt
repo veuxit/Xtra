@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -234,6 +235,13 @@ class SettingsActivity : AppCompatActivity() {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.updateUrl.collectLatest {
                         if (it != null) {
+                            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
+                                !requireContext().packageManager.canRequestPackageInstalls()) {
+                                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                                if (intent.resolveActivity(requireContext().packageManager) != null) {
+                                    requireContext().startActivity(intent)
+                                }
+                            }
                             requireActivity().getAlertDialogBuilder()
                                 .setTitle(getString(R.string.update_available))
                                 .setMessage(getString(R.string.update_message))
@@ -405,12 +413,34 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<SwitchPreferenceCompat>("update_check_enabled")?.setOnPreferenceChangeListener { _, newValue ->
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && newValue == true && !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
+                    !requireContext().packageManager.canRequestPackageInstalls()) {
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                    if (intent.resolveActivity(requireContext().packageManager) != null) {
+                        requireContext().startActivity(intent)
+                    }
+                }
+                true
+            }
+
             findPreference<EditTextPreference>("update_check_frequency")?.apply {
                 summary = getString(R.string.update_check_frequency_summary, text)
                 setOnPreferenceChangeListener { _, newValue ->
                     summary = getString(R.string.update_check_frequency_summary, newValue)
                     true
                 }
+            }
+
+            findPreference<SwitchPreferenceCompat>("update_use_browser")?.setOnPreferenceChangeListener { _, newValue ->
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && newValue == false && requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                    !requireContext().packageManager.canRequestPackageInstalls()) {
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                    if (intent.resolveActivity(requireContext().packageManager) != null) {
+                        requireContext().startActivity(intent)
+                    }
+                }
+                true
             }
 
             findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
