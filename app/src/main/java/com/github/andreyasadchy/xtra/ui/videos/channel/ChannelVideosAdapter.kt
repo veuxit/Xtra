@@ -23,12 +23,13 @@ import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 
 class ChannelVideosAdapter(
     private val fragment: Fragment,
@@ -168,6 +169,8 @@ class ChannelVideosAdapter(
                                     ))
                                 }
                             }
+                            val padding = context.convertDpToPixels(5f)
+                            text.setPadding(padding, 0, padding, 0)
                             tagsLayout.addView(text)
                         }
                         tagsFlowLayout.referencedIds = ids.toIntArray()
