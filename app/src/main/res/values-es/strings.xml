@@ -603,12 +603,12 @@
     <string name="import_app_downloads">Importar descargas desde el almacenamiento de aplicaciones</string>
     <string name="move_to_shared_storage">Mover al almacenamiento compartido</string>
     <string name="move_to_app_storage">Mover al almacenamiento de aplicaciones</string>
-    <string name="download_moving">Moviendo</string>
+    <string name="download_moving">Moviendo: %d%%</string>
     <string name="theme_adapted_username_color">Colores legibles basados en el tema de la aplicación</string>
-    <string name="download_deleting">Eliminando</string>
+    <string name="download_deleting">Eliminando: %d%%</string>
     <string name="download_vod_to_file">Descargar vídeos en archivos individuales</string>
     <string name="convert_vod_to_file">Convertir a un archivo</string>
-    <string name="download_converting">Convirtiendo</string>
+    <string name="download_converting">Convirtiendo: %d%%</string>
     <string name="convert_message">¿Convertir este vídeo en un único archivo?</string>
     <string name="convert">Convertir</string>
     <string name="download_chat">Descargar repetición del chat</string>
