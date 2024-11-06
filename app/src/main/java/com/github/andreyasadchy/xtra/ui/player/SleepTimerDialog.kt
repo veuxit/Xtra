@@ -76,7 +76,7 @@ class SleepTimerDialog : DialogFragment() {
             val admin = ComponentName(requireContext(), AdminReceiver::class.java)
             if ((requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).isAdminActive(admin)) {
                 lockCheckbox.apply {
-                    isChecked = requireContext().prefs().getBoolean(C.SLEEP_TIMER_LOCK, true)
+                    isChecked = requireContext().prefs().getBoolean(C.SLEEP_TIMER_LOCK, false)
                     text = context.getString(R.string.sleep_timer_lock)
                 }
             } else {

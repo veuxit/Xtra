@@ -646,4 +646,7 @@
     <string name="notification_live_channel_title">Live-Benachrichtigungen</string>
     <string name="live_notification">%s ist Live</string>
     <string name="live_notifications">Live-Benachrichtigungen</string>
+    <string name="sleep_timer_lock_screen">Lock screen after sleep timer is done</string>
+    <string name="sleep_timer_time_picker">Use Material time picker for sleep timer</string>
+    <string name="stop_sleep_timer_message">Stop sleep timer?</string>
 </resources>
