@@ -171,6 +171,8 @@ class DownloadsViewModel @Inject internal constructor(
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
+                    progress = 0
+                    maxProgress = 100
                     status = OfflineVideo.STATUS_CONVERTING
                 })
                 if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
@@ -202,6 +204,9 @@ class DownloadsViewModel @Inject internal constructor(
                                         }
                                     }
                                 }
+                                repository.updateVideo(video.apply {
+                                    maxProgress = tracksToDelete.count()
+                                })
                                 oldPlaylist.segments.forEach { track ->
                                     val oldFile = oldVideoDirectory.findFile(track.uri.substringAfterLast("%2F").substringAfterLast("/"))
                                     if (oldFile != null) {
@@ -212,6 +217,9 @@ class DownloadsViewModel @Inject internal constructor(
                                             oldFile.delete()
                                         }
                                     }
+                                    repository.updateVideo(video.apply {
+                                        progress += 1
+                                    })
                                 }
                                 repository.updateVideo(video.apply {
                                     thumbnail.let {
@@ -255,6 +263,9 @@ class DownloadsViewModel @Inject internal constructor(
                                     }
                                 }
                             }
+                            repository.updateVideo(video.apply {
+                                maxProgress = tracksToDelete.count()
+                            })
                             oldPlaylist.segments.forEach { track ->
                                 val oldFile = File(oldVideoDirectory.path + File.separator + track.uri.substringAfterLast("%2F").substringAfterLast("/"))
                                 if (oldFile.exists()) {
@@ -265,6 +276,9 @@ class DownloadsViewModel @Inject internal constructor(
                                         oldFile.delete()
                                     }
                                 }
+                                repository.updateVideo(video.apply {
+                                    progress += 1
+                                })
                             }
                             repository.updateVideo(video.apply {
                                 thumbnail.let {
@@ -299,6 +313,8 @@ class DownloadsViewModel @Inject internal constructor(
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
+                    progress = 0
+                    maxProgress = 100
                     status = OfflineVideo.STATUS_MOVING
                 })
                 if (videoUrl.endsWith(".m3u8")) {
@@ -341,6 +357,9 @@ class DownloadsViewModel @Inject internal constructor(
                                         }
                                     }
                                 }
+                                repository.updateVideo(video.apply {
+                                    maxProgress = tracksToDelete.count()
+                                })
                                 oldPlaylist.segments.forEach { track ->
                                     val oldFile = File(oldVideoDirectory.path + File.separator + track.uri.substringAfterLast("%2F").substringAfterLast("/"))
                                     if (oldFile.exists()) {
@@ -354,6 +373,9 @@ class DownloadsViewModel @Inject internal constructor(
                                             }
                                         }
                                     }
+                                    repository.updateVideo(video.apply {
+                                        progress += 1
+                                    })
                                 }
                                 val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
                                 val newChatFile = oldChatFile?.let { newDirectory?.findFile(it.name) ?: newDirectory?.createFile("", it.name) }
@@ -431,6 +453,8 @@ class DownloadsViewModel @Inject internal constructor(
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
+                    progress = 0
+                    maxProgress = 100
                     status = OfflineVideo.STATUS_MOVING
                 })
                 if (videoUrl.endsWith(".m3u8")) {
@@ -473,6 +497,9 @@ class DownloadsViewModel @Inject internal constructor(
                                     }
                                 }
                             }
+                            repository.updateVideo(video.apply {
+                                maxProgress = tracksToDelete.count()
+                            })
                             oldPlaylist.segments.forEach { track ->
                                 val oldFile = oldVideoDirectory.findFile(track.uri.substringAfterLast("%2F").substringAfterLast("/"))
                                 if (oldFile != null) {
@@ -484,6 +511,9 @@ class DownloadsViewModel @Inject internal constructor(
                                         oldFile.delete()
                                     }
                                 }
+                                repository.updateVideo(video.apply {
+                                    progress += 1
+                                })
                             }
                             val oldChatFile = video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri()) }
                             val newChatFileUri = oldChatFile?.let { "$path${File.separator}${it.name}" }
@@ -614,6 +644,8 @@ class DownloadsViewModel @Inject internal constructor(
             videosInUse.add(video)
             viewModelScope.launch(Dispatchers.IO) {
                 repository.updateVideo(video.apply {
+                    progress = 0
+                    maxProgress = 100
                     status = OfflineVideo.STATUS_DELETING
                 })
                 if (video.live) {
@@ -628,21 +660,28 @@ class DownloadsViewModel @Inject internal constructor(
                             val videoDirectory = directory.findFile(videoUrl.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
                             val playlistFile = videoDirectory.findFile(videoUrl.substringAfterLast("%2F")) ?: return@launch
                             val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
-                            if (playlists.isEmpty()) {
-                                videoDirectory.delete()
-                            } else {
-                                val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
+                            val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
+                            }
+                            val tracksToDelete = playlist.segments.toMutableSet()
+                            playlists.forEach { file ->
+                                val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
                                     PlaylistUtils.parseMediaPlaylist(it)
                                 }
-                                val tracksToDelete = playlist.segments.toMutableSet()
-                                playlists.forEach { file ->
-                                    val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
-                                        PlaylistUtils.parseMediaPlaylist(it)
-                                    }
-                                    tracksToDelete.removeAll(p.segments.toSet())
-                                }
-                                tracksToDelete.forEach { videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete() }
-                                playlistFile.delete()
+                                tracksToDelete.removeAll(p.segments.toSet())
+                            }
+                            repository.updateVideo(video.apply {
+                                maxProgress = tracksToDelete.count()
+                            })
+                            tracksToDelete.forEach {
+                                videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete()
+                                repository.updateVideo(video.apply {
+                                    progress += 1
+                                })
+                            }
+                            playlistFile.delete()
+                            if (playlists.isEmpty()) {
+                                videoDirectory.delete()
                             }
                         } else {
                             DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())?.delete()
@@ -658,17 +697,24 @@ class DownloadsViewModel @Inject internal constructor(
                             if (directory != null) {
                                 val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
                                 if (playlists != null) {
+                                    val playlist = PlaylistUtils.parseMediaPlaylist(playlistFile.inputStream())
+                                    val tracksToDelete = playlist.segments.toMutableSet()
+                                    playlists.forEach {
+                                        val p = PlaylistUtils.parseMediaPlaylist(it.inputStream())
+                                        tracksToDelete.removeAll(p.segments.toSet())
+                                    }
+                                    repository.updateVideo(video.apply {
+                                        maxProgress = tracksToDelete.count()
+                                    })
+                                    tracksToDelete.forEach {
+                                        File(it.uri).delete()
+                                        repository.updateVideo(video.apply {
+                                            progress += 1
+                                        })
+                                    }
+                                    playlistFile.delete()
                                     if (playlists.isEmpty()) {
                                         directory.deleteRecursively()
-                                    } else {
-                                        val playlist = PlaylistUtils.parseMediaPlaylist(playlistFile.inputStream())
-                                        val tracksToDelete = playlist.segments.toMutableSet()
-                                        playlists.forEach {
-                                            val p = PlaylistUtils.parseMediaPlaylist(it.inputStream())
-                                            tracksToDelete.removeAll(p.segments.toSet())
-                                        }
-                                        tracksToDelete.forEach { File(it.uri).delete() }
-                                        playlistFile.delete()
                                     }
                                 }
                             }

@@ -603,12 +603,12 @@
     <string name="import_app_downloads">Downloads aus dem App-Speicher importieren</string>
     <string name="move_to_shared_storage">In gemeinsam genutzten Speicher verschieben</string>
     <string name="move_to_app_storage">In den App-Speicher verschieben</string>
-    <string name="download_moving">Verschieben</string>
+    <string name="download_moving">Verschieben: %d%%</string>
     <string name="theme_adapted_username_color">Lesbare Farben basierend auf dem App-Design</string>
-    <string name="download_deleting">Löschen</string>
+    <string name="download_deleting">Löschen: %d%%</string>
     <string name="download_vod_to_file">Videos in einzelne Dateien herunterladen</string>
     <string name="convert_vod_to_file">In eine Datei konvertieren</string>
-    <string name="download_converting">Konvertieren</string>
+    <string name="download_converting">Konvertieren: %d%%</string>
     <string name="convert_message">Dieses Video in eine einzelne Datei konvertieren?</string>
     <string name="convert">Konvertieren</string>
     <string name="download_chat">Chat-Wiederholung herunterladen</string>

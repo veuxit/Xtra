@@ -603,12 +603,12 @@
     <string name="import_app_downloads">Импорт загрузок из хранилища приложения</string>
     <string name="move_to_shared_storage">Перенести в общее хранилище</string>
     <string name="move_to_app_storage">Перенести в хранилище приложения</string>
-    <string name="download_moving">Перемещение</string>
+    <string name="download_moving">Перемещение: %d%%</string>
     <string name="theme_adapted_username_color">Адаптировать цвета в зависимости от темы</string>
-    <string name="download_deleting">Удаление</string>
+    <string name="download_deleting">Удаление: %d%%</string>
     <string name="download_vod_to_file">Скачивать видео в единственные файлы</string>
     <string name="convert_vod_to_file">Преобразовать в файл</string>
-    <string name="download_converting">Преобразуется</string>
+    <string name="download_converting">Преобразуется: %d%%</string>
     <string name="convert_message">Преобразовать это видео в один файл?</string>
     <string name="convert">Преобразовать</string>
     <string name="download_chat">Скачать повтор чата</string>
