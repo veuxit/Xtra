@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -57,6 +58,7 @@ import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.hideKeyboard
 import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
@@ -66,6 +68,8 @@ import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.delay
@@ -497,7 +501,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         } else if (((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0) > 0L) {
             context.toast(R.string.timer_canceled)
         }
-        if (lockScreen != prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
+        if (lockScreen != prefs.getBoolean(C.SLEEP_TIMER_LOCK, false)) {
             prefs.edit { putBoolean(C.SLEEP_TIMER_LOCK, lockScreen) }
         }
         (activity as? MainActivity)?.setSleepTimer(durationMs)
@@ -547,7 +551,35 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun showSleepTimerDialog() {
-        SleepTimerDialog.show(childFragmentManager, (activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+        if (requireContext().prefs().getBoolean(C.SLEEP_TIMER_USE_TIME_PICKER, false)) {
+            if (((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0) > 0L) {
+                requireContext().getAlertDialogBuilder()
+                    .setMessage(getString(R.string.stop_sleep_timer_message))
+                    .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                        onSleepTimerChanged(-1L, 0, 0, requireContext().prefs().getBoolean(C.SLEEP_TIMER_LOCK, false))
+                    }
+                    .setNegativeButton(getString(R.string.no), null)
+                    .show()
+            } else {
+                val savedValue = requireContext().prefs().getInt(C.SLEEP_TIMER_TIME, 15)
+                val picker = MaterialTimePicker.Builder()
+                    .setTimeFormat(if (DateFormat.is24HourFormat(requireContext())) TimeFormat.CLOCK_24H else TimeFormat.CLOCK_12H)
+                    .setInputMode(MaterialTimePicker.INPUT_MODE_CLOCK)
+                    .setHour(savedValue / 60)
+                    .setMinute(savedValue % 60)
+                    .build()
+                picker.addOnPositiveButtonClickListener {
+                    val minutes = TwitchApiHelper.getMinutesLeft(picker.hour, picker.minute)
+                    onSleepTimerChanged(minutes * 60_000L, minutes / 60, minutes % 60, requireContext().prefs().getBoolean(C.SLEEP_TIMER_LOCK, false))
+                    requireContext().prefs().edit {
+                        putInt(C.SLEEP_TIMER_TIME, picker.hour * 60 + picker.minute)
+                    }
+                }
+                picker.show(childFragmentManager, null)
+            }
+        } else {
+            SleepTimerDialog.show(childFragmentManager, (activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+        }
     }
 
     fun showQualityDialog() {

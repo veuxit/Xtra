@@ -594,7 +594,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                                 it.onMinimize()
                                 it.onClose()
                                 closePlayer()
-                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
+                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, false)) {
                                     if ((getSystemService(POWER_SERVICE) as PowerManager).isInteractive) {
                                         try {
                                             (getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
