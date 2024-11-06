@@ -122,9 +122,6 @@ ksp {
 apollo {
     service("service") {
         packageName.set("com.github.andreyasadchy.xtra")
-        outputDirConnection {
-            connectToAndroidSourceSet("main")
-        }
     }
 }
 

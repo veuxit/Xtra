@@ -2,8 +2,18 @@ package com.github.andreyasadchy.xtra.di
 
 import android.app.Application
 import android.os.Build
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.network.okHttpClient
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.ApolloRequest
+import com.apollographql.apollo.api.CustomScalarAdapters
+import com.apollographql.apollo.api.Operation
+import com.apollographql.apollo.api.http.HttpBody
+import com.apollographql.apollo.api.http.HttpMethod
+import com.apollographql.apollo.api.http.HttpRequest
+import com.apollographql.apollo.api.http.HttpRequestComposer
+import com.apollographql.apollo.api.json.buildJsonByteString
+import com.apollographql.apollo.api.json.writeObject
+import com.apollographql.apollo.network.http.HttpNetworkTransport
+import com.apollographql.apollo.network.okHttpClient
 import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.GraphQLApi
@@ -21,6 +31,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
+import okio.BufferedSink
 import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -102,8 +113,36 @@ class XtraModule {
     @Provides
     fun providesApolloClient(okHttpClient: OkHttpClient): ApolloClient {
         val builder = ApolloClient.Builder().apply {
-            serverUrl("https://gql.twitch.tv/gql/")
-            okHttpClient(okHttpClient)
+            networkTransport(
+                HttpNetworkTransport.Builder()
+                    .okHttpClient(okHttpClient)
+                    .httpRequestComposer(object : HttpRequestComposer {
+                        override fun <D : Operation.Data> compose(apolloRequest: ApolloRequest<D>): HttpRequest {
+                            val operationByteString = buildJsonByteString(indent = null) {
+                                writeObject {
+                                    name("variables")
+                                    writeObject {
+                                        apolloRequest.operation.serializeVariables(this, apolloRequest.executionContext[CustomScalarAdapters] ?: CustomScalarAdapters.Empty, false)
+                                    }
+                                    name("query")
+                                    value(apolloRequest.operation.document().replaceFirst(apolloRequest.operation.name(), ""))
+                                }
+                            }
+                            return HttpRequest.Builder(HttpMethod.Post, "https://gql.twitch.tv/gql/").apply {
+                                apolloRequest.httpHeaders?.let { addHeaders(it) }
+                                body(object : HttpBody {
+                                    override val contentType = "application/json"
+                                    override val contentLength = operationByteString.size.toLong()
+
+                                    override fun writeTo(bufferedSink: BufferedSink) {
+                                        bufferedSink.write(operationByteString)
+                                    }
+                                })
+                            }.build()
+                        }
+                    })
+                    .build()
+            )
         }
         return builder.build()
     }
