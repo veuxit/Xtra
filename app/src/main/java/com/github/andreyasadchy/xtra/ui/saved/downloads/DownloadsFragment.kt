@@ -14,6 +14,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.viewModels
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -196,6 +197,22 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
             })
+        }, {
+            it.url?.let { videoUrl ->
+                if (videoUrl.endsWith(".m3u8")) {
+                    DocumentFile.fromTreeUri(requireContext(), videoUrl.substringBefore("/document/").toUri())?.uri
+                } else {
+                    videoUrl.toUri()
+                }?.let { url ->
+                    requireContext().startActivity(Intent.createChooser(Intent().apply {
+                        action = Intent.ACTION_SEND
+                        setDataAndType(url, requireContext().contentResolver.getType(url))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                        it.name?.let { putExtra(Intent.EXTRA_TITLE, it) }
+                    }, null))
+                }
+            }
         }, {
             val delete = getString(R.string.delete)
             val checkBox = CheckBox(requireContext()).apply {

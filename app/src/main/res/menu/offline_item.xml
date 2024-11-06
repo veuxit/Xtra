@@ -21,6 +21,10 @@
         android:title="@string/change_chat_file"
         android:visible="false" />
     <item
+        android:id="@+id/shareVideo"
+        android:title="@string/share"
+        android:visible="false" />
+    <item
         android:id="@+id/delete"
         android:title="@string/delete" />
 </menu>
