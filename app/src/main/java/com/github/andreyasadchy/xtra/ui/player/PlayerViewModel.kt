@@ -16,8 +16,6 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import java.io.File
-import java.util.Timer
-import kotlin.concurrent.schedule
 
 
 abstract class PlayerViewModel(
@@ -35,32 +33,6 @@ abstract class PlayerViewModel(
     private val _isFollowing = MutableStateFlow<Boolean?>(null)
     val isFollowing: StateFlow<Boolean?> = _isFollowing
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
-
-    private var timer: Timer? = null
-    val sleepTimer = MutableStateFlow(false)
-    private var timerEndTime = 0L
-    val timerTimeLeft
-        get() = timerEndTime - System.currentTimeMillis()
-
-    fun setTimer(duration: Long) {
-        timer?.let {
-            it.cancel()
-            timerEndTime = 0L
-            timer = null
-        }
-        if (duration > 0L) {
-            timer = Timer().apply {
-                timerEndTime = System.currentTimeMillis() + duration
-                schedule(duration) {
-                    sleepTimer.value = true
-                }
-            }
-        }
-    }
-
-    override fun onCleared() {
-        timer?.cancel()
-    }
 
     fun isFollowingChannel(helixHeaders: Map<String, String>, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
         if (_isFollowing.value == null) {
