@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
@@ -49,11 +50,16 @@ class SleepTimerDialog : DialogFragment() {
             }
             val positiveListener: (dialog: DialogInterface, which: Int) -> Unit = { _, _ ->
                 listener.onSleepTimerChanged(hours.value * 3600_000L + minutes.value * 60_000L,  hours.value, minutes.value, lockCheckbox.isChecked)
+                requireContext().prefs().edit {
+                    putInt(C.SLEEP_TIMER_MINUTES, hours.value * 60 + minutes.value)
+                }
                 dismiss()
             }
             val timeLeft = requireArguments().getLong(KEY_TIME_LEFT)
             if (timeLeft < 0L) {
-                minutes.value = 15
+                val savedValue = requireContext().prefs().getInt(C.SLEEP_TIMER_MINUTES, 15)
+                hours.value = savedValue / 60
+                minutes.value = savedValue % 60
                 builder.setPositiveButton(getString(R.string.start), positiveListener)
                 builder.setNegativeButton(android.R.string.cancel) { _, _ -> dismiss() }
             } else {
