@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.repository
 
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.api.Optional
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedStreamsQuery
 import com.github.andreyasadchy.xtra.UsersStreamQuery
 import com.github.andreyasadchy.xtra.api.HelixApi

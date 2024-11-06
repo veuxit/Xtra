@@ -1,6 +1,6 @@
 [versions]
 android-gradle-plugin = "8.7.1"
-apollo = "3.8.5"
+apollo = "4.0.1"
 appcompat = "1.7.0"
 checker-qual = "3.48.1"
 coil = "2.7.0"
@@ -32,7 +32,7 @@ webkit = "1.12.1"
 work = "2.10.0-beta01"
 
 [libraries]
-apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checker-qual" }
 coil = { module = "io.coil-kt:coil", version.ref = "coil" }
@@ -79,7 +79,7 @@ work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
-apollo3 = { id = "com.apollographql.apollo3", version.ref = "apollo" }
+apollo3 = { id = "com.apollographql.apollo", version.ref = "apollo" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }

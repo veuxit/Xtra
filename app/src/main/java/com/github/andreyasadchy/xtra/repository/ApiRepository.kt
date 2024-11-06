@@ -1,8 +1,8 @@
 package com.github.andreyasadchy.xtra.repository
 
 import android.util.Base64
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.api.Optional
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
 import com.github.andreyasadchy.xtra.BadgesQuery
 import com.github.andreyasadchy.xtra.GameBoxArtQuery
 import com.github.andreyasadchy.xtra.UserBadgesQuery
