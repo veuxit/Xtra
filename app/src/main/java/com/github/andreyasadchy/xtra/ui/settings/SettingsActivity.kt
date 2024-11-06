@@ -49,7 +49,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.AdminReceiver
 import com.github.andreyasadchy.xtra.util.C
@@ -144,9 +143,8 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     viewModel.restoreSettings(
                         list = list,
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                        helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
-                        userId = Account.get(requireContext()).id
+                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                        helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                     )
                 }
             }
@@ -430,9 +428,8 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 viewModel.toggleNotifications(
                     enabled = newValue as Boolean,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
-                    userId = Account.get(requireContext()).id
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                 )
                 true
             }

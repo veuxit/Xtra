@@ -14,8 +14,7 @@ import androidx.work.WorkerParameters
 import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.assisted.Assisted
@@ -31,7 +30,7 @@ class LiveNotificationWorker @AssistedInject constructor(
     lateinit var shownNotifications: ShownNotificationsRepository
 
     @Inject
-    lateinit var localFollowsChannel: LocalFollowChannelRepository
+    lateinit var notificationsRepository: NotificationsRepository
 
     @Inject
     lateinit var apolloClient: ApolloClient
@@ -43,11 +42,10 @@ class LiveNotificationWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val streams = shownNotifications.getNewStreams(
-            localFollowsChannel = localFollowsChannel,
-            gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
+            notificationsRepository = notificationsRepository,
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
             apolloClient = apolloClient,
             helixHeaders = TwitchApiHelper.getHelixHeaders(context),
-            userId = Account.get(context).id,
             helixApi = helixApi
         )
         if (streams.isNotEmpty()) {
