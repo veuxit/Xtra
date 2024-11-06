@@ -8,6 +8,7 @@ import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
+import com.github.andreyasadchy.xtra.db.NotificationsDao
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.ShownNotificationsDao
 import com.github.andreyasadchy.xtra.db.SortChannelDao
@@ -18,6 +19,7 @@ import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
@@ -67,6 +69,10 @@ class DatabaseModule {
 
     @Singleton
     @Provides
+    fun providesNotificationsRepository(notificationsDao: NotificationsDao): NotificationsRepository = NotificationsRepository(notificationsDao)
+
+    @Singleton
+    @Provides
     fun providesVideosDao(database: AppDatabase): VideosDao = database.videos()
 
     @Singleton
@@ -104,6 +110,10 @@ class DatabaseModule {
     @Singleton
     @Provides
     fun providesShownNotificationsDao(database: AppDatabase): ShownNotificationsDao = database.shownNotificationsDao()
+
+    @Singleton
+    @Provides
+    fun providesNotificationsDao(database: AppDatabase): NotificationsDao = database.notificationsDao()
 
     @Singleton
     @Provides
@@ -259,6 +269,11 @@ class DatabaseModule {
                         object : Migration(26, 27) {
                             override fun migrate(db: SupportSQLiteDatabase) {
                                 db.execSQL("CREATE TABLE IF NOT EXISTS shown_notifications (channelId TEXT NOT NULL, startedAt INTEGER NOT NULL, PRIMARY KEY (channelId))")
+                            }
+                        },
+                        object : Migration(27, 28) {
+                            override fun migrate(db: SupportSQLiteDatabase) {
+                                db.execSQL("CREATE TABLE IF NOT EXISTS notifications (channelId TEXT NOT NULL, PRIMARY KEY (channelId))")
                             }
                         },
                     )

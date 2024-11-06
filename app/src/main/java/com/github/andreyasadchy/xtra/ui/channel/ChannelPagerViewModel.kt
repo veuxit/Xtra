@@ -3,14 +3,19 @@ package com.github.andreyasadchy.xtra.ui.channel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.apollographql.apollo.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
+import com.github.andreyasadchy.xtra.model.Notification
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -30,12 +35,18 @@ class ChannelPagerViewModel @Inject constructor(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
+    private val shownNotificationsRepository: ShownNotificationsRepository,
+    private val notificationsRepository: NotificationsRepository,
+    private val apolloClient: ApolloClient,
+    private val helixApi: HelixApi,
     private val okHttpClient: OkHttpClient,
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
     private val args = ChannelPagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
+    private val _notificationsEnabled = MutableStateFlow<Boolean?>(null)
+    val notificationsEnabled: StateFlow<Boolean?> = _notificationsEnabled
     private val _isFollowing = MutableStateFlow<Boolean?>(null)
     val isFollowing: StateFlow<Boolean?> = _isFollowing
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
@@ -77,6 +88,34 @@ class ChannelPagerViewModel @Inject constructor(
             if (_stream.value?.user == null && _user.value == null) {
                 loadUser(helixHeaders)
             }
+        }
+    }
+
+    fun notificationsEnabled(channelId: String) {
+        if (_notificationsEnabled.value == null) {
+            viewModelScope.launch {
+                _notificationsEnabled.value = notificationsRepository.getByUserId(channelId) != null
+            }
+        }
+    }
+
+    fun enableNotifications(channelId: String) {
+        viewModelScope.launch {
+            notificationsRepository.saveUser(Notification(channelId))
+            _notificationsEnabled.value = true
+        }
+    }
+
+    fun disableNotifications(channelId: String) {
+        viewModelScope.launch {
+            notificationsRepository.deleteUser(Notification(channelId))
+            _notificationsEnabled.value = false
+        }
+    }
+
+    fun updateNotifications(gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+        viewModelScope.launch {
+            shownNotificationsRepository.getNewStreams(notificationsRepository, gqlHeaders, apolloClient, helixHeaders, helixApi)
         }
     }
 
