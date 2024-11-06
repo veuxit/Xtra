@@ -665,4 +665,8 @@
     <string name="sleep_timer_lock_screen">Lock screen after sleep timer is done</string>
     <string name="sleep_timer_time_picker">Use Material time picker for sleep timer</string>
     <string name="stop_sleep_timer_message">Stop sleep timer?</string>
+    <string name="enable_notifications">Turn on notifications</string>
+    <string name="disable_notifications">Turn off notifications</string>
+    <string name="enabled_notifications">Enabled notifications</string>
+    <string name="disabled_notifications">Disabled notifications</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.github.andreyasadchy.xtra.ui.channel
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
@@ -8,7 +10,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
@@ -26,6 +30,11 @@ import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
 import androidx.viewpager2.widget.ViewPager2
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChannelBinding
 import com.github.andreyasadchy.xtra.model.Account
@@ -41,6 +50,7 @@ import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.main.LiveNotificationWorker
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
@@ -63,6 +73,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 
 @AndroidEntryPoint
@@ -141,6 +152,42 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
             toolbar.menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
             toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.toggleNotifications -> {
+                        viewModel.notificationsEnabled.value?.let {
+                            if (it) {
+                                args.channelId?.let {
+                                    viewModel.disableNotifications(it)
+                                    requireContext().shortToast(requireContext().getString(R.string.disabled_notifications))
+                                }
+                            } else {
+                                args.channelId?.let {
+                                    viewModel.enableNotifications(it)
+                                    if (!requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                            ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+                                        }
+                                        viewModel.updateNotifications(TwitchApiHelper.getGQLHeaders(requireContext()), TwitchApiHelper.getHelixHeaders(requireContext()))
+                                        WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork(
+                                            "live_notifications",
+                                            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+                                            PeriodicWorkRequestBuilder<LiveNotificationWorker>(15, TimeUnit.MINUTES)
+                                                .setInitialDelay(1, TimeUnit.MINUTES)
+                                                .setConstraints(
+                                                    Constraints.Builder()
+                                                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                                                        .build()
+                                                )
+                                                .build()
+                                        )
+                                        requireContext().prefs().edit { putBoolean(C.LIVE_NOTIFICATIONS_ENABLED, true) }
+                                    }
+                                    requireContext().shortToast(requireContext().getString(R.string.enabled_notifications))
+                                }
+                            }
+                        }
+                        true
+                    }
                     R.id.followButton -> {
                         viewModel.isFollowing.value?.let {
                             if (it) {
@@ -183,6 +230,23 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         true
                     }
                     else -> false
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.notificationsEnabled.collectLatest {
+                        if (it != null) {
+                            toolbar.menu.findItem(R.id.toggleNotifications)?.apply {
+                                if (it) {
+                                    icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_notifications_black_24)
+                                    title = requireContext().getString(R.string.disable_notifications)
+                                } else {
+                                    icon = ContextCompat.getDrawable(requireContext(), R.drawable.baseline_notifications_none_black_24)
+                                    title = requireContext().getString(R.string.enable_notifications)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
@@ -312,6 +376,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 }
             }
         }
+        args.channelId?.let { viewModel.notificationsEnabled(it) }
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0

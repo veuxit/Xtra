@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.37.1"
+        versionName = "2.38.0"
     }
 
     buildTypes {
@@ -59,6 +59,7 @@ android {
     configurations.all {
         resolutionStrategy.force(listOf(
             "androidx.appcompat:appcompat:1.7.0-alpha03",
+            "androidx.constraintlayout:constraintlayout:2.1.4",
             "androidx.core:core-ktx:1.13.0-alpha01",
             "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",

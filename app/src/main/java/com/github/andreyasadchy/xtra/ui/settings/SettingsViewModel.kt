@@ -21,7 +21,7 @@ import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
@@ -47,7 +47,6 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import okio.source
-import okio.use
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -62,7 +61,7 @@ class SettingsViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
-    private val localFollowsChannel: LocalFollowChannelRepository,
+    private val notificationsRepository: NotificationsRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixApi: HelixApi,
     private val appDatabase: AppDatabase,
@@ -325,7 +324,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, userId: String?) {
+    fun restoreSettings(list: List<String>, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 list.take(2).forEach { url ->
@@ -336,7 +335,7 @@ class SettingsViewModel @Inject constructor(
                         val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                             it.readText()
                         }
-                        toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders, userId)
+                        toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders)
                     } else {
                         val database = applicationContext.getDatabasePath("database")
                         File(database.parent, "database-shm").delete()
@@ -359,7 +358,7 @@ class SettingsViewModel @Inject constructor(
                         val prefs = FileInputStream(url).bufferedReader().use {
                             it.readText()
                         }
-                        toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders, userId)
+                        toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders)
                     } else {
                         val database = applicationContext.getDatabasePath("database")
                         File(database.parent, "database-shm").delete()
@@ -377,10 +376,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, userId: String?) {
+    fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(localFollowsChannel, gqlHeaders, graphQLRepository, helixHeaders, userId, helixApi)
+                shownNotificationsRepository.getNewStreams(notificationsRepository, gqlHeaders, graphQLRepository, helixHeaders, helixApi)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,

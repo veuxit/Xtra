@@ -1,25 +1,25 @@
 [versions]
-android-gradle-plugin = "8.7.1"
-apollo = "3.8.5"
+android-gradle-plugin = "8.7.2"
+apollo = "4.1.0"
 appcompat = "1.7.0"
-checker-qual = "3.48.1"
+checker-qual = "3.48.2"
 coil = "2.7.0"
-constraintlayout = "2.1.4"
-core = "1.13.1"
+constraintlayout = "2.2.0"
+core = "1.15.0"
 coroutines = "1.9.0"
 draglistview = "1.7.3"
-fragment = "1.8.4"
+fragment = "1.8.5"
 glide = "4.16.0"
 glide-webpdecoder = "2.6.4.16.0"
 hilt = "2.52"
 hilt-extension-compiler = "1.2.0"
 hilt-work = "1.2.0"
-kotlin = "2.0.20"
-ksp = "2.0.20-1.0.25"
-lifecycle = "2.8.6"
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.26"
+lifecycle = "2.8.7"
 material = "1.12.0"
 media3 = "1.4.1"
-navigation = "2.8.2"
+navigation = "2.8.3"
 okhttp = "5.0.0-alpha.14"
 okio = "3.9.1"
 paging = "3.3.2"
@@ -29,10 +29,10 @@ room = "2.6.1"
 serialization = "1.7.3"
 swiperefreshlayout = "1.1.0"
 webkit = "1.12.1"
-work = "2.10.0-beta01"
+work = "2.10.0"
 
 [libraries]
-apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checker-qual" }
 coil = { module = "io.coil-kt:coil", version.ref = "coil" }
@@ -79,7 +79,7 @@ work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
-apollo3 = { id = "com.apollographql.apollo3", version.ref = "apollo" }
+apollo3 = { id = "com.apollographql.apollo", version.ref = "apollo" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
