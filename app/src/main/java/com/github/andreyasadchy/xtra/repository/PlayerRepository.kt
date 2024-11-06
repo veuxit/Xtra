@@ -364,6 +364,10 @@ class PlayerRepository @Inject constructor(
 
     fun loadVideoPositions() = videoPositions.getAll()
 
+    suspend fun getVideoPosition(id: Long) = withContext(Dispatchers.IO) {
+        videoPositions.getById(id)
+    }
+
     fun saveVideoPosition(position: VideoPosition) {
         GlobalScope.launch {
             videoPositions.insert(position)

@@ -51,6 +51,7 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import java.io.IOException
@@ -82,7 +83,6 @@ class PlaybackService : MediaSessionService() {
     private var playerMode = PlayerMode.NORMAL
     private var background = false
     private var dynamicsProcessing: DynamicsProcessing? = null
-    private var playingAds = false
     private var usingProxy = false
     private var stopProxy = false
 
@@ -158,7 +158,7 @@ class PlaybackService : MediaSessionService() {
                                 setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 prepare()
                                 playWhenReady = true
-                                seekTo(playbackPosition)
+                                seekTo(if (prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) getPosition() else 0)
                                 setVideoQuality()
                             }
                         }
@@ -176,7 +176,6 @@ class PlaybackService : MediaSessionService() {
                                 setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 prepare()
                                 playWhenReady = true
-                                seekTo(playbackPosition)
                                 setVideoQuality()
                             }
                         }
@@ -193,7 +192,7 @@ class PlaybackService : MediaSessionService() {
                                 setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 prepare()
                                 playWhenReady = true
-                                seekTo(playbackPosition)
+                                seekTo(if (prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) getPosition() else 0)
                                 setVideoQuality()
                             }
                         }
@@ -333,7 +332,6 @@ class PlaybackService : MediaSessionService() {
                                 @Suppress("DEPRECATION")
                                 customCommand.customExtras.getParcelable(ITEM)
                             }?.let { item ->
-                                playingAds = false
                                 usingProxy = false
                                 stopProxy = false
                                 usingPlaylist = true
@@ -443,11 +441,7 @@ class PlaybackService : MediaSessionService() {
                                     session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                     session.player.prepare()
                                     session.player.playWhenReady = true
-                                    session.player.seekTo(savedPosition?.let {
-                                        if (!customCommand.customExtras.getBoolean(IGNORE_SAVED_POSITION) && it.id == item.id?.toLongOrNull()) {
-                                            it.position
-                                        } else null
-                                    } ?: customCommand.customExtras.getLong(PLAYBACK_POSITION))
+                                    session.player.seekTo(customCommand.customExtras.getLong(PLAYBACK_POSITION))
                                 }
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -528,9 +522,7 @@ class PlaybackService : MediaSessionService() {
                                     session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                     session.player.prepare()
                                     session.player.playWhenReady = true
-                                    session.player.seekTo(if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                                        savedPosition?.let { if (it.id == item.id.toLong()) it.position else null } ?: item.lastWatchPosition ?: 0
-                                    } else 0)
+                                    session.player.seekTo(customCommand.customExtras.getLong(PLAYBACK_POSITION))
                                 }
                             }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -569,7 +561,6 @@ class PlaybackService : MediaSessionService() {
                             val pipMode = customCommand.customExtras.getBoolean(PIP_MODE)
                             if (prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "2") {
                                 savePosition()
-                                playbackPosition = session.player.currentPosition
                                 session.player.stop()
                             } else {
                                 if (playerMode == PlayerMode.NORMAL) {
@@ -577,7 +568,6 @@ class PlaybackService : MediaSessionService() {
                                         startAudioOnly()
                                     } else {
                                         savePosition()
-                                        playbackPosition = session.player.currentPosition
                                         session.player.stop()
                                     }
                                 }
@@ -914,7 +904,6 @@ class PlaybackService : MediaSessionService() {
         item = null
         mediaItem = null
         headers = null
-        playbackPosition = 0
         playerMode = PlayerMode.NORMAL
         usingPlaylist = false
         usingAutoQuality = false
@@ -935,6 +924,26 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    private fun getPosition(): Long {
+        return item?.let { item ->
+            when (item) {
+                is Video -> {
+                    item.id?.toLongOrNull()?.let { id ->
+                        runBlocking {
+                            playerRepository.getVideoPosition(id)?.position
+                        }
+                    }
+                }
+                is OfflineVideo -> {
+                    runBlocking {
+                        offlineRepository.getVideoById(item.id)?.lastWatchPosition
+                    }
+                }
+                else -> 0
+            }
+        } ?: 0
+    }
+
     private fun savePosition() {
         item?.let { item ->
             mediaSession?.player?.let { player ->
@@ -942,13 +951,10 @@ class PlaybackService : MediaSessionService() {
                     when (item) {
                         is Video -> {
                             item.id?.toLongOrNull()?.let { id ->
-                                val position = VideoPosition(id, player.currentPosition)
-                                savedPosition = position
-                                playerRepository.saveVideoPosition(position)
+                                playerRepository.saveVideoPosition(VideoPosition(id, player.currentPosition))
                             }
                         }
                         is OfflineVideo -> {
-                            savedPosition = VideoPosition(item.id.toLong(), player.currentPosition)
                             offlineRepository.updateVideoPosition(item.id, player.currentPosition)
                         }
                     }
@@ -979,8 +985,6 @@ class PlaybackService : MediaSessionService() {
         private var item: Parcelable? = null
         private var mediaItem: MediaItem? = null
         private var headers: Map<String, String>? = null
-        private var playbackPosition: Long = 0
-        private var savedPosition: VideoPosition? = null
 
         private var usingPlaylist = false
         private var usingAutoQuality = false
@@ -1035,7 +1039,6 @@ class PlaybackService : MediaSessionService() {
         const val USING_PLAYLIST = "usingPlaylist"
         const val PLAYLIST_AS_DATA = "playlistAsData"
         const val PLAYBACK_POSITION = "playbackPosition"
-        const val IGNORE_SAVED_POSITION = "ignoreSavedPosition"
         const val PIP_MODE = "pipMode"
         const val DURATION = "duration"
         const val USING_PROXY = "usingProxy"

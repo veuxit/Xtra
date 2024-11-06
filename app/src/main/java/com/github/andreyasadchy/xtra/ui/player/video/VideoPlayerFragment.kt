@@ -89,7 +89,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.loaded.collectLatest {
                     if (it) {
-                        loaded = true
                         settings?.enable()
                         download?.enable()
                         mode?.enable()
@@ -269,7 +268,23 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
 
     override fun startPlayer() {
         super.startPlayer()
-        playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getDouble(KEY_OFFSET).toLong())
+        if (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !viewModel.loaded.value) {
+            playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getDouble(KEY_OFFSET).toLong())
+        } else {
+            val id = video.id?.toLongOrNull()
+            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true) && id != null) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.savedPosition.collectLatest {
+                            playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, it?.position ?: 0)
+                        }
+                    }
+                }
+                viewModel.getPosition(id)
+            } else {
+                playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
+            }
+        }
     }
 
     private fun playVideo(skipAccessToken: Boolean, playbackPosition: Long?) {
@@ -278,7 +293,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
                 PlaybackService.ITEM to video,
                 PlaybackService.USING_PLAYLIST to false,
                 PlaybackService.PLAYBACK_POSITION to playbackPosition,
-                PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
             )), Bundle.EMPTY)
         } else {
             viewModel.load(
@@ -297,7 +311,6 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
                                 PlaybackService.URI to it.toString(),
                                 PlaybackService.USING_PLAYLIST to true,
                                 PlaybackService.PLAYBACK_POSITION to playbackPosition,
-                                PlaybackService.IGNORE_SAVED_POSITION to (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !loaded)
                             )), Bundle.EMPTY)
                             viewModel.result.value = null
                         }
@@ -442,10 +455,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
         private const val KEY_VIDEO = "video"
         private const val KEY_OFFSET = "offset"
         private const val KEY_IGNORE_SAVED_POSITION = "ignoreSavedPosition"
-        private var loaded = false
 
         fun newInstance(video: Video, offset: Double? = null, ignoreSavedPosition: Boolean = false): VideoPlayerFragment {
-            loaded = false
             return VideoPlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_OFFSET to offset, KEY_IGNORE_SAVED_POSITION to ignoreSavedPosition) }
         }
     }

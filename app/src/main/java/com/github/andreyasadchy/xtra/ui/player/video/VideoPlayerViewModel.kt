@@ -13,6 +13,7 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -32,6 +33,7 @@ class VideoPlayerViewModel @Inject constructor(
 
     val result = MutableStateFlow<Uri?>(null)
 
+    val savedPosition = MutableSharedFlow<VideoPosition?>()
     val isBookmarked = MutableStateFlow<Boolean?>(null)
     val gamesList = MutableStateFlow<List<Game>?>(null)
     var shouldRetry = true
@@ -47,6 +49,12 @@ class VideoPlayerViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun getPosition(id: Long) {
+        viewModelScope.launch {
+            savedPosition.emit(playerRepository.getVideoPosition(id))
         }
     }
 
