@@ -22,7 +22,6 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
@@ -42,6 +41,7 @@ import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
+import com.github.andreyasadchy.xtra.player.lowlatency.OkHttpDataSource
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -51,7 +51,14 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.SocketAddress
+import java.net.URI
 import java.util.LinkedList
 import java.util.Timer
 import java.util.regex.Pattern
@@ -99,7 +106,7 @@ class PlaybackService : MediaSessionService() {
                     when (item) {
                         is Stream -> {
                             (item as Stream).let { item ->
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory().apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient).apply {
                                     headers?.let {
                                         setDefaultRequestProperties(it)
                                     }
@@ -133,7 +140,7 @@ class PlaybackService : MediaSessionService() {
                         }
                         is Video -> {
                             (item as Video).let { item ->
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory())).apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient))).apply {
                                     setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
                                     if (usingPlaylist && (prefs.getBoolean(C.PLAYER_SUBTITLES, false) || prefs.getBoolean(C.PLAYER_MENU_SUBTITLES, false))) {
                                         setAllowChunklessPreparation(false)
@@ -341,7 +348,7 @@ class PlaybackService : MediaSessionService() {
                                 val playlistAsData = customCommand.customExtras.getBoolean(PLAYLIST_AS_DATA)
                                 Companion.item = item
                                 Companion.headers = headers
-                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory().apply {
+                                HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient).apply {
                                     if (headers != null) {
                                         setDefaultRequestProperties(headers)
                                     }
@@ -418,7 +425,7 @@ class PlaybackService : MediaSessionService() {
                                     usingAutoQuality = true
                                     Companion.usingPlaylist = usingPlaylist
                                     Companion.item = item
-                                    HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, DefaultHttpDataSource.Factory())).apply {
+                                    HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(okHttpClient))).apply {
                                         setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
                                         if (usingPlaylist && (prefs.getBoolean(C.PLAYER_SUBTITLES, false) || prefs.getBoolean(C.PLAYER_MENU_SUBTITLES, false))) {
                                             setAllowChunklessPreparation(false)
@@ -861,6 +868,45 @@ class PlaybackService : MediaSessionService() {
 
     private fun toggleProxy(enable: Boolean) {
         usingProxy = enable
+        mediaSession?.player?.currentMediaItem?.let { item ->
+            val proxyHost = prefs().getString(C.PROXY_HOST, null)
+            val proxyPort = prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
+            val proxyUser = prefs().getString(C.PROXY_USER, null)
+            val proxyPassword = prefs().getString(C.PROXY_PASSWORD, null)
+            HlsMediaSource.Factory(DefaultDataSource.Factory(this@PlaybackService, OkHttpDataSource.Factory(
+                if (enable && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                    okHttpClient.newBuilder().apply {
+                        proxySelector(object : ProxySelector() {
+                            override fun select(u: URI): List<Proxy> {
+                                return if (Regex("video-weaver\\.\\w+\\.hls\\.ttvnw\\.net").matches(u.host)) {
+                                    listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)), Proxy.NO_PROXY)
+                                } else {
+                                    listOf(Proxy.NO_PROXY)
+                                }
+                            }
+
+                            override fun connectFailed(u: URI, sa: SocketAddress, e: IOException) {}
+                        })
+                        if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                            proxyAuthenticator { _, response ->
+                                response.request().newBuilder().header(
+                                    "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                                ).build()
+                            }
+                        }
+                    }.build()
+                } else okHttpClient
+            ).apply {
+                headers?.let { setDefaultRequestProperties(it) }
+            })).apply {
+                setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
+                setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
+                if (prefs().getBoolean(C.PLAYER_SUBTITLES, false) || prefs().getBoolean(C.PLAYER_MENU_SUBTITLES, false)) {
+                    setAllowChunklessPreparation(false)
+                }
+            }.createMediaSource(item).let { (mediaSession?.player as? ExoPlayer)?.setMediaSource(it) }
+        }
     }
 
     private fun clear() {

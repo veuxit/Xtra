@@ -9,17 +9,10 @@ import androidx.work.Configuration
 import com.github.andreyasadchy.xtra.di.AppInjector
 import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
-import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import dagger.hilt.android.HiltAndroidApp
-import okhttp3.TlsVersion
 import org.conscrypt.Conscrypt
-import java.security.KeyStore
 import java.security.Security
 import javax.inject.Inject
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
 
 
 @HiltAndroidApp
@@ -38,13 +31,6 @@ class XtraApp : Application(), Configuration.Provider {
         } catch (e: Exception) {
 
         }
-        val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
-            init(null as KeyStore?)
-            trustManagers.first { it is X509TrustManager } as X509TrustManager
-        }
-        val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
-        sslContext.init(null, arrayOf(trustManager), null)
-        HttpsURLConnection.setDefaultSSLSocketFactory(TlsSocketFactory(sslContext.socketFactory)) // enable TLS 1.2 for exoplayer
 
         INSTANCE = this
         AppInjector.init(this)

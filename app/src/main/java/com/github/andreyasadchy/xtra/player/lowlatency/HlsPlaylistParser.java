@@ -650,7 +650,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     boolean hideAds = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PLAYER_HIDE_ADS, false);
     @Nullable String proxyHost = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_HOST, null);
     @Nullable String proxyPort = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_PORT, null);
-    boolean usingProxy = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PROXY_MEDIA_PLAYLIST, false) && proxyHost != null && !proxyHost.isBlank() && proxyPort != null && !proxyPort.isBlank();
+    boolean usingProxy = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PROXY_MEDIA_PLAYLIST, true) && proxyHost != null && !proxyHost.isBlank() && proxyPort != null && !proxyPort.isBlank();
     List<DateRange> adRanges = new ArrayList<>(); // ad segments
     @HlsMediaPlaylist.PlaylistType int playlistType = HlsMediaPlaylist.PLAYLIST_TYPE_UNKNOWN;
     long startOffsetUs = C.TIME_UNSET;

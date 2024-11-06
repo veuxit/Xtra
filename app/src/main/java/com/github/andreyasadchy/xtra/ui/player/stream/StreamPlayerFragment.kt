@@ -367,7 +367,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                             )), Bundle.EMPTY)
                         } else {
                             if (!oldValue) {
-                                if (!stopProxy && !playlist.isNullOrBlank() && prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, false) && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() && prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null) {
+                                if (!stopProxy && !playlist.isNullOrBlank() && prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true) && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() && prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null) {
                                     player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(PlaybackService.USING_PROXY to true)), Bundle.EMPTY)
                                     viewLifecycleOwner.lifecycleScope.launch {
                                         for (i in 0 until 10) {
