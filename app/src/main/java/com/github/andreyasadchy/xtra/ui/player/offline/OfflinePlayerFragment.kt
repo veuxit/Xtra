@@ -10,6 +10,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.session.SessionCommand
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
@@ -25,6 +28,8 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class OfflinePlayerFragment : BasePlayerFragment() {
@@ -128,7 +133,24 @@ class OfflinePlayerFragment : BasePlayerFragment() {
 
     override fun startPlayer() {
         super.startPlayer()
-        player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(PlaybackService.ITEM to video)), Bundle.EMPTY)
+        if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.video.collectLatest {
+                        player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                            PlaybackService.ITEM to (it ?: video),
+                            PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
+                        )), Bundle.EMPTY)
+                    }
+                }
+            }
+            viewModel.getVideo(video.id)
+        } else {
+            player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                PlaybackService.ITEM to video,
+                PlaybackService.PLAYBACK_POSITION to 0L,
+            )), Bundle.EMPTY)
+        }
     }
 
     override fun onNetworkRestored() {
