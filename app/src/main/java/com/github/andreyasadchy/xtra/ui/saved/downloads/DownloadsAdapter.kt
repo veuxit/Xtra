@@ -247,9 +247,9 @@ class DownloadsAdapter(
                                     context.getString(R.string.downloading_progress, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
                                 }
                             }
-                            OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving)
-                            OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting)
-                            OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting)
+                            OfflineVideo.STATUS_MOVING -> context.getString(R.string.download_moving, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                            OfflineVideo.STATUS_DELETING -> context.getString(R.string.download_deleting, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
+                            OfflineVideo.STATUS_CONVERTING -> context.getString(R.string.download_converting, ((item.progress.toFloat() / item.maxProgress) * 100f).toInt())
                             OfflineVideo.STATUS_BLOCKED -> context.getString(R.string.download_queued)
                             OfflineVideo.STATUS_QUEUED -> context.getString(R.string.download_blocked)
                             OfflineVideo.STATUS_QUEUED_WIFI -> context.getString(R.string.download_blocked_wifi)

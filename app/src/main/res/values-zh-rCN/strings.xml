@@ -603,12 +603,12 @@
     <string name="import_app_downloads">从应用程序存储导入下载</string>
     <string name="move_to_shared_storage">移动到共享存储</string>
     <string name="move_to_app_storage">移动到应用存储</string>
-    <string name="download_moving">移动中</string>
+    <string name="download_moving">移动中：%d%%</string>
     <string name="theme_adapted_username_color">基于应用程序主题的可读颜色</string>
-    <string name="download_deleting">正在删除</string>
+    <string name="download_deleting">正在删除：%d%%</string>
     <string name="download_vod_to_file">将视频下载为单个文件</string>
     <string name="convert_vod_to_file">转换为一个文件</string>
-    <string name="download_converting">正在转换</string>
+    <string name="download_converting">正在转换：%d%%</string>
     <string name="convert_message">把视频转换为一个文件？</string>
     <string name="convert">转换</string>
     <string name="download_chat">下载聊天室回放</string>
