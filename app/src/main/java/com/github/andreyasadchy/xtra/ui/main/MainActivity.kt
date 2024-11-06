@@ -684,7 +684,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                                 it.onMinimize()
                                 it.onClose()
                                 closePlayer()
-                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
+                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, false)) {
                                     if ((getSystemService(POWER_SERVICE) as PowerManager).let {
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
                                                 it.isInteractive

@@ -167,6 +167,25 @@ object TwitchApiHelper {
         } else null
     }
 
+    fun getMinutesLeft(hour: Int, minute: Int): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val currentDate = LocalDateTime.ofInstant(Instant.now(), ZoneOffset.systemDefault())
+            val date = currentDate.withHour(hour).withMinute(minute).let {
+                if (it < currentDate) it.plusDays(1) else it
+            }
+            return ChronoUnit.MINUTES.between(currentDate, date).toInt()
+        } else {
+            val currentDate = Calendar.getInstance()
+            val date = Calendar.getInstance()
+            date.set(Calendar.HOUR_OF_DAY, hour)
+            date.set(Calendar.MINUTE, minute)
+            if (date < currentDate) {
+                date.add(Calendar.DAY_OF_YEAR, 1)
+            }
+            return ((date.timeInMillis - currentDate.timeInMillis) / 60000).toInt()
+        }
+    }
+
     fun getTimestamp(input: Long, timestampFormat: String?): String? {
         val pattern = when (timestampFormat) {
             "0" -> "H:mm"
