@@ -386,7 +386,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     private fun onRaidUpdate(raid: Raid) {
         if (!viewModel.raidClosed) {
             if (raid.openStream) {
-                if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment && !(parentFragment as BasePlayerFragment).isSleepTimerActive()) {
+                if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment) {
                     onRaidClicked(raid)
                 }
                 binding.chatView.hideRaid()

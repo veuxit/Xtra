@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,7 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.Menu
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -71,6 +73,8 @@ import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
@@ -562,6 +566,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
         }
+        viewModel.sleepTimer?.cancel()
+        viewModel.sleepTimerEndTime = 0L
     }
 
     private fun restorePlayerFragment() {
@@ -574,6 +580,40 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 }
             }
         }
+    }
+
+    fun setSleepTimer(duration: Long) {
+        viewModel.sleepTimer?.cancel()
+        viewModel.sleepTimerEndTime = 0L
+        if (duration > 0L) {
+            viewModel.sleepTimer = Timer().apply {
+                schedule(duration) {
+                    lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            playerFragment?.let {
+                                it.onMinimize()
+                                it.onClose()
+                                closePlayer()
+                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
+                                    if ((getSystemService(POWER_SERVICE) as PowerManager).isInteractive) {
+                                        try {
+                                            (getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
+                                        } catch (e: SecurityException) {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            viewModel.sleepTimerEndTime = System.currentTimeMillis() + duration
+        }
+    }
+
+    fun getSleepTimerTimeLeft(): Long {
+        return viewModel.sleepTimerEndTime - System.currentTimeMillis()
     }
 
     fun popFragment() {
