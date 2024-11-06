@@ -38,6 +38,7 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import retrofit2.HttpException
+import java.util.Timer
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,6 +59,9 @@ class MainViewModel @Inject constructor(
 
     var isPlayerOpened = false
         private set
+
+    var sleepTimer: Timer? = null
+    var sleepTimerEndTime = 0L
 
     val video = MutableStateFlow<Video?>(null)
     val clip = MutableStateFlow<Clip?>(null)

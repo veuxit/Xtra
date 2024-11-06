@@ -1,16 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.player
 
 import android.app.PictureInPictureParams
-import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
-import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -403,21 +400,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
         if (this !is ClipPlayerFragment) {
-            viewLifecycleOwner.lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    viewModel.sleepTimer.collectLatest {
-                        if (it) {
-                            onMinimize()
-                            onClose()
-                            activity.closePlayer()
-                            if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
-                                lockScreen()
-                            }
-                            viewModel.sleepTimer.value = false
-                        }
-                    }
-                }
-            }
             if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {
                 view.findViewById<ImageButton>(R.id.playerSleepTimer)?.apply {
                     visible()
@@ -512,13 +494,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 minutes == 0 -> getString(R.string.playback_will_stop, resources.getQuantityString(R.plurals.hours, hours, hours))
                 else -> getString(R.string.playback_will_stop_hours_minutes, resources.getQuantityString(R.plurals.hours, hours, hours), resources.getQuantityString(R.plurals.minutes, minutes, minutes))
             })
-        } else if (viewModel.timerTimeLeft > 0L) {
+        } else if (((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0) > 0L) {
             context.toast(R.string.timer_canceled)
         }
         if (lockScreen != prefs.getBoolean(C.SLEEP_TIMER_LOCK, true)) {
             prefs.edit { putBoolean(C.SLEEP_TIMER_LOCK, lockScreen) }
         }
-        viewModel.setTimer(durationMs)
+        (activity as? MainActivity)?.setSleepTimer(durationMs)
     }
 
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {
@@ -558,10 +540,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     //    abstract fun play(obj: Parcelable) //TODO instead maybe add livedata in mainactivity and observe it
 
-    fun isSleepTimerActive(): Boolean {
-        return viewModel.timerTimeLeft > 0L
-    }
-
     fun setResizeMode() {
         resizeMode = (resizeMode + 1).let { if (it < 5) it else 0 }
         playerView.resizeMode = resizeMode
@@ -569,7 +547,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun showSleepTimerDialog() {
-        SleepTimerDialog.show(childFragmentManager, viewModel.timerTimeLeft)
+        SleepTimerDialog.show(childFragmentManager, (activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
     }
 
     fun showQualityDialog() {
@@ -754,14 +732,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).hide(WindowInsetsCompat.Type.systemBars())
     }
 
-    private fun lockScreen() {
-        if ((requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive) {
-            try {
-                (requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
-            } catch (e: SecurityException) {}
-        }
-    }
-
     fun setSubtitles(available: Boolean = null ?: subtitlesAvailable(), enabled: Boolean = null ?: subtitlesEnabled()) {
         requireView().findViewById<ImageButton>(R.id.playerSubtitleToggle)?.apply {
             if (available && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
@@ -828,7 +798,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         viewModel.background = true
         player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, bundleOf(
             PlaybackService.PIP_MODE to viewModel.pipMode,
-            PlaybackService.DURATION to viewModel.timerTimeLeft
+            PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
         )), Bundle.EMPTY)?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
