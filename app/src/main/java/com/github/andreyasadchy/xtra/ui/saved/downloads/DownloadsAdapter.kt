@@ -40,6 +40,7 @@ class DownloadsAdapter(
     private val convertVideo: (OfflineVideo) -> Unit,
     private val moveVideo: (OfflineVideo) -> Unit,
     private val updateChatUrl: (OfflineVideo) -> Unit,
+    private val shareVideo: (OfflineVideo) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
@@ -214,6 +215,9 @@ class DownloadsAdapter(
                                         menu.findItem(R.id.convertVideo).isVisible = true
                                     }
                                     menu.findItem(R.id.updateChatUrl).isVisible = true
+                                    if (item.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
+                                        menu.findItem(R.id.shareVideo).isVisible = true
+                                    }
                                 }
                             }
                             setOnMenuItemClickListener {
@@ -223,6 +227,7 @@ class DownloadsAdapter(
                                     R.id.convertVideo -> convertVideo(item)
                                     R.id.moveVideo -> moveVideo(item)
                                     R.id.updateChatUrl -> updateChatUrl(item)
+                                    R.id.shareVideo -> shareVideo(item)
                                     R.id.delete -> deleteVideo(item)
                                     else -> menu.close()
                                 }
