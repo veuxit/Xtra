@@ -54,7 +54,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryBadges(headers: Map<String, String>, quality: String): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$quality: BadgeImageSize) { badges { imageURL(size: \$quality) setID title version }}")
+            put("query", "query null(\$quality: BadgeImageSize) { badges { imageURL(size: \$quality) setID title version }}")
             putJsonObject("variables") {
                 put("quality", quality)
             }
@@ -64,7 +64,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryGameBoxArt(headers: Map<String, String>, id: String? = null, name: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$name: String) { game(id: \$id, name: \$name) { boxArtURL }}")
+            put("query", "query null(\$id: ID, \$name: String) { game(id: \$id, name: \$name) { boxArtURL }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("name", name)
@@ -75,7 +75,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryGameClips(headers: Map<String, String>, id: String? = null, slug: String? = null, name: String? = null, languages: List<String>? = null, sort: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$slug: String, \$name: String, \$languages: [Language!], \$sort: ClipsPeriod, \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { clips(first: \$first, after: \$after, criteria: { languages: \$languages, period: \$sort }) { edges { cursor node { broadcaster { id login displayName profileImageURL(width: 300) } createdAt durationSeconds slug thumbnailURL title video { animatedPreviewURL id } videoOffsetSeconds viewCount } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$id: ID, \$slug: String, \$name: String, \$languages: [Language!], \$sort: ClipsPeriod, \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { clips(first: \$first, after: \$after, criteria: { languages: \$languages, period: \$sort }) { edges { cursor node { broadcaster { id login displayName profileImageURL(width: 300) } createdAt durationSeconds slug thumbnailURL title video { animatedPreviewURL id } videoOffsetSeconds viewCount } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("slug", slug)
@@ -95,7 +95,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryGameStreams(headers: Map<String, String>, id: String? = null, slug: String? = null, name: String? = null, sort: String? = null, tags: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$slug: String, \$name: String, \$sort: StreamSort, \$tags: [String!], \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { streams(first: \$first, after: \$after, options: { sort: \$sort, freeformTags: \$tags }) { edges { cursor node { broadcaster { broadcastSettings { title } id login displayName profileImageURL(width: 300) } createdAt id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$id: ID, \$slug: String, \$name: String, \$sort: StreamSort, \$tags: [String!], \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { streams(first: \$first, after: \$after, options: { sort: \$sort, freeformTags: \$tags }) { edges { cursor node { broadcaster { broadcastSettings { title } id login displayName profileImageURL(width: 300) } createdAt id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("slug", slug)
@@ -115,7 +115,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryGameVideos(headers: Map<String, String>, id: String? = null, slug: String? = null, name: String? = null, languages: List<String>? = null, sort: String? = null, type: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$slug: String, \$name: String, \$languages: [String!], \$sort: VideoSort, \$type: [BroadcastType!], \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { videos(first: \$first, after: \$after, languages: \$languages, types: \$type, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt id lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$id: ID, \$slug: String, \$name: String, \$languages: [String!], \$sort: VideoSort, \$type: [BroadcastType!], \$first: Int, \$after: Cursor) { game(id: \$id, slug: \$slug, name: \$name) { videos(first: \$first, after: \$after, languages: \$languages, types: \$type, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt id lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("slug", slug)
@@ -140,7 +140,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQuerySearchChannels(headers: Map<String, String>, query: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$query: String!, \$first: Int, \$after: Cursor) { searchUsers(userQuery: \$query, first: \$first, after: \$after) { edges { cursor node { displayName followers { totalCount } id login profileImageURL(width: 300) stream { type } } } pageInfo { hasNextPage } }}")
+            put("query", "query null(\$query: String!, \$first: Int, \$after: Cursor) { searchUsers(userQuery: \$query, first: \$first, after: \$after) { edges { cursor node { displayName followers { totalCount } id login profileImageURL(width: 300) stream { type } } } pageInfo { hasNextPage } }}")
             putJsonObject("variables") {
                 put("query", query)
                 put("first", first)
@@ -152,7 +152,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQuerySearchGames(headers: Map<String, String>, query: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$query: String!, \$first: Int, \$after: Cursor) { searchCategories(query: \$query, first: \$first, after: \$after) { edges { cursor node { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } pageInfo { hasNextPage } }}")
+            put("query", "query null(\$query: String!, \$first: Int, \$after: Cursor) { searchCategories(query: \$query, first: \$first, after: \$after) { edges { cursor node { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } pageInfo { hasNextPage } }}")
             putJsonObject("variables") {
                 put("query", query)
                 put("first", first)
@@ -164,7 +164,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQuerySearchStreams(headers: Map<String, String>, query: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$query: String!, \$first: Int, \$after: Cursor) { searchStreams(userQuery: \$query, first: \$first, after: \$after) { edges { cursor node { broadcaster { broadcastSettings { title } displayName id login profileImageURL(width: 300) } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } }}")
+            put("query", "query null(\$query: String!, \$first: Int, \$after: Cursor) { searchStreams(userQuery: \$query, first: \$first, after: \$after) { edges { cursor node { broadcaster { broadcastSettings { title } displayName id login profileImageURL(width: 300) } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } }}")
             putJsonObject("variables") {
                 put("query", query)
                 put("first", first)
@@ -176,7 +176,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQuerySearchVideos(headers: Map<String, String>, query: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$query: String!, \$first: Int, \$after: String) { searchFor(userQuery: \$query, platform: \"\", target: { cursor: \$after, index: VOD, limit: \$first }) { videos { cursor items { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { displayName id slug } id lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title viewCount } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$query: String!, \$first: Int, \$after: String) { searchFor(userQuery: \$query, platform: \"\", target: { cursor: \$after, index: VOD, limit: \$first }) { videos { cursor items { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { displayName id slug } id lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title viewCount } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("query", query)
                 put("first", first)
@@ -188,7 +188,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryTopGames(headers: Map<String, String>, tags: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$tags: [String!], \$first: Int, \$after: Cursor) { games(first: \$first, after: \$after, options: { tags: \$tags }) { edges { cursor node { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } pageInfo { hasNextPage } }}")
+            put("query", "query null(\$tags: [String!], \$first: Int, \$after: Cursor) { games(first: \$first, after: \$after, options: { tags: \$tags }) { edges { cursor node { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } pageInfo { hasNextPage } }}")
             putJsonObject("variables") {
                 putJsonArray("tags") {
                     tags?.forEach {
@@ -204,7 +204,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryTopStreams(headers: Map<String, String>, tags: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$tags: [String!], \$first: Int, \$after: Cursor) { streams(first: \$first, after: \$after, options: { freeformTags: \$tags }) { edges { cursor node { broadcaster { broadcastSettings { title } displayName id login profileImageURL(width: 300) } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } }}")
+            put("query", "query null(\$tags: [String!], \$first: Int, \$after: Cursor) { streams(first: \$first, after: \$after, options: { freeformTags: \$tags }) { edges { cursor node { broadcaster { broadcastSettings { title } displayName id login profileImageURL(width: 300) } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } } pageInfo { hasNextPage } }}")
             putJsonObject("variables") {
                 putJsonArray("tags") {
                     tags?.forEach {
@@ -220,7 +220,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUser(headers: Map<String, String>, id: String? = null, login: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { displayName id login profileImageURL(width: 300) }}")
+            put("query", "query null(\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { displayName id login profileImageURL(width: 300) }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -231,7 +231,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserBadges(headers: Map<String, String>, id: String? = null, login: String? = null, quality: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String, \$quality: BadgeImageSize) { user(id: \$id, login: \$login, lookupType: ALL) { broadcastBadges { imageURL(size: \$quality) setID title version } }}")
+            put("query", "query null(\$id: ID, \$login: String, \$quality: BadgeImageSize) { user(id: \$id, login: \$login, lookupType: ALL) { broadcastBadges { imageURL(size: \$quality) setID title version } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -243,7 +243,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserChannelPage(headers: Map<String, String>, id: String? = null, login: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName followers { totalCount } lastBroadcast { startedAt } id login profileImageURL(width: 300) roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } stream { createdAt game { id displayName slug } id previewImageURL title type viewersCount } }}")
+            put("query", "query null(\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName followers { totalCount } lastBroadcast { startedAt } id login profileImageURL(width: 300) roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } stream { createdAt game { id displayName slug } id previewImageURL title type viewersCount } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -254,7 +254,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserCheerEmotes(headers: Map<String, String>, id: String? = null, login: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String) { cheerConfig { displayConfig { backgrounds colors { bits color } scales types { animation extension } } groups { nodes { prefix tiers { bits } } templateURL } } user(id: \$id, login: \$login, lookupType: ALL) { cheer { cheerGroups { nodes { prefix tiers { bits } } templateURL } } }}")
+            put("query", "query null(\$id: ID, \$login: String) { cheerConfig { displayConfig { backgrounds colors { bits color } scales types { animation extension } } groups { nodes { prefix tiers { bits } } templateURL } } user(id: \$id, login: \$login, lookupType: ALL) { cheer { cheerGroups { nodes { prefix tiers { bits } } templateURL } } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -265,7 +265,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserClips(headers: Map<String, String>, id: String? = null, login: String? = null, sort: String? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String, \$sort: ClipsPeriod, \$first: Int, \$after: Cursor) { user(id: \$id, login: \$login, lookupType: ALL) { clips(first: \$first, after: \$after, criteria: { period: \$sort }) { edges { cursor node { createdAt durationSeconds game { id displayName slug } slug thumbnailURL title video { animatedPreviewURL id } videoOffsetSeconds viewCount } } pageInfo { hasNextPage } } displayName login profileImageURL(width: 300) }}")
+            put("query", "query null(\$id: ID, \$login: String, \$sort: ClipsPeriod, \$first: Int, \$after: Cursor) { user(id: \$id, login: \$login, lookupType: ALL) { clips(first: \$first, after: \$after, criteria: { period: \$sort }) { edges { cursor node { createdAt durationSeconds game { id displayName slug } slug thumbnailURL title video { animatedPreviewURL id } videoOffsetSeconds viewCount } } pageInfo { hasNextPage } } displayName login profileImageURL(width: 300) }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -286,7 +286,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserFollowedGames(headers: Map<String, String>, first: Int? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$first: Int) { user { followedGames(first: \$first, type: ALL) { nodes { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } }}")
+            put("query", "query null(\$first: Int) { user { followedGames(first: \$first, type: ALL) { nodes { boxArtURL broadcastersCount displayName id slug tags(tagType: CONTENT) { id localizedName } viewersCount } } }}")
             putJsonObject("variables") {
                 put("first", first)
             }
@@ -296,7 +296,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserFollowedStreams(headers: Map<String, String>, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$first: Int, \$after: Cursor) { user { followedLiveUsers(first: \$first, after: \$after) { edges { cursor node { displayName id login profileImageURL(width: 300) self { follower { notificationSettings { isEnabled } } } stream { broadcaster { broadcastSettings { title } } createdAt game { displayName id slug } id previewImageURL freeformTags { name } type viewersCount } } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$first: Int, \$after: Cursor) { user { followedLiveUsers(first: \$first, after: \$after) { edges { cursor node { displayName id login profileImageURL(width: 300) self { follower { notificationSettings { isEnabled } } } stream { broadcaster { broadcastSettings { title } } createdAt game { displayName id slug } id previewImageURL freeformTags { name } type viewersCount } } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("first", first)
                 put("after", after)
@@ -307,7 +307,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserFollowedUsers(headers: Map<String, String>, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$first: Int, \$after: Cursor) { user { follows(first: \$first, after: \$after, order: ASC) { edges { cursor followedAt node { displayName id lastBroadcast { startedAt } login profileImageURL(width: 300) } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$first: Int, \$after: Cursor) { user { follows(first: \$first, after: \$after, order: ASC) { edges { cursor followedAt node { displayName id lastBroadcast { startedAt } login profileImageURL(width: 300) } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("first", first)
                 put("after", after)
@@ -318,7 +318,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserFollowedVideos(headers: Map<String, String>, sort: String? = null, type: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$languages: [String!], \$sort: VideoSort, \$type: [BroadcastType!], \$first: Int, \$after: Cursor) { user { followedVideos(first: \$first, after: \$after, languages: \$languages, types: \$type, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { id displayName slug } id lengthSeconds owner { id login displayName profileImageURL(width: 300) } previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$languages: [String!], \$sort: VideoSort, \$type: [BroadcastType!], \$first: Int, \$after: Cursor) { user { followedVideos(first: \$first, after: \$after, languages: \$languages, types: \$type, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { id displayName slug } id lengthSeconds owner { id login displayName profileImageURL(width: 300) } previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("sort", sort)
                 putJsonArray("type") {
@@ -335,7 +335,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserMessageClicked(headers: Map<String, String>, id: String? = null, login: String? = null, targetId: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String, \$targetId: ID) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName follow(targetID: \$targetId) { followedAt } id login profileImageURL(width: 300) }}")
+            put("query", "query null(\$id: ID, \$login: String, \$targetId: ID) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName follow(targetID: \$targetId) { followedAt } id login profileImageURL(width: 300) }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -347,7 +347,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserResultID(headers: Map<String, String>, id: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID!) { userResultByID(id: \$id) { ... on User { id __typename } ... on UserDoesNotExist { key reason __typename } ... on UserError { key __typename } }}")
+            put("query", "query null(\$id: ID!) { userResultByID(id: \$id) { ... on User { id __typename } ... on UserDoesNotExist { key reason __typename } ... on UserError { key __typename } }}")
             putJsonObject("variables") {
                 put("id", id)
             }
@@ -357,7 +357,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserResultLogin(headers: Map<String, String>, login: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$login: String!) { userResultByLogin(login: \$login) { ... on User { id __typename } ... on UserDoesNotExist { key reason __typename } ... on UserError { key __typename } }}")
+            put("query", "query null(\$login: String!) { userResultByLogin(login: \$login) { ... on User { id __typename } ... on UserDoesNotExist { key reason __typename } ... on UserError { key __typename } }}")
             putJsonObject("variables") {
                 put("login", login)
             }
@@ -367,7 +367,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserVideos(headers: Map<String, String>, id: String? = null, login: String? = null, sort: String? = null, types: List<String>? = null, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID, \$login: String, \$sort: VideoSort, \$types: [BroadcastType!], \$first: Int, \$after: Cursor) { user(id: \$id, login: \$login, lookupType: ALL) { displayName login profileImageURL(width: 300) videos(first: \$first, after: \$after, types: \$types, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { id displayName slug } id lengthSeconds previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
+            put("query", "query null(\$id: ID, \$login: String, \$sort: VideoSort, \$types: [BroadcastType!], \$first: Int, \$after: Cursor) { user(id: \$id, login: \$login, lookupType: ALL) { displayName login profileImageURL(width: 300) videos(first: \$first, after: \$after, types: \$types, sort: \$sort) { edges { cursor node { animatedPreviewURL broadcastType contentTags { id localizedName } createdAt game { id displayName slug } id lengthSeconds previewThumbnailURL title viewCount } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -386,7 +386,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUsersLastBroadcast(headers: Map<String, String>, ids: List<String>? = null, logins: List<String>? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id lastBroadcast { startedAt } profileImageURL(width: 300) }}")
+            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id lastBroadcast { startedAt } profileImageURL(width: 300) }}")
             putJsonObject("variables") {
                 putJsonArray("ids") {
                     ids?.forEach {
@@ -405,7 +405,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUsersStream(headers: Map<String, String>, id: List<String>? = null, login: List<String>? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: [ID!], \$login: [String!]) { users(ids: \$id, logins: \$login) { displayName id login profileImageURL(width: 300) stream { broadcaster { broadcastSettings { title } } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } }}")
+            put("query", "query null(\$id: [ID!], \$login: [String!]) { users(ids: \$id, logins: \$login) { displayName id login profileImageURL(width: 300) stream { broadcaster { broadcastSettings { title } } createdAt game { id displayName slug } id previewImageURL freeformTags { name } type viewersCount } }}")
             putJsonObject("variables") {
                 putJsonArray("id") {
                     id?.forEach {
@@ -424,7 +424,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUsersType(headers: Map<String, String>, ids: List<String>? = null, logins: List<String>? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } }}")
+            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } }}")
             putJsonObject("variables") {
                 putJsonArray("ids") {
                     ids?.forEach {
@@ -443,7 +443,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryVideo(headers: Map<String, String>, id: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$id: ID) { video(id: \$id) { animatedPreviewURL broadcastType createdAt game { id displayName } lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title }}")
+            put("query", "query null(\$id: ID) { video(id: \$id) { animatedPreviewURL broadcastType createdAt game { id displayName } lengthSeconds owner { displayName id login profileImageURL(width: 300) } previewThumbnailURL title }}")
             putJsonObject("variables") {
                 put("id", id)
             }
