@@ -3,7 +3,9 @@ package com.github.andreyasadchy.xtra.ui.player.clip
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,8 +17,10 @@ import javax.inject.Inject
 class ClipPlayerViewModel @Inject constructor(
     repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
+    shownNotificationsRepository: ShownNotificationsRepository,
+    notificationsRepository: NotificationsRepository,
     okHttpClient: OkHttpClient,
-    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, okHttpClient) {
+    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
 
     val result = MutableStateFlow<Map<String, String>?>(null)
 

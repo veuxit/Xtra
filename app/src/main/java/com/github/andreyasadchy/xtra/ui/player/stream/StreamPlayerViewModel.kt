@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,8 +22,10 @@ import javax.inject.Inject
 class StreamPlayerViewModel @Inject constructor(
     private val repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
+    shownNotificationsRepository: ShownNotificationsRepository,
+    notificationsRepository: NotificationsRepository,
     okHttpClient: OkHttpClient,
-    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, okHttpClient) {
+    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
 
     val result = MutableStateFlow<String?>(null)
 

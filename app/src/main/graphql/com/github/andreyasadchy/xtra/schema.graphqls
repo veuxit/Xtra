@@ -30,6 +30,10 @@ type BroadcastSettings {
   title: String
 }
 
+type ChannelNotificationSettings {
+  isEnabled: Boolean
+}
+
 type CheerInfo {
   cheerGroups: [CheermoteGroup!]
 }
@@ -133,6 +137,10 @@ type FollowedLiveUserEdge {
 
 type FollowerConnection {
   totalCount: Int
+}
+
+type FollowerEdge {
+  notificationSettings: ChannelNotificationSettings
 }
 
 type FreeformTag {
@@ -275,6 +283,7 @@ type User {
   lastBroadcast: Broadcast
   profileImageURL(width: Int): String
   roles: UserRoles
+  self: UserSelfConnection
   stream: Stream
   videos(first: Int, after: Cursor, types: [BroadcastType!], sort: VideoSort): VideoConnection
 }
@@ -295,6 +304,10 @@ type UserRoles {
   isPartner: Boolean
   isSiteAdmin: Boolean
   isStaff: Boolean
+}
+
+type UserSelfConnection {
+  follower: FollowerEdge
 }
 
 type Video {
