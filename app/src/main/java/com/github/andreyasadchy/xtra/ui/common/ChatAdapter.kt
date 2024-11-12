@@ -22,8 +22,9 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.text.getSpans
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
-import coil.imageLoader
-import coil.request.ImageRequest
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
@@ -425,38 +426,40 @@ class ChatAdapter(
                 else -> image.url1x
             })
             .target(
-                onSuccess = { result ->
-                    val size = if (image.isEmote) {
-                        calculateEmoteSize(result)
-                    } else {
-                        Pair(badgeSize, badgeSize)
-                    }
-                    if (image.isZeroWidth && enableZeroWidth) {
-                        result.setBounds(-90, 0, size.first - 90, size.second)
-                    } else {
-                        result.setBounds(0, 0, size.first, size.second)
-                    }
-                    if (result is Animatable && image.isAnimated && animateGifs) {
-                        result.callback = object : Drawable.Callback {
-                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
-                                holder.textView.removeCallbacks(what)
-                            }
-
-                            override fun invalidateDrawable(who: Drawable) {
-                                holder.textView.invalidate()
-                            }
-
-                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
-                                holder.textView.postDelayed(what, `when`)
-                            }
+                onSuccess = {
+                    (it.asDrawable(fragment.requireContext().resources)).let { result ->
+                        val size = if (image.isEmote) {
+                            calculateEmoteSize(result)
+                        } else {
+                            Pair(badgeSize, badgeSize)
                         }
-                        (result as Animatable).start()
+                        if (image.isZeroWidth && enableZeroWidth) {
+                            result.setBounds(-90, 0, size.first - 90, size.second)
+                        } else {
+                            result.setBounds(0, 0, size.first, size.second)
+                        }
+                        if (result is Animatable && image.isAnimated && animateGifs) {
+                            result.callback = object : Drawable.Callback {
+                                override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                    holder.textView.removeCallbacks(what)
+                                }
+
+                                override fun invalidateDrawable(who: Drawable) {
+                                    holder.textView.invalidate()
+                                }
+
+                                override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                    holder.textView.postDelayed(what, `when`)
+                                }
+                            }
+                            (result as Animatable).start()
+                        }
+                        try {
+                            builder.setSpan(CenteredImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
+                        } catch (e: IndexOutOfBoundsException) {
+                        }
+                        holder.bind(builder, message, userId, userName, channelId, fullMsg)
                     }
-                    try {
-                        builder.setSpan(CenteredImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    } catch (e: IndexOutOfBoundsException) {
-                    }
-                    holder.bind(builder, message, userId, userName, channelId, fullMsg)
                 },
             )
             .build()

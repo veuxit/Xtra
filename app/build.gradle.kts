@@ -101,6 +101,7 @@ dependencies {
 
     implementation(libs.coil)
     implementation(libs.coil.gif)
+    implementation(libs.coil.okhttp)
 
     implementation(libs.glide)
     ksp(libs.glide.ksp)
