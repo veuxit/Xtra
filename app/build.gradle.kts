@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
-    alias(libs.plugins.apollo3)
+    alias(libs.plugins.apollo)
 }
 
 kotlin {
@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 121
-        versionName = "2.38.0"
+        versionName = "2.38.1"
     }
 
     buildTypes {

@@ -925,15 +925,18 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun loadUserFollowing(helixHeaders: Map<String, String>, targetId: String?, userId: String?, gqlHeaders: Map<String, String>, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
+    suspend fun loadUserFollowing(helixHeaders: Map<String, String>, targetId: String?, userId: String?, gqlHeaders: Map<String, String>, targetLogin: String?): Pair<Boolean, Boolean?> = withContext(Dispatchers.IO) {
         try {
-            if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gql.loadFollowingUser(gqlHeaders, targetLogin).data?.user?.self?.follower != null else throw Exception()
+            if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || targetLogin == null) throw Exception()
+            val follower = gql.loadFollowingUser(gqlHeaders, targetLogin).data?.user?.self?.follower
+            Pair(follower != null, follower?.disableNotifications == false)
         } catch (e: Exception) {
-            helix.getUserFollows(
+            val following = helix.getUserFollows(
                 headers = helixHeaders,
                 targetId = targetId,
                 userId = userId
             ).data.firstOrNull()?.channelId == targetId
+            Pair(following, null)
         }
     }
 
@@ -1003,6 +1006,10 @@ class ApiRepository @Inject constructor(
 
     suspend fun unfollowUser(gqlHeaders: Map<String, String>, userId: String?): String? = withContext(Dispatchers.IO) {
         gql.loadUnfollowUser(gqlHeaders, userId).errors?.firstOrNull()?.message
+    }
+
+    suspend fun toggleNotifications(gqlHeaders: Map<String, String>, userId: String?, disableNotifications: Boolean): String? = withContext(Dispatchers.IO) {
+        gql.loadToggleNotificationsUser(gqlHeaders, userId, disableNotifications).errors?.firstOrNull()?.message
     }
 
     suspend fun followGame(gqlHeaders: Map<String, String>, gameId: String?): String? = withContext(Dispatchers.IO) {

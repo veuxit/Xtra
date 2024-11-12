@@ -143,6 +143,9 @@ interface GraphQLApi {
     suspend fun getUnfollowUser(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): ErrorResponse
 
     @POST(".")
+    suspend fun getToggleNotificationsUser(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): ErrorResponse
+
+    @POST(".")
     suspend fun getFollowGame(@HeaderMap headers: Map<String, String>, @Body json: JsonObject): ErrorResponse
 
     @POST(".")

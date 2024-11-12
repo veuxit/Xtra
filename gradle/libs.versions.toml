@@ -80,7 +80,7 @@ work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
-apollo3 = { id = "com.apollographql.apollo", version.ref = "apollo" }
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
