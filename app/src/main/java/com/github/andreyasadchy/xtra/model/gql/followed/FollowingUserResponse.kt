@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.model.gql.followed
 
 import com.github.andreyasadchy.xtra.model.gql.Error
-import com.github.andreyasadchy.xtra.model.gql.game.GamesResponse.Data
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -26,6 +25,6 @@ data class FollowingUserResponse(
 
     @Serializable
     data class Follower(
-        val followedAt: String? = null,
+        val disableNotifications: Boolean? = null,
     )
 }

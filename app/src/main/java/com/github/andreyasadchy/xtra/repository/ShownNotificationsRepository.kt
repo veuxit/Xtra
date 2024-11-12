@@ -30,6 +30,17 @@ class ShownNotificationsRepository @Inject constructor(
                 } else null
             }
         }?.let { list.addAll(it) }
+        if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            try {
+                gqlQueryLoad(gqlHeaders, gqlApi)
+            } catch (e: Exception) {
+                null
+            }?.mapNotNull { item ->
+                item.takeIf { list.find { it.channelId == item.channelId } == null }
+            }?.let {
+                list.addAll(it)
+            }
+        }
         val liveList = list.mapNotNull { stream ->
             stream.channelId.takeUnless { it.isNullOrBlank() }?.let { channelId ->
                 stream.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let { startedAt ->
@@ -46,6 +57,45 @@ class ShownNotificationsRepository @Inject constructor(
             item.takeIf { oldList.find { it.channelId == item.channelId }.let { it == null || it.startedAt < item.startedAt } }?.channelId
         }
         list.filter { it.channelId in newStreams }
+    }
+
+    private suspend fun gqlQueryLoad(gqlHeaders: Map<String, String>, gqlApi: GraphQLRepository): List<Stream> {
+        val list = mutableListOf<Stream>()
+        var offset: String? = null
+        do {
+            val response = gqlApi.loadQueryUserFollowedStreams(
+                headers = gqlHeaders,
+                first = 100,
+                after = offset
+            )
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            val data = response.data!!.user!!.followedLiveUsers!!
+            val items = data.edges!!
+            items.mapNotNull { item ->
+                item?.node?.let {
+                    if (it.self?.follower?.notificationSettings?.isEnabled == true) {
+                        Stream(
+                            id = it.stream?.id,
+                            channelId = it.id,
+                            channelLogin = it.login,
+                            channelName = it.displayName,
+                            gameId = it.stream?.game?.id,
+                            gameSlug = it.stream?.game?.slug,
+                            gameName = it.stream?.game?.displayName,
+                            type = it.stream?.type,
+                            title = it.stream?.broadcaster?.broadcastSettings?.title,
+                            viewerCount = it.stream?.viewersCount,
+                            startedAt = it.stream?.createdAt?.toString(),
+                            thumbnailUrl = it.stream?.previewImageURL,
+                            profileImageUrl = it.profileImageURL,
+                            tags = it.stream?.freeformTags?.mapNotNull { tag -> tag.name }
+                        )
+                    } else null
+                }
+            }.let { list.addAll(it) }
+            offset = items.lastOrNull()?.cursor?.toString()
+        } while (!items.lastOrNull()?.cursor?.toString().isNullOrBlank() && data.pageInfo?.hasNextPage == true)
+        return list
     }
 
     private suspend fun gqlQueryLocal(gqlHeaders: Map<String, String>, ids: List<String>, gqlApi: GraphQLRepository): List<Stream> {
@@ -117,5 +167,9 @@ class ShownNotificationsRepository @Inject constructor(
             } else null
         }
         return list
+    }
+
+    suspend fun saveList(list: List<ShownNotification>) = withContext(Dispatchers.IO) {
+        shownNotificationsDao.insertList(list)
     }
 }

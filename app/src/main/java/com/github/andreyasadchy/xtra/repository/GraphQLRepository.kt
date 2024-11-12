@@ -296,7 +296,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserFollowedStreams(headers: Map<String, String>, first: Int? = null, after: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query (\$first: Int, \$after: Cursor) { user { followedLiveUsers(first: \$first, after: \$after) { edges { cursor node { displayName id login profileImageURL(width: 300) stream { broadcaster { broadcastSettings { title } } createdAt game { displayName id slug } id previewImageURL freeformTags { name } type viewersCount } } } pageInfo { hasNextPage } } }}")
+            put("query", "query (\$first: Int, \$after: Cursor) { user { followedLiveUsers(first: \$first, after: \$after) { edges { cursor node { displayName id login profileImageURL(width: 300) self { follower { notificationSettings { isEnabled } } } stream { broadcaster { broadcastSettings { title } } createdAt game { displayName id slug } id previewImageURL freeformTags { name } type viewersCount } } } pageInfo { hasNextPage } } }}")
             putJsonObject("variables") {
                 put("first", first)
                 put("after", after)
@@ -954,13 +954,14 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "bcd7302425eb539b7f13af50f47b300355f011f20b6e202f09ee989083ae9257")
+                    put("sha256Hash", "ecadcf350272dde399a63385cf888903d7fcd4c8fc6809a8469fe3753579d1c6")
                     put("version", 1)
                 }
             }
             put("operationName", "FollowingLive_CurrentUser")
             putJsonObject("variables") {
                 put("cursor", cursor)
+                put("includeIsDJ", true)
                 put("limit", limit)
             }
         }
@@ -971,7 +972,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
         val json = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "a8e02d4cc25511e9997842c80333e15ba0bb9e11b4199e31c5207317faff9618")
+                    put("sha256Hash", "11d0ddb94121afab8fa8b641e01f038db35892f95b4e4b9e5380eaa33d5e4a8c")
                     put("version", 1)
                 }
             }
@@ -1054,6 +1055,25 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
             }
         }
         return graphQL.getUnfollowUser(headers, json)
+    }
+
+    suspend fun loadToggleNotificationsUser(headers: Map<String, String>, userId: String?, disableNotifications: Boolean): ErrorResponse {
+        val json = buildJsonObject {
+            putJsonObject("extensions") {
+                putJsonObject("persistedQuery") {
+                    put("sha256Hash", "2319a2486246f63b13ffc0d1c317c89df177150185352791a81eb7bced0128a1")
+                    put("version", 1)
+                }
+            }
+            put("operationName", "LiveNotificationsToggle_ToggleNotifications")
+            putJsonObject("variables") {
+                putJsonObject("input") {
+                    put("disableNotifications", disableNotifications)
+                    put("targetID", userId)
+                }
+            }
+        }
+        return graphQL.getToggleNotificationsUser(headers, json)
     }
 
     suspend fun loadFollowGame(headers: Map<String, String>, gameId: String?): ErrorResponse {

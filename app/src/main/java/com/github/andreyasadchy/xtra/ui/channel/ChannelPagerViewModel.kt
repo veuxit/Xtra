@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.Notification
+import com.github.andreyasadchy.xtra.model.ShownNotification
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
@@ -17,6 +18,7 @@ import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +30,7 @@ import okio.buffer
 import okio.sink
 import java.io.File
 import javax.inject.Inject
+import kotlin.text.isNullOrBlank
 
 @HiltViewModel
 class ChannelPagerViewModel @Inject constructor(
@@ -47,6 +50,7 @@ class ChannelPagerViewModel @Inject constructor(
     private val args = ChannelPagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     private val _notificationsEnabled = MutableStateFlow<Boolean?>(null)
     val notificationsEnabled: StateFlow<Boolean?> = _notificationsEnabled
+    val notifications = MutableStateFlow<Pair<Boolean, String?>?>(null)
     private val _isFollowing = MutableStateFlow<Boolean?>(null)
     val isFollowing: StateFlow<Boolean?> = _isFollowing
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
@@ -91,25 +95,65 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun notificationsEnabled(channelId: String) {
-        if (_notificationsEnabled.value == null) {
-            viewModelScope.launch {
-                _notificationsEnabled.value = notificationsRepository.getByUserId(channelId) != null
+    fun enableNotifications(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String, notificationsEnabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && _isFollowing.value == true && userId != channelId) {
+                    val errorMessage = repository.toggleNotifications(gqlHeaders, channelId, false)
+                    if (!errorMessage.isNullOrBlank()) {
+                        if (errorMessage == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "enableNotifications"
+                        } else {
+                            notifications.value = Pair(true, errorMessage)
+                        }
+                    } else {
+                        _notificationsEnabled.value = true
+                        notifications.value = Pair(true, errorMessage)
+                        if (notificationsEnabled) {
+                            _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
+                                shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
+                            }
+                        }
+                    }
+                } else {
+                    notificationsRepository.saveUser(Notification(channelId))
+                    _notificationsEnabled.value = true
+                    notifications.value = Pair(true, null)
+                    if (notificationsEnabled) {
+                        _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
+                            shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+
             }
         }
     }
 
-    fun enableNotifications(channelId: String) {
+    fun disableNotifications(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String) {
         viewModelScope.launch {
-            notificationsRepository.saveUser(Notification(channelId))
-            _notificationsEnabled.value = true
-        }
-    }
+            try {
+                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && _isFollowing.value == true && userId != channelId) {
+                    val errorMessage = repository.toggleNotifications(gqlHeaders, channelId, true)
+                    if (!errorMessage.isNullOrBlank()) {
+                        if (errorMessage == "failed integrity check" && integrity.value == null) {
+                            integrity.value = "disableNotifications"
+                        } else {
+                            notifications.value = Pair(false, errorMessage)
+                        }
+                    } else {
+                        _notificationsEnabled.value = false
+                        notifications.value = Pair(false, errorMessage)
+                    }
+                } else {
+                    notificationsRepository.deleteUser(Notification(channelId))
+                    _notificationsEnabled.value = false
+                    notifications.value = Pair(false, null)
+                }
+            } catch (e: Exception) {
 
-    fun disableNotifications(channelId: String) {
-        viewModelScope.launch {
-            notificationsRepository.deleteUser(Notification(channelId))
-            _notificationsEnabled.value = false
+            }
         }
     }
 
@@ -123,17 +167,21 @@ class ChannelPagerViewModel @Inject constructor(
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
-                    val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        if ((!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId) ||
-                            (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin)) {
-                            repository.loadUserFollowing(helixHeaders, channelId, account.id, gqlHeaders, channelLogin)
-                        } else false
+                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin) ||
+                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId)) {
+                        val response = repository.loadUserFollowing(helixHeaders, channelId, account.id, gqlHeaders, channelLogin)
+                        _isFollowing.value = response.first
+                        _notificationsEnabled.value = if (response.first && response.second != null) {
+                            response.second
+                        } else {
+                            channelId?.let { notificationsRepository.getByUserId(it) != null }
+                        }
                     } else {
                         channelId?.let {
-                            localFollowsChannel.getFollowByUserId(it)
-                        } != null
+                            _isFollowing.value = localFollowsChannel.getFollowByUserId(it) != null
+                            _notificationsEnabled.value = notificationsRepository.getByUserId(channelId) != null
+                        }
                     }
-                    _isFollowing.value = isFollowing
                 } catch (e: Exception) {
 
                 }
@@ -141,26 +189,32 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowChannel(filesDir: String, gqlHeaders: Map<String, String>, setting: Int, userId: String?, userLogin: String?, userName: String?, channelLogo: String?) {
+    fun saveFollowChannel(filesDir: String, gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, notificationsEnabled: Boolean) {
         viewModelScope.launch {
             try {
-                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val errorMessage = repository.followUser(gqlHeaders, userId)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "follow"
+                if (!channelId.isNullOrBlank()) {
+                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
+                        val errorMessage = repository.followUser(gqlHeaders, channelId)
+                        if (!errorMessage.isNullOrBlank()) {
+                            if (errorMessage == "failed integrity check" && integrity.value == null) {
+                                integrity.value = "follow"
+                            } else {
+                                follow.value = Pair(true, errorMessage)
+                            }
                         } else {
+                            _isFollowing.value = true
                             follow.value = Pair(true, errorMessage)
+                            _notificationsEnabled.value = true
+                            if (notificationsEnabled) {
+                                _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
+                                    shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
+                                }
+                            }
                         }
                     } else {
-                        _isFollowing.value = true
-                        follow.value = Pair(true, errorMessage)
-                    }
-                } else {
-                    if (!userId.isNullOrBlank()) {
                         val downloadedLogo = channelLogo.takeIf { !it.isNullOrBlank() }?.let {
                             File(filesDir, "profile_pics").mkdir()
-                            val path = filesDir + File.separator + "profile_pics" + File.separator + userId
+                            val path = filesDir + File.separator + "profile_pics" + File.separator + channelId
                             viewModelScope.launch(Dispatchers.IO) {
                                 okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                     if (response.isSuccessful) {
@@ -172,9 +226,16 @@ class ChannelPagerViewModel @Inject constructor(
                             }
                             path
                         }
-                        localFollowsChannel.saveFollow(LocalFollowChannel(userId, userLogin, userName, downloadedLogo))
+                        localFollowsChannel.saveFollow(LocalFollowChannel(channelId, channelLogin, channelName, downloadedLogo))
                         _isFollowing.value = true
                         follow.value = Pair(true, null)
+                        notificationsRepository.saveUser(Notification(channelId))
+                        _notificationsEnabled.value = true
+                        if (notificationsEnabled) {
+                            _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
+                                shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
+                            }
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -183,26 +244,29 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?) {
+    fun deleteFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?) {
         viewModelScope.launch {
             try {
-                if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val errorMessage = repository.unfollowUser(gqlHeaders, userId)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "unfollow"
+                if (!channelId.isNullOrBlank()) {
+                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
+                        val errorMessage = repository.unfollowUser(gqlHeaders, channelId)
+                        if (!errorMessage.isNullOrBlank()) {
+                            if (errorMessage == "failed integrity check" && integrity.value == null) {
+                                integrity.value = "unfollow"
+                            } else {
+                                follow.value = Pair(false, errorMessage)
+                            }
                         } else {
+                            _isFollowing.value = false
                             follow.value = Pair(false, errorMessage)
+                            _notificationsEnabled.value = false
                         }
                     } else {
-                        _isFollowing.value = false
-                        follow.value = Pair(false, errorMessage)
-                    }
-                } else {
-                    if (userId != null) {
-                        localFollowsChannel.getFollowByUserId(userId)?.let { localFollowsChannel.deleteFollow(it) }
+                        localFollowsChannel.getFollowByUserId(channelId)?.let { localFollowsChannel.deleteFollow(it) }
                         _isFollowing.value = false
                         follow.value = Pair(false, null)
+                        notificationsRepository.deleteUser(Notification(channelId))
+                        _notificationsEnabled.value = false
                     }
                 }
             } catch (e: Exception) {

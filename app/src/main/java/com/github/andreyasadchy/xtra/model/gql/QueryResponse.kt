@@ -45,6 +45,11 @@ data class QueryResponse(
     )
 
     @Serializable
+    data class ChannelNotificationSettings(
+        val isEnabled: Boolean? = null,
+    )
+
+    @Serializable
     data class CheerInfo(
         val cheerGroups: List<CheermoteGroup>? = null,
     )
@@ -166,6 +171,11 @@ data class QueryResponse(
     @Serializable
     data class FollowerConnection(
         val totalCount: Int? = null,
+    )
+
+    @Serializable
+    data class FollowerEdge(
+        val notificationSettings: ChannelNotificationSettings? = null,
     )
 
     @Serializable
@@ -329,6 +339,7 @@ data class QueryResponse(
         val lastBroadcast: Broadcast? = null,
         val profileImageURL: String? = null,
         val roles: UserRoles? = null,
+        val self: UserSelfConnection? = null,
         val stream: Stream? = null,
         val videos: VideoConnection? = null,
     )
@@ -349,6 +360,11 @@ data class QueryResponse(
         val isPartner: Boolean? = null,
         val isSiteAdmin: Boolean? = null,
         val isStaff: Boolean? = null,
+    )
+
+    @Serializable
+    data class UserSelfConnection(
+        val follower: FollowerEdge? = null,
     )
 
     @Serializable

@@ -9,7 +9,9 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +29,11 @@ import javax.inject.Inject
 class VideoPlayerViewModel @Inject constructor(
     private val repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
+    shownNotificationsRepository: ShownNotificationsRepository,
+    notificationsRepository: NotificationsRepository,
     private val okHttpClient: OkHttpClient,
     private val playerRepository: PlayerRepository,
-    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, okHttpClient) {
+    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
 
     val result = MutableStateFlow<Uri?>(null)
 
