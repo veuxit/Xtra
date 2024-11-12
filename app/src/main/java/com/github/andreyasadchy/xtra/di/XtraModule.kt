@@ -125,7 +125,7 @@ class XtraModule {
                                         apolloRequest.operation.serializeVariables(this, apolloRequest.executionContext[CustomScalarAdapters] ?: CustomScalarAdapters.Empty, false)
                                     }
                                     name("query")
-                                    value(apolloRequest.operation.document().replaceFirst(apolloRequest.operation.name(), ""))
+                                    value(apolloRequest.operation.document().replaceFirst(apolloRequest.operation.name(), "null"))
                                 }
                             }
                             return HttpRequest.Builder(HttpMethod.Post, "https://gql.twitch.tv/gql/").apply {
