@@ -167,7 +167,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                             ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                                             ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
                                         }
-                                        viewModel.updateNotifications(TwitchApiHelper.getGQLHeaders(requireContext()), TwitchApiHelper.getHelixHeaders(requireContext()))
+                                        viewModel.updateNotifications(TwitchApiHelper.getGQLHeaders(requireContext(), true), TwitchApiHelper.getHelixHeaders(requireContext()))
                                         WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork(
                                             "live_notifications",
                                             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
