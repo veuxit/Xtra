@@ -177,7 +177,15 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
             if (user.channelName != null) {
                 userLayout.visible()
                 userName.visible()
-                userName.text = user.channelName
+                userName.text = if (user.channelLogin != null && !user.channelLogin.equals(user.channelName, true)) {
+                    when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                        "0" -> "${user.channelName}(${user.channelLogin})"
+                        "1" -> user.channelName
+                        else -> user.channelLogin
+                    }
+                } else {
+                    user.channelName
+                }
                 userName.setOnClickListener {
                     listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
                     dismiss()
