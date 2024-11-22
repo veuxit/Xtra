@@ -130,9 +130,10 @@ object EventSubUtils {
             )
         } else {
             ChatMessage(
-                message = systemMsg,
-                color = "#999999",
-                isAction = true,
+                userId = if (!json.isNull("chatter_user_id")) json.optString("chatter_user_id").takeIf { it.isNotBlank() } else null,
+                userLogin = if (!json.isNull("chatter_user_login")) json.optString("chatter_user_login").takeIf { it.isNotBlank() } else null,
+                userName = if (!json.isNull("chatter_user_name")) json.optString("chatter_user_name").takeIf { it.isNotBlank() } else null,
+                systemMsg = systemMsg,
                 timestamp = timestamp?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
                 fullMsg = json.toString()
             )
@@ -141,9 +142,7 @@ object EventSubUtils {
 
     fun parseClearChat(context: Context, json: JSONObject, timestamp: String?): ChatMessage {
         return ChatMessage(
-            message = ContextCompat.getString(context, R.string.chat_clear),
-            color = "#999999",
-            isAction = true,
+            systemMsg = ContextCompat.getString(context, R.string.chat_clear),
             timestamp = timestamp?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
             fullMsg = json.toString()
         )
