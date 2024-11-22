@@ -100,7 +100,15 @@ class StreamsAdapter(
                     }
                     if (item.channelName != null)  {
                         username.visible()
-                        username.text = item.channelName
+                        username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                            when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                "1" -> item.channelName
+                                else -> item.channelLogin
+                            }
+                        } else {
+                            item.channelName
+                        }
                         username.setOnClickListener(channelListener)
                     } else {
                         username.gone()

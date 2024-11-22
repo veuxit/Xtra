@@ -131,7 +131,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 if (it != null) {
                     userLayout.visible()
                     userName.visible()
-                    userName.text = it
+                    userName.text = if (args.channelLogin != null && !args.channelLogin.equals(it, true)) {
+                        when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                            "0" -> "${it}(${args.channelLogin})"
+                            "1" -> it
+                            else -> args.channelLogin
+                        }
+                    } else {
+                        it
+                    }
                 } else {
                     userName.gone()
                 }
@@ -190,7 +198,16 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                     R.id.followButton -> {
                         viewModel.isFollowing.value?.let {
                             if (it) {
-                                FragmentUtils.showUnfollowDialog(requireContext(), args.channelName) {
+                                FragmentUtils.showUnfollowDialog(requireContext(),
+                                    if (args.channelLogin != null && !args.channelLogin.equals(args.channelName, true)) {
+                                        when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                            "0" -> "${args.channelName}(${args.channelLogin})"
+                                            "1" -> args.channelName
+                                            else -> args.channelLogin
+                                        }
+                                    } else {
+                                        args.channelName
+                                    }) {
                                     viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, args.channelId)
                                 }
                             } else {
@@ -298,9 +315,29 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                     requireContext().shortToast(errorMessage)
                                 } else {
                                     if (following) {
-                                        requireContext().shortToast(requireContext().getString(R.string.now_following, args.channelName))
+                                        requireContext().shortToast(requireContext().getString(R.string.now_following,
+                                            if (args.channelLogin != null && !args.channelLogin.equals(args.channelName, true)) {
+                                                when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                                    "0" -> "${args.channelName}(${args.channelLogin})"
+                                                    "1" -> args.channelName
+                                                    else -> args.channelLogin
+                                                }
+                                            } else {
+                                                args.channelName
+                                            }
+                                        ))
                                     } else {
-                                        requireContext().shortToast(requireContext().getString(R.string.unfollowed, args.channelName))
+                                        requireContext().shortToast(requireContext().getString(R.string.unfollowed,
+                                            if (args.channelLogin != null && !args.channelLogin.equals(args.channelName, true)) {
+                                                when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                                    "0" -> "${args.channelName}(${args.channelLogin})"
+                                                    "1" -> args.channelName
+                                                    else -> args.channelLogin
+                                                }
+                                            } else {
+                                                args.channelName
+                                            }
+                                        ))
                                     }
                                 }
                                 viewModel.follow.value = null
@@ -435,7 +472,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 if (it != null && it != args.channelName) {
                     userLayout.visible()
                     userName.visible()
-                    userName.text = it
+                    userName.text = if (stream?.channelLogin != null && !stream.channelLogin.equals(it, true)) {
+                        when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                            "0" -> "${it}(${stream.channelLogin})"
+                            "1" -> it
+                            else -> stream.channelLogin
+                        }
+                    } else {
+                        it
+                    }
                     requireArguments().putString(C.CHANNEL_DISPLAYNAME, it)
                 }
             }

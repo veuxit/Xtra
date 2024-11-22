@@ -54,6 +54,7 @@ class ChatAdapter(
     private val randomColor: Boolean,
     private val isLightTheme: Boolean,
     private val useThemeAdaptedUsernameColor: Boolean,
+    private val nameDisplay: String?,
     private val boldNames: Boolean,
     private val emoteQuality: String,
     private val animateGifs: Boolean,
@@ -220,15 +221,24 @@ class ChatAdapter(
             }
             val userNameEndIndex = builderIndex + (chatMessage.userName?.length ?: 0)
             if (!chatMessage.userName.isNullOrBlank()) {
-                builder.append(chatMessage.userName)
-                builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
-                builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), builderIndex, builderIndex + chatMessage.userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                val userName = if (chatMessage.userLogin != null && !chatMessage.userLogin.equals(chatMessage.userName, true)) {
+                    when (nameDisplay) {
+                        "0" -> "${chatMessage.userName}(${chatMessage.userLogin})"
+                        "1" -> chatMessage.userName
+                        else -> chatMessage.userLogin
+                    }
+                } else {
+                    chatMessage.userName
+                }
+                builder.append(userName)
+                builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                builder.setSpan(StyleSpan(if (boldNames) Typeface.BOLD else Typeface.NORMAL), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                 builderIndex += if (!chatMessage.isAction) {
                     builder.append(": ")
-                    chatMessage.userName.length + 2
+                    userName.length + 2
                 } else {
                     builder.append(" ")
-                    chatMessage.userName.length + 1
+                    userName.length + 1
                 }
             }
             builder.append(chatMessage.message)

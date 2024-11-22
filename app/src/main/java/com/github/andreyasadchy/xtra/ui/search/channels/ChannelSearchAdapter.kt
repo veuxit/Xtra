@@ -11,9 +11,11 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentSearchChannelsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.loadImage
+import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
 class ChannelSearchAdapter(
@@ -57,7 +59,15 @@ class ChannelSearchAdapter(
                     }
                     if (item.channelName != null) {
                         userName.visible()
-                        userName.text = item.channelName
+                        userName.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                            when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                "1" -> item.channelName
+                                else -> item.channelLogin
+                            }
+                        } else {
+                            item.channelName
+                        }
                     } else {
                         userName.gone()
                     }

@@ -67,13 +67,13 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
     private var _binding: FragmentPlayerStreamBinding? = null
     private val binding get() = _binding!!
     override val viewModel: StreamPlayerViewModel by viewModels()
-    private lateinit var stream: Stream
+    private lateinit var item: Stream
 
     override val controllerAutoShow: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        item = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requireArguments().getParcelable(KEY_STREAM, Stream::class.java)!!
         } else {
             @Suppress("DEPRECATION")
@@ -165,26 +165,34 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
             requireView().findViewById<TextView>(R.id.playerChannel)?.apply {
                 visible()
-                text = stream.channelName
+                text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                    when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                        "0" -> "${item.channelName}(${item.channelLogin})"
+                        "1" -> item.channelName
+                        else -> item.channelLogin
+                    }
+                } else {
+                    item.channelName
+                }
                 setOnClickListener {
                     findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = stream.channelId,
-                        channelLogin = stream.channelLogin,
-                        channelName = stream.channelName,
-                        channelLogo = stream.channelLogo
+                        channelId = item.channelId,
+                        channelLogin = item.channelLogin,
+                        channelName = item.channelName,
+                        channelLogo = item.channelLogo
                     ))
                     slidingLayout.minimize()
                 }
             }
         }
         if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
-            stream.startedAt?.let {
+            item.startedAt?.let {
                 TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
                     updateUptime(startedAtMs)
                 }
             }
         }
-        updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
+        updateStreamInfo(item.title, item.gameId, item.gameSlug, item.gameName)
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
@@ -194,11 +202,20 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
             followButton?.setOnClickListener {
                 viewModel.isFollowing.value?.let {
                     if (it) {
-                        FragmentUtils.showUnfollowDialog(requireContext(), stream.channelName) {
-                            viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, stream.channelId)
+                        FragmentUtils.showUnfollowDialog(requireContext(),
+                            if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                    "0" -> "${item.channelName}(${item.channelLogin})"
+                                    "1" -> item.channelName
+                                    else -> item.channelLogin
+                                }
+                            } else {
+                                item.channelName
+                            }) {
+                            viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, item.channelId)
                         }
                     } else {
-                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), stream.startedAt)
+                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), item.startedAt)
                     }
                 }
             }
@@ -227,9 +244,29 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                 requireContext().shortToast(errorMessage)
                             } else {
                                 if (following) {
-                                    requireContext().shortToast(requireContext().getString(R.string.now_following, stream.channelName))
+                                    requireContext().shortToast(requireContext().getString(R.string.now_following,
+                                        if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                            when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                                "1" -> item.channelName
+                                                else -> item.channelLogin
+                                            }
+                                        } else {
+                                            item.channelName
+                                        }
+                                    ))
                                 } else {
-                                    requireContext().shortToast(requireContext().getString(R.string.unfollowed, stream.channelName))
+                                    requireContext().shortToast(requireContext().getString(R.string.unfollowed,
+                                        if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                            when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                                "1" -> item.channelName
+                                                else -> item.channelLogin
+                                            }
+                                        } else {
+                                            item.channelName
+                                        }
+                                    ))
                                 }
                             }
                             viewModel.follow.value = null
@@ -242,7 +279,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
             if (it != null) {
                 it as ChatFragment
             } else {
-                val fragment = ChatFragment.newInstance(stream.channelId, stream.channelLogin, stream.channelName, stream.id)
+                val fragment = ChatFragment.newInstance(item.channelId, item.channelLogin, item.channelName, item.id)
                 childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
                 fragment
             }
@@ -254,18 +291,18 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
-        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, stream.channelId, stream.channelLogin)
+        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, item.channelId, item.channelLogin)
     }
 
     override fun startPlayer() {
         super.startPlayer()
         viewModel.useProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
         if (viewModel.stream.value == null) {
-            viewModel.stream.value = stream
-            loadStream(stream)
+            viewModel.stream.value = item
+            loadStream(item)
             val account = Account.get(requireContext())
             viewModel.loadStream(
-                stream = stream,
+                stream = item,
                 loop = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
                         !requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
                         (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !account.id.isNullOrBlank() && !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
@@ -441,7 +478,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
     }
 
     fun updateLiveStatus(playbackMessage: PlaybackMessage, channelLogin: String?) {
-        if (channelLogin == stream.channelLogin) {
+        if (channelLogin == item.channelLogin) {
             playbackMessage.live?.let {
                 if (it) {
                     restartPlayer()
@@ -514,12 +551,12 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     fun restartPlayer() {
         if (viewModel.playerMode != PlayerMode.DISABLED) {
-            loadStream(stream)
+            loadStream(item)
         }
     }
 
     fun openViewerList() {
-        stream.channelLogin?.let { login -> FragmentUtils.showPlayerViewerListDialog(childFragmentManager, login) }
+        item.channelLogin?.let { login -> FragmentUtils.showPlayerViewerListDialog(childFragmentManager, login) }
     }
 
     fun showPlaylistTags(mediaPlaylist: Boolean) {
@@ -579,7 +616,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                         result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
                             result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                DownloadDialog.newInstance(stream, keys, values).show(childFragmentManager, null)
+                                DownloadDialog.newInstance(item, keys, values).show(childFragmentManager, null)
                             }
                         }
                     }
@@ -600,7 +637,7 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     when (callback) {
                         "refresh" -> {
-                            stream.channelLogin?.let { channelLogin ->
+                            item.channelLogin?.let { channelLogin ->
                                 val proxyHost = prefs.getString(C.PROXY_HOST, null)
                                 val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                                 val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
@@ -620,10 +657,10 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                     enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
                                 )
                             }
-                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), Account.get(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, stream.channelId, stream.channelLogin)
+                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), Account.get(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
                         }
-                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, stream.channelId, stream.channelLogin, stream.channelName, stream.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), stream.startedAt)
-                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, stream.channelId)
+                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), item.startedAt)
+                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, item.channelId)
                     }
                 }
             }

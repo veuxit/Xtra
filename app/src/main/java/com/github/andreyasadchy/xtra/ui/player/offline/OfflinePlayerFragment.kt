@@ -40,14 +40,14 @@ class OfflinePlayerFragment : BasePlayerFragment() {
     private var _binding: FragmentPlayerOfflineBinding? = null
     private val binding get() = _binding!!
     override val viewModel: OfflinePlayerViewModel by viewModels()
-    private lateinit var video: OfflineVideo
+    private lateinit var item: OfflineVideo
 
     override val controllerShowTimeoutMs: Int = 5000
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableNetworkCheck = false
         super.onCreate(savedInstanceState)
-        video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        item = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requireArguments().getParcelable(KEY_VIDEO, OfflineVideo::class.java)!!
         } else {
             @Suppress("DEPRECATION")
@@ -78,41 +78,49 @@ class OfflinePlayerFragment : BasePlayerFragment() {
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
             requireView().findViewById<TextView>(R.id.playerChannel)?.apply {
                 visible()
-                text = video.channelName
+                text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                    when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                        "0" -> "${item.channelName}(${item.channelLogin})"
+                        "1" -> item.channelName
+                        else -> item.channelLogin
+                    }
+                } else {
+                    item.channelName
+                }
                 setOnClickListener {
                     findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = video.channelId,
-                        channelLogin = video.channelLogin,
-                        channelName = video.channelName,
-                        channelLogo = video.channelLogo
+                        channelId = item.channelId,
+                        channelLogin = item.channelLogin,
+                        channelName = item.channelName,
+                        channelLogo = item.channelLogo
                     ))
                     slidingLayout.minimize()
                 }
             }
         }
-        if (!video.name.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+        if (!item.name.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
             requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
                 visible()
-                text = video.name
+                text = item.name
             }
         }
-        if (!video.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+        if (!item.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
             requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
                 visible()
-                text = video.gameName
+                text = item.gameName
                 setOnClickListener {
                     findNavController().navigate(
                         if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
                             GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                gameId = video.gameId,
-                                gameSlug = video.gameSlug,
-                                gameName = video.gameName
+                                gameId = item.gameId,
+                                gameSlug = item.gameSlug,
+                                gameName = item.gameName
                             )
                         } else {
                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                gameId = video.gameId,
-                                gameSlug = video.gameSlug,
-                                gameName = video.gameName
+                                gameId = item.gameId,
+                                gameSlug = item.gameSlug,
+                                gameName = item.gameName
                             )
                         }
                     )
@@ -124,7 +132,7 @@ class OfflinePlayerFragment : BasePlayerFragment() {
             if (it != null) {
                 it as ChatFragment
             } else {
-                val fragment = ChatFragment.newLocalInstance(video.channelId, video.channelLogin, video.chatUrl)
+                val fragment = ChatFragment.newLocalInstance(item.channelId, item.channelLogin, item.chatUrl)
                 childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
                 fragment
             }
@@ -138,16 +146,16 @@ class OfflinePlayerFragment : BasePlayerFragment() {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.video.collectLatest {
                         player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                            PlaybackService.ITEM to (it ?: video),
+                            PlaybackService.ITEM to (it ?: item),
                             PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
                         )), Bundle.EMPTY)
                     }
                 }
             }
-            viewModel.getVideo(video.id)
+            viewModel.getVideo(item.id)
         } else {
             player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                PlaybackService.ITEM to video,
+                PlaybackService.ITEM to item,
                 PlaybackService.PLAYBACK_POSITION to 0L,
             )), Bundle.EMPTY)
         }
@@ -163,7 +171,7 @@ class OfflinePlayerFragment : BasePlayerFragment() {
     override fun onClose() {
         if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
             player?.currentPosition?.let { position ->
-                viewModel.savePosition(video.id, position)
+                viewModel.savePosition(item.id, position)
             }
         }
         super.onClose()

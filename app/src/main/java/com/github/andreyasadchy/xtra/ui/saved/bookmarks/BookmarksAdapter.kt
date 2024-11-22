@@ -178,7 +178,15 @@ class BookmarksAdapter(
                     }
                     if (item.userName != null)  {
                         username.visible()
-                        username.text = item.userName
+                        username.text = if (item.userLogin != null && !item.userLogin.equals(item.userName, true)) {
+                            when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                "0" -> "${item.userName}(${item.userLogin})"
+                                "1" -> item.userName
+                                else -> item.userLogin
+                            }
+                        } else {
+                            item.userName
+                        }
                         username.setOnClickListener(channelListener)
                     } else {
                         username.gone()

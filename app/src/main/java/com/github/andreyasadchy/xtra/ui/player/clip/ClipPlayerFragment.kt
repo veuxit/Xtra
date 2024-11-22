@@ -55,13 +55,13 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
     private var _binding: FragmentPlayerClipBinding? = null
     private val binding get() = _binding!!
     override val viewModel: ClipPlayerViewModel by viewModels()
-    private lateinit var clip: Clip
+    private lateinit var item: Clip
 
     override val controllerShowTimeoutMs: Int = 2500
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        clip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        item = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requireArguments().getParcelable(KEY_CLIP, Clip::class.java)!!
         } else {
             @Suppress("DEPRECATION")
@@ -110,18 +110,18 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 setOnClickListener { showDownloadDialog() }
             }
         }
-        if (!clip.videoId.isNullOrBlank()) {
+        if (!item.videoId.isNullOrBlank()) {
             binding.watchVideo.visible()
             binding.watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
-                    id = clip.videoId,
-                    channelId = clip.channelId,
-                    channelLogin = clip.channelLogin,
-                    channelName = clip.channelName,
-                    profileImageUrl = clip.profileImageUrl,
-                    animatedPreviewURL = clip.videoAnimatedPreviewURL
-                ), (if (clip.vodOffset != null) {
-                    ((clip.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
+                    id = item.videoId,
+                    channelId = item.channelId,
+                    channelLogin = item.channelLogin,
+                    channelName = item.channelName,
+                    profileImageUrl = item.profileImageUrl,
+                    animatedPreviewURL = item.videoAnimatedPreviewURL
+                ), (if (item.vodOffset != null) {
+                    ((item.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
                 } else {
                     0.0
                 }), true)
@@ -130,41 +130,49 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
             requireView().findViewById<TextView>(R.id.playerChannel)?.apply {
                 visible()
-                text = clip.channelName
+                text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                    when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                        "0" -> "${item.channelName}(${item.channelLogin})"
+                        "1" -> item.channelName
+                        else -> item.channelLogin
+                    }
+                } else {
+                    item.channelName
+                }
                 setOnClickListener {
                     findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = clip.channelId,
-                        channelLogin = clip.channelLogin,
-                        channelName = clip.channelName,
-                        channelLogo = clip.channelLogo
+                        channelId = item.channelId,
+                        channelLogin = item.channelLogin,
+                        channelName = item.channelName,
+                        channelLogo = item.channelLogo
                     ))
                     slidingLayout.minimize()
                 }
             }
         }
-        if (!clip.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+        if (!item.title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
             requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
                 visible()
-                text = clip.title
+                text = item.title
             }
         }
-        if (!clip.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+        if (!item.gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
             requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
                 visible()
-                text = clip.gameName
+                text = item.gameName
                 setOnClickListener {
                     findNavController().navigate(
                         if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
                             GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                gameId = clip.gameId,
-                                gameSlug = clip.gameSlug,
-                                gameName = clip.gameName
+                                gameId = item.gameId,
+                                gameSlug = item.gameSlug,
+                                gameName = item.gameName
                             )
                         } else {
                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                gameId = clip.gameId,
-                                gameSlug = clip.gameSlug,
-                                gameName = clip.gameName
+                                gameId = item.gameId,
+                                gameSlug = item.gameSlug,
+                                gameName = item.gameName
                             )
                         }
                     )
@@ -181,11 +189,20 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
             followButton?.setOnClickListener {
                 viewModel.isFollowing.value?.let {
                     if (it) {
-                        FragmentUtils.showUnfollowDialog(requireContext(), clip.channelName) {
-                            viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, clip.channelId)
+                        FragmentUtils.showUnfollowDialog(requireContext(),
+                            if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                    "0" -> "${item.channelName}(${item.channelLogin})"
+                                    "1" -> item.channelName
+                                    else -> item.channelLogin
+                                }
+                            } else {
+                                item.channelName
+                            }) {
+                            viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, item.channelId)
                         }
                     } else {
-                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, clip.channelId, clip.channelLogin, clip.channelName, clip.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
+                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, account.id, item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
                     }
                 }
             }
@@ -214,9 +231,29 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                 requireContext().shortToast(errorMessage)
                             } else {
                                 if (following) {
-                                    requireContext().shortToast(requireContext().getString(R.string.now_following, clip.channelName))
+                                    requireContext().shortToast(requireContext().getString(R.string.now_following,
+                                        if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                            when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                                "1" -> item.channelName
+                                                else -> item.channelLogin
+                                            }
+                                        } else {
+                                            item.channelName
+                                        }
+                                    ))
                                 } else {
-                                    requireContext().shortToast(requireContext().getString(R.string.unfollowed, clip.channelName))
+                                    requireContext().shortToast(requireContext().getString(R.string.unfollowed,
+                                        if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
+                                            when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                "0" -> "${item.channelName}(${item.channelLogin})"
+                                                "1" -> item.channelName
+                                                else -> item.channelLogin
+                                            }
+                                        } else {
+                                            item.channelName
+                                        }
+                                    ))
                                 }
                             }
                             viewModel.follow.value = null
@@ -229,7 +266,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
             if (it != null) {
                 it as ChatFragment
             } else {
-                val fragment = ChatFragment.newInstance(clip.channelId, clip.channelLogin, clip.videoId, clip.vodOffset)
+                val fragment = ChatFragment.newInstance(item.channelId, item.channelLogin, item.videoId, item.vodOffset)
                 childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
                 fragment
             }
@@ -241,12 +278,12 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
         val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
-        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, clip.channelId, clip.channelLogin)
+        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), account, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, item.channelId, item.channelLogin)
     }
 
     override fun startPlayer() {
         super.startPlayer()
-        clip.let { clip ->
+        item.let { clip ->
             val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
             if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
                 viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
@@ -294,7 +331,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                             result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
                                 result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                    DownloadDialog.newInstance(clip, keys, values).show(childFragmentManager, null)
+                                    DownloadDialog.newInstance(item, keys, values).show(childFragmentManager, null)
                                 }
                             }
                         }
@@ -322,11 +359,11 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     when (callback) {
                         "refresh" -> {
-                            viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
-                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), Account.get(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, clip.channelId, clip.channelLogin)
+                            viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), item.id)
+                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), Account.get(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
                         }
-                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, clip.channelId, clip.channelLogin, clip.channelName, clip.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
-                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, clip.channelId)
+                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
+                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, Account.get(requireContext()).id, item.channelId)
                     }
                 }
             }
