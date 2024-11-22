@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
+import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
@@ -123,7 +124,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.newMessage.collect {
                             if (it != null) {
-                                chatView.notifyMessageAdded()
+                                chatView.notifyMessageAdded(it)
                                 viewModel.newMessage.value = null
                             }
                         }
@@ -313,6 +314,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
         val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
         val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
+        val nameDisplay = requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")
         val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
         val useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
@@ -322,7 +324,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         if (!disableChat) {
             if (isLive) {
                 val streamId = args.getString(KEY_STREAM_ID)
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
             } else {
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
@@ -330,7 +332,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     val startTime = args.getInt(KEY_START_TIME)
                     val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
                     val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
-                    viewModel.startReplay(helixHeaders, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+                    viewModel.startReplay(helixHeaders, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity)
                 }
             }
         }
@@ -352,8 +354,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
         val showClearMsg = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)
         val showClearChat = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
+        val nameDisplay = requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")
         if (channelLogin != null && enableRecentMsg) {
-            viewModel.loadRecentMessages(channelLogin, recentMsgLimit.toString(), showUserNotice, showClearMsg, showClearChat)
+            viewModel.loadRecentMessages(channelLogin, recentMsgLimit.toString(), showUserNotice, showClearMsg, showClearChat, nameDisplay)
         }
     }
 
@@ -403,6 +406,10 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             channelName = raid.targetName,
             profileImageUrl = raid.targetProfileImage,
         ))
+    }
+
+    override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
+        return binding.chatView.createMessageClickedChatAdapter()
     }
 
     fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()

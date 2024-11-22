@@ -34,7 +34,7 @@ import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.ui.common.ChatAdapter
+import com.github.andreyasadchy.xtra.ui.chat.ChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -86,6 +86,9 @@ class ChatView : ConstraintLayout {
         }
     }
 
+    private val messageDialog: MessageClickedDialog?
+        get() = fragment.childFragmentManager.findFragmentByTag("closeOnPip") as? MessageClickedDialog
+
     constructor(context: Context) : super(context) {
         init(context)
     }
@@ -106,28 +109,29 @@ class ChatView : ConstraintLayout {
         this.fragment = fragment
         with(binding) {
             adapter = ChatAdapter(
-                fragment = fragment,
-                emoteSize = context.convertDpToPixels(29.5f),
-                badgeSize = context.convertDpToPixels(18.5f),
-                randomColor = context.prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
-                isLightTheme = context.isLightTheme,
-                useThemeAdaptedUsernameColor = context.prefs().getBoolean(C.CHAT_THEME_ADAPTED_USERNAME_COLOR, true),
-                nameDisplay = context.prefs().getString(C.UI_NAME_DISPLAY, "0"),
-                boldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
-                emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
-                animateGifs = context.prefs().getBoolean(C.ANIMATED_EMOTES, true),
-                enableZeroWidth = context.prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
                 enableTimestamps = context.prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
                 timestampFormat = context.prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
                 firstMsgVisibility = context.prefs().getString(C.CHAT_FIRSTMSG_VISIBILITY, "0")?.toIntOrNull() ?: 0,
                 firstChatMsg = context.getString(R.string.chat_first),
-                rewardChatMsg = context.getString(R.string.chat_reward),
                 redeemedChatMsg = context.getString(R.string.redeemed),
                 redeemedNoMsg = context.getString(R.string.user_redeemed),
-                imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
-                channelId = channelId,
+                rewardChatMsg = context.getString(R.string.chat_reward),
+                useRandomColors = context.prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
+                useReadableColors = context.prefs().getBoolean(C.CHAT_THEME_ADAPTED_USERNAME_COLOR, true),
+                isLightTheme = context.isLightTheme,
+                nameDisplay = context.prefs().getString(C.UI_NAME_DISPLAY, "0"),
+                useBoldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
+                showSystemMessageEmotes = context.prefs().getBoolean(C.CHAT_SYSTEM_MESSAGE_EMOTES, true),
+                chatUrl = chatUrl,
                 getEmoteBytes = getEmoteBytes,
-                chatUrl = chatUrl
+                fragment = fragment,
+                imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
+                emoteSize = context.convertDpToPixels(29.5f),
+                badgeSize = context.convertDpToPixels(18.5f),
+                emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+                animateGifs = context.prefs().getBoolean(C.ANIMATED_EMOTES, true),
+                enableZeroWidth = context.prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
+                channelId = channelId,
             )
             recyclerView.let {
                 it.adapter = adapter
@@ -156,9 +160,16 @@ class ChatView : ConstraintLayout {
 
     fun submitList(list: MutableList<ChatMessage>?) {
         adapter.messages = list
+        messageDialog?.adapter?.let { adapter ->
+            if (!adapter.userId.isNullOrBlank() || !adapter.userLogin.isNullOrBlank()) {
+                adapter.messages = list?.filter {
+                    (!adapter.userId.isNullOrBlank() && it.userId == adapter.userId) || (!adapter.userLogin.isNullOrBlank() && it.userLogin == adapter.userLogin)
+                }?.toMutableList()
+            }
+        }
     }
 
-    fun notifyMessageAdded() {
+    fun notifyMessageAdded(newMessage: ChatMessage) {
         with(binding) {
             adapter.messages?.apply {
                 adapter.notifyItemInserted(lastIndex)
@@ -174,11 +185,29 @@ class ChatView : ConstraintLayout {
                     recyclerView.scrollToPosition(lastIndex)
                 }
             }
+            messageDialog?.adapter?.let { adapter ->
+                if ((!adapter.userId.isNullOrBlank() && newMessage.userId == adapter.userId) || (!adapter.userLogin.isNullOrBlank() && newMessage.userLogin == adapter.userLogin)) {
+                    adapter.messages?.apply {
+                        add(newMessage)
+                        adapter.notifyItemInserted(lastIndex)
+                        val messageLimit = context.prefs().getInt(C.CHAT_LIMIT, 600)
+                        if (size >= (messageLimit + 1)) {
+                            val removeCount = size - messageLimit
+                            repeat(removeCount) {
+                                removeAt(0)
+                            }
+                            adapter.notifyItemRangeRemoved(0, removeCount)
+                        }
+                        messageDialog?.scrollToLastPosition()
+                    }
+                }
+            }
         }
     }
 
     fun notifyEmotesLoaded() {
         adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) }
+        messageDialog?.adapter?.let { adapter -> adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) } }
     }
 
     fun notifyRoomState(roomState: RoomState) {
@@ -283,57 +312,72 @@ class ChatView : ConstraintLayout {
     }
 
     fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
-        adapter.addLocalTwitchEmotes(list)
+        adapter.localTwitchEmotes = list
+        messageDialog?.adapter?.localTwitchEmotes = list
     }
 
     fun addGlobalStvEmotes(list: List<Emote>?) {
-        adapter.addGlobalStvEmotes(list)
+        adapter.globalStvEmotes = list
+        messageDialog?.adapter?.globalStvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelStvEmotes(list: List<Emote>?) {
-        adapter.addChannelStvEmotes(list)
+        adapter.channelStvEmotes = list
+        messageDialog?.adapter?.channelStvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalBttvEmotes(list: List<Emote>?) {
-        adapter.addGlobalBttvEmotes(list)
+        adapter.globalBttvEmotes = list
+        messageDialog?.adapter?.globalBttvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelBttvEmotes(list: List<Emote>?) {
-        adapter.addChannelBttvEmotes(list)
+        adapter.channelBttvEmotes = list
+        messageDialog?.adapter?.channelBttvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalFfzEmotes(list: List<Emote>?) {
-        adapter.addGlobalFfzEmotes(list)
+        adapter.globalFfzEmotes = list
+        messageDialog?.adapter?.globalFfzEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelFfzEmotes(list: List<Emote>?) {
-        adapter.addChannelFfzEmotes(list)
+        adapter.channelFfzEmotes = list
+        messageDialog?.adapter?.channelFfzEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalBadges(list: List<TwitchBadge>?) {
-        adapter.addGlobalBadges(list)
+        adapter.globalBadges = list
+        messageDialog?.adapter?.globalBadges = list
     }
 
     fun addChannelBadges(list: List<TwitchBadge>?) {
-        adapter.addChannelBadges(list)
+        adapter.channelBadges = list
+        messageDialog?.adapter?.channelBadges = list
     }
 
     fun addCheerEmotes(list: List<CheerEmote>?) {
-        adapter.addCheerEmotes(list)
+        adapter.cheerEmotes = list
+        messageDialog?.adapter?.cheerEmotes = list
     }
 
     fun setUsername(username: String?) {
-        adapter.setUsername(username)
+        adapter.loggedInUser = username
+        messageDialog?.adapter?.loggedInUser = username
     }
 
     fun setCallback(callback: ChatViewCallback) {
         this.callback = callback
+    }
+
+    fun createMessageClickedChatAdapter(): MessageClickedChatAdapter {
+        return adapter.createMessageClickedChatAdapter()
     }
 
     fun emoteMenuIsVisible(): Boolean = binding.emoteMenu.isVisible
@@ -376,10 +420,10 @@ class ChatView : ConstraintLayout {
 
     fun enableChatInteraction(enableMessaging: Boolean) {
         with(binding) {
-            adapter.setOnClickListener { formatted, message, userId, userName, channelId, fullMsg ->
+            adapter.messageClickListener = { channelId ->
                 editText.hideKeyboard()
                 editText.clearFocus()
-                MessageClickedDialog.newInstance(enableMessaging, formatted, message, userId, userName, channelId, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
+                MessageClickedDialog.newInstance(enableMessaging, channelId).show(fragment.childFragmentManager, "closeOnPip")
             }
             if (enableMessaging) {
                 autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
