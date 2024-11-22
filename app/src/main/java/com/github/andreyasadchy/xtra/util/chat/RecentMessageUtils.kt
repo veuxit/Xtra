@@ -24,9 +24,10 @@ object RecentMessageUtils {
         val msgIndex = messageInfo.indexOf(" ", messageInfo.indexOf("#", messageInfo.indexOf(":") + 1) + 1)
         return if (msgIndex == -1 && userNotice) { // no user message & is user notice
             ChatMessage(
-                message = systemMsg ?: messageInfo,
-                color = "#999999",
-                isAction = true,
+                userId = prefixes["user-id"],
+                userLogin = userLogin,
+                userName = prefixes["display-name"]?.replace("\\s", " "),
+                systemMsg = systemMsg ?: messageInfo,
                 timestamp = prefixes["tmi-sent-ts"]?.toLong(),
                 fullMsg = message
             )
@@ -84,21 +85,20 @@ object RecentMessageUtils {
         }
     }
 
-    fun parseClearMessage(context: Context, message: String): ChatMessage {
+    fun parseClearMessage(message: String): Pair<ChatMessage, String?> {
         val parts = message.substring(1).split(" ".toRegex(), 2)
         val prefixes = splitAndMakeMap(parts[0], ";", "=")
-        val user = prefixes["login"]
+        val login = prefixes["login"]
         val messageInfo = parts[1]
         val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
         val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
         val msg = messageInfo.substring(if (msgIndex != -1) msgIndex + 1 else index2 + 1)
-        return ChatMessage(
-            message = ContextCompat.getString(context, R.string.chat_clearmsg).format(user, msg),
-            color = "#999999",
-            isAction = true,
+        return Pair(ChatMessage(
+            userLogin = login,
+            message = msg,
             timestamp = prefixes["tmi-sent-ts"]?.toLong(),
             fullMsg = message
-        )
+        ), prefixes["target-msg-id"])
     }
 
     fun parseClearChat(context: Context, message: String): ChatMessage {
@@ -108,20 +108,20 @@ object RecentMessageUtils {
         val messageInfo = parts[1]
         val userIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
         val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
-        val user = if (userIndex != -1) messageInfo.substring(userIndex + 1) else if (index2 != -1) messageInfo.substring(index2 + 1) else null
-        val text = if (user != null) {
+        val login = if (userIndex != -1) messageInfo.substring(userIndex + 1) else if (index2 != -1) messageInfo.substring(index2 + 1) else null
+        val text = if (login != null) {
             if (duration != null) {
-                ContextCompat.getString(context, R.string.chat_timeout).format(user, TwitchApiHelper.getDurationFromSeconds(context, duration))
+                ContextCompat.getString(context, R.string.chat_timeout).format(login, TwitchApiHelper.getDurationFromSeconds(context, duration))
             } else {
-                ContextCompat.getString(context, R.string.chat_ban).format(user)
+                ContextCompat.getString(context, R.string.chat_ban).format(login)
             }
         } else {
             ContextCompat.getString(context, R.string.chat_clear)
         }
         return ChatMessage(
-            message = text,
-            color = "#999999",
-            isAction = true,
+            userId = prefixes["target-user-id"],
+            userLogin = login,
+            systemMsg = text,
             timestamp = prefixes["tmi-sent-ts"]?.toLong(),
             fullMsg = message
         )
@@ -136,9 +136,7 @@ object RecentMessageUtils {
         val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
         val text = messageInfo.substring(if (msgIndex != -1) msgIndex + 1 else index2 + 1)
         return ChatMessage(
-            message = TwitchApiHelper.getNoticeString(context, msgId, text),
-            color = "#999999",
-            isAction = true,
+            systemMsg = TwitchApiHelper.getNoticeString(context, msgId, text),
             fullMsg = message
         )
     }

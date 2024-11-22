@@ -61,6 +61,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.collections.set
+import kotlin.text.equals
 
 
 @HiltViewModel
@@ -126,15 +127,15 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int,emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
+    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, nameDisplay: String?, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
         if (chat == null && channelLogin != null) {
             this.messageLimit = messageLimit
             this.streamId = streamId
-            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
+            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, nameDisplay, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
             chat?.start()
             loadEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
             if (enableRecentMsg) {
-                loadRecentMessages(channelLogin, recentMsgLimit, showUserNotice, showClearMsg, showClearChat)
+                loadRecentMessages(channelLogin, recentMsgLimit, showUserNotice, showClearMsg, showClearChat, nameDisplay)
             }
             if (isLoggedIn) {
                 (chat as? LiveChatController)?.loadUserEmotes()
@@ -142,10 +143,10 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, localUri: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int,emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, checkIntegrity: Boolean) {
+    fun startReplay(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, localUri: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, messageLimit: Int,emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, nameDisplay: String?, checkIntegrity: Boolean) {
         if (chat == null) {
             this.messageLimit = messageLimit
-            chat = VideoChatController(gqlHeaders, videoId, startTime, localUri, getCurrentPosition, getCurrentSpeed, helixHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+            chat = VideoChatController(gqlHeaders, videoId, startTime, localUri, getCurrentPosition, getCurrentSpeed, helixHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity)
             chat?.start()
             if (videoId != null) {
                 loadEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
@@ -379,7 +380,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean) {
+    fun loadRecentMessages(channelLogin: String, recentMsgLimit: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, nameDisplay: String?) {
         viewModelScope.launch {
             try {
                 val list = mutableListOf<ChatMessage>()
@@ -393,7 +394,9 @@ class ChatViewModel @Inject constructor(
                         }
                         message.contains("CLEARMSG") -> {
                             if (showClearMsg) {
-                                RecentMessageUtils.parseClearMessage(applicationContext, message)
+                                val pair = RecentMessageUtils.parseClearMessage(message)
+                                val deletedMessage = pair.second?.let { targetId -> list.find { it.id == targetId } }
+                                getClearMessage(pair.first, deletedMessage, nameDisplay)
                             } else null
                         }
                         message.contains("CLEARCHAT") -> {
@@ -447,6 +450,36 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun getClearMessage(chatMessage: ChatMessage, deletedMessage: ChatMessage?, nameDisplay: String?): ChatMessage {
+        val login = deletedMessage?.userLogin ?: chatMessage.userLogin
+        val userName = if (deletedMessage?.userName != null && login != null && !login.equals(deletedMessage.userName, true)) {
+            when (nameDisplay) {
+                "0" -> "${deletedMessage.userName}(${login})"
+                "1" -> deletedMessage.userName
+                else -> login
+            }
+        } else {
+            deletedMessage?.userName ?: login
+        }
+        val message = ContextCompat.getString(applicationContext, R.string.chat_clearmsg).format(userName, deletedMessage?.message ?: chatMessage.message)
+        val messageIndex = message.indexOf(": ") + 2
+        return ChatMessage(
+            userId = deletedMessage?.userId,
+            userLogin = login,
+            userName = deletedMessage?.userName,
+            systemMsg = message,
+            emotes = deletedMessage?.emotes?.map {
+                TwitchEmote(
+                    id = it.id,
+                    begin = it.begin + messageIndex,
+                    end = it.end + messageIndex
+                )
+            },
+            timestamp = chatMessage.timestamp,
+            fullMsg = chatMessage.fullMsg
+        )
+    }
+
     inner class LiveChatController(
         private val useChatWebSocket: Boolean,
         private val useSSL: Boolean,
@@ -465,6 +498,7 @@ class ChatViewModel @Inject constructor(
         private val collectPoints: Boolean,
         private val notifyPoints: Boolean,
         private val showRaids: Boolean,
+        private val nameDisplay: String?,
         private val useApiCommands: Boolean,
         private val useApiChatMessages: Boolean,
         private val useEventSubChat: Boolean,
@@ -557,27 +591,19 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onConnect() {
-            onMessage(ChatMessage(
-                message = ContextCompat.getString(applicationContext, R.string.chat_join).format(channelLogin),
-                color = "#999999",
-                isAction = true,
-            ))
+            onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.chat_join).format(channelLogin)))
         }
 
         override fun onDisconnect(message: String, fullMsg: String) {
             onMessage(ChatMessage(
-                message = ContextCompat.getString(applicationContext, R.string.chat_disconnect).format(channelLogin, message),
-                color = "#999999",
-                isAction = true,
+                systemMsg = ContextCompat.getString(applicationContext, R.string.chat_disconnect).format(channelLogin, message),
                 fullMsg = fullMsg
             ))
         }
 
         override fun onSendMessageError(message: String, fullMsg: String) {
             onMessage(ChatMessage(
-                message = ContextCompat.getString(applicationContext, R.string.chat_send_msg_error).format(message),
-                color = "#999999",
-                isAction = true,
+                systemMsg = ContextCompat.getString(applicationContext, R.string.chat_send_msg_error).format(message),
                 fullMsg = fullMsg
             ))
         }
@@ -595,7 +621,9 @@ class ChatViewModel @Inject constructor(
 
         override fun onClearMessage(message: String) {
             if (showClearMsg) {
-                onMessage(ChatUtils.parseClearMessage(applicationContext, message))
+                val pair = ChatUtils.parseClearMessage(message)
+                val deletedMessage = pair.second?.let { targetId -> _chatMessages.value.find { it.id == targetId } }
+                onMessage(getClearMessage(pair.first, deletedMessage, nameDisplay))
             }
         }
 
@@ -726,17 +754,9 @@ class ChatViewModel @Inject constructor(
             if (playbackMessage != null) {
                 playbackMessage.live?.let {
                     if (it) {
-                        onMessage(ChatMessage(
-                            message = ContextCompat.getString(applicationContext, R.string.stream_live).format(channelLogin),
-                            color = "#999999",
-                            isAction = true,
-                        ))
+                        onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_live).format(channelLogin)))
                     } else {
-                        onMessage(ChatMessage(
-                            message = ContextCompat.getString(applicationContext, R.string.stream_offline).format(channelLogin),
-                            color = "#999999",
-                            isAction = true,
-                        ))
+                        onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_offline).format(channelLogin)))
                     }
                 }
                 _playbackMessage.value = playbackMessage
@@ -797,9 +817,7 @@ class ChatViewModel @Inject constructor(
         override fun onPointsEarned(message: JSONObject) {
             val points = PubSubUtils.parsePointsEarned(message)
             onMessage(ChatMessage(
-                message = ContextCompat.getString(applicationContext, R.string.points_earned).format(points.pointsGained),
-                color = "#999999",
-                isAction = true,
+                systemMsg = ContextCompat.getString(applicationContext, R.string.points_earned).format(points.pointsGained),
                 timestamp = points.timestamp,
                 fullMsg = points.fullMsg
             ))
@@ -861,7 +879,7 @@ class ChatViewModel @Inject constructor(
             ).forEach {
                 viewModelScope.launch {
                     repository.createChatEventSubSubscription(helixHeaders, account.id, channelId, it, sessionId)?.let {
-                        onMessage(ChatMessage(message = it, color = "#999999", isAction = true))
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
@@ -908,11 +926,7 @@ class ChatViewModel @Inject constructor(
                 usedRaidId = null
                 onRaidClose()
                 _chatMessages.value = arrayListOf(
-                    ChatMessage(
-                        message = ContextCompat.getString(applicationContext, R.string.disconnected),
-                        color = "#999999",
-                        isAction = true,
-                    )
+                    ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.disconnected))
                 )
                 if (!hideRaid.value) {
                     hideRaid.value = true
@@ -925,7 +939,7 @@ class ChatViewModel @Inject constructor(
             if (useApiChatMessages && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                 viewModelScope.launch {
                     repository.sendMessage(helixHeaders, account.id, channelId, message.toString())?.let {
-                        onMessage(ChatMessage(message = it, color = "#999999", isAction = true))
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             } else {
@@ -957,7 +971,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 message = splits[1],
                                 color = splits[0].substringAfter("/announce", "").ifBlank { null }
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -972,7 +986,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 targetLogin = splits[1],
                                 reason = if (splits.size >= 3) splits[2] else null
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -986,7 +1000,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -997,7 +1011,7 @@ class ChatViewModel @Inject constructor(
                                 helixHeaders = helixHeaders,
                                 channelId = channelId,
                                 userId = account.id
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1016,7 +1030,7 @@ class ChatViewModel @Inject constructor(
                                 helixHeaders = helixHeaders,
                                 userId = account.id
                             )
-                        }?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                        }?.let { onMessage(ChatMessage(systemMsg = it)) }
                     }
                 }
                 command.equals("/commercial", true) -> {
@@ -1028,7 +1042,7 @@ class ChatViewModel @Inject constructor(
                                     helixHeaders = helixHeaders,
                                     channelId = channelId,
                                     length = splits[1]
-                                )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                                )?.let { onMessage(ChatMessage(systemMsg = it)) }
                             }
                         }
                     } else sendMessage(message)
@@ -1043,7 +1057,7 @@ class ChatViewModel @Inject constructor(
                                     channelId = channelId,
                                     userId = account.id,
                                     messageId = splits[1]
-                                )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                                )?.let { onMessage(ChatMessage(systemMsg = it)) }
                             }
                         }
                     } else sendMessage(message)
@@ -1057,7 +1071,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 emote = true
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1069,7 +1083,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 emote = false
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1083,7 +1097,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 followers = true,
                                 followersDuration = if (splits.size >= 2) splits[1] else null
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1095,7 +1109,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 followers = false
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1108,7 +1122,7 @@ class ChatViewModel @Inject constructor(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
                             description = if (splits.size >= 2) splits[1] else null
-                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(systemMsg = it)) }
                     }
                 }
                 command.equals("/mod", true) -> {
@@ -1120,7 +1134,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1133,7 +1147,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1142,7 +1156,7 @@ class ChatViewModel @Inject constructor(
                         repository.getModerators(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
-                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(systemMsg = it)) }
                     }
                 }
                 command.equals("/raid", true) -> {
@@ -1155,7 +1169,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 targetLogin = splits[1],
                                 checkIntegrity = checkIntegrity
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1165,7 +1179,7 @@ class ChatViewModel @Inject constructor(
                             helixHeaders = helixHeaders,
                             gqlHeaders = gqlHeaders,
                             channelId = channelId
-                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(systemMsg = it)) }
                     }
                 }
                 command.equals("/slow", true) -> {
@@ -1178,7 +1192,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 slow = true,
                                 slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1190,7 +1204,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 slow = false
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1202,7 +1216,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 subs = true,
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1214,7 +1228,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 subs = false,
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1230,7 +1244,7 @@ class ChatViewModel @Inject constructor(
                                 targetLogin = splits[1],
                                 duration = if (splits.size >= 3) splits[2] else null ?: if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) "10m" else "600",
                                 reason = if (splits.size >= 4) splits[3] else null,
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1244,7 +1258,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1256,7 +1270,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 unique = true,
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1268,7 +1282,7 @@ class ChatViewModel @Inject constructor(
                                 channelId = channelId,
                                 userId = account.id,
                                 unique = false,
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     } else sendMessage(message)
                 }
@@ -1281,7 +1295,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1294,7 +1308,7 @@ class ChatViewModel @Inject constructor(
                                 gqlHeaders = gqlHeaders,
                                 channelId = channelId,
                                 targetLogin = splits[1]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1303,7 +1317,7 @@ class ChatViewModel @Inject constructor(
                         repository.getVips(
                             gqlHeaders = gqlHeaders,
                             channelLogin = channelLogin,
-                        )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                        )?.let { onMessage(ChatMessage(systemMsg = it)) }
                     }
                 }
                 command.equals("/w", true) -> {
@@ -1315,7 +1329,7 @@ class ChatViewModel @Inject constructor(
                                 userId = account.id,
                                 targetLogin = splits[1],
                                 message = splits[2]
-                            )?.let { onMessage(ChatMessage(message = it, color = "#999999", isAction = true)) }
+                            )?.let { onMessage(ChatMessage(systemMsg = it)) }
                         }
                     }
                 }
@@ -1339,6 +1353,7 @@ class ChatViewModel @Inject constructor(
         private val enableStv: Boolean,
         private val enableBttv: Boolean,
         private val enableFfz: Boolean,
+        private val nameDisplay: String?,
         private val checkIntegrity: Boolean) : ChatController() {
 
         private var chatReplayManager: ChatReplayManager? = null
@@ -1409,7 +1424,11 @@ class ChatViewModel @Inject constructor(
                                                                 when {
                                                                     message.contains("PRIVMSG") -> messages.add(ChatUtils.parseChatMessage(message, false))
                                                                     message.contains("USERNOTICE") -> messages.add(ChatUtils.parseChatMessage(message, true))
-                                                                    message.contains("CLEARMSG") -> messages.add(ChatUtils.parseClearMessage(applicationContext, message))
+                                                                    message.contains("CLEARMSG") -> {
+                                                                        val pair = ChatUtils.parseClearMessage(message)
+                                                                        val deletedMessage = pair.second?.let { targetId -> messages.find { it.id == targetId } }
+                                                                        messages.add(getClearMessage(pair.first, deletedMessage, nameDisplay))
+                                                                    }
                                                                     message.contains("CLEARCHAT") -> messages.add(ChatUtils.parseClearChat(applicationContext, message))
                                                                 }
                                                                 if (reader.peek() != JsonToken.END_ARRAY) {

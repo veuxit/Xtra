@@ -1,13 +1,16 @@
 package com.github.andreyasadchy.xtra.ui.view.chat
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -15,8 +18,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
@@ -26,6 +32,7 @@ import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -34,6 +41,7 @@ import kotlinx.coroutines.launch
 class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
 
     interface OnButtonClickListener {
+        fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter
         fun onReplyClicked(userName: String)
         fun onCopyMessageClicked(message: String)
         fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?)
@@ -41,16 +49,11 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
 
     companion object {
         private const val KEY_MESSAGING = "messaging"
-        private const val KEY_FORMATTED = "formatted"
-        private const val KEY_MESSAGE = "message"
-        private const val KEY_USERID = "userId"
-        private const val KEY_USERNAME = "userName"
         private const val KEY_CHANNEL_ID = "channelId"
-        private const val KEY_FULL_MSG = "full"
         private val savedUsers = mutableListOf<Pair<User, String?>>()
 
-        fun newInstance(messagingEnabled: Boolean, formattedMessage: CharSequence, message: String?, userId: String?, userName: String?, channelId: String?, fullMsg: String?) = MessageClickedDialog().apply {
-            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_FORMATTED to formattedMessage, KEY_MESSAGE to message, KEY_USERID to userId, KEY_USERNAME to userName, KEY_CHANNEL_ID to channelId, KEY_FULL_MSG to fullMsg)
+        fun newInstance(messagingEnabled: Boolean, channelId: String?) = MessageClickedDialog().apply {
+            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_CHANNEL_ID to channelId)
         }
     }
 
@@ -59,6 +62,8 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
     private val viewModel: MessageClickedViewModel by viewModels()
 
     private lateinit var listener: OnButtonClickListener
+    var adapter: MessageClickedChatAdapter? = null
+    private var isChatTouched = false
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -70,6 +75,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
         return binding.root
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewLifecycleOwner.lifecycleScope.launch {
@@ -83,21 +89,68 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
             }
         }
         with(binding) {
-            val args = requireArguments()
-            message.text = args.getCharSequence(KEY_FORMATTED)
-            val msg = args.getString(KEY_MESSAGE)
-            val userId = args.getString(KEY_USERID)
-            val userName = args.getString(KEY_USERNAME)
-            val targetId = args.getString(KEY_CHANNEL_ID)
-            val fullMsg = args.getString(KEY_FULL_MSG)
-            val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
-            if (userId != null) {
-                val item = savedUsers.find { it.first.channelId == userId && it.second == targetId }
+            adapter = listener.onCreateMessageClickedChatAdapter()
+            val behavior = BottomSheetBehavior.from(view.parent as View)
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            recyclerView.let {
+                it.adapter = adapter
+                it.itemAnimator = null
+                it.layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
+                it.setOnTouchListener(object : View.OnTouchListener {
+                    override fun onTouch(v: View, event: MotionEvent): Boolean {
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> behavior.isDraggable = false
+                            MotionEvent.ACTION_UP -> behavior.isDraggable = true
+                        }
+                        return false
+                    }
+                })
+                it.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        super.onScrollStateChanged(recyclerView, newState)
+                        isChatTouched = newState == RecyclerView.SCROLL_STATE_DRAGGING
+                    }
+                })
+            }
+            adapter?.let { adapter ->
+                adapter.messageClickListener = { selectedMessage, previousSelectedMessage ->
+                    updateButtons(selectedMessage)
+                    previousSelectedMessage?.let {
+                        adapter.messages?.indexOf(it)?.takeIf { it != -1 }?.let {
+                            (recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                                adapter.updateBackground(previousSelectedMessage, it)
+                            } ?: adapter.notifyItemChanged(it)
+                        }
+                    }
+                }
+                adapter.selectedMessage?.let {
+                    updateButtons(it)
+                    adapter.messages?.indexOf(it)?.takeIf { it != -1 }?.let { binding.recyclerView.scrollToPosition(it) }
+                }
+            }
+            if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false)) {
+                copyFullMsg.visible()
+            }
+            val userId = adapter?.selectedMessage?.userId
+            val userLogin = adapter?.selectedMessage?.userLogin
+            if (userId != null || userLogin != null) {
+                val targetId = requireArguments().getString(KEY_CHANNEL_ID)
+                val item = userId?.let { savedUsers.find { it.first.channelId == userId && it.second == targetId } }
                 if (item != null) {
                     updateUserLayout(item.first)
+                    item.first.channelName?.let { channelName ->
+                        if (requireArguments().getBoolean(KEY_MESSAGING) && !reply.isVisible && channelName.isNotBlank()) {
+                            reply.visible()
+                            reply.setOnClickListener {
+                                listener.onReplyClicked(channelName)
+                                dismiss()
+                            }
+                        }
+                    }
                 } else {
                     viewModel.loadUser(
                         channelId = userId,
+                        channelLogin = userLogin,
                         targetId = if (userId != targetId) targetId else null,
                         helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
@@ -112,6 +165,13 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                                     if (user != null) {
                                         savedUsers.add(Pair(user, targetId))
                                         updateUserLayout(user)
+                                        if (requireArguments().getBoolean(KEY_MESSAGING) && !reply.isVisible && !user.channelName.isNullOrBlank()) {
+                                            reply.visible()
+                                            reply.setOnClickListener {
+                                                listener.onReplyClicked(user.channelName)
+                                                dismiss()
+                                            }
+                                        }
                                         viewModel.user.value = Pair(null, false)
                                     } else {
                                         if (error == true) {
@@ -123,33 +183,38 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                         }
                     }
                 }
-                if (args.getBoolean(KEY_MESSAGING)) {
-                    if (!userName.isNullOrBlank()) {
-                        reply.visible()
-                        reply.setOnClickListener {
-                            listener.onReplyClicked(userName)
-                            dismiss()
-                        }
-                    }
-                    if (!msg.isNullOrBlank()) {
-                        copyMessage.visible()
-                        copyMessage.setOnClickListener {
-                            listener.onCopyMessageClicked(msg)
-                            dismiss()
-                        }
+            }
+        }
+    }
+
+    private fun updateButtons(chatMessage: ChatMessage) {
+        with(binding) {
+            if (requireArguments().getBoolean(KEY_MESSAGING) && (!chatMessage.userId.isNullOrBlank() || !chatMessage.userLogin.isNullOrBlank())) {
+                if (!reply.isVisible && !chatMessage.userName.isNullOrBlank()) {
+                    reply.visible()
+                    reply.setOnClickListener {
+                        listener.onReplyClicked(chatMessage.userName)
+                        dismiss()
                     }
                 }
+                if (!chatMessage.message.isNullOrBlank()) {
+                    copyMessage.visible()
+                    copyMessage.setOnClickListener {
+                        listener.onCopyMessageClicked(chatMessage.message)
+                        dismiss()
+                    }
+                } else {
+                    copyMessage.gone()
+                }
             }
+            val clipboard = getSystemService(requireContext(), ClipboardManager::class.java)
             copyClip.setOnClickListener {
-                clipboard?.setPrimaryClip(ClipData.newPlainText("label", msg))
+                clipboard?.setPrimaryClip(ClipData.newPlainText("label", chatMessage.message))
                 dismiss()
             }
-            if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false) && fullMsg != null) {
-                copyFullMsg.visible()
-                copyFullMsg.setOnClickListener {
-                    clipboard?.setPrimaryClip(ClipData.newPlainText("label", fullMsg))
-                    dismiss()
-                }
+            copyFullMsg.setOnClickListener {
+                clipboard?.setPrimaryClip(ClipData.newPlainText("label", chatMessage.fullMsg))
+                dismiss()
             }
         }
     }
@@ -225,15 +290,36 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
         }
     }
 
+    fun scrollToLastPosition() {
+        if (!isChatTouched && !shouldShowButton()) {
+            adapter?.messages?.let { binding.recyclerView.scrollToPosition(it.lastIndex) }
+        }
+    }
+
+    private fun shouldShowButton(): Boolean {
+        with(binding) {
+            val offset = recyclerView.computeVerticalScrollOffset()
+            if (offset < 0) {
+                return false
+            }
+            val extent = recyclerView.computeVerticalScrollExtent()
+            val range = recyclerView.computeVerticalScrollRange()
+            val percentage = (100f * offset / (range - extent).toFloat())
+            return percentage < 100f
+        }
+    }
+
     override fun onIntegrityDialogCallback(callback: String?) {
         if (callback == "refresh") {
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    val userId = requireArguments().getString(KEY_USERID)
-                    if (userId != null) {
+                    val userId = adapter?.selectedMessage?.userId
+                    val userLogin = adapter?.selectedMessage?.userLogin
+                    if (userId != null || userLogin != null) {
                         val targetId = requireArguments().getString(KEY_CHANNEL_ID)
                         viewModel.loadUser(
                             channelId = userId,
+                            channelLogin = userLogin,
                             targetId = if (userId != targetId) targetId else null,
                             helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),

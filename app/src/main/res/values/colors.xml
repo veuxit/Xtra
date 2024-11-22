@@ -29,5 +29,6 @@
     <color name="chatMessageReward">#800E4C68</color>
     <color name="chatMessageNotice">#803E0E68</color>
     <color name="chatMessageMention">#80680E0E</color>
+    <color name="chatMessageSelected">#80163584</color>
     <color name="liveStreamRed">#DD0000</color>
 </resources>
