@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="nameDisplayEntries">
+        <item>@string/name_display_entry1</item>
+        <item>@string/name_display_entry2</item>
+        <item>@string/name_display_entry3</item>
+    </string-array>
+
+    <string-array name="nameDisplayValues">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
     <string-array name="skipVideoTokenEntries">
         <item>@string/skipVideoTokenEntries1</item>
         <item>@string/skipVideoTokenEntries2</item>

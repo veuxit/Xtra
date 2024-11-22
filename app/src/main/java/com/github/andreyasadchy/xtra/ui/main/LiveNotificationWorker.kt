@@ -16,7 +16,9 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import javax.inject.Inject
@@ -64,7 +66,17 @@ class LiveNotificationWorker @AssistedInject constructor(
             streams.forEach {
                 val notification = NotificationCompat.Builder(context, channelId).apply {
                     setGroup(GROUP_KEY)
-                    setContentTitle(ContextCompat.getString(context, R.string.live_notification).format(it.channelName))
+                    setContentTitle(ContextCompat.getString(context, R.string.live_notification).format(
+                        if (it.channelLogin != null && !it.channelLogin.equals(it.channelName, true)) {
+                            when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                "0" -> "${it.channelName}(${it.channelLogin})"
+                                "1" -> it.channelName
+                                else -> it.channelLogin
+                            }
+                        } else {
+                            it.channelName
+                        }
+                    ))
                     setContentText(it.title)
                     setSmallIcon(R.drawable.notification_icon)
                     setAutoCancel(true)

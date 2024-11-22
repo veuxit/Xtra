@@ -112,6 +112,7 @@ class ChatView : ConstraintLayout {
                 randomColor = context.prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
                 isLightTheme = context.isLightTheme,
                 useThemeAdaptedUsernameColor = context.prefs().getBoolean(C.CHAT_THEME_ADAPTED_USERNAME_COLOR, true),
+                nameDisplay = context.prefs().getString(C.UI_NAME_DISPLAY, "0"),
                 boldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
                 emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
                 animateGifs = context.prefs().getBoolean(C.ANIMATED_EMOTES, true),
@@ -238,7 +239,19 @@ class ChatView : ConstraintLayout {
             raidClose.setOnClickListener {
                 hideRaid()
             }
-            raidText.text = context.getString(R.string.raid_text, raid.targetName, raid.viewerCount)
+            raidText.text = context.getString(
+                R.string.raid_text,
+                if (raid.targetLogin != null && !raid.targetLogin.equals(raid.targetName, true)) {
+                    when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                        "0" -> "${raid.targetName}(${raid.targetLogin})"
+                        "1" -> raid.targetName
+                        else -> raid.targetLogin
+                    }
+                } else {
+                    raid.targetName
+                },
+                raid.viewerCount
+            )
         }
     }
 
