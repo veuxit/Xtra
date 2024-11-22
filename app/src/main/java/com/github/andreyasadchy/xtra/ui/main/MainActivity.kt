@@ -43,6 +43,11 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
 import com.github.andreyasadchy.xtra.model.Account
@@ -80,6 +85,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Timer
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
@@ -336,6 +342,19 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         restorePlayerFragment()
         handleIntent(intent)
+        if (prefs.getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)) {
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "live_notifications",
+                ExistingPeriodicWorkPolicy.KEEP,
+                PeriodicWorkRequestBuilder<LiveNotificationWorker>(15, TimeUnit.MINUTES)
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+                    )
+                    .build()
+            )
+        }
     }
 
     private fun setNavBarColor(isPortrait: Boolean) {
