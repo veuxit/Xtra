@@ -20,6 +20,7 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
+import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedChatAdapter
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
 import java.util.Random
 
@@ -31,6 +32,7 @@ class ChatAdapter(
     private val redeemedChatMsg: String,
     private val redeemedNoMsg: String,
     private val rewardChatMsg: String,
+    private val replyMessage: String,
     private val useRandomColors: Boolean,
     private val useReadableColors: Boolean,
     private val isLightTheme: Boolean,
@@ -76,6 +78,7 @@ class ChatAdapter(
     private val savedLocalEmotes = mutableMapOf<String, ByteArray>()
 
     var messageClickListener: ((String?) -> Unit)? = null
+    var replyClickListener: (() -> Unit)? = null
     private var selectedMessage: ChatMessage? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -86,10 +89,10 @@ class ChatAdapter(
         val chatMessage = messages?.get(position) ?: return
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
-            rewardChatMsg, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, loggedInUser,
-            chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes,
-            globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes,
-            savedLocalEmotes
+            rewardChatMsg, true, replyMessage, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
+            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes,
+            globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes,
+            savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         holder.bind(chatMessage, pair.first)
         ChatAdapterUtils.loadImages(
@@ -100,11 +103,21 @@ class ChatAdapter(
 
     fun createMessageClickedChatAdapter(): MessageClickedChatAdapter {
         return MessageClickedChatAdapter(
-            enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, useRandomColors,
-            useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, chatUrl, getEmoteBytes, fragment, imageLibrary,
-            emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors, savedColors, loggedInUser, localTwitchEmotes,
-            globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges,
-            cheerEmotes, selectedMessage
+            enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
+            { chatMessage -> selectedMessage = chatMessage; replyClickListener?.invoke() }, useRandomColors, useReadableColors, isLightTheme, nameDisplay,
+            useBoldNames, showSystemMessageEmotes, chatUrl, getEmoteBytes, fragment, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs,
+            enableZeroWidth, messages, userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes,
+            channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
+        )
+    }
+
+    fun createReplyClickedChatAdapter(): ReplyClickedChatAdapter {
+        return ReplyClickedChatAdapter(
+            enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
+            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, chatUrl, getEmoteBytes, fragment,
+            imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors, savedColors, loggedInUser,
+            localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges,
+            channelBadges, cheerEmotes, selectedMessage
         )
     }
 
@@ -150,8 +163,10 @@ class ChatAdapter(
                 movementMethod = LinkMovementMethod.getInstance()
                 TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
                 setOnClickListener {
-                    selectedMessage = chatMessage
-                    messageClickListener?.invoke(channelId)
+                    if (selectionStart == -1 && selectionEnd == -1) {
+                        selectedMessage = chatMessage
+                        messageClickListener?.invoke(channelId)
+                    }
                 }
             }
         }

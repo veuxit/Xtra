@@ -6,6 +6,8 @@ import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+import android.text.TextPaint
+import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.text.style.URLSpan
@@ -46,7 +48,7 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Pair<SpannableStringBuilder, ArrayList<Image>> {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Pair<SpannableStringBuilder, ArrayList<Image>> {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
         var builderIndex = 0
@@ -135,6 +137,32 @@ object ChatAdapterUtils {
                     builder.append("$rewardChatMsg\n")
                     builderIndex += rewardChatMsg.length + 1
                 }
+            }
+            if (chatMessage.reply?.message != null && showReplies) {
+                val userName = if (chatMessage.reply.userName != null && chatMessage.reply.userLogin != null && !chatMessage.reply.userLogin.equals(chatMessage.reply.userName, true)) {
+                    when (nameDisplay) {
+                        "0" -> "${chatMessage.reply.userName}(${chatMessage.reply.userLogin})"
+                        "1" -> chatMessage.reply.userName
+                        else -> chatMessage.reply.userLogin
+                    }
+                } else {
+                    chatMessage.reply.userName ?: chatMessage.reply.userLogin
+                }
+                val string = replyMessage.format(userName, chatMessage.reply.message).let {
+                    it.takeIf { it.length <= 60 } ?: it.take(59).plus("…")
+                }
+                builder.append("${string}\n")
+                if (replyClick != null) {
+                    builder.setSpan(object : ClickableSpan() {
+                        override fun onClick(widget: View) {
+                            replyClick()
+                        }
+
+                        override fun updateDrawState(ds: TextPaint) {}
+                    }, builderIndex, builderIndex + string.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + string.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                builderIndex += string.length + 1
             }
             if (chatMessage.timestamp != null && enableTimestamps) {
                 val timestamp = TwitchApiHelper.getTimestamp(chatMessage.timestamp, timestampFormat)

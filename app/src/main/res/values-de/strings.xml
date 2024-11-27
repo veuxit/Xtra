@@ -659,4 +659,5 @@
     <string name="name_display_entry2">Nur Anzeigenamen anzeigen</string>
     <string name="name_display_entry3">Nur Anmeldung anzeigen</string>
     <string name="show_system_message_emotes">Emotes in Systemnachrichten anzeigen</string>
+    <string name="replying_to_message">Replying to %1$s\: %2$s</string>
 </resources>
