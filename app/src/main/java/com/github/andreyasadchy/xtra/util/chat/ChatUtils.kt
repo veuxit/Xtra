@@ -68,17 +68,12 @@ object ChatUtils {
                     }
                 }
             }
-            val replyId = prefixes["reply-thread-parent-msg-id"]
             ChatMessage(
                 id = prefixes["id"],
                 userId = prefixes["user-id"],
                 userLogin = userLogin,
                 userName = prefixes["display-name"]?.replace("\\s", " "),
-                message = if (replyId != null && userMessage.startsWith("@")) {
-                    userMessage.substringAfter(" ")
-                } else {
-                    userMessage
-                },
+                message = userMessage,
                 color = prefixes["color"],
                 emotes = emotesList,
                 badges = badgesList,
@@ -88,7 +83,7 @@ object ChatUtils {
                 systemMsg = systemMsg,
                 msgId = prefixes["msg-id"],
                 reward = prefixes["custom-reward-id"]?.let { ChannelPointReward(id = it) },
-                reply = replyId?.let { Reply(
+                reply = prefixes["reply-thread-parent-msg-id"]?.let { Reply(
                     threadParentId = it,
                     userLogin = prefixes["reply-parent-user-login"],
                     userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
