@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.view.chat
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.KeyEvent
@@ -57,7 +56,7 @@ import kotlin.math.max
 class ChatView : ConstraintLayout {
 
     interface ChatViewCallback {
-        fun send(message: CharSequence)
+        fun send(message: CharSequence, replyId: String?)
         fun onRaidClicked(raid: Raid)
         fun onRaidClose()
     }
@@ -87,7 +86,10 @@ class ChatView : ConstraintLayout {
     }
 
     private val messageDialog: MessageClickedDialog?
-        get() = fragment.childFragmentManager.findFragmentByTag("closeOnPip") as? MessageClickedDialog
+        get() = fragment.childFragmentManager.findFragmentByTag("messageDialog") as? MessageClickedDialog
+
+    private val replyDialog: ReplyClickedDialog?
+        get() = fragment.childFragmentManager.findFragmentByTag("replyDialog") as? ReplyClickedDialog
 
     constructor(context: Context) : super(context) {
         init(context)
@@ -116,6 +118,7 @@ class ChatView : ConstraintLayout {
                 redeemedChatMsg = context.getString(R.string.redeemed),
                 redeemedNoMsg = context.getString(R.string.user_redeemed),
                 rewardChatMsg = context.getString(R.string.chat_reward),
+                replyMessage = context.getString(R.string.replying_to_message),
                 useRandomColors = context.prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
                 useReadableColors = context.prefs().getBoolean(C.CHAT_THEME_ADAPTED_USERNAME_COLOR, true),
                 isLightTheme = context.isLightTheme,
@@ -167,6 +170,13 @@ class ChatView : ConstraintLayout {
                 }?.toMutableList()
             }
         }
+        replyDialog?.adapter?.let { adapter ->
+            if (!adapter.threadParentId.isNullOrBlank()) {
+                adapter.messages = list?.filter {
+                    it.reply?.threadParentId == adapter.threadParentId || it.id == adapter.threadParentId
+                }?.toMutableList()
+            }
+        }
     }
 
     fun notifyMessageAdded(newMessage: ChatMessage) {
@@ -202,12 +212,30 @@ class ChatView : ConstraintLayout {
                     }
                 }
             }
+            replyDialog?.adapter?.let { adapter ->
+                if (!adapter.threadParentId.isNullOrBlank() && newMessage.reply?.threadParentId == adapter.threadParentId) {
+                    adapter.messages?.apply {
+                        add(newMessage)
+                        adapter.notifyItemInserted(lastIndex)
+                        val messageLimit = context.prefs().getInt(C.CHAT_LIMIT, 600)
+                        if (size >= (messageLimit + 1)) {
+                            val removeCount = size - messageLimit
+                            repeat(removeCount) {
+                                removeAt(0)
+                            }
+                            adapter.notifyItemRangeRemoved(0, removeCount)
+                        }
+                        replyDialog?.scrollToLastPosition()
+                    }
+                }
+            }
         }
     }
 
     fun notifyEmotesLoaded() {
         adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) }
         messageDialog?.adapter?.let { adapter -> adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) } }
+        replyDialog?.adapter?.let { adapter -> adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) } }
     }
 
     fun notifyRoomState(roomState: RoomState) {
@@ -314,62 +342,73 @@ class ChatView : ConstraintLayout {
     fun addLocalTwitchEmotes(list: List<TwitchEmote>?) {
         adapter.localTwitchEmotes = list
         messageDialog?.adapter?.localTwitchEmotes = list
+        replyDialog?.adapter?.localTwitchEmotes = list
     }
 
     fun addGlobalStvEmotes(list: List<Emote>?) {
         adapter.globalStvEmotes = list
         messageDialog?.adapter?.globalStvEmotes = list
+        replyDialog?.adapter?.globalStvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelStvEmotes(list: List<Emote>?) {
         adapter.channelStvEmotes = list
         messageDialog?.adapter?.channelStvEmotes = list
+        replyDialog?.adapter?.channelStvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalBttvEmotes(list: List<Emote>?) {
         adapter.globalBttvEmotes = list
         messageDialog?.adapter?.globalBttvEmotes = list
+        replyDialog?.adapter?.globalBttvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelBttvEmotes(list: List<Emote>?) {
         adapter.channelBttvEmotes = list
         messageDialog?.adapter?.channelBttvEmotes = list
+        replyDialog?.adapter?.channelBttvEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalFfzEmotes(list: List<Emote>?) {
         adapter.globalFfzEmotes = list
         messageDialog?.adapter?.globalFfzEmotes = list
+        replyDialog?.adapter?.globalFfzEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addChannelFfzEmotes(list: List<Emote>?) {
         adapter.channelFfzEmotes = list
         messageDialog?.adapter?.channelFfzEmotes = list
+        replyDialog?.adapter?.channelFfzEmotes = list
         addToAutoCompleteList(list)
     }
 
     fun addGlobalBadges(list: List<TwitchBadge>?) {
         adapter.globalBadges = list
         messageDialog?.adapter?.globalBadges = list
+        replyDialog?.adapter?.globalBadges = list
     }
 
     fun addChannelBadges(list: List<TwitchBadge>?) {
         adapter.channelBadges = list
         messageDialog?.adapter?.channelBadges = list
+        replyDialog?.adapter?.channelBadges = list
     }
 
     fun addCheerEmotes(list: List<CheerEmote>?) {
         adapter.cheerEmotes = list
         messageDialog?.adapter?.cheerEmotes = list
+        replyDialog?.adapter?.cheerEmotes = list
     }
 
     fun setUsername(username: String?) {
         adapter.loggedInUser = username
         messageDialog?.adapter?.loggedInUser = username
+        replyDialog?.adapter?.loggedInUser = username
     }
 
     fun setCallback(callback: ChatViewCallback) {
@@ -378,6 +417,10 @@ class ChatView : ConstraintLayout {
 
     fun createMessageClickedChatAdapter(): MessageClickedChatAdapter {
         return adapter.createMessageClickedChatAdapter()
+    }
+
+    fun createReplyClickedChatAdapter(): ReplyClickedChatAdapter {
+        return adapter.createReplyClickedChatAdapter()
     }
 
     fun emoteMenuIsVisible(): Boolean = binding.emoteMenu.isVisible
@@ -403,14 +446,36 @@ class ChatView : ConstraintLayout {
         binding.editText.text.append(emote.name).append(' ')
     }
 
-    @SuppressLint("SetTextI18n")
-    fun reply(userName: CharSequence) {
-        val text = "@$userName "
-        binding.editText.apply {
-            setText(text)
-            setSelection(text.length)
-            requestFocus()
-            WindowCompat.getInsetsController(fragment.requireActivity().window, this).show(WindowInsetsCompat.Type.ime())
+    fun reply(replyId: String?, replyMessage: String?) {
+        with(binding) {
+            if (!replyId.isNullOrBlank()) {
+                messageDialog?.dismiss()
+                replyView.visible()
+                replyText.text = replyMessage
+                replyClose.setOnClickListener {
+                    replyView.gone()
+                    send.setOnClickListener { sendMessage() }
+                    editText.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                            sendMessage()
+                        } else {
+                            false
+                        }
+                    }
+                }
+                send.setOnClickListener { sendMessage(replyId) }
+                editText.setOnKeyListener { _, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                        sendMessage(replyId)
+                    } else {
+                        false
+                    }
+                }
+            }
+            editText.apply {
+                requestFocus()
+                WindowCompat.getInsetsController(fragment.requireActivity().window, this).show(WindowInsetsCompat.Type.ime())
+            }
         }
     }
 
@@ -423,7 +488,12 @@ class ChatView : ConstraintLayout {
             adapter.messageClickListener = { channelId ->
                 editText.hideKeyboard()
                 editText.clearFocus()
-                MessageClickedDialog.newInstance(enableMessaging, channelId).show(fragment.childFragmentManager, "closeOnPip")
+                MessageClickedDialog.newInstance(enableMessaging, channelId).show(fragment.childFragmentManager, "messageDialog")
+            }
+            adapter.replyClickListener = {
+                editText.hideKeyboard()
+                editText.clearFocus()
+                ReplyClickedDialog.newInstance(enableMessaging).show(fragment.childFragmentManager, "replyDialog")
             }
             if (enableMessaging) {
                 autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
@@ -465,6 +535,7 @@ class ChatView : ConstraintLayout {
                     editText.text.clear()
                     true
                 }
+                replyView.gone()
                 send.setOnClickListener { sendMessage() }
                 if (parent != null && parent.parent is SlidingLayout && !context.prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
                     messageView.gone()
@@ -508,16 +579,25 @@ class ChatView : ConstraintLayout {
         super.onDetachedFromWindow()
     }
 
-    private fun sendMessage(): Boolean {
+    private fun sendMessage(replyId: String? = null): Boolean {
         with(binding) {
             editText.hideKeyboard()
             editText.clearFocus()
             toggleEmoteMenu(false)
+            replyView.gone()
+            send.setOnClickListener { sendMessage() }
+            editText.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                    sendMessage()
+                } else {
+                    false
+                }
+            }
             return callback?.let {
                 val text = editText.text.trim()
                 editText.text.clear()
                 if (text.isNotEmpty()) {
-                    it.send(text)
+                    it.send(text, replyId)
                     scrollToLastPosition()
                     true
                 } else {

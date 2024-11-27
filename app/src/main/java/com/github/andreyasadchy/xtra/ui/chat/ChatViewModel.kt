@@ -162,8 +162,8 @@ class ChatViewModel @Inject constructor(
         chat?.pause()
     }
 
-    override fun send(message: CharSequence) {
-        chat?.send(message)
+    override fun send(message: CharSequence, replyId: String?) {
+        chat?.send(message, replyId)
     }
 
     override fun onRaidClicked(raid: Raid) {
@@ -527,26 +527,30 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        override fun send(message: CharSequence) {
-            if (useApiCommands) {
-                if (message.toString().startsWith("/")) {
-                    try {
-                        sendCommand(message)
-                    } catch (e: Exception) {
-                        if (e.message == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "refresh"
-                        }
-                    }
-                } else {
-                    sendMessage(message)
-                }
+        override fun send(message: CharSequence, replyId: String?) {
+            if (replyId != null) {
+                sendMessage(message, replyId)
             } else {
-                if (message.toString() == "/dc" || message.toString() == "/disconnect") {
-                    if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive) == true) {
-                        disconnect()
+                if (useApiCommands) {
+                    if (message.toString().startsWith("/")) {
+                        try {
+                            sendCommand(message)
+                        } catch (e: Exception) {
+                            if (e.message == "failed integrity check" && integrity.value == null) {
+                                integrity.value = "refresh"
+                            }
+                        }
+                    } else {
+                        sendMessage(message)
                     }
                 } else {
-                    sendMessage(message)
+                    if (message.toString() == "/dc" || message.toString() == "/disconnect") {
+                        if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive) == true) {
+                            disconnect()
+                        }
+                    } else {
+                        sendMessage(message)
+                    }
                 }
             }
         }
@@ -935,7 +939,7 @@ class ChatViewModel @Inject constructor(
             }
         }
 
-        private fun sendMessage(message: CharSequence) {
+        private fun sendMessage(message: CharSequence, replyId: String? = null) {
             if (useApiChatMessages && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                 viewModelScope.launch {
                     repository.sendMessage(helixHeaders, account.id, channelId, message.toString())?.let {
@@ -943,7 +947,7 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             } else {
-                chatWriteIRC?.send(message) ?: chatWriteWebSocket?.send(message)
+                chatWriteIRC?.send(message, replyId) ?: chatWriteWebSocket?.send(message, replyId)
             }
             val usedEmotes = hashSetOf<RecentEmote>()
             val currentTime = System.currentTimeMillis()
@@ -1359,7 +1363,7 @@ class ChatViewModel @Inject constructor(
         private var chatReplayManager: ChatReplayManager? = null
         private var chatReplayManagerLocal: ChatReplayManagerLocal? = null
 
-        override fun send(message: CharSequence) {}
+        override fun send(message: CharSequence, replyId: String?) {}
 
         override fun start() {
             pause()
@@ -1822,7 +1826,7 @@ class ChatViewModel @Inject constructor(
     }
 
     abstract inner class ChatController : OnChatMessageReceivedListener {
-        abstract fun send(message: CharSequence)
+        abstract fun send(message: CharSequence, replyId: String?)
         abstract fun start()
         abstract fun pause()
         abstract fun stop()

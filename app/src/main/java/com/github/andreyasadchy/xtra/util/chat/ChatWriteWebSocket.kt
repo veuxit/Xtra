@@ -93,8 +93,9 @@ class ChatWriteWebSocket(
         }
     }
 
-    fun send(message: CharSequence) {
-        write("PRIVMSG $hashChannelName :$message")
+    fun send(message: CharSequence, replyId: String?) {
+        val reply = replyId?.let { "@reply-parent-msg-id=${it} " } ?: ""
+        write("${reply}PRIVMSG $hashChannelName :$message")
     }
 
     private fun write(message: String) {

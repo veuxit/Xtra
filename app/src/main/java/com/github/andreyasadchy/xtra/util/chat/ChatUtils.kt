@@ -6,6 +6,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
+import com.github.andreyasadchy.xtra.model.chat.Reply
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlin.collections.set
@@ -67,12 +68,17 @@ object ChatUtils {
                     }
                 }
             }
+            val replyId = prefixes["reply-thread-parent-msg-id"]
             ChatMessage(
                 id = prefixes["id"],
                 userId = prefixes["user-id"],
                 userLogin = userLogin,
                 userName = prefixes["display-name"]?.replace("\\s", " "),
-                message = userMessage,
+                message = if (replyId != null && userMessage.startsWith("@")) {
+                    userMessage.substringAfter(" ")
+                } else {
+                    userMessage
+                },
                 color = prefixes["color"],
                 emotes = emotesList,
                 badges = badgesList,
@@ -82,6 +88,12 @@ object ChatUtils {
                 systemMsg = systemMsg,
                 msgId = prefixes["msg-id"],
                 reward = prefixes["custom-reward-id"]?.let { ChannelPointReward(id = it) },
+                reply = replyId?.let { Reply(
+                    threadParentId = it,
+                    userLogin = prefixes["reply-parent-user-login"],
+                    userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
+                    message = prefixes["reply-parent-msg-body"]?.replace("\\s", " ")
+                ) },
                 timestamp = prefixes["tmi-sent-ts"]?.toLong(),
                 fullMsg = message
             )
