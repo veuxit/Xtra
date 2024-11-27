@@ -460,7 +460,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             // player dialog
             (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
             // player chat message dialog
-            (chatFragment?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
+            (chatFragment?.childFragmentManager?.findFragmentByTag("messageDialog") as? BottomSheetDialogFragment)?.dismiss()
+            (chatFragment?.childFragmentManager?.findFragmentByTag("replyDialog") as? BottomSheetDialogFragment)?.dismiss()
         } else {
             playerView.useController = true
         }

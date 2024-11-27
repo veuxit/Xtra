@@ -23,7 +23,7 @@ import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
 import java.util.Random
 
-class MessageClickedChatAdapter(
+class ReplyClickedChatAdapter(
     private val enableTimestamps: Boolean,
     private val timestampFormat: String?,
     private val firstMsgVisibility: Int,
@@ -32,7 +32,6 @@ class MessageClickedChatAdapter(
     private val redeemedNoMsg: String,
     private val rewardChatMsg: String,
     private val replyMessage: String,
-    private val replyClick: (ChatMessage) -> Unit,
     private val useRandomColors: Boolean,
     private val useReadableColors: Boolean,
     private val isLightTheme: Boolean,
@@ -62,15 +61,10 @@ class MessageClickedChatAdapter(
     var globalBadges: List<TwitchBadge>?,
     var channelBadges: List<TwitchBadge>?,
     var cheerEmotes: List<CheerEmote>?,
-    var selectedMessage: ChatMessage?) : RecyclerView.Adapter<MessageClickedChatAdapter.ViewHolder>() {
+    var selectedMessage: ChatMessage?) : RecyclerView.Adapter<ReplyClickedChatAdapter.ViewHolder>() {
 
-    val userId = selectedMessage?.userId
-    val userLogin = selectedMessage?.userLogin
-    var messages: MutableList<ChatMessage>? = if (!userId.isNullOrBlank() || !userLogin.isNullOrBlank()) {
-        messages?.filter {
-            (!userId.isNullOrBlank() && it.userId == userId) || (!userLogin.isNullOrBlank() && it.userLogin == userLogin)
-        }?.toMutableList()
-    } else null ?: selectedMessage?.let { mutableListOf(it) }
+    val threadParentId = selectedMessage?.reply?.threadParentId
+    var messages: MutableList<ChatMessage>? = messages?.filter { it.reply?.threadParentId == threadParentId || it.id == threadParentId }?.toMutableList() ?: selectedMessage?.let { mutableListOf(it) }
         set(value) {
             val oldSize = field?.size ?: 0
             if (oldSize > 0) {
@@ -94,10 +88,10 @@ class MessageClickedChatAdapter(
         val chatMessage = messages?.get(position) ?: return
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
-            rewardChatMsg, true, replyMessage, { replyClick(chatMessage) }, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay,
-            useBoldNames, showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes,
-            channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes,
-            savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            rewardChatMsg, false, replyMessage, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
+            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes,
+            globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes,
+            savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         if (chatMessage == selectedMessage) {
             holder.textView.setBackgroundResource(R.color.chatMessageSelected)

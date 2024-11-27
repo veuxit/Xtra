@@ -42,7 +42,7 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
 
     interface OnButtonClickListener {
         fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter
-        fun onReplyClicked(userName: String)
+        fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?)
         fun onCopyMessageClicked(message: String)
         fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?)
     }
@@ -123,59 +123,56 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                         }
                     }
                 }
-                adapter.selectedMessage?.let {
-                    updateButtons(it)
-                    adapter.messages?.indexOf(it)?.takeIf { it != -1 }?.let { binding.recyclerView.scrollToPosition(it) }
-                }
-            }
-            if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false)) {
-                copyFullMsg.visible()
-            }
-            val userId = adapter?.selectedMessage?.userId
-            val userLogin = adapter?.selectedMessage?.userLogin
-            if (userId != null || userLogin != null) {
-                val targetId = requireArguments().getString(KEY_CHANNEL_ID)
-                val item = userId?.let { savedUsers.find { it.first.channelId == userId && it.second == targetId } }
-                if (item != null) {
-                    updateUserLayout(item.first)
-                    item.first.channelName?.let { channelName ->
-                        if (requireArguments().getBoolean(KEY_MESSAGING) && !reply.isVisible && channelName.isNotBlank()) {
-                            reply.visible()
-                            reply.setOnClickListener {
-                                listener.onReplyClicked(channelName)
-                                dismiss()
+                adapter.selectedMessage?.let { selectedMessage ->
+                    updateButtons(selectedMessage)
+                    adapter.messages?.indexOf(selectedMessage)?.takeIf { it != -1 }?.let { binding.recyclerView.scrollToPosition(it) }
+                    if (selectedMessage.userId != null || selectedMessage.userLogin != null) {
+                        val targetId = requireArguments().getString(KEY_CHANNEL_ID)
+                        val item = selectedMessage.userId?.let { savedUsers.find { it.first.channelId == selectedMessage.userId && it.second == targetId } }
+                        if (item != null) {
+                            updateUserLayout(item.first)
+                            item.first.channelName?.let { channelName ->
+                                if (requireArguments().getBoolean(KEY_MESSAGING) && !selectedMessage.id.isNullOrBlank() && selectedMessage.userName.isNullOrBlank() && channelName.isNotBlank()) {
+                                    reply.visible()
+                                    reply.setOnClickListener {
+                                        listener.onReplyClicked(selectedMessage.id, selectedMessage.userLogin, channelName, selectedMessage.message)
+                                        dismiss()
+                                    }
+                                }
                             }
-                        }
-                    }
-                } else {
-                    viewModel.loadUser(
-                        channelId = userId,
-                        channelLogin = userLogin,
-                        targetId = if (userId != targetId) targetId else null,
-                        helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                        checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-                    )
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.user.collectLatest { pair ->
-                                if (pair != null) {
-                                    val user = pair.first
-                                    val error = pair.second
-                                    if (user != null) {
-                                        savedUsers.add(Pair(user, targetId))
-                                        updateUserLayout(user)
-                                        if (requireArguments().getBoolean(KEY_MESSAGING) && !reply.isVisible && !user.channelName.isNullOrBlank()) {
-                                            reply.visible()
-                                            reply.setOnClickListener {
-                                                listener.onReplyClicked(user.channelName)
-                                                dismiss()
+                        } else {
+                            viewModel.loadUser(
+                                channelId = selectedMessage.userId,
+                                channelLogin = selectedMessage.userLogin,
+                                targetId = if (selectedMessage.userId != targetId) targetId else null,
+                                helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            )
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.user.collectLatest { pair ->
+                                        if (pair != null) {
+                                            val user = pair.first
+                                            val error = pair.second
+                                            if (user != null) {
+                                                savedUsers.add(Pair(user, targetId))
+                                                updateUserLayout(user)
+                                                adapter.selectedMessage?.let { selectedMessage ->
+                                                    if (requireArguments().getBoolean(KEY_MESSAGING) && !selectedMessage.id.isNullOrBlank() && selectedMessage.userName.isNullOrBlank() && !user.channelName.isNullOrBlank()) {
+                                                        reply.visible()
+                                                        reply.setOnClickListener {
+                                                            listener.onReplyClicked(selectedMessage.id, selectedMessage.userLogin, user.channelName, selectedMessage.message)
+                                                            dismiss()
+                                                        }
+                                                    }
+                                                }
+                                                viewModel.user.value = Pair(null, false)
+                                            } else {
+                                                if (error == true) {
+                                                    viewProfile.visible()
+                                                }
                                             }
-                                        }
-                                        viewModel.user.value = Pair(null, false)
-                                    } else {
-                                        if (error == true) {
-                                            viewProfile.visible()
                                         }
                                     }
                                 }
@@ -184,18 +181,23 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
                     }
                 }
             }
+            if (requireContext().prefs().getBoolean(C.DEBUG_CHAT_FULLMSG, false)) {
+                copyFullMsg.visible()
+            }
         }
     }
 
     private fun updateButtons(chatMessage: ChatMessage) {
         with(binding) {
             if (requireArguments().getBoolean(KEY_MESSAGING) && (!chatMessage.userId.isNullOrBlank() || !chatMessage.userLogin.isNullOrBlank())) {
-                if (!reply.isVisible && !chatMessage.userName.isNullOrBlank()) {
+                if (!chatMessage.id.isNullOrBlank()) {
                     reply.visible()
                     reply.setOnClickListener {
-                        listener.onReplyClicked(chatMessage.userName)
+                        listener.onReplyClicked(chatMessage.id, chatMessage.userLogin, chatMessage.userName, chatMessage.message)
                         dismiss()
                     }
+                } else {
+                    reply.gone()
                 }
                 if (!chatMessage.message.isNullOrBlank()) {
                     copyMessage.visible()

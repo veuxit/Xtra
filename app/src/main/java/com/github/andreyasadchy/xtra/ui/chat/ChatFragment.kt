@@ -23,6 +23,8 @@ import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedDialog
+import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedChatAdapter
+import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -34,7 +36,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener {
+class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
 
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
@@ -412,6 +414,10 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         return binding.chatView.createMessageClickedChatAdapter()
     }
 
+    override fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter {
+        return binding.chatView.createReplyClickedChatAdapter()
+    }
+
     fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()
 
     fun toggleEmoteMenu(enable: Boolean) = binding.chatView.toggleEmoteMenu(enable)
@@ -422,8 +428,20 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         binding.chatView.appendEmote(emote)
     }
 
-    override fun onReplyClicked(userName: String) {
-        binding.chatView.reply(userName)
+    override fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?) {
+        val replyMessage = message?.let {
+            val name = if (userName != null && userLogin != null && !userLogin.equals(userName, true)) {
+                when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                    "0" -> "${userName}(${userLogin})"
+                    "1" -> userName
+                    else -> userLogin
+                }
+            } else {
+                userName ?: userLogin
+            }
+            requireContext().getString(R.string.replying_to_message, name, message)
+        }
+        binding.chatView.reply(replyId, replyMessage)
     }
 
     override fun onCopyMessageClicked(message: String) {

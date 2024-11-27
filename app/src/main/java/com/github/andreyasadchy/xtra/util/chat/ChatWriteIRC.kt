@@ -112,10 +112,11 @@ class ChatWriteIRC(
         writers.forEach { it?.write(message + System.lineSeparator()) }
     }
 
-    fun send(message: CharSequence) {
+    fun send(message: CharSequence, replyId: String?) {
         messageSenderExecutor.execute {
             try {
-                write("PRIVMSG $hashChannelName :$message", writerOut)
+                val reply = replyId?.let { "@reply-parent-msg-id=${it} " } ?: ""
+                write("${reply}PRIVMSG $hashChannelName :$message", writerOut)
                 writerOut.flush()
                 Log.d(TAG, "Sent message to $hashChannelName: $message")
             } catch (e: Exception) {
