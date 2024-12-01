@@ -54,9 +54,6 @@ import androidx.preference.PreferenceManager;
 import com.github.andreyasadchy.xtra.XtraApp;
 import com.google.common.collect.Iterables;
 
-import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
-import org.checkerframework.checker.nullness.qual.PolyNull;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1313,13 +1310,13 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     return parseOptionalStringAttr(line, pattern, null, variableDefinitions);
   }
 
-  private static @PolyNull String parseOptionalStringAttr(
+  private static String parseOptionalStringAttr(
       String line,
       Pattern pattern,
-      @PolyNull String defaultValue,
+      String defaultValue,
       Map<String, String> variableDefinitions) {
     Matcher matcher = pattern.matcher(line);
-    @PolyNull String value = matcher.find() ? checkNotNull(matcher.group(1)) : defaultValue;
+    String value = matcher.find() ? checkNotNull(matcher.group(1)) : defaultValue;
     return variableDefinitions.isEmpty() || value == null
         ? value
         : replaceVariableReferences(value, variableDefinitions);
@@ -1386,7 +1383,6 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       this.reader = reader;
     }
 
-    @EnsuresNonNullIf(expression = "next", result = true)
     public boolean hasNext() throws IOException {
       if (next != null) {
         return true;

@@ -9,13 +9,14 @@ import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.PlayerVolumeBinding
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.slider.Slider
 
 
-class PlayerVolumeDialog : ExpandingBottomSheetDialogFragment() {
+class PlayerVolumeDialog : BottomSheetDialogFragment() {
 
     interface PlayerVolumeListener {
         fun changeVolume(volume: Float)
@@ -48,6 +49,9 @@ class PlayerVolumeDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val volume = (requireArguments().getFloat(VOLUME, 1f) * 100)
             setVolume(volume)

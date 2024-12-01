@@ -21,7 +21,6 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.TIME
 import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.VIEWS
 import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment
@@ -30,8 +29,10 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
+class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
 
     interface OnFilter {
         fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean)
@@ -74,6 +75,9 @@ class VideosSortDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialog
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val args = requireArguments()
             when (parentFragment) {

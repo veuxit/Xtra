@@ -2,7 +2,6 @@
 android-gradle-plugin = "8.7.2"
 apollo = "4.1.0"
 appcompat = "1.7.0"
-checker-qual = "3.48.2"
 coil = "3.0.4"
 constraintlayout = "2.2.0"
 core = "1.15.0"
@@ -34,7 +33,6 @@ work = "2.10.0"
 [libraries]
 apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
-checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checker-qual" }
 coil = { module = "io.coil-kt.coil3:coil", version.ref = "coil" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 coil-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }

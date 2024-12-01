@@ -12,12 +12,13 @@ import androidx.core.view.setPadding
 import androidx.core.widget.NestedScrollView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.view.GridRecyclerView
 import com.github.andreyasadchy.xtra.util.C
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 
-class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
+class PlayerGamesDialog : BottomSheetDialogFragment() {
 
     interface PlayerSeekListener {
         fun seek(position: Long)
@@ -62,5 +63,12 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
             }
         }
         return NestedScrollView(context).apply { addView(recycleView) }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
     }
 }

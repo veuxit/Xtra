@@ -495,6 +495,11 @@ class ChatView : ConstraintLayout {
                 editText.clearFocus()
                 ReplyClickedDialog.newInstance(enableMessaging).show(fragment.childFragmentManager, "replyDialog")
             }
+            adapter.imageClickListener = { url, name, source, format, isAnimated, emoteId ->
+                editText.hideKeyboard()
+                editText.clearFocus()
+                ImageClickedDialog.newInstance(url, name, source, format, isAnimated, emoteId).show(fragment.childFragmentManager, "imageDialog")
+            }
             if (enableMessaging) {
                 autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
                     setNotifyOnChange(false)

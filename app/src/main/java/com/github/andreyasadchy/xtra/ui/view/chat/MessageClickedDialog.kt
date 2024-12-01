@@ -24,7 +24,6 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.ui.User
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -33,12 +32,13 @@ import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
+class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
 
     interface OnButtonClickListener {
         fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter
@@ -78,6 +78,9 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
@@ -90,8 +93,6 @@ class MessageClickedDialog : ExpandingBottomSheetDialogFragment(), IntegrityDial
         }
         with(binding) {
             adapter = listener.onCreateMessageClickedChatAdapter()
-            val behavior = BottomSheetBehavior.from(view.parent as View)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
             recyclerView.let {
                 it.adapter = adapter
                 it.itemAnimator = null

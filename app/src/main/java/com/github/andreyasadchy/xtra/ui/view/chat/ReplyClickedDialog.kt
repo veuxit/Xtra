@@ -16,16 +16,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class ReplyClickedDialog : ExpandingBottomSheetDialogFragment() {
+class ReplyClickedDialog : BottomSheetDialogFragment() {
 
     interface OnButtonClickListener {
         fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter
@@ -61,10 +61,11 @@ class ReplyClickedDialog : ExpandingBottomSheetDialogFragment() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             adapter = listener.onCreateReplyClickedChatAdapter()
-            val behavior = BottomSheetBehavior.from(view.parent as View)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
             recyclerView.let {
                 it.adapter = adapter
                 it.itemAnimator = null

@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 35
-        versionCode = 265
-        versionName = "2.39.2"
+        versionCode = 266
+        versionName = "2.39.3"
     }
 
     buildTypes {
@@ -97,7 +97,6 @@ dependencies {
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
-    implementation(libs.checker.qual)
 
     implementation(libs.coil)
     implementation(libs.coil.gif)

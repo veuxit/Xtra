@@ -676,4 +676,13 @@
     <string name="name_display_entry3">Show login only</string>
     <string name="show_system_message_emotes">Show emotes on system messages</string>
     <string name="replying_to_message">Replying to %1$s\: %2$s</string>
+    <string name="channel_stv_emote">Channel 7TV emote</string>
+    <string name="channel_bttv_emote">Channel BTTV emote</string>
+    <string name="channel_ffz_emote">Channel FFZ emote</string>
+    <string name="global_stv_emote">Global 7TV emote</string>
+    <string name="global_bttv_emote">Global BTTV emote</string>
+    <string name="global_ffz_emote">Global FFZ emote</string>
+    <string name="channel_sub_emote">%1$s tier %2$s sub emote</string>
+    <string name="channel_follower_emote">%s follower emote</string>
+    <string name="bits_reward_emote">%d bits reward</string>
 </resources>
