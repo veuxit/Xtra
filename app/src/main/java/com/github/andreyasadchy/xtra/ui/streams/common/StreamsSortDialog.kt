@@ -11,11 +11,12 @@ import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogStreamsSortBinding
 import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
 import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
 import com.github.andreyasadchy.xtra.util.C
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
+class StreamsSortDialog : BottomSheetDialogFragment() {
 
     interface OnFilter {
         fun onChange(sort: StreamSortEnum)
@@ -48,6 +49,9 @@ class StreamsSortDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val args = requireArguments()
             val originalSortId = if (
