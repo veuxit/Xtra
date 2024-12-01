@@ -17,9 +17,10 @@ import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
 import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.ALPHABETICALLY
 import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.FOLLOWED_AT
 import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.LAST_BROADCAST
-import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
+class FollowedChannelsSortDialog : BottomSheetDialogFragment() {
 
     interface OnFilter {
         fun onChange(sort: FollowSortEnum, sortText: CharSequence, order: FollowOrderEnum, orderText: CharSequence, saveDefault: Boolean)
@@ -54,6 +55,9 @@ class FollowedChannelsSortDialog : ExpandingBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val args = requireArguments()
             val originalSortId = when (

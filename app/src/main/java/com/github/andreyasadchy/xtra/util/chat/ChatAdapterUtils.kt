@@ -27,6 +27,7 @@ import com.github.andreyasadchy.xtra.model.chat.Image
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.CenteredImageSpan
+import com.github.andreyasadchy.xtra.ui.view.chat.ImageClickedDialog
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.Random
 import kotlin.collections.forEach
@@ -45,12 +46,12 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Pair<SpannableStringBuilder, ArrayList<Image>> {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Pair<SpannableStringBuilder, ArrayList<Image>> {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
         var builderIndex = 0
         var badgesCount = 0
-        if (chatMessage.message.isNullOrBlank()) {
+        if (chatMessage.message.isNullOrBlank() && (chatMessage.systemMsg != null || chatMessage.reward?.title != null)) {
             if (chatMessage.timestamp != null && enableTimestamps) {
                 val timestamp = TwitchApiHelper.getTimestamp(chatMessage.timestamp, timestampFormat)
                 if (timestamp != null) {
@@ -63,7 +64,7 @@ object ChatAdapterUtils {
                 builder.append(chatMessage.systemMsg)
                 builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + chatMessage.systemMsg.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                 if (showSystemMessageEmotes) {
-                    prepareEmotes(chatMessage, chatMessage.systemMsg, builder, builderIndex, badgesCount, images, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                    prepareEmotes(chatMessage, chatMessage.systemMsg, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
                 }
                 builderIndex = builder.length
             } else {
@@ -72,7 +73,7 @@ object ChatAdapterUtils {
                     builder.append("$string ")
                     builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + string.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                     if (showSystemMessageEmotes) {
-                        prepareEmotes(chatMessage, string, builder, builderIndex, badgesCount, images, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                        prepareEmotes(chatMessage, string, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
                     }
                     builderIndex = builder.length
                     builder.append(". ")
@@ -174,6 +175,15 @@ object ChatAdapterUtils {
                 if (badge != null) {
                     builder.append(". ")
                     builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (imageClick != null) {
+                        builder.setSpan(object : ClickableSpan() {
+                            override fun onClick(widget: View) {
+                                imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.title, null, null, null, null)
+                            }
+
+                            override fun updateDrawState(ds: TextPaint) {}
+                        }, builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
                     images.add(Image(
                         localData = badge.localData?.let { getLocalBadgeData(badge.setId + badge.version, it, savedLocalBadges, chatUrl, getEmoteBytes) },
                         url1x = badge.url1x,
@@ -225,11 +235,13 @@ object ChatAdapterUtils {
                     builderIndex += 1
                 }
             }
-            builder.append(chatMessage.message)
-            if (chatMessage.isAction) {
-                builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.message.length, SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-            val wasMentioned = prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, badgesCount, images, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes) == true
+            val wasMentioned = if (chatMessage.message != null) {
+                builder.append(chatMessage.message)
+                if (chatMessage.isAction) {
+                    builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.message.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes) == true
+            } else false
             when {
                 chatMessage.isFirst && firstMsgVisibility < 2 -> itemView.setBackgroundResource(R.color.chatMessageFirst)
                 chatMessage.reward?.id != null && firstMsgVisibility < 2 -> itemView.setBackgroundResource(R.color.chatMessageReward)
@@ -273,7 +285,7 @@ object ChatAdapterUtils {
         return ColorUtils.HSLToColor(colorArray)
     }
 
-    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, builderIndex: Int, badgesCount: Int, images: ArrayList<Image>, useReadableColors: Boolean, isLightTheme: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
+    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, builderIndex: Int, badgesCount: Int, images: ArrayList<Image>, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useReadableColors: Boolean, isLightTheme: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
         return try {
             var builderIndex = builderIndex
             chatMessage.emotes?.let { emotes ->
@@ -302,6 +314,18 @@ object ChatAdapterUtils {
                 }
                 for (e in copy) {
                     val begin = builderIndex + e.begin
+                    if (imageClick != null) {
+                        val array = CharArray(e.end + 1 - e.begin)
+                        builder.getChars(begin, builderIndex + e.end + 1, array, 0)
+                        val name = array.concatToString()
+                        builder.setSpan(object : ClickableSpan() {
+                            override fun onClick(widget: View) {
+                                imageClick(e.url4x ?: e.url3x ?: e.url2x ?: e.url1x, name, null, e.format, e.isAnimated, e.id)
+                            }
+
+                            override fun updateDrawState(ds: TextPaint) {}
+                        }, begin, builderIndex + e.end + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
                     builder.replace(begin, builderIndex + e.end + 1, ".")
                     builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), begin, begin + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
                     val length = e.end - e.begin
@@ -348,6 +372,15 @@ object ChatAdapterUtils {
                             }
                             builder.replace(builderIndex, builderIndex + bitsName.length, ".")
                             builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            if (imageClick != null) {
+                                builder.setSpan(object : ClickableSpan() {
+                                    override fun onClick(widget: View) {
+                                        imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, value, null, emote.format, emote.isAnimated, null)
+                                    }
+
+                                    override fun updateDrawState(ds: TextPaint) {}
+                                }, builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
                             images.add(Image(
                                 localData = emote.localData?.let { getLocalCheerEmoteData(emote.name + emote.minBits, it, savedLocalCheerEmotes, chatUrl, getEmoteBytes) },
                                 url1x = emote.url1x,
@@ -372,12 +405,13 @@ object ChatAdapterUtils {
                     } else null
                 } else null
                 if (cheerEmote == null) {
-                    val emote = channelStvEmotes?.find { it.name == value } ?:
-                    channelBttvEmotes?.find { it.name == value } ?:
-                    channelFfzEmotes?.find { it.name == value } ?:
-                    globalStvEmotes?.find { it.name == value } ?:
-                    globalBttvEmotes?.find { it.name == value } ?:
-                    globalFfzEmotes?.find { it.name == value }
+                    var source: String? = null
+                    val emote = channelStvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_STV } ?:
+                    channelBttvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_BTTV } ?:
+                    channelFfzEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_FFZ } ?:
+                    globalStvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.GLOBAL_STV } ?:
+                    globalBttvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.GLOBAL_BTTV } ?:
+                    globalFfzEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.GLOBAL_FFZ }
                     if (emote != null) {
                         for (j in images.lastIndex - emotesFound downTo badgesCount) {
                             val e = images[j]
@@ -389,6 +423,15 @@ object ChatAdapterUtils {
                         }
                         builder.replace(builderIndex, builderIndex + value.length, ".")
                         builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                        if (imageClick != null) {
+                            builder.setSpan(object : ClickableSpan() {
+                                override fun onClick(widget: View) {
+                                    imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, emote.name, source, emote.format, emote.isAnimated, null)
+                                }
+
+                                override fun updateDrawState(ds: TextPaint) {}
+                            }, builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
                         images.add(Image(
                             localData = emote.localData?.let { getLocalEmoteData(emote.name!!, it, savedLocalEmotes, chatUrl, getEmoteBytes) },
                             url1x = emote.url1x,

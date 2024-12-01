@@ -16,9 +16,11 @@ import androidx.core.os.bundleOf
 import androidx.core.view.setPadding
 import androidx.core.widget.NestedScrollView
 import com.github.andreyasadchy.xtra.R
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 
-class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
+class RadioButtonDialogFragment : BottomSheetDialogFragment() {
 
     interface OnSortOptionChanged {
         fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?)
@@ -75,5 +77,12 @@ class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
         }
         radioGroup.check(checkedId)
         return NestedScrollView(context).apply { addView(radioGroup) }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val behavior = BottomSheetBehavior.from(view.parent as View)
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
     }
 }

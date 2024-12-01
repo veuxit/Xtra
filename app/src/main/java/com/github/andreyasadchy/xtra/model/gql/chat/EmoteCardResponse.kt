@@ -15,8 +15,6 @@ data class EmoteCardResponse(
 
     @Serializable
     data class Emote(
-        val id: String? = null,
-        val token: String? = null,
         val type: String? = null,
         val subscriptionTier: String? = null,
         val bitsBadgeTierSummary: Tier? = null,
@@ -30,7 +28,6 @@ data class EmoteCardResponse(
 
     @Serializable
     data class User(
-        val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
     )

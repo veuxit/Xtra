@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.39.2"
+        versionName = "2.39.3"
     }
 
     buildTypes {
@@ -125,7 +125,6 @@ dependencies {
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
-    implementation(libs.checker.qual)
 
     implementation(libs.glide)
     ksp(libs.glide.ksp)
