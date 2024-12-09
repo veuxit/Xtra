@@ -1,8 +1,10 @@
 package com.github.andreyasadchy.xtra.ui.view.chat
 
 import android.graphics.drawable.Animatable
+import android.graphics.drawable.ColorDrawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
+import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
 import android.text.method.LinkMovementMethod
 import android.text.style.ImageSpan
 import android.util.Patterns
@@ -18,6 +20,7 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
@@ -39,17 +42,21 @@ class MessageClickedChatAdapter(
     private val isLightTheme: Boolean,
     private val nameDisplay: String?,
     private val useBoldNames: Boolean,
+    private val showNamePaints: Boolean,
+    val namePaints: MutableList<NamePaint>?,
+    val paintUsers: MutableMap<String, String>?,
     private val showSystemMessageEmotes: Boolean,
     private val chatUrl: String?,
     private val getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?,
     private val fragment: Fragment,
+    private val backgroundColor: Int,
     private val imageLibrary: String?,
     private val emoteSize: Int,
     private val badgeSize: Int,
     private val emoteQuality: String,
     private val animateGifs: Boolean,
     private val enableZeroWidth: Boolean,
-    messages: MutableList<ChatMessage>?,
+    messages: List<ChatMessage>?,
     private val userColors: HashMap<String, Int>,
     private val savedColors: HashMap<String, Int>,
     var loggedInUser: String?,
@@ -97,18 +104,18 @@ class MessageClickedChatAdapter(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
             rewardChatMsg, true, replyMessage, { replyClick(chatMessage) },
             { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
-            useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, loggedInUser,
-            chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes,
-            channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes,
-            savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers,
+            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes,
+            channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes,
+            savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         if (chatMessage == selectedMessage) {
             holder.textView.setBackgroundResource(R.color.chatMessageSelected)
         }
         holder.bind(chatMessage, pair.first)
         ChatAdapterUtils.loadImages(
-            fragment, holder.textView, { holder.bind(chatMessage, it) }, pair.second, imageLibrary, pair.first, emoteSize, badgeSize, emoteQuality,
-            animateGifs, enableZeroWidth
+            fragment, holder.textView, { holder.bind(chatMessage, it) }, pair.second, pair.third, backgroundColor, imageLibrary, pair.first, emoteSize,
+            badgeSize, emoteQuality, animateGifs, enableZeroWidth
         )
     }
 
@@ -130,6 +137,12 @@ class MessageClickedChatAdapter(
                 else -> item.setBackgroundResource(0)
             }
         }
+        (item.text as? Spannable)?.let { view ->
+            view.getSpans<NamePaintImageSpan>().forEach {
+                it.backgroundColor = (item.background as? ColorDrawable)?.color
+                view.setSpan(it, view.getSpanStart(it), view.getSpanEnd(it), SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
     }
 
     override fun getItemCount(): Int = messages?.size ?: 0
@@ -137,8 +150,13 @@ class MessageClickedChatAdapter(
     override fun onViewAttachedToWindow(holder: ViewHolder) {
         super.onViewAttachedToWindow(holder)
         if (animateGifs) {
-            (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? Animatable)?.start()
+            (holder.textView.text as? Spannable)?.let { view ->
+                view.getSpans<ImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.start()
+                }
+                view.getSpans<NamePaintImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.start()
+                }
             }
         }
     }
@@ -146,8 +164,13 @@ class MessageClickedChatAdapter(
     override fun onViewDetachedFromWindow(holder: ViewHolder) {
         super.onViewDetachedFromWindow(holder)
         if (animateGifs) {
-            (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? Animatable)?.stop()
+            (holder.textView.text as? Spannable)?.let { view ->
+                view.getSpans<ImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.stop()
+                }
+                view.getSpans<NamePaintImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.stop()
+                }
             }
         }
     }
@@ -156,8 +179,13 @@ class MessageClickedChatAdapter(
         val childCount = recyclerView.childCount
         if (animateGifs) {
             for (i in 0 until childCount) {
-                ((recyclerView.getChildAt(i) as TextView).text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                    (it.drawable as? Animatable)?.stop()
+                ((recyclerView.getChildAt(i) as TextView).text as? Spannable)?.let { view ->
+                    view.getSpans<ImageSpan>().forEach {
+                        (it.drawable as? Animatable)?.stop()
+                    }
+                    view.getSpans<NamePaintImageSpan>().forEach {
+                        (it.drawable as? Animatable)?.stop()
+                    }
                 }
             }
         }
@@ -178,6 +206,12 @@ class MessageClickedChatAdapter(
                         messageClickListener?.invoke(chatMessage, selectedMessage)
                         selectedMessage = chatMessage
                         setBackgroundResource(R.color.chatMessageSelected)
+                        (text as? Spannable)?.let { view ->
+                            view.getSpans<NamePaintImageSpan>().forEach {
+                                it.backgroundColor = (background as? ColorDrawable)?.color
+                                view.setSpan(it, view.getSpanStart(it), view.getSpanEnd(it), SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                        }
                     }
                 }
             }

@@ -31,6 +31,7 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.chat.ChatAdapter
@@ -48,6 +49,7 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.toggleVisibility
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.extensions.LayoutContainer
 import java.util.regex.Pattern
@@ -107,7 +109,7 @@ class ChatView : ConstraintLayout {
         _binding = ViewChatBinding.inflate(LayoutInflater.from(context), this, true)
     }
 
-    fun init(fragment: Fragment, channelId: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)? = null, chatUrl: String? = null) {
+    fun init(fragment: Fragment, channelId: String?, namePaints: List<NamePaint>? = null, paintUsers: Map<String, String>? = null, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)? = null, chatUrl: String? = null) {
         this.fragment = fragment
         with(binding) {
             adapter = ChatAdapter(
@@ -124,10 +126,21 @@ class ChatView : ConstraintLayout {
                 isLightTheme = context.isLightTheme,
                 nameDisplay = context.prefs().getString(C.UI_NAME_DISPLAY, "0"),
                 useBoldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
+                showNamePaints = context.prefs().getBoolean(C.CHAT_SHOW_PAINTS, false),
+                namePaintsList = namePaints,
+                paintUsersMap = paintUsers,
                 showSystemMessageEmotes = context.prefs().getBoolean(C.CHAT_SYSTEM_MESSAGE_EMOTES, true),
                 chatUrl = chatUrl,
                 getEmoteBytes = getEmoteBytes,
                 fragment = fragment,
+                backgroundColor = MaterialColors.getColor(this@ChatView, com.google.android.material.R.attr.colorSurface),
+                dialogBackgroundColor = MaterialColors.getColor(this@ChatView,
+                    if (context.prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
+                        com.google.android.material.R.attr.colorSurfaceContainerLow
+                    } else {
+                        com.google.android.material.R.attr.colorSurface
+                    }
+                ),
                 imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
                 emoteSize = context.convertDpToPixels(29.5f),
                 badgeSize = context.convertDpToPixels(18.5f),
@@ -405,6 +418,36 @@ class ChatView : ConstraintLayout {
         replyDialog?.adapter?.cheerEmotes = list
     }
 
+    fun addPaint(paint: NamePaint) {
+        adapter.namePaints?.let { namePaints ->
+            namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+            namePaints.add(paint)
+        }
+        messageDialog?.adapter?.namePaints?.let { namePaints ->
+            namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+            namePaints.add(paint)
+        }
+        replyDialog?.adapter?.namePaints?.let { namePaints ->
+            namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+            namePaints.add(paint)
+        }
+    }
+
+    fun addPaintUser(pair: Pair<String, String>) {
+        adapter.paintUsers?.let { paintUsers ->
+            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
+            paintUsers.put(pair.first, pair.second)
+        }
+        messageDialog?.adapter?.paintUsers?.let { paintUsers ->
+            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
+            paintUsers.put(pair.first, pair.second)
+        }
+        replyDialog?.adapter?.paintUsers?.let { paintUsers ->
+            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
+            paintUsers.put(pair.first, pair.second)
+        }
+    }
+
     fun setUsername(username: String?) {
         adapter.loggedInUser = username
         messageDialog?.adapter?.loggedInUser = username
@@ -415,12 +458,12 @@ class ChatView : ConstraintLayout {
         this.callback = callback
     }
 
-    fun createMessageClickedChatAdapter(): MessageClickedChatAdapter {
-        return adapter.createMessageClickedChatAdapter()
+    fun createMessageClickedChatAdapter(messages: List<ChatMessage>): MessageClickedChatAdapter {
+        return adapter.createMessageClickedChatAdapter(messages)
     }
 
-    fun createReplyClickedChatAdapter(): ReplyClickedChatAdapter {
-        return adapter.createReplyClickedChatAdapter()
+    fun createReplyClickedChatAdapter(messages: List<ChatMessage>): ReplyClickedChatAdapter {
+        return adapter.createReplyClickedChatAdapter(messages)
     }
 
     fun emoteMenuIsVisible(): Boolean = binding.emoteMenu.isVisible

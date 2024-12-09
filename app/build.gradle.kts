@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 121
-        versionName = "2.39.3"
+        versionName = "2.40.0"
     }
 
     buildTypes {
@@ -59,30 +59,33 @@ android {
 }
 
 dependencies {
-    //UI
     implementation(libs.material)
-    implementation(libs.appcompat)
-    implementation(libs.constraintlayout)
-    implementation(libs.preference.ktx)
-    implementation(libs.swiperefreshlayout)
     implementation(libs.draglistview)
 
-    //Architecture components
-    implementation(libs.paging.runtime)
+    implementation(libs.activity)
+    implementation(libs.appcompat)
+    implementation(libs.constraintlayout)
+    implementation(libs.coordinatorlayout)
+    implementation(libs.core.ktx)
+    implementation(libs.customview)
+    implementation(libs.documentfile)
+    implementation(libs.fragment.ktx)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.process)
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
+    implementation(libs.paging.runtime)
+    implementation(libs.preference.ktx)
+    implementation(libs.recyclerview)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.room.paging)
-    implementation(libs.work.runtime)
-    implementation(libs.core.ktx)
-    implementation(libs.fragment.ktx)
-    implementation(libs.navigation.fragment)
-    implementation(libs.navigation.ui)
+    implementation(libs.swiperefreshlayout)
+    implementation(libs.viewpager2)
     implementation(libs.webkit)
+    implementation(libs.work.runtime)
 
-    //Misc
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)

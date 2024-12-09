@@ -394,6 +394,13 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="chat_show_paints"
+        android:title="@string/show_name_paints"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:key="chat_disable"
         android:title="@string/disable_chat"
         app:iconSpaceReserved="false"

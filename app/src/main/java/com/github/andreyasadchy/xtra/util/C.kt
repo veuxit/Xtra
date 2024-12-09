@@ -190,6 +190,7 @@ object C {
     const val CHAT_RAIDS_SHOW = "chat_raids_show"
     const val CHAT_RAIDS_AUTO_SWITCH = "chat_raids_auto_switch"
     const val CHAT_SYSTEM_MESSAGE_EMOTES = "chat_system_message_emotes"
+    const val CHAT_SHOW_PAINTS = "chat_show_paints"
     const val TOKEN_XDEVICEID = "token_xdeviceid"
     const val TOKEN_RANDOM_DEVICEID = "token_random_deviceid"
     const val TOKEN_PLAYERTYPE = "token_playertype"
