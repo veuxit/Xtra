@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.39.3"
+        versionName = "2.40.0"
     }
 
     buildTypes {
@@ -58,6 +58,7 @@ android {
     }
     configurations.all {
         resolutionStrategy.force(listOf(
+            "androidx.activity:activity:1.8.2",
             "androidx.appcompat:appcompat:1.7.0-alpha03",
             "androidx.constraintlayout:constraintlayout:2.1.4",
             "androidx.core:core-ktx:1.13.0-alpha01",
@@ -74,6 +75,7 @@ android {
             "androidx.navigation:navigation-fragment:2.7.7",
             "androidx.navigation:navigation-ui:2.7.7",
             "androidx.paging:paging-runtime:3.3.0-alpha02",
+            "androidx.viewpager2:viewpager2:1.1.0-beta02",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "androidx.work:work-runtime:2.9.1",
             "com.google.android.material:material:1.11.0",
@@ -86,33 +88,35 @@ android {
 }
 
 dependencies {
-    implementation("org.conscrypt:conscrypt-android:2.5.2")
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("androidx.multidex:multidex:2.0.1")
 
-    //UI
     implementation(libs.material)
-    implementation(libs.appcompat)
-    implementation(libs.constraintlayout)
-    implementation(libs.preference.ktx)
-    implementation(libs.swiperefreshlayout)
     implementation(libs.draglistview)
 
-    //Architecture components
-    implementation(libs.paging.runtime)
-    //implementation(libs.lifecycle.viewmodel)
+    implementation(libs.activity)
+    implementation(libs.appcompat)
+    implementation(libs.constraintlayout)
+    implementation(libs.coordinatorlayout)
+    implementation(libs.core.ktx)
+    implementation(libs.customview)
+    implementation(libs.documentfile)
+    implementation(libs.fragment.ktx)
     implementation(libs.lifecycle.process)
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
+    implementation(libs.paging.runtime)
+    implementation(libs.preference.ktx)
+    implementation(libs.recyclerview)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.room.paging)
-    implementation(libs.work.runtime)
-    implementation(libs.core.ktx)
-    implementation(libs.fragment.ktx)
-    implementation(libs.navigation.fragment)
-    implementation(libs.navigation.ui)
+    implementation(libs.swiperefreshlayout)
+    implementation(libs.viewpager2)
     implementation(libs.webkit)
+    implementation(libs.work.runtime)
 
-    //Misc
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)
