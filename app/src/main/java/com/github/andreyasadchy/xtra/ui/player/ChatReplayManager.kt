@@ -10,7 +10,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -117,7 +116,9 @@ class ChatReplayManager @Inject constructor(
     }
 
     private fun startJob() {
-        messageJob = coroutineScope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.IO) {
+            messageJob?.join()
+            messageJob = this as Job
             while (isActive) {
                 val message = list.firstOrNull() ?: break
                 if (message.offsetSeconds != null) {

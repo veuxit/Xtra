@@ -669,4 +669,5 @@
     <string name="channel_sub_emote">%1$s tier %2$s sub emote</string>
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
+    <string name="show_name_paints">Show 7TV name paints</string>
 </resources>

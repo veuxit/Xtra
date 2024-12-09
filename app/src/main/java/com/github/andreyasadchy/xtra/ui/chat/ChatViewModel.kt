@@ -18,6 +18,7 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
@@ -46,6 +47,8 @@ import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RecentMessageUtils
 import com.github.andreyasadchy.xtra.util.chat.RoomState
+import com.github.andreyasadchy.xtra.util.chat.STVEventApiListener
+import com.github.andreyasadchy.xtra.util.chat.STVEventApiWebSocket
 import com.github.andreyasadchy.xtra.util.chat.StreamInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -110,6 +113,10 @@ class ChatViewModel @Inject constructor(
     val playbackMessage: StateFlow<PlaybackMessage?> = _playbackMessage
     var streamId: String? = null
     private val rewardList = mutableListOf<ChatMessage>()
+    val namePaints = mutableListOf<NamePaint>()
+    val paintUsers = mutableMapOf<String, String>()
+    val newPaint = MutableStateFlow<NamePaint?>(null)
+    val newPaintUser = MutableStateFlow<Pair<String, String>?>(null)
 
     val reloadMessages = MutableStateFlow(false)
     val scrollDown = MutableStateFlow(false)
@@ -127,11 +134,11 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, nameDisplay: String?, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
+    fun startLive(useChatWebSocket: Boolean, useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, showNamePaints: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, nameDisplay: String?, checkIntegrity: Boolean, useApiCommands: Boolean, useApiChatMessages: Boolean, useEventSubChat: Boolean) {
         if (chat == null && channelLogin != null) {
             this.messageLimit = messageLimit
             this.streamId = streamId
-            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, nameDisplay, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
+            chat = LiveChatController(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, showNamePaints, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, nameDisplay, useApiCommands, useApiChatMessages, useEventSubChat, checkIntegrity)
             chat?.start()
             loadEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
             if (enableRecentMsg) {
@@ -486,6 +493,7 @@ class ChatViewModel @Inject constructor(
         private val usePubSub: Boolean,
         private val account: Account,
         private val isLoggedIn: Boolean,
+        private val showNamePaints: Boolean,
         private val helixHeaders: Map<String, String>,
         private val gqlHeaders: Map<String, String>,
         private val channelId: String?,
@@ -502,7 +510,7 @@ class ChatViewModel @Inject constructor(
         private val useApiCommands: Boolean,
         private val useApiChatMessages: Boolean,
         private val useEventSubChat: Boolean,
-        private val checkIntegrity: Boolean) : ChatController(), ChatListener, PubSubListener, EventSubListener {
+        private val checkIntegrity: Boolean) : ChatController(), ChatListener, PubSubListener, EventSubListener, STVEventApiListener {
 
         private var chatReadIRC: ChatReadIRC? = null
         private var chatWriteIRC: ChatWriteIRC? = null
@@ -510,6 +518,7 @@ class ChatViewModel @Inject constructor(
         private var chatWriteWebSocket: ChatWriteWebSocket? = null
         private var eventSub: EventSubWebSocket? = null
         private var pubSub: PubSubWebSocket? = null
+        private var stvEventApi: STVEventApiWebSocket? = null
         private val allEmotes = mutableListOf<Emote>()
         private var usedRaidId: String? = null
 
@@ -577,12 +586,16 @@ class ChatViewModel @Inject constructor(
             if (usePubSub && !channelId.isNullOrBlank()) {
                 pubSub = PubSubWebSocket(channelId, account.id, gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "), collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this).apply { connect() }
             }
+            if (showNamePaints && !channelId.isNullOrBlank()) {
+                stvEventApi = STVEventApiWebSocket(channelId, okHttpClient, viewModelScope, this).apply { connect() }
+            }
         }
 
         override fun pause() {
             chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
             chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect()
             pubSub?.disconnect()
+            stvEventApi?.disconnect()
         }
 
         override fun stop() {
@@ -914,6 +927,18 @@ class ChatViewModel @Inject constructor(
             roomState.value = EventSubUtils.parseRoomState(json)
         }
 
+        override fun onPaintUpdate(paint: NamePaint) {
+            namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+            namePaints.add(paint)
+            newPaint.value = paint
+        }
+
+        override fun onUserUpdate(userId: String, paintId: String) {
+            paintUsers.entries.find { it.key == userId }?.let { paintUsers.remove(it.key) }
+            paintUsers.put(userId, paintId)
+            newPaintUser.value = Pair(userId, paintId)
+        }
+
         fun addEmotes(list: List<Emote>) {
             allEmotes.addAll(list.filter { it !in allEmotes })
         }
@@ -927,6 +952,7 @@ class ChatViewModel @Inject constructor(
                 chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
                 chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect() ?: eventSub?.disconnect()
                 pubSub?.disconnect()
+                stvEventApi?.disconnect()
                 usedRaidId = null
                 onRaidClose()
                 _chatMessages.value = arrayListOf(

@@ -69,7 +69,12 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             val enableChat = when {
                 requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) -> false
                 isLive -> {
-                    chatView.init(this@ChatFragment, channelId)
+                    chatView.init(
+                        fragment = this@ChatFragment,
+                        channelId = channelId,
+                        namePaints = viewModel.namePaints,
+                        paintUsers = viewModel.paintUsers
+                    )
                     chatView.setCallback(viewModel)
                     if (isLoggedIn) {
                         chatView.setUsername(account.login)
@@ -105,7 +110,12 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     true
                 }
                 chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) -> {
-                    chatView.init(this@ChatFragment, channelId, viewModel::getEmoteBytes, chatUrl)
+                    chatView.init(
+                        fragment = this@ChatFragment,
+                        channelId = channelId,
+                        getEmoteBytes = viewModel::getEmoteBytes,
+                        chatUrl = chatUrl
+                    )
                     true
                 }
                 else -> {
@@ -283,6 +293,26 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         }
                     }
                 }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.newPaint.collectLatest {
+                            if (it != null) {
+                                chatView.addPaint(it)
+                                viewModel.newPaint.value = null
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.newPaintUser.collectLatest {
+                            if (it != null) {
+                                chatView.addPaintUser(it)
+                                viewModel.newPaintUser.value = null
+                            }
+                        }
+                    }
+                }
             }
             if (chatUrl != null) {
                 initialize()
@@ -303,6 +333,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         val useChatWebSocket = requireContext().prefs().getBoolean(C.CHAT_USE_WEBSOCKET, false)
         val useSSL = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
         val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
+        val showNamePaints = requireContext().prefs().getBoolean(C.CHAT_SHOW_PAINTS, false)
         val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
         val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
@@ -326,7 +357,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         if (!disableChat) {
             if (isLive) {
                 val streamId = args.getString(KEY_STREAM_ID)
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
+                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, showNamePaints, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
             } else {
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
@@ -411,11 +442,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
-        return binding.chatView.createMessageClickedChatAdapter()
+        return binding.chatView.createMessageClickedChatAdapter(viewModel.chatMessages.value.toList())
     }
 
     override fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter {
-        return binding.chatView.createReplyClickedChatAdapter()
+        return binding.chatView.createReplyClickedChatAdapter(viewModel.chatMessages.value.toList())
     }
 
     fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()

@@ -17,12 +17,15 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
+import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintImageSpan
 import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedChatAdapter
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
 import java.util.Random
+import kotlin.collections.toMutableList
 
 class ChatAdapter(
     private val enableTimestamps: Boolean,
@@ -38,10 +41,15 @@ class ChatAdapter(
     private val isLightTheme: Boolean,
     private val nameDisplay: String?,
     private val useBoldNames: Boolean,
+    private val showNamePaints: Boolean,
+    namePaintsList: List<NamePaint>?,
+    paintUsersMap: Map<String, String>?,
     private val showSystemMessageEmotes: Boolean,
     private val chatUrl: String?,
     private val getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?,
     private val fragment: Fragment,
+    private val backgroundColor: Int,
+    private val dialogBackgroundColor: Int,
     private val imageLibrary: String?,
     private val emoteSize: Int,
     private val badgeSize: Int,
@@ -72,6 +80,8 @@ class ChatAdapter(
     var globalBadges: List<TwitchBadge>? = null
     var channelBadges: List<TwitchBadge>? = null
     var cheerEmotes: List<CheerEmote>? = null
+    val namePaints: MutableList<NamePaint>? = namePaintsList?.toMutableList()
+    val paintUsers: MutableMap<String, String>? = paintUsersMap?.toMutableMap()
     private val savedLocalTwitchEmotes = mutableMapOf<String, ByteArray>()
     private val savedLocalBadges = mutableMapOf<String, ByteArray>()
     private val savedLocalCheerEmotes = mutableMapOf<String, ByteArray>()
@@ -91,37 +101,37 @@ class ChatAdapter(
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
             rewardChatMsg, true, replyMessage, null, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
-            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes,
-            globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes,
-            savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            showNamePaints, namePaints, paintUsers, showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors,
+            localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges,
+            channelBadges, cheerEmotes, savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         holder.bind(chatMessage, pair.first)
         ChatAdapterUtils.loadImages(
-            fragment, holder.textView, { holder.bind(chatMessage, it) }, pair.second, imageLibrary, pair.first, emoteSize, badgeSize, emoteQuality,
-            animateGifs, enableZeroWidth
+            fragment, holder.textView, { holder.bind(chatMessage, it) }, pair.second, pair.third, backgroundColor, imageLibrary, pair.first, emoteSize,
+            badgeSize, emoteQuality, animateGifs, enableZeroWidth
         )
     }
 
-    fun createMessageClickedChatAdapter(): MessageClickedChatAdapter {
+    fun createMessageClickedChatAdapter(messages: List<ChatMessage>): MessageClickedChatAdapter {
         return MessageClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { chatMessage -> selectedMessage = chatMessage; replyClickListener?.invoke() },
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
-            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, chatUrl, getEmoteBytes, fragment,
-            imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors, savedColors, loggedInUser,
-            localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges,
-            channelBadges, cheerEmotes, selectedMessage
+            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showSystemMessageEmotes,
+            chatUrl, getEmoteBytes, fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages,
+            userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
+            channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
 
-    fun createReplyClickedChatAdapter(): ReplyClickedChatAdapter {
+    fun createReplyClickedChatAdapter(messages: List<ChatMessage>): ReplyClickedChatAdapter {
         return ReplyClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
-            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showSystemMessageEmotes, chatUrl, getEmoteBytes, fragment,
-            imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors, savedColors, loggedInUser,
-            localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges,
-            channelBadges, cheerEmotes, selectedMessage
+            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showSystemMessageEmotes,
+            chatUrl, getEmoteBytes, fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages,
+            userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
+            channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
 
@@ -130,8 +140,13 @@ class ChatAdapter(
     override fun onViewAttachedToWindow(holder: ViewHolder) {
         super.onViewAttachedToWindow(holder)
         if (animateGifs) {
-            (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? Animatable)?.start()
+            (holder.textView.text as? Spannable)?.let { view ->
+                view.getSpans<ImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.start()
+                }
+                view.getSpans<NamePaintImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.start()
+                }
             }
         }
     }
@@ -139,8 +154,13 @@ class ChatAdapter(
     override fun onViewDetachedFromWindow(holder: ViewHolder) {
         super.onViewDetachedFromWindow(holder)
         if (animateGifs) {
-            (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? Animatable)?.stop()
+            (holder.textView.text as? Spannable)?.let { view ->
+                view.getSpans<ImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.stop()
+                }
+                view.getSpans<NamePaintImageSpan>().forEach {
+                    (it.drawable as? Animatable)?.stop()
+                }
             }
         }
     }
@@ -149,8 +169,13 @@ class ChatAdapter(
         val childCount = recyclerView.childCount
         if (animateGifs) {
             for (i in 0 until childCount) {
-                ((recyclerView.getChildAt(i) as TextView).text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                    (it.drawable as? Animatable)?.stop()
+                ((recyclerView.getChildAt(i) as TextView).text as? Spannable)?.let { view ->
+                    view.getSpans<ImageSpan>().forEach {
+                        (it.drawable as? Animatable)?.stop()
+                    }
+                    view.getSpans<NamePaintImageSpan>().forEach {
+                        (it.drawable as? Animatable)?.stop()
+                    }
                 }
             }
         }

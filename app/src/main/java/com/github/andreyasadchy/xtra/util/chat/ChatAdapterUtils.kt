@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.util.chat
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Animatable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -27,10 +28,13 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.Image
+import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.chat.CenteredImageSpan
 import com.github.andreyasadchy.xtra.ui.view.chat.ImageClickedDialog
+import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintImageSpan
+import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintSpan
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.Random
 import kotlin.collections.forEach
@@ -49,9 +53,10 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Pair<SpannableStringBuilder, ArrayList<Image>> {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Triple<SpannableStringBuilder, ArrayList<Image>, Triple<NamePaint, String, Int>?> {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
+        var imagePaint: Triple<NamePaint, String, Int>? = null
         var builderIndex = 0
         var badgesCount = 0
         if (chatMessage.message.isNullOrBlank() && (chatMessage.systemMsg != null || chatMessage.reward?.title != null)) {
@@ -72,7 +77,16 @@ object ChatAdapterUtils {
                 builderIndex = builder.length
             } else {
                 if (chatMessage.reward?.title != null) {
-                    val string = redeemedNoMsg.format(chatMessage.userName, chatMessage.reward.title)
+                    val userName = if (chatMessage.userLogin != null && !chatMessage.userLogin.equals(chatMessage.userName, true)) {
+                        when (nameDisplay) {
+                            "0" -> "${chatMessage.userName}(${chatMessage.userLogin})"
+                            "1" -> chatMessage.userName
+                            else -> chatMessage.userLogin
+                        }
+                    } else {
+                        chatMessage.userName
+                    }
+                    val string = redeemedNoMsg.format(userName, chatMessage.reward.title)
                     builder.append("$string ")
                     builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + string.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                     if (showSystemMessageEmotes) {
@@ -229,6 +243,22 @@ object ChatAdapterUtils {
                 if (useBoldNames) {
                     builder.setSpan(StyleSpan(Typeface.BOLD), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
+                if (showNamePaints && !chatMessage.userId.isNullOrBlank()) {
+                    paintUsers?.get(chatMessage.userId)?.let { paintId -> namePaints?.find { it.id == paintId } }?.let { paint ->
+                        when (paint.type) {
+                            "LINEAR_GRADIENT", "RADIAL_GRADIENT" -> {
+                                if (paint.colors != null && paint.colorPositions != null) {
+                                    builder.setSpan(NamePaintSpan(userName, paint.type, paint.colors, paint.colorPositions, paint.angle, paint.repeat, paint.shadows), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                }
+                            }
+                            "URL" -> {
+                                if (!paint.imageUrl.isNullOrBlank()) {
+                                    imagePaint = Triple(paint, userName, builderIndex)
+                                }
+                            }
+                        }
+                    }
+                }
                 builderIndex += userName.length
                 if (!chatMessage.isAction) {
                     builder.append(": ")
@@ -253,7 +283,7 @@ object ChatAdapterUtils {
                 else -> itemView.setBackgroundResource(0)
             }
         }
-        return Pair(builder, images)
+        return Triple(builder, images, imagePaint)
     }
 
     private fun getSavedColor(color: String, savedColors: HashMap<String, Int>, useReadableColors: Boolean, isLightTheme: Boolean): Int {
@@ -524,7 +554,75 @@ object ChatAdapterUtils {
         }
     }
 
-    fun loadImages(fragment: Fragment, itemView: View, bind: (SpannableStringBuilder) -> Unit, images: List<Image>, imageLibrary: String?, builder: SpannableStringBuilder, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableZeroWidth: Boolean) {
+    fun loadImages(fragment: Fragment, itemView: View, bind: (SpannableStringBuilder) -> Unit, images: List<Image>, imagePaint: Triple<NamePaint, String, Int>?, backgroundColor: Int, imageLibrary: String?, builder: SpannableStringBuilder, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableZeroWidth: Boolean) {
+        if (imagePaint != null) {
+            val paint = imagePaint.first
+            if (imageLibrary == "0") {
+                val request = ImageRequest.Builder(fragment.requireContext())
+                    .data(paint.imageUrl)
+                    .target(
+                        onSuccess = {
+                            (it.asDrawable(fragment.resources)).let { result ->
+                                if (result is Animatable && animateGifs) {
+                                    result.callback = object : Drawable.Callback {
+                                        override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                            itemView.removeCallbacks(what)
+                                        }
+
+                                        override fun invalidateDrawable(who: Drawable) {
+                                            itemView.invalidate()
+                                        }
+
+                                        override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                            itemView.postDelayed(what, `when`)
+                                        }
+                                    }
+                                    (result as Animatable).start()
+                                }
+                                try {
+                                    builder.setSpan(NamePaintImageSpan(imagePaint.second, paint.shadows, (itemView.background as? ColorDrawable)?.color, backgroundColor, result), imagePaint.third, imagePaint.third + imagePaint.second.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                } catch (e: IndexOutOfBoundsException) {
+                                }
+                                bind(builder)
+                            }
+                        },
+                    )
+                    .build()
+                fragment.requireContext().imageLoader.enqueue(request)
+            } else {
+                Glide.with(fragment)
+                    .load(paint.imageUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .into(object : CustomTarget<Drawable>() {
+                        override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                            if (resource is Animatable && animateGifs) {
+                                resource.callback = object : Drawable.Callback {
+                                    override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                        itemView.removeCallbacks(what)
+                                    }
+
+                                    override fun invalidateDrawable(who: Drawable) {
+                                        itemView.invalidate()
+                                    }
+
+                                    override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                        itemView.postDelayed(what, `when`)
+                                    }
+                                }
+                                (resource as Animatable).start()
+                            }
+                            try {
+                                builder.setSpan(NamePaintImageSpan(imagePaint.second, paint.shadows, (itemView.background as? ColorDrawable)?.color, backgroundColor, resource), imagePaint.third, imagePaint.third + imagePaint.second.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            } catch (e: IndexOutOfBoundsException) {
+                            }
+                            bind(builder)
+                        }
+
+                        override fun onLoadCleared(placeholder: Drawable?) {
+                        }
+                    })
+            }
+        }
         images.forEach {
             if (imageLibrary == "0" || (imageLibrary == "1" && !it.format.equals("webp", true))) {
                 loadCoil(fragment, it, itemView, bind, builder, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth)
