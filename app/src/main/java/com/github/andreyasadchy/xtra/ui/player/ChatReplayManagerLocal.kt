@@ -66,6 +66,9 @@ class ChatReplayManagerLocal @Inject constructor(
                     while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
                         delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
                     }
+                    if (!isActive) {
+                        break
+                    }
                     messageListener.onMessage(ChatMessage(
                         id = message.id,
                         userId = message.userId,
@@ -83,7 +86,7 @@ class ChatReplayManagerLocal @Inject constructor(
                         reward = message.reward,
                         fullMsg = message.fullMsg
                     ))
-                }
+                } else if (!isActive) break
                 list.remove(message)
             }
         }
