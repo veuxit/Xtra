@@ -18,8 +18,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.m3u8.MediaPlaylist
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -368,10 +366,8 @@ class PlayerRepository @Inject constructor(
         videoPositions.getById(id)
     }
 
-    fun saveVideoPosition(position: VideoPosition) {
-        GlobalScope.launch {
-            videoPositions.insert(position)
-        }
+    suspend fun saveVideoPosition(position: VideoPosition) = withContext(Dispatchers.IO) {
+        videoPositions.insert(position)
     }
 
     suspend fun deleteVideoPositions() = withContext(Dispatchers.IO) {

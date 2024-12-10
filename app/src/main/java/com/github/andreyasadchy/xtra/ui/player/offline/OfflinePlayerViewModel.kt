@@ -33,7 +33,9 @@ class OfflinePlayerViewModel @Inject constructor(
 
     fun savePosition(id: Int, position: Long) {
         if (loaded.value) {
-            offlineRepository.updateVideoPosition(id, position)
+            viewModelScope.launch {
+                offlineRepository.updateVideoPosition(id, position)
+            }
         }
     }
 }

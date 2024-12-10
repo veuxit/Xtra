@@ -10,7 +10,7 @@ data class QueryResponse(
 ) {
     @Serializable
     data class Query(
-        val badges: List<Badge>? = null,
+        val badges: List<Badge?>? = null,
         val cheerConfig: GlobalCheerConfig? = null,
         val games: GameConnection? = null,
         val game: Game? = null,
@@ -22,7 +22,7 @@ data class QueryResponse(
         val user: User? = null,
         val userResultByID: UserResult? = null,
         val userResultByLogin: UserResult? = null,
-        val users: List<User>? = null,
+        val users: List<User?>? = null,
         val video: Video? = null,
     )
 
@@ -320,7 +320,7 @@ data class QueryResponse(
     @Serializable
     data class User(
         val bannerImageURL: String? = null,
-        val broadcastBadges: List<Badge>? = null,
+        val broadcastBadges: List<Badge?>? = null,
         val broadcastSettings: BroadcastSettings? = null,
         val cheer: CheerInfo? = null,
         val clips: ClipConnection? = null,

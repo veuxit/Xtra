@@ -33,6 +33,7 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -362,7 +363,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    viewModel.downloadStream(requireContext().filesDir.path, stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    (requireActivity() as? MainActivity)?.downloadStream(requireContext().filesDir.path, stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {
@@ -408,7 +409,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                             val downloadChat = downloadChat.isChecked
                             val downloadChatEmotes = downloadChatEmotes.isChecked
                             if (!path.isNullOrBlank()) {
-                                viewModel.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                                (requireActivity() as? MainActivity)?.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                                 requireContext().prefs().edit {
                                     putInt(C.DOWNLOAD_LOCATION, location)
                                     if (location == 0) {
@@ -455,7 +456,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    viewModel.downloadClip(requireContext().filesDir.path, clip, quality.second, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    (requireActivity() as? MainActivity)?.downloadClip(requireContext().filesDir.path, clip, quality.second, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {

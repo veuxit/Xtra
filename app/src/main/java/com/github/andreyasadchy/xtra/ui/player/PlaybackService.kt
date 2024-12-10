@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -21,6 +22,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -67,6 +69,7 @@ import javax.inject.Inject
 import kotlin.concurrent.schedule
 
 
+@OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 
@@ -951,11 +954,15 @@ class PlaybackService : MediaSessionService() {
                     when (item) {
                         is Video -> {
                             item.id?.toLongOrNull()?.let { id ->
-                                playerRepository.saveVideoPosition(VideoPosition(id, player.currentPosition))
+                                runBlocking {
+                                    playerRepository.saveVideoPosition(VideoPosition(id, player.currentPosition))
+                                }
                             }
                         }
                         is OfflineVideo -> {
-                            offlineRepository.updateVideoPosition(item.id, player.currentPosition)
+                            runBlocking {
+                                offlineRepository.updateVideoPosition(item.id, player.currentPosition)
+                            }
                         }
                     }
                 }
