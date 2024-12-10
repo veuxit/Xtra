@@ -721,7 +721,7 @@ class SettingsActivity : AppCompatActivity() {
                             if (fromPosition != toPosition) {
                                 var str = ""
                                 adapter.itemList.forEachIndexed { index, item ->
-                                    str = "$str${index.toLong()}:${(item as Pair<Long, String>).second},"
+                                    str = "$str${index}:${(item as Pair<*, *>).second},"
                                 }
                                 requireActivity().prefs().edit { putString(entry.value.first, str) }
                             }

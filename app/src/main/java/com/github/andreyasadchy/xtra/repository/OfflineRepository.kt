@@ -5,8 +5,6 @@ import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -66,10 +64,8 @@ class OfflineRepository @Inject constructor(
         videosDao.update(video)
     }
 
-    fun updateVideoPosition(id: Int, position: Long) {
-        GlobalScope.launch {
-            videosDao.updatePosition(id, position)
-        }
+    suspend fun updateVideoPosition(id: Int, position: Long) = withContext(Dispatchers.IO) {
+        videosDao.updatePosition(id, position)
     }
 
     suspend fun deletePositions() = withContext(Dispatchers.IO) {

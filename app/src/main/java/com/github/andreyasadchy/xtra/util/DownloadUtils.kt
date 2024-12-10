@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.github.andreyasadchy.xtra.R
 import java.io.File
@@ -32,7 +31,7 @@ object DownloadUtils {
     }
 
     fun getAvailableStorage(context: Context): List<Storage> {
-        val storage = ContextCompat.getExternalFilesDirs(context, ".downloads")
+        val storage = context.getExternalFilesDirs(".downloads")
         val list = mutableListOf<Storage>()
         for (i in storage.indices) {
             val storagePath = storage[i]?.absolutePath ?: continue

@@ -64,7 +64,9 @@ class VideoPlayerViewModel @Inject constructor(
 
     fun savePosition(id: Long, position: Long) {
         if (loaded.value) {
-            playerRepository.saveVideoPosition(VideoPosition(id, position))
+            viewModelScope.launch {
+                playerRepository.saveVideoPosition(VideoPosition(id, position))
+            }
         }
     }
 
