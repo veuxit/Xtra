@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -116,9 +117,7 @@ class ChatReplayManager @Inject constructor(
     }
 
     private fun startJob() {
-        coroutineScope.launch(Dispatchers.IO) {
-            messageJob?.join()
-            messageJob = this as Job
+        messageJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
                 val message = list.firstOrNull() ?: break
                 if (message.offsetSeconds != null) {
@@ -126,6 +125,9 @@ class ChatReplayManager @Inject constructor(
                     val messageOffset = message.offsetSeconds.times(1000)
                     while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
                         delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
+                    }
+                    if (!isActive) {
+                        break
                     }
                     messageListener.onMessage(ChatMessage(
                         id = message.id,
@@ -142,7 +144,7 @@ class ChatReplayManager @Inject constructor(
                     if (list.size <= 25 && !cursor.isNullOrBlank() && !isLoading) {
                         load()
                     }
-                }
+                } else if (!isActive) break
                 list.remove(message)
             }
         }
