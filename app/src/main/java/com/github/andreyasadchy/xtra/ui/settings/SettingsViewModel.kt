@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.util.JsonReader
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
@@ -79,7 +78,7 @@ class SettingsViewModel @Inject constructor(
     fun importDownloads() {
         viewModelScope.launch(Dispatchers.IO) {
             val chatFiles = mutableMapOf<String, String>()
-            ContextCompat.getExternalFilesDirs(applicationContext, ".downloads").forEach { storage ->
+            applicationContext.getExternalFilesDirs(".downloads").forEach { storage ->
                 storage?.absolutePath?.let { directory ->
                     File(directory).listFiles()?.let { files ->
                         files.filter { it.name.endsWith(".json") }.forEach { chatFile ->

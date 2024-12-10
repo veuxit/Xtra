@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.main
 
 import android.app.Activity
+import android.app.ActivityOptions
 import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
@@ -410,9 +411,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     private fun restartActivity() {
         finish()
-        overridePendingTransition(0, 0)
-        startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
-        overridePendingTransition(0, 0)
+        startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) }, ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle())
     }
 
     override fun onUserLeaveHint() {
@@ -698,6 +697,18 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     fun getSleepTimerTimeLeft(): Long {
         return viewModel.sleepTimerEndTime - System.currentTimeMillis()
+    }
+
+    fun downloadStream(filesDir: String, stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadStream(filesDir, stream, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
+    }
+
+    fun downloadVideo(filesDir: String, video: Video, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadVideo(filesDir, video, url, path, quality, from, to, downloadChat, downloadChatEmotes, playlistToFile, wifiOnly)
+    }
+
+    fun downloadClip(filesDir: String, clip: Clip, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadClip(filesDir, clip, url, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
     }
 
     fun popFragment() {
