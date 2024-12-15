@@ -56,7 +56,7 @@ class MainViewModel @Inject constructor(
 
     val integrity = MutableStateFlow<String?>(null)
 
-    val newNetworkStatus = MutableStateFlow<Boolean?>(null)
+    val checkNetworkStatus = MutableStateFlow(false)
     val isNetworkAvailable = MutableStateFlow<Boolean?>(null)
 
     var isPlayerMaximized = false
@@ -88,13 +88,6 @@ class MainViewModel @Inject constructor(
     fun onPlayerClosed() {
         isPlayerOpened = false
         isPlayerMaximized = false
-    }
-
-    fun setNetworkAvailable(available: Boolean) {
-        if (isNetworkAvailable.value != available) {
-            isNetworkAvailable.value = available
-            newNetworkStatus.value = available
-        }
     }
 
     fun loadVideo(videoId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
