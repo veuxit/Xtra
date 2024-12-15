@@ -126,7 +126,7 @@ class ChatView : ConstraintLayout {
                 isLightTheme = context.isLightTheme,
                 nameDisplay = context.prefs().getString(C.UI_NAME_DISPLAY, "0"),
                 useBoldNames = context.prefs().getBoolean(C.CHAT_BOLDNAMES, false),
-                showNamePaints = context.prefs().getBoolean(C.CHAT_SHOW_PAINTS, false),
+                showNamePaints = context.prefs().getBoolean(C.CHAT_SHOW_PAINTS, true),
                 namePaintsList = namePaints,
                 paintUsersMap = paintUsers,
                 showSystemMessageEmotes = context.prefs().getBoolean(C.CHAT_SYSTEM_MESSAGE_EMOTES, true),
@@ -438,14 +438,23 @@ class ChatView : ConstraintLayout {
             paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
             paintUsers.put(pair.first, pair.second)
         }
+        adapter.messages?.toList()?.let { messages ->
+            messages.filter { it.userId == pair.first }.forEach { message ->
+                messages.indexOf(message).takeIf { it != -1 }?.let {
+                    adapter.notifyItemChanged(it)
+                }
+            }
+        }
         messageDialog?.adapter?.paintUsers?.let { paintUsers ->
             paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
             paintUsers.put(pair.first, pair.second)
         }
+        messageDialog?.updatePaint(pair.first)
         replyDialog?.adapter?.paintUsers?.let { paintUsers ->
             paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
             paintUsers.put(pair.first, pair.second)
         }
+        replyDialog?.updatePaint(pair.first)
     }
 
     fun setUsername(username: String?) {
