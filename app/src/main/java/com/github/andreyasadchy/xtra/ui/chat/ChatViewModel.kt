@@ -968,7 +968,7 @@ class ChatViewModel @Inject constructor(
         private fun sendMessage(message: CharSequence, replyId: String? = null) {
             if (useApiChatMessages && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                 viewModelScope.launch {
-                    repository.sendMessage(helixHeaders, account.id, channelId, message.toString())?.let {
+                    repository.sendMessage(helixHeaders, account.id, channelId, message.toString(), replyId)?.let {
                         onMessage(ChatMessage(systemMsg = it))
                     }
                 }
