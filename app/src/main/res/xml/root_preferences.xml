@@ -393,7 +393,7 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="chat_show_paints"
         android:title="@string/show_name_paints"
         app:iconSpaceReserved="false"

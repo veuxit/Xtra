@@ -36,6 +36,12 @@ interface MiscApi {
     @GET("https://7tv.io/v3/users/twitch/{channelId}")
     suspend fun getStvEmotes(@Path("channelId") channelId: String): StvChannelResponse
 
+    @GET("https://7tv.io/v3/users/twitch/{userId}")
+    suspend fun getStvUser(@Path("userId") userId: String): ResponseBody
+
+    @POST("https://7tv.io/v3/users/{userId}/presences")
+    suspend fun sendStvPresence(@Path("userId") userId: String, @Body body: RequestBody)
+
     @GET("https://api.betterttv.net/3/cached/emotes/global")
     suspend fun getGlobalBttvEmotes(): List<BttvResponse>
 

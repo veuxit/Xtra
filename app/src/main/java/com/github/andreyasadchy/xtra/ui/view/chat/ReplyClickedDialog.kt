@@ -161,6 +161,18 @@ class ReplyClickedDialog : BottomSheetDialogFragment() {
         }
     }
 
+    fun updatePaint(userId: String) {
+        adapter?.let { adapter ->
+            adapter.messages?.toList()?.let { messages ->
+                messages.filter { it.userId == userId }.forEach { message ->
+                    messages.indexOf(message).takeIf { it != -1 }?.let {
+                        adapter.notifyItemChanged(it)
+                    }
+                }
+            }
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
