@@ -1041,11 +1041,12 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(helixHeaders: Map<String, String>, userId: String?, channelId: String?, message: String?): String? = withContext(Dispatchers.IO) {
+    suspend fun sendMessage(helixHeaders: Map<String, String>, userId: String?, channelId: String?, message: String?, replyId: String?): String? = withContext(Dispatchers.IO) {
         val json = buildJsonObject {
             put("broadcaster_id", channelId)
             put("sender_id", userId)
             put("message", message)
+            replyId?.let { put("reply_parent_message_id", it) }
         }
         val response = helix.sendMessage(helixHeaders, json)
         if (response.isSuccessful) {
