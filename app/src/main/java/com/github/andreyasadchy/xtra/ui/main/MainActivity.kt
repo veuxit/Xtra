@@ -109,7 +109,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         private set
     private val networkReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            viewModel.setNetworkAvailable(isNetworkAvailable)
+            viewModel.checkNetworkStatus.value = true
         }
     }
     private lateinit var prefs: SharedPreferences
@@ -279,31 +279,37 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             restartActivity()
         }
 
-        val notInitialized = savedInstanceState == null
+        var initialized = savedInstanceState != null
         initNavigation()
-        var flag = notInitialized && !isNetworkAvailable
+        if (!initialized && !isNetworkAvailable) {
+            initialized = true
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.newNetworkStatus.collectLatest { online ->
-                    if (online != null) {
-                        if (online) {
-                            if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                                viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                viewModel.checkNetworkStatus.collectLatest {
+                    if (it) {
+                        val online = isNetworkAvailable
+                        if (viewModel.isNetworkAvailable.value != online) {
+                            viewModel.isNetworkAvailable.value = online
+                            if (initialized) {
+                                shortToast(if (online) R.string.connection_restored else R.string.no_connection)
+                            } else {
+                                initialized = true
                             }
-                            if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
-                                (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
-                                viewModel.checkUpdates(
-                                    prefs.getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/api16",
-                                    tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
-                                )
+                            if (online) {
+                                if (!TwitchApiHelper.checkedValidation && prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
+                                    viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                                }
+                                if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                                    (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
+                                    viewModel.checkUpdates(
+                                        prefs.getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/api16",
+                                        tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
+                                    )
+                                }
                             }
                         }
-                        if (flag) {
-                            shortToast(if (online) R.string.connection_restored else R.string.no_connection)
-                        } else {
-                            flag = true
-                        }
-                        viewModel.newNetworkStatus.value = null
+                        viewModel.checkNetworkStatus.value = false
                     }
                 }
             }
@@ -340,6 +346,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 }
             }
         }
+        @Suppress("DEPRECATION")
         registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         restorePlayerFragment()
         handleIntent(intent)
