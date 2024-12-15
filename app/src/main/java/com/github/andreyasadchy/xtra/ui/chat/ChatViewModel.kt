@@ -519,6 +519,8 @@ class ChatViewModel @Inject constructor(
         private var eventSub: EventSubWebSocket? = null
         private var pubSub: PubSubWebSocket? = null
         private var stvEventApi: STVEventApiWebSocket? = null
+        private var stvUserId: String? = null
+        private var stvLastPresenceUpdate: Long? = null
         private val allEmotes = mutableListOf<Emote>()
         private var usedRaidId: String? = null
 
@@ -588,6 +590,15 @@ class ChatViewModel @Inject constructor(
             }
             if (showNamePaints && !channelId.isNullOrBlank()) {
                 stvEventApi = STVEventApiWebSocket(channelId, okHttpClient, viewModelScope, this).apply { connect() }
+                if (isLoggedIn && !account.id.isNullOrBlank()) {
+                    viewModelScope.launch {
+                        try {
+                            stvUserId = playerRepository.getStvUser(account.id).takeIf { !it.isNullOrBlank() }
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
             }
         }
 
@@ -605,6 +616,9 @@ class ChatViewModel @Inject constructor(
         private fun onChatMessage(message: ChatMessage) {
             onMessage(message)
             addChatter(message.userName)
+            if (isLoggedIn && !account.id.isNullOrBlank() && message.userId == account.id) {
+                onUpdatePresence(null, false)
+            }
         }
 
         override fun onConnect() {
@@ -934,9 +948,28 @@ class ChatViewModel @Inject constructor(
         }
 
         override fun onUserUpdate(userId: String, paintId: String) {
-            paintUsers.entries.find { it.key == userId }?.let { paintUsers.remove(it.key) }
-            paintUsers.put(userId, paintId)
-            newPaintUser.value = Pair(userId, paintId)
+            val item = paintUsers.entries.find { it.key == userId }
+            if (item == null || item.value != paintId) {
+                item?.let { paintUsers.remove(it.key) }
+                paintUsers.put(userId, paintId)
+                newPaintUser.value = Pair(userId, paintId)
+            }
+        }
+
+        override fun onUpdatePresence(sessionId: String?, self: Boolean) {
+            stvUserId?.let { stvUserId ->
+                if (stvUserId.isNotBlank() && !channelId.isNullOrBlank() && (self && !sessionId.isNullOrBlank() || !self) &&
+                    stvLastPresenceUpdate?.let { (System.currentTimeMillis() - it) > 10000 } != false) {
+                    stvLastPresenceUpdate = System.currentTimeMillis()
+                    viewModelScope.launch {
+                        try {
+                            playerRepository.sendStvPresence(stvUserId, channelId, sessionId, self)
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
+            }
         }
 
         fun addEmotes(list: List<Emote>) {

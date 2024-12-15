@@ -21,12 +21,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import org.json.JSONObject
 import retrofit2.Response
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -273,6 +277,23 @@ class PlayerRepository @Inject constructor(
                 }
             }
         }
+    }
+
+    suspend fun getStvUser(userId: String): String? = withContext(Dispatchers.IO) {
+        JSONObject(misc.getStvUser(userId).string()).optJSONObject("user")?.optString("id")
+    }
+
+    suspend fun sendStvPresence(stvUserId: String, channelId: String, sessionId: String?, self: Boolean) = withContext(Dispatchers.IO) {
+        val json = buildJsonObject {
+            put("kind", 1)
+            put("passive", self)
+            put("session_id", if (self) sessionId else "undefined")
+            putJsonObject("data") {
+                put("platform", "TWITCH")
+                put("id", channelId)
+            }
+        }.toString().toRequestBody()
+        misc.sendStvPresence(stvUserId, json)
     }
 
     suspend fun loadGlobalBttvEmotes(): List<Emote> = withContext(Dispatchers.IO) {

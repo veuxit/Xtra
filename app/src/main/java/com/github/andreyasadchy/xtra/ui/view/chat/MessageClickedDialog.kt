@@ -293,6 +293,18 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
         }
     }
 
+    fun updatePaint(userId: String) {
+        adapter?.let { adapter ->
+            adapter.messages?.toList()?.let { messages ->
+                messages.filter { it.userId == userId }.forEach { message ->
+                    messages.indexOf(message).takeIf { it != -1 }?.let {
+                        adapter.notifyItemChanged(it)
+                    }
+                }
+            }
+        }
+    }
+
     fun scrollToLastPosition() {
         if (!isChatTouched && !shouldShowButton()) {
             adapter?.messages?.let { binding.recyclerView.scrollToPosition(it.lastIndex) }

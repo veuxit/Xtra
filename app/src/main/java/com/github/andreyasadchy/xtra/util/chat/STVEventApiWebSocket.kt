@@ -175,6 +175,13 @@ class STVEventApiWebSocket(
                             }
                         }
                     }
+                    OPCODE_HELLO -> {
+                        val data = json.optJSONObject("d")
+                        val sessionId = data?.optString("session_id")
+                        if (sessionId != null) {
+                            listener.onUpdatePresence(sessionId, true)
+                        }
+                    }
                     OPCODE_RECONNECT -> reconnect()
                 }
             } catch (e: Exception) {
@@ -189,6 +196,7 @@ class STVEventApiWebSocket(
 
     companion object {
         private const val OPCODE_DISPATCH = 0
+        private const val OPCODE_HELLO = 1
         private const val OPCODE_RECONNECT = 4
         private const val OPCODE_SUBSCRIBE = 35
     }
