@@ -4,16 +4,16 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -105,9 +105,17 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private lateinit var navController: NavController
     var playerFragment: BasePlayerFragment? = null
         private set
-    private val networkReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            viewModel.setNetworkAvailable(isNetworkAvailable)
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            lifecycleScope.launch {
+                viewModel.checkNetworkStatus.value = true
+            }
+        }
+
+        override fun onLost(network: Network) {
+            lifecycleScope.launch {
+                viewModel.checkNetworkStatus.value = true
+            }
         }
     }
     private lateinit var prefs: SharedPreferences
@@ -275,31 +283,38 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             restartActivity()
         }
 
-        val notInitialized = savedInstanceState == null
+        var initialized = savedInstanceState != null
         initNavigation()
-        var flag = notInitialized && !isNetworkAvailable
+        if (!initialized && !isNetworkAvailable) {
+            initialized = true
+            shortToast(R.string.no_connection)
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.newNetworkStatus.collectLatest { online ->
-                    if (online != null) {
-                        if (online) {
-                            if (prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                                viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                viewModel.checkNetworkStatus.collectLatest {
+                    if (it) {
+                        val online = isNetworkAvailable
+                        if (viewModel.isNetworkAvailable.value != online) {
+                            viewModel.isNetworkAvailable.value = online
+                            if (initialized) {
+                                shortToast(if (online) R.string.connection_restored else R.string.no_connection)
+                            } else {
+                                initialized = true
                             }
-                            if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
-                                (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
-                                viewModel.checkUpdates(
-                                    prefs.getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/latest",
-                                    tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
-                                )
+                            if (online) {
+                                if (!TwitchApiHelper.checkedValidation && prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
+                                    viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                                }
+                                if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                                    (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
+                                    viewModel.checkUpdates(
+                                        prefs.getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/latest",
+                                        tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
+                                    )
+                                }
                             }
                         }
-                        if (flag) {
-                            shortToast(if (online) R.string.connection_restored else R.string.no_connection)
-                        } else {
-                            flag = true
-                        }
-                        viewModel.newNetworkStatus.value = null
+                        viewModel.checkNetworkStatus.value = false
                     }
                 }
             }
@@ -336,7 +351,16 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 }
             }
         }
-        registerReceiver(networkReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager.registerNetworkCallback(
+            NetworkRequest.Builder().apply {
+                addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                }
+                removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            }.build(), networkCallback
+        )
         restorePlayerFragment()
         handleIntent(intent)
         if (prefs.getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)) {
@@ -397,7 +421,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     override fun onDestroy() {
-        unregisterReceiver(networkReceiver)
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager.unregisterNetworkCallback(networkCallback)
         if (isFinishing) {
             playerFragment?.onClose()
         }
