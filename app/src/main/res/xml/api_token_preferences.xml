@@ -14,7 +14,7 @@
     <EditTextPreference
         android:defaultValue="ilfexgv3nnljz3isbm257gzwrzr7bi"
         android:key="helix_client_id"
-        android:title="@string/api_helix"
+        android:title="@string/api_helix_client_id"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
@@ -30,7 +30,7 @@
     <EditTextPreference
         android:defaultValue="kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
         android:key="gql_client_id2"
-        android:title="@string/api_gql"
+        android:title="@string/api_gql_client_id"
         app:useSimpleSummaryProvider="true"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />

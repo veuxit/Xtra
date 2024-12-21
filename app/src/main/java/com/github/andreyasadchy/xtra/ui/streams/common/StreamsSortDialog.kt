@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.streams.common
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,7 +9,6 @@ import androidx.core.os.bundleOf
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogStreamsSortBinding
-import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
 import com.github.andreyasadchy.xtra.util.C
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -19,14 +17,16 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 class StreamsSortDialog : BottomSheetDialogFragment() {
 
     interface OnFilter {
-        fun onChange(sort: StreamSortEnum)
+        fun onChange(sort: String)
     }
 
     companion object {
+        const val SORT_VIEWERS = "VIEWER_COUNT"
+        const val SORT_VIEWERS_ASC = "VIEWER_COUNT_ASC"
 
         private const val SORT = "sort"
 
-        fun newInstance(sort: StreamSortEnum? = StreamSortEnum.VIEWERS_HIGH): StreamsSortDialog {
+        fun newInstance(sort: String?): StreamsSortDialog {
             return StreamsSortDialog().apply {
                 arguments = bundleOf(SORT to sort)
             }
@@ -54,19 +54,21 @@ class StreamsSortDialog : BottomSheetDialogFragment() {
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val args = requireArguments()
-            val originalSortId = if (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(SORT, StreamSortEnum::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(SORT) as? StreamSortEnum
-                } == StreamSortEnum.VIEWERS_HIGH) R.id.viewers_high else R.id.viewers_low
+            val originalSortId = when (args.getString(SORT)) {
+                SORT_VIEWERS -> R.id.viewers_high
+                SORT_VIEWERS_ASC -> R.id.viewers_low
+                else -> R.id.viewers_high
+            }
             sort.check(originalSortId)
             apply.setOnClickListener {
                 val checkedSortId = sort.checkedRadioButtonId
                 if (checkedSortId != originalSortId) {
                     listener.onChange(
-                        if (checkedSortId == R.id.viewers_high) StreamSortEnum.VIEWERS_HIGH else StreamSortEnum.VIEWERS_LOW
+                        when (checkedSortId) {
+                            R.id.viewers_high -> SORT_VIEWERS
+                            R.id.viewers_low -> SORT_VIEWERS_ASC
+                            else -> SORT_VIEWERS
+                        }
                     )
                 }
                 dismiss()

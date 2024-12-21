@@ -19,9 +19,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.AppDatabase
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
@@ -61,7 +61,7 @@ class SettingsViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
-    private val notificationsRepository: NotificationsRepository,
+    private val notificationUsersRepository: NotificationUsersRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixApi: HelixApi,
     private val appDatabase: AppDatabase,
@@ -379,7 +379,7 @@ class SettingsViewModel @Inject constructor(
     fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(notificationsRepository, gqlHeaders, graphQLRepository, helixHeaders, helixApi)
+                shownNotificationsRepository.getNewStreams(notificationUsersRepository, gqlHeaders, graphQLRepository, helixHeaders, helixApi)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,

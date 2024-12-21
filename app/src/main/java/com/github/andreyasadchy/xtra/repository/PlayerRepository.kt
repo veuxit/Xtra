@@ -7,13 +7,13 @@ import com.github.andreyasadchy.xtra.api.UsherApi
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.chat.BttvResponse
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.chat.FfzResponse
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
-import com.github.andreyasadchy.xtra.model.chat.RecentMessagesResponse
-import com.github.andreyasadchy.xtra.model.chat.StvResponse
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
+import com.github.andreyasadchy.xtra.model.misc.BttvResponse
+import com.github.andreyasadchy.xtra.model.misc.FfzResponse
+import com.github.andreyasadchy.xtra.model.misc.RecentMessagesResponse
+import com.github.andreyasadchy.xtra.model.misc.StvResponse
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.m3u8.MediaPlaylist
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils

@@ -4,7 +4,6 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
@@ -17,11 +16,11 @@ class GameStreamsDataSource(
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val gqlQuerySort: StreamSort?,
-    private val gqlSort: StreamSortEnum?,
+    private val gqlSort: String?,
     private val tags: List<String>?,
     private val gqlApi: GraphQLRepository,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
+    private val apiPref: List<String>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -29,28 +28,28 @@ class GameStreamsDataSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Stream> {
         return try {
             val response = try {
-                when (apiPref.elementAt(0)?.second) {
-                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                    C.GQL -> { api = C.GQL; gqlLoad(params) }
+                when (apiPref.getOrNull(0)) {
+                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == "VIEWER_COUNT" || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                    C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                    C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
-                    when (apiPref.elementAt(1)?.second) {
-                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                        C.GQL -> { api = C.GQL; gqlLoad(params) }
+                    when (apiPref.getOrNull(1)) {
+                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == "VIEWER_COUNT" || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                        C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                        C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
-                        when (apiPref.elementAt(2)?.second) {
-                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == StreamSortEnum.VIEWERS_HIGH || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                            C.GQL -> { api = C.GQL; gqlLoad(params) }
+                        when (apiPref.getOrNull(2)) {
+                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && (gqlSort == "VIEWER_COUNT" || gqlSort == null) && tags.isNullOrEmpty()) { api = C.HELIX; helixLoad(params) } else throw Exception()
+                            C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                            C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) }
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
@@ -150,7 +149,7 @@ class GameStreamsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): List<Stream> {
-        val response = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort?.value, tags, params.loadSize, offset)
+        val response = gqlApi.loadGameStreams(gqlHeaders, gameSlug, gqlSort, tags, params.loadSize, offset)
         if (checkIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }

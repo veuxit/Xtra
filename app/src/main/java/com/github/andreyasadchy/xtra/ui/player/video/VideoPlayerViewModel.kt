@@ -3,13 +3,13 @@ package com.github.andreyasadchy.xtra.ui.player.video
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
@@ -30,10 +30,10 @@ class VideoPlayerViewModel @Inject constructor(
     private val repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
     shownNotificationsRepository: ShownNotificationsRepository,
-    notificationsRepository: NotificationsRepository,
+    notificationUsersRepository: NotificationUsersRepository,
     private val okHttpClient: OkHttpClient,
     private val playerRepository: PlayerRepository,
-    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
+    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val result = MutableStateFlow<Uri?>(null)
 

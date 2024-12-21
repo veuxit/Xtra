@@ -4,12 +4,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class QueryResponse(
+class QueryResponse(
     val errors: List<Error>? = null,
     val data: Query? = null,
 ) {
     @Serializable
-    data class Query(
+    class Query(
         val badges: List<Badge?>? = null,
         val cheerConfig: GlobalCheerConfig? = null,
         val games: GameConnection? = null,
@@ -27,7 +27,7 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class Badge(
+    class Badge(
         val imageURL: String? = null,
         val setID: String? = null,
         val title: String? = null,
@@ -35,39 +35,39 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class Broadcast(
+    class Broadcast(
         val startedAt: String? = null,
     )
 
     @Serializable
-    data class BroadcastSettings(
+    class BroadcastSettings(
         val title: String? = null,
     )
 
     @Serializable
-    data class ChannelNotificationSettings(
+    class ChannelNotificationSettings(
         val isEnabled: Boolean? = null,
     )
 
     @Serializable
-    data class CheerInfo(
+    class CheerInfo(
         val cheerGroups: List<CheermoteGroup>? = null,
     )
 
     @Serializable
-    data class Cheermote(
+    class Cheermote(
         val prefix: String? = null,
         val tiers: List<CheermoteTier>? = null,
     )
 
     @Serializable
-    data class CheermoteColorConfig(
+    class CheermoteColorConfig(
         val bits: Int? = null,
         val color: String? = null,
     )
 
     @Serializable
-    data class CheermoteDisplayConfig(
+    class CheermoteDisplayConfig(
         val backgrounds: List<String>? = null,
         val colors: List<CheermoteColorConfig>? = null,
         val scales: List<String>? = null,
@@ -75,24 +75,24 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class CheermoteDisplayType(
+    class CheermoteDisplayType(
         val animation: String? = null,
         val extension: String? = null,
     )
 
     @Serializable
-    data class CheermoteGroup(
+    class CheermoteGroup(
         val nodes: List<Cheermote>? = null,
         val templateURL: String? = null,
     )
 
     @Serializable
-    data class CheermoteTier(
+    class CheermoteTier(
         val bits: Int? = null,
     )
 
     @Serializable
-    data class Clip(
+    class Clip(
         val broadcaster: User? = null,
         val createdAt: String? = null,
         val durationSeconds: Int? = null,
@@ -107,19 +107,19 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class ClipConnection(
+    class ClipConnection(
         val edges: List<ClipEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class ClipEdge(
+    class ClipEdge(
         val cursor: String? = null,
         val node: Clip? = null,
     )
 
     @Serializable
-    data class Emote(
+    class Emote(
         val id: String? = null,
         val owner: User? = null,
         val setID: String? = null,
@@ -128,63 +128,63 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class EmoteSet(
+    class EmoteSet(
         val emotes: List<Emote>? = null,
     )
 
     @Serializable
-    data class Follow(
+    class Follow(
         val followedAt: String? = null,
     )
 
     @Serializable
-    data class FollowConnection(
+    class FollowConnection(
         val edges: List<FollowEdge>? = null,
         val pageInfo: PageInfo? = null,
         val totalCount: Int? = null,
     )
 
     @Serializable
-    data class FollowedGameConnection(
+    class FollowedGameConnection(
         val nodes: List<Game>? = null,
     )
 
     @Serializable
-    data class FollowEdge(
+    class FollowEdge(
         val cursor: String? = null,
         val followedAt: String? = null,
         val node: User? = null,
     )
 
     @Serializable
-    data class FollowedLiveUserConnection(
+    class FollowedLiveUserConnection(
         val edges: List<FollowedLiveUserEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class FollowedLiveUserEdge(
+    class FollowedLiveUserEdge(
         val cursor: String? = null,
         val node: User? = null,
     )
 
     @Serializable
-    data class FollowerConnection(
+    class FollowerConnection(
         val totalCount: Int? = null,
     )
 
     @Serializable
-    data class FollowerEdge(
+    class FollowerEdge(
         val notificationSettings: ChannelNotificationSettings? = null,
     )
 
     @Serializable
-    data class FreeformTag(
+    class FreeformTag(
         val name: String? = null,
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val boxArtURL: String? = null,
         val broadcastersCount: Int? = null,
         val clips: ClipConnection? = null,
@@ -198,95 +198,95 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class GameConnection(
+    class GameConnection(
         val edges: List<GameEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class GameEdge(
+    class GameEdge(
         val cursor: String? = null,
         val node: Game? = null,
     )
 
     @Serializable
-    data class GlobalCheerConfig(
+    class GlobalCheerConfig(
         val displayConfig: CheermoteDisplayConfig? = null,
         val groups: List<CheermoteGroup>? = null,
     )
 
     @Serializable
-    data class PageInfo(
+    class PageInfo(
         val hasNextPage: Boolean? = null,
         val hasPreviousPage: Boolean? = null,
     )
 
     @Serializable
-    data class SearchCategoriesConnection(
+    class SearchCategoriesConnection(
         val edges: List<SearchCategoriesEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchCategoriesEdge(
+    class SearchCategoriesEdge(
         val cursor: String? = null,
         val node: Game? = null,
     )
 
     @Serializable
-    data class SearchFor(
+    class SearchFor(
         val channels: SearchForResultUsers? = null,
         val games: SearchForResultGames? = null,
         val videos: SearchForResultVideos? = null,
     )
 
     @Serializable
-    data class SearchForResultGames(
+    class SearchForResultGames(
         val cursor: String? = null,
         val items: List<Game>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchForResultUsers(
+    class SearchForResultUsers(
         val cursor: String? = null,
         val items: List<User>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchForResultVideos(
+    class SearchForResultVideos(
         val cursor: String? = null,
         val items: List<Video>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchStreamConnection(
+    class SearchStreamConnection(
         val edges: List<SearchStreamEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchStreamEdge(
+    class SearchStreamEdge(
         val cursor: String? = null,
         val node: Stream? = null,
     )
 
     @Serializable
-    data class SearchUserConnection(
+    class SearchUserConnection(
         val edges: List<SearchUserEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class SearchUserEdge(
+    class SearchUserEdge(
         val cursor: String? = null,
         val node: User? = null,
     )
 
     @Serializable
-    data class Stream(
+    class Stream(
         val broadcaster: User? = null,
         val createdAt: String? = null,
         val freeformTags: List<FreeformTag>? = null,
@@ -299,26 +299,26 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class StreamConnection(
+    class StreamConnection(
         val edges: List<StreamEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class StreamEdge(
+    class StreamEdge(
         val cursor: String? = null,
         val node: Stream? = null,
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val id: String? = null,
         val localizedName: String? = null,
         val scope: String? = null,
     )
 
     @Serializable
-    data class User(
+    class User(
         val bannerImageURL: String? = null,
         val broadcastBadges: List<Badge?>? = null,
         val broadcastSettings: BroadcastSettings? = null,
@@ -345,7 +345,7 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class UserResult(
+    class UserResult(
         val key: String? = null,
         val reason: String? = null,
         @SerialName("__typename")
@@ -353,22 +353,19 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class UserRoles(
+    class UserRoles(
         val isAffiliate: Boolean? = null,
-        val isExtensionsDeveloper: Boolean? = null,
-        val isGlobalMod: Boolean? = null,
         val isPartner: Boolean? = null,
-        val isSiteAdmin: Boolean? = null,
         val isStaff: Boolean? = null,
     )
 
     @Serializable
-    data class UserSelfConnection(
+    class UserSelfConnection(
         val follower: FollowerEdge? = null,
     )
 
     @Serializable
-    data class Video(
+    class Video(
         val animatedPreviewURL: String? = null,
         val broadcastType: String? = null,
         val contentTags: List<Tag>? = null,
@@ -383,13 +380,13 @@ data class QueryResponse(
     )
 
     @Serializable
-    data class VideoConnection(
+    class VideoConnection(
         val edges: List<VideoEdge>? = null,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class VideoEdge(
+    class VideoEdge(
         val cursor: String? = null,
         val node: Video? = null,
     )

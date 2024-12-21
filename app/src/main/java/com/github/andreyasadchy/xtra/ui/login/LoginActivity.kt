@@ -25,9 +25,6 @@ import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewFeature
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivityLoginBinding
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.LoggedIn
-import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -88,18 +85,18 @@ class LoginActivity : AppCompatActivity() {
         val helixHeaders = TwitchApiHelper.getHelixHeaders(this)
         val helixClientId = helixHeaders[C.HEADER_CLIENT_ID]
         val helixToken = helixHeaders[C.HEADER_TOKEN]?.removePrefix("Bearer ")
-        val account = Account.get(this)
-        if (account !is NotLoggedIn) {
-            val gqlHeaders = TwitchApiHelper.getGQLHeaders(this, true)
-            val gqlClientId = gqlHeaders[C.HEADER_CLIENT_ID]
-            val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+        val gqlHeaders = TwitchApiHelper.getGQLHeaders(this, true)
+        val gqlClientId = gqlHeaders[C.HEADER_CLIENT_ID]
+        val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+        if (!gqlToken.isNullOrBlank() || !helixToken.isNullOrBlank()) {
             TwitchApiHelper.checkedValidation = false
-            Account.set(this, null)
             tokenPrefs().edit {
                 putString(C.TOKEN, null)
                 putString(C.GQL_HEADERS, null)
                 putLong(C.INTEGRITY_EXPIRATION, 0)
                 putString(C.GQL_TOKEN2, null)
+                putString(C.USER_ID, null)
+                putString(C.USERNAME, null)
             }
             lifecycleScope.launch {
                 if (!helixClientId.isNullOrBlank() && !helixToken.isNullOrBlank()) {
@@ -319,9 +316,10 @@ class LoginActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 if (!helixToken.isNullOrBlank()) {
                     TwitchApiHelper.checkedValidation = true
-                    Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
                     tokenPrefs().edit {
                         putString(C.TOKEN, helixToken)
+                        putString(C.USER_ID, userId)
+                        putString(C.USERNAME, userLogin)
                     }
                 }
                 setResult(RESULT_OK)
@@ -350,9 +348,10 @@ class LoginActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         if (!helixToken.isNullOrBlank()) {
                             TwitchApiHelper.checkedValidation = true
-                            Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
                             tokenPrefs().edit {
                                 putString(C.TOKEN, helixToken)
+                                putString(C.USER_ID, userId)
+                                putString(C.USERNAME, userLogin)
                             }
                         }
                         setResult(RESULT_OK)
@@ -393,9 +392,8 @@ class LoginActivity : AppCompatActivity() {
                                     }
                                     if ((apiSetting == 0 && tokens.count() == 2) || (apiSetting == 1) || (apiSetting == 2)) {
                                         TwitchApiHelper.checkedValidation = true
-                                        Account.set(this@LoginActivity, LoggedIn(userId, userLogin))
-                                        if (!gqlToken.isNullOrBlank()) {
-                                            tokenPrefs().edit {
+                                        tokenPrefs().edit {
+                                            if (!gqlToken.isNullOrBlank()) {
                                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                                     putLong(C.INTEGRITY_EXPIRATION, 0)
                                                     putString(C.GQL_HEADERS, JSONObject(mapOf(
@@ -406,11 +404,11 @@ class LoginActivity : AppCompatActivity() {
                                                     putString(C.GQL_TOKEN2, gqlToken)
                                                 }
                                             }
-                                        }
-                                        if (!helixToken.isNullOrBlank()) {
-                                            tokenPrefs().edit {
+                                            if (!helixToken.isNullOrBlank()) {
                                                 putString(C.TOKEN, helixToken)
                                             }
+                                            putString(C.USER_ID, userId)
+                                            putString(C.USERNAME, userLogin)
                                         }
                                         setResult(RESULT_OK)
                                         finish()

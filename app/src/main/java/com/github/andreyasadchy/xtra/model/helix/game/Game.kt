@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Game(
+class Game(
     val id: String? = null,
     val name: String? = null,
     @SerialName("box_art_url")

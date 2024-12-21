@@ -15,7 +15,7 @@ import androidx.paging.cachedIn
 import androidx.work.NetworkType
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment

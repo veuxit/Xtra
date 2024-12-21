@@ -14,7 +14,7 @@ class SearchStreamsDataSource(
     private val gqlApi: GraphQLRepository,
     private val gqlHeaders: Map<String, String>,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Stream>() {
+    private val apiPref: List<String>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -22,17 +22,17 @@ class SearchStreamsDataSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Stream> {
         return try {
             val response = if (query.isBlank()) listOf() else try {
-                when (apiPref?.elementAt(0)?.second) {
+                when (apiPref.getOrNull(0)) {
                     C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
+                    C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
-                    when (apiPref?.elementAt(1)?.second) {
+                    when (apiPref.getOrNull(1)) {
                         C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
+                        C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
@@ -43,7 +43,7 @@ class SearchStreamsDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL || nextPage)) {
                     nextPage = false
                     (params.key ?: 1) + 1
                 } else null

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.edit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -15,10 +16,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.databinding.SortBarBinding
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.Clip
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
+import com.github.andreyasadchy.xtra.model.ui.SortChannel
+import com.github.andreyasadchy.xtra.model.ui.SortGame
 import com.github.andreyasadchy.xtra.ui.clips.BaseClipsFragment
 import com.github.andreyasadchy.xtra.ui.clips.ClipsAdapter
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
@@ -64,7 +64,43 @@ class ClipsFragment : BaseClipsFragment(), Scrollable, Sortable, VideosSortDialo
     }
 
     override fun initialize() {
-        initializeAdapter(binding, pagingAdapter, viewModel.flow)
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (viewModel.filter.value == null) {
+                if (args.channelId != null || args.channelLogin != null) {
+                    val sortValues = args.channelId?.let { viewModel.getSortChannel(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortChannel("default")
+                    viewModel.setFilter(
+                        period = sortValues?.clipPeriod,
+                        languageIndex = 0,
+                        saveSort = sortValues?.saveSort,
+                    )
+                } else {
+                    val sortValues = args.gameId?.let { viewModel.getSortGame(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortGame("default")
+                    viewModel.setFilter(
+                        period = sortValues?.clipPeriod,
+                        languageIndex = sortValues?.clipLanguageIndex,
+                        saveSort = sortValues?.saveSort,
+                    )
+                }
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                    requireContext().getString(R.string.view_count),
+                    requireContext().getString(
+                        when (viewModel.period) {
+                            VideosSortDialog.PERIOD_DAY -> R.string.today
+                            VideosSortDialog.PERIOD_WEEK -> R.string.this_week
+                            VideosSortDialog.PERIOD_MONTH -> R.string.this_month
+                            VideosSortDialog.PERIOD_ALL -> R.string.all_time
+                            else -> R.string.this_week
+                        }
+                    )
+                )
+            }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+        }
+        initializeAdapter(binding, pagingAdapter)
     }
 
     override fun setupSortBar(sortBar: SortBarBinding) {
@@ -87,18 +123,120 @@ class ClipsFragment : BaseClipsFragment(), Scrollable, Sortable, VideosSortDialo
         }
     }
 
-    override fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
+    override fun onChange(sort: String, sortText: CharSequence, period: String, periodText: CharSequence, type: String, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
         if ((parentFragment as? FragmentHost)?.currentFragment == this) {
             viewLifecycleOwner.lifecycleScope.launch {
                 binding.scrollTop.gone()
                 pagingAdapter.submitData(PagingData.empty())
-                viewModel.filter(
-                    period = period,
-                    languageIndex = languageIndex,
-                    text = getString(R.string.sort_and_period, sortText, periodText),
-                    saveSort = saveSort,
-                    saveDefault = saveDefault
-                )
+                viewModel.setFilter(period, languageIndex, saveSort)
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period, sortText, periodText)
+                if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
+                    val sortValues = args.gameId?.let { viewModel.getSortGame(it) }
+                    if (saveSort) {
+                        if (sortValues != null) {
+                            sortValues.apply {
+                                this.saveSort = true
+                                clipPeriod = period
+                                clipLanguageIndex = languageIndex
+                            }
+                        } else {
+                            args.gameId?.let {
+                                SortGame(
+                                    id = it,
+                                    saveSort = true,
+                                    clipPeriod = period,
+                                    clipLanguageIndex = languageIndex
+                                )
+                            }
+                        }
+                    } else {
+                        sortValues?.apply {
+                            this.saveSort = false
+                        }
+                    }?.let { viewModel.saveSortGame(it) }
+                    if (saveDefault) {
+                        if (sortValues != null) {
+                            sortValues.apply {
+                                this.saveSort = saveSort
+                            }
+                        } else {
+                            args.gameId?.let {
+                                SortGame(
+                                    id = it,
+                                    saveSort = saveSort
+                                )
+                            }
+                        }?.let { viewModel.saveSortGame(it) }
+                        val sortDefaults = viewModel.getSortGame("default")
+                        if (sortDefaults != null) {
+                            sortDefaults.apply {
+                                clipPeriod = period
+                                clipLanguageIndex = languageIndex
+                            }
+                        } else {
+                            SortGame(
+                                id = "default",
+                                clipPeriod = period,
+                                clipLanguageIndex = languageIndex
+                            )
+                        }.let { viewModel.saveSortGame(it) }
+                    }
+                    if (saveDefault != requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false)) {
+                        requireContext().prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_CLIPS, saveDefault) }
+                    }
+                } else {
+                    if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
+                        val sortValues = args.channelId?.let { viewModel.getSortChannel(it) }
+                        if (saveSort) {
+                            if (sortValues != null) {
+                                sortValues.apply {
+                                    this.saveSort = true
+                                    clipPeriod = period
+                                }
+                            } else {
+                                args.channelId?.let {
+                                    SortChannel(
+                                        id = it,
+                                        saveSort = true,
+                                        clipPeriod = period
+                                    )
+                                }
+                            }
+                        } else {
+                            sortValues?.apply {
+                                this.saveSort = false
+                            }
+                        }?.let { viewModel.saveSortChannel(it) }
+                        if (saveDefault) {
+                            if (sortValues != null) {
+                                sortValues.apply {
+                                    this.saveSort = saveSort
+                                }
+                            } else {
+                                args.channelId?.let {
+                                    SortChannel(
+                                        id = it,
+                                        saveSort = saveSort
+                                    )
+                                }
+                            }?.let { viewModel.saveSortChannel(it) }
+                            val sortDefaults = viewModel.getSortChannel("default")
+                            if (sortDefaults != null) {
+                                sortDefaults.apply {
+                                    clipPeriod = period
+                                }
+                            } else {
+                                SortChannel(
+                                    id = "default",
+                                    clipPeriod = period
+                                )
+                            }.let { viewModel.saveSortChannel(it) }
+                        }
+                        if (saveDefault != requireContext().prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)) {
+                            requireContext().prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, saveDefault) }
+                        }
+                    }
+                }
             }
         }
     }

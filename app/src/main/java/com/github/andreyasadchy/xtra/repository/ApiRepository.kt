@@ -256,8 +256,6 @@ class ApiRepository @Inject constructor(
                         channelName = it.displayName,
                         type = when {
                             it.roles?.isStaff == true -> "staff"
-                            it.roles?.isSiteAdmin == true -> "admin"
-                            it.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
                         },
                         broadcasterType = when {
@@ -414,8 +412,6 @@ class ApiRepository @Inject constructor(
                         },
                         type = when {
                             it.roles?.isStaff == true -> "staff"
-                            it.roles?.isSiteAdmin == true -> "admin"
-                            it.roles?.isGlobalMod == true -> "global_mod"
                             else -> null
                         }
                     )

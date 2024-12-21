@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Video(
+class Video(
     val id: String? = null,
     @SerialName("user_id")
     val channelId: String? = null,

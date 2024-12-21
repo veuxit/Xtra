@@ -4,7 +4,7 @@ import com.github.andreyasadchy.xtra.model.helix.Pagination
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GamesResponse(
+class GamesResponse(
     val data: List<Game>,
     val pagination: Pagination? = null,
 )

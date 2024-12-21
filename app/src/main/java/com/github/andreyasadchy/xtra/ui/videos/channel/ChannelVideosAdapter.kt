@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.videos.channel
 
+import android.content.Intent
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -24,7 +25,6 @@ import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
@@ -100,7 +100,7 @@ class ChannelVideosAdapter(
                     }
                     if (item.viewCount != null) {
                         views.visible()
-                        views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount)
+                        views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
                     } else {
                         views.gone()
                     }
@@ -193,7 +193,16 @@ class ChannelVideosAdapter(
                                 when(it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.bookmark -> saveBookmark(item)
-                                    R.id.share -> FragmentUtils.shareLink(context, "https://twitch.tv/videos/${item.id}", item.title)
+                                    R.id.share -> {
+                                        context.startActivity(Intent.createChooser(Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, "https://twitch.tv/videos/${item.id}")
+                                            item.title?.let {
+                                                putExtra(Intent.EXTRA_TITLE, it)
+                                            }
+                                            type = "text/plain"
+                                        }, null))
+                                    }
                                     else -> menu.close()
                                 }
                                 true

@@ -172,8 +172,8 @@
     <string name="settings_chat">CHAT</string>
     <string name="settings_player">PLAYER</string>
     <string name="token_random_deviceid">Random device id</string>
-    <string name="api_helix">Helix client id</string>
-    <string name="api_gql">GQL client id</string>
+    <string name="api_helix_client_id">Helix client id</string>
+    <string name="api_gql_client_id">GQL client id</string>
     <string name="playback_speed">Playback speed</string>
     <string name="quality">Quality</string>
     <string name="saved_value">Saved value</string>
@@ -215,8 +215,6 @@
     <string name="user_partner">Partner</string>
     <string name="user_affiliate">Affiliate</string>
     <string name="user_staff">Staff</string>
-    <string name="user_admin">Admin</string>
-    <string name="user_global_mod">Global mod</string>
     <string name="uptime">%s uptime</string>
     <string name="select_language">Select language</string>
     <string name="show_tags">Show tags</string>
@@ -532,8 +530,6 @@
     <string name="tokens">Tokens</string>
     <string name="download_limit">Download concurrent limit</string>
     <string name="followed_only">Followed only</string>
-    <string name="api_gql2">GQL client id 2</string>
-    <string name="api_gql_token2">GQL token 2</string>
     <string name="debug_api_commands">Use api chat commands</string>
     <string name="skip_video_access_token">Skip video access token</string>
     <string name="skip_clip_access_token">Skip clip access token</string>
@@ -565,7 +561,6 @@
     <string name="show_media_playlist_tags">Show media playlist tags</string>
     <string name="show_multivariant_playlist_tags">Show multivariant playlist tags</string>
     <string name="use_gamepager">Use tabs layout for game page</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
     <string name="disable_background_video">Disable video rendering in the background</string>
     <string name="use_background_audio_track">Switch to audio only track in the background</string>
     <string name="show_audio_compressor_button">Show audio compressor button</string>
@@ -686,4 +681,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

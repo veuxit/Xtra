@@ -53,7 +53,7 @@ class FollowedChannelsAdapter(
                     )) }
                     if (item.channelLogo != null)  {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = true, diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
                     } else {
                         userImage.gone()
                     }

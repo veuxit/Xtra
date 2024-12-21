@@ -1,37 +1,36 @@
 package com.github.andreyasadchy.xtra.model.gql.search
 
 import com.github.andreyasadchy.xtra.model.gql.Error
-import com.github.andreyasadchy.xtra.model.gql.game.GamesResponse.Data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SearchVideosResponse(
+class SearchVideosResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val searchFor: Search,
     )
 
     @Serializable
-    data class Search(
+    class Search(
         val videos: Videos,
     )
 
     @Serializable
-    data class Videos(
+    class Videos(
         val edges: List<Item>,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val item: Video,
     )
 
     @Serializable
-    data class Video(
+    class Video(
         val id: String? = null,
         val owner: User? = null,
         val game: Game? = null,
@@ -43,14 +42,14 @@ data class SearchVideosResponse(
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val id: String? = null,
         val slug: String? = null,
         val displayName: String? = null,

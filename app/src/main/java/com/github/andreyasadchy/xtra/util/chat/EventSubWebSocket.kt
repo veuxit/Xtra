@@ -16,7 +16,12 @@ import org.json.JSONObject
 class EventSubWebSocket(
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: EventSubListener) {
+    private val onConnect: () -> Unit,
+    private val onWelcomeMessage: (String) -> Unit,
+    private val onChatMessage: (JSONObject, String?) -> Unit,
+    private val onUserNotice: (JSONObject, String?) -> Unit,
+    private val onClearChat: (JSONObject, String?) -> Unit,
+    private val onRoomState: (JSONObject, String?) -> Unit) {
     private var socket: WebSocket? = null
     var isActive = false
     private var pongReceived = false
@@ -70,7 +75,7 @@ class EventSubWebSocket(
     private inner class EventSubWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             isActive = true
-            listener.onConnect()
+            onConnect()
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -97,10 +102,10 @@ class EventSubWebSocket(
                             val event = payload?.optJSONObject("event")
                             if (event != null) {
                                 when (metadata.optString("subscription_type")) {
-                                    "channel.chat.message" -> listener.onChatMessage(event, timestamp)
-                                    "channel.chat.notification" -> listener.onUserNotice(event, timestamp)
-                                    "channel.chat.clear" -> listener.onClearChat(event, timestamp)
-                                    "channel.chat_settings.update" -> listener.onRoomState(event, timestamp)
+                                    "channel.chat.message" -> onChatMessage(event, timestamp)
+                                    "channel.chat.notification" -> onUserNotice(event, timestamp)
+                                    "channel.chat.clear" -> onClearChat(event, timestamp)
+                                    "channel.chat_settings.update" -> onRoomState(event, timestamp)
                                 }
                             }
                         }
@@ -122,7 +127,7 @@ class EventSubWebSocket(
                             if (!usingReconnectUrl) {
                                 val sessionId = session?.optString("id")
                                 if (!sessionId.isNullOrBlank()) {
-                                    listener.onWelcomeMessage(sessionId)
+                                    onWelcomeMessage(sessionId)
                                 }
                             }
                         }

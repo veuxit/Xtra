@@ -35,10 +35,9 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
@@ -83,7 +82,7 @@ class PlaybackService : MediaSessionService() {
     lateinit var offlineRepository: OfflineRepository
 
     private var mediaSession: MediaSession? = null
-    private var playerMode = PlayerMode.NORMAL
+    private var playerMode = PLAYER_MODE_NORMAL
     private var background = false
     private var dynamicsProcessing: DynamicsProcessing? = null
     private var usingProxy = false
@@ -540,7 +539,7 @@ class PlaybackService : MediaSessionService() {
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(RESULT to playerMode)))
                         }
                         SWITCH_AUDIO_MODE -> {
-                            if (playerMode != PlayerMode.AUDIO_ONLY) {
+                            if (playerMode != PLAYER_MODE_AUDIO_ONLY) {
                                 changeQuality(audioIndex)
                             } else {
                                 changeQuality(previousIndex)
@@ -566,7 +565,7 @@ class PlaybackService : MediaSessionService() {
                                 savePosition()
                                 session.player.stop()
                             } else {
-                                if (playerMode == PlayerMode.NORMAL) {
+                                if (playerMode == PLAYER_MODE_NORMAL) {
                                     if (!pipMode && session.player.playbackState != Player.STATE_ENDED && session.player.playbackState != Player.STATE_IDLE && session.player.playWhenReady) {
                                         startAudioOnly()
                                     } else {
@@ -600,9 +599,9 @@ class PlaybackService : MediaSessionService() {
                             if (usingProxy) {
                                 toggleProxy(false)
                             }
-                            if (playerMode == PlayerMode.NORMAL) {
+                            if (playerMode == PLAYER_MODE_NORMAL) {
                                 session.player.prepare()
-                            } else if (playerMode == PlayerMode.AUDIO_ONLY) {
+                            } else if (playerMode == PLAYER_MODE_AUDIO_ONLY) {
                                 if (qualityIndex != audioIndex) {
                                     setVideoQuality()
                                 }
@@ -645,15 +644,11 @@ class PlaybackService : MediaSessionService() {
                             )))
                         }
                         GET_VIDEO_DOWNLOAD_INFO -> {
-                            val info = (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.let { playlist ->
-                                VideoDownloadInfo(
-                                    qualities = urls,
-                                    totalDuration = playlist.durationUs / 1000L,
-                                    currentPosition = session.player.currentPosition
-                                )
-                            }
                             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(
-                                RESULT to info
+                                URLS_KEYS to urls.keys.toTypedArray(),
+                                URLS_VALUES to urls.values.toTypedArray(),
+                                TOTAL_DURATION to (session.player.currentManifest as? HlsManifest)?.mediaPlaylist?.durationUs?.div(1000),
+                                CURRENT_POSITION to session.player.currentPosition,
                             )))
                         }
                         GET_ERROR_CODE -> {
@@ -677,9 +672,9 @@ class PlaybackService : MediaSessionService() {
     private fun setVideoQuality() {
         mediaSession?.player?.let { player ->
             val mode = playerMode
-            if (mode != PlayerMode.NORMAL) {
-                playerMode = PlayerMode.NORMAL
-                if (mode == PlayerMode.AUDIO_ONLY) {
+            if (mode != PLAYER_MODE_NORMAL) {
+                playerMode = PLAYER_MODE_NORMAL
+                if (mode == PLAYER_MODE_AUDIO_ONLY) {
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
                         setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
                     }.build()
@@ -689,14 +684,14 @@ class PlaybackService : MediaSessionService() {
                         player.prepare()
                         player.seekTo(position)
                     }
-                } else if (mode == PlayerMode.DISABLED) {
+                } else if (mode == PLAYER_MODE_DISABLED) {
                     player.prepare()
                 }
             }
             when {
                 qualityIndex > audioIndex -> {
                     player.stop()
-                    playerMode = PlayerMode.DISABLED
+                    playerMode = PLAYER_MODE_DISABLED
                 }
                 qualityIndex == audioIndex -> {
                     if (usingProxy) {
@@ -714,7 +709,7 @@ class PlaybackService : MediaSessionService() {
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
                         setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
                     }.build()
-                    playerMode = PlayerMode.AUDIO_ONLY
+                    playerMode = PLAYER_MODE_AUDIO_ONLY
                     updateVideoQuality(urlIndex)
                 }
                 else -> {
@@ -750,7 +745,7 @@ class PlaybackService : MediaSessionService() {
                     setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
                 }.build()
             }
-            playerMode = PlayerMode.AUDIO_ONLY
+            playerMode = PLAYER_MODE_AUDIO_ONLY
             updateVideoQuality(urlIndex)
         }
     }
@@ -907,7 +902,7 @@ class PlaybackService : MediaSessionService() {
         item = null
         mediaItem = null
         headers = null
-        playerMode = PlayerMode.NORMAL
+        playerMode = PLAYER_MODE_NORMAL
         usingPlaylist = false
         usingAutoQuality = false
         usingChatOnlyQuality = false
@@ -1050,6 +1045,11 @@ class PlaybackService : MediaSessionService() {
         const val DURATION = "duration"
         const val USING_PROXY = "usingProxy"
         const val STOP_PROXY = "stopProxy"
+        const val TOTAL_DURATION = "totalDuration"
+        const val CURRENT_POSITION = "currentPosition"
+        const val PLAYER_MODE_NORMAL = "player_mode_normal"
+        const val PLAYER_MODE_AUDIO_ONLY = "player_mode_audio_only"
+        const val PLAYER_MODE_DISABLED = "player_mode_disabled"
 
         const val REQUEST_CODE_RESUME = 2
     }

@@ -7,10 +7,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
 import org.json.JSONObject
 import java.lang.Integer.parseInt
-import java.lang.Long.parseLong
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.Duration
@@ -31,38 +29,30 @@ object TwitchApiHelper {
     var checkedUpdates = false
 
     fun getTemplateUrl(url: String?, type: String): String? {
-        if ((url == null)||(url == "")||(url.startsWith("https://vod-secure.twitch.tv/_404/404_processing")))
+        if (url.isNullOrBlank() || url.startsWith("https://vod-secure.twitch.tv/_404/404_processing")) {
             return when (type) {
                 "game" -> "https://static-cdn.jtvnw.net/ttv-static/404_boxart.jpg"
                 "video" -> "https://vod-secure.twitch.tv/_404/404_processing_320x180.png"
                 else -> null
             }
+        }
         val width = when (type) {
             "game" -> "285"
             "video" -> "1280"
             "profileimage" -> "300"
-            else -> "" }
+            else -> ""
+        }
         val height = when (type) {
             "game" -> "380"
             "video" -> "720"
             "profileimage" -> "300"
-            else -> "" }
-        val reg1 = """-\d\d\dx\d\d\d""".toRegex()
-        val reg2 = """\d\d\d\dx\d\d\d""".toRegex()
-        val reg3 = """\d\d\dx\d\d\d""".toRegex()
-        val reg4 = """\d\dx\d\d\d""".toRegex()
-        val reg5 = """\d\d\dx\d\d""".toRegex()
-        val reg6 = """\d\dx\d\d""".toRegex()
-        if (type == "clip") return if (reg1.containsMatchIn(url)) reg1.replace(url, "") else url
+            else -> ""
+        }
         return when {
-            url.contains("%{width}", true) -> url.replace("%{width}", width).replace("%{height}", height)
-            url.contains("{width}", true) -> url.replace("{width}", width).replace("{height}", height)
-            reg2.containsMatchIn(url) -> reg2.replace(url, "${width}x${height}")
-            reg3.containsMatchIn(url) -> reg3.replace(url, "${width}x${height}")
-            reg4.containsMatchIn(url) -> reg4.replace(url, "${width}x${height}")
-            reg5.containsMatchIn(url) -> reg5.replace(url, "${width}x${height}")
-            reg6.containsMatchIn(url) -> reg6.replace(url, "${width}x${height}")
-            else -> url
+            type == "clip" -> url.replace(Regex("-\\d+x\\d+."), ".")
+            url.contains("%{width}") -> url.replace("%{width}", width).replace("%{height}", height)
+            url.contains("{width}") -> url.replace("{width}", width).replace("{height}", height)
+            else -> url.replace(Regex("-\\d+x\\d+."), "-${width}x${height}.")
         }
     }
 
@@ -76,33 +66,14 @@ object TwitchApiHelper {
         }
     }
 
-    fun getUserType(context: Context, type: String?): String? {
-        return when (type?.lowercase()) {
-            "partner" -> context.getString(R.string.user_partner)
-            "affiliate" -> context.getString(R.string.user_affiliate)
-            "staff" -> context.getString(R.string.user_staff)
-            "admin" -> context.getString(R.string.user_admin)
-            "global_mod" -> context.getString(R.string.user_global_mod)
-            else -> null
-        }
-    }
-
-    fun getDuration(duration: String?): Long? {
-        return if (duration.isNullOrBlank()) {
+    fun getDuration(duration: String): Long? {
+        return duration.toLongOrNull() ?: try {
+            val h = duration.substringBefore("h", "0").takeLast(2).filter { it.isDigit() }.toInt()
+            val m = duration.substringBefore("m", "0").takeLast(2).filter { it.isDigit() }.toInt()
+            val s = duration.substringBefore("s", "0").takeLast(2).filter { it.isDigit() }.toInt()
+            ((h * 3600) + (m * 60) + s).toLong()
+        } catch (e: Exception) {
             null
-        } else {
-            try {
-                parseLong(duration)
-            } catch (e: Exception) {
-                try {
-                    val h = duration.substringBefore("h", "0").takeLast(2).filter { it.isDigit() }.toInt()
-                    val m = duration.substringBefore("m", "0").takeLast(2).filter { it.isDigit() }.toInt()
-                    val s = duration.substringBefore("s", "0").takeLast(2).filter { it.isDigit() }.toInt()
-                    ((h * 3600) + (m * 60) + s).toLong()
-                } catch (e: Exception) {
-                    null
-                }
-            }
         }
     }
 
@@ -210,12 +181,7 @@ object TwitchApiHelper {
         }
     }
 
-    fun getClipTime(period: VideoPeriodEnum? = null): String {
-        val days = when (period) {
-            VideoPeriodEnum.DAY -> 1
-            VideoPeriodEnum.WEEK -> 7
-            VideoPeriodEnum.MONTH -> 30
-            else -> 0 }
+    fun getClipTime(days: Int): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val date = LocalDateTime.ofInstant(Instant.now().minus(days.toLong(), ChronoUnit.DAYS), ZoneOffset.UTC)
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
@@ -278,24 +244,24 @@ object TwitchApiHelper {
         return DateUtils.formatDateTime(context, date, format)
     }
 
-    fun formatViewsCount(context: Context, count: Int): String {
-        return if (count > 1000 && context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)) {
+    fun formatViewsCount(context: Context, count: Int, truncate: Boolean): String {
+        return if (count > 1000 && truncate) {
             context.getString(R.string.views, formatCountIfMoreThanAThousand(count))
         } else {
             context.resources.getQuantityString(R.plurals.views, count, count)
         }
     }
 
-    fun formatViewersCount(context: Context, count: Int): String {
-        return if (count > 1000 && context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)) {
+    fun formatViewersCount(context: Context, count: Int, truncate: Boolean): String {
+        return if (count > 1000 && truncate) {
             context.getString(R.string.viewers_count, formatCountIfMoreThanAThousand(count))
         } else {
             context.resources.getQuantityString(R.plurals.viewers, count, count)
         }
     }
 
-    fun formatCount(context: Context, count: Int): String {
-        return if (count > 1000 && context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)) {
+    fun formatCount(count: Int, truncate: Boolean): String {
+        return if (count > 1000 && truncate) {
             formatCountIfMoreThanAThousand(count)
         } else {
             count.toString()
@@ -368,70 +334,21 @@ object TwitchApiHelper {
         return System.currentTimeMillis() >= context.tokenPrefs().getLong(C.INTEGRITY_EXPIRATION, 0)
     }
 
-    val gamesApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val streamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val gameStreamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val gameVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val gameClipsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX), Pair(2, C.GQL))
-    val channelVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val channelClipsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX), Pair(2, C.GQL))
-    val searchVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL))
-    val searchStreamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX))
-    val searchChannelsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX), Pair(2, C.GQL))
-    val searchGamesApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val followedStreamsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.HELIX), Pair(2, C.GQL))
-    val followedVideosApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL))
-    val followedChannelsApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL), Pair(2, C.HELIX))
-    val followedGamesApiDefaults: ArrayList<Pair<Long?, String?>?> = arrayListOf(Pair(0, C.GQL_QUERY), Pair(1, C.GQL))
-
-    fun listFromPrefs(pref: String?, defaults: ArrayList<Pair<Long?, String?>?>): ArrayList<Pair<Long?, String?>?> {
-        return if (!pref.isNullOrBlank()) {
-            val list = ArrayList<Pair<Long?, String?>?>()
-            val split = splitAndMakeMap(pref)
-            for (i in split.sortedBy { it?.first }) {
-                val item = defaults.find { it?.second == i?.second }
-                if (item != null) {
-                    list.add(i)
-                }
-            }
-            for (i in defaults.sortedBy { it?.first }) {
-                val item = list.find { it?.second == i?.second }
-                if (item == null) {
-                    i?.first?.toInt()?.let { list.add(it, i) }
-                }
-            }
-            list
-        } else {
-            defaults
-        }
-    }
-
-    private fun splitAndMakeMap(string: String): ArrayList<Pair<Long?, String?>?> {
-        val list = string.split(",".toRegex()).dropLastWhile { it.isEmpty() }
-        val map = arrayListOf<Pair<Long?, String?>?>()
-        for (pair in list) {
-            val kv = pair.split(":".toRegex()).dropLastWhile { it.isEmpty() }
-            map.add(Pair(kv[0].toLong(), kv[1]))
-        }
-        return map
-    }
-
-    fun getVideoUrlFromPreview(url: String, type: String?, quality: String? = null): String {
-        return url
-            .replace("storyboards",
-                quality ?: if (type?.lowercase() == "upload") {
-                    "1080p60"
-                } else {
-                    "chunked"
-                })
-            .replaceAfterLast("/",
-                if (type?.lowercase() == "highlight") {
-                    "highlight-${url.substringAfterLast("/").substringBefore("-")}.m3u8"
-                } else {
-                    "index-dvr.m3u8"
-                }
-            )
-    }
+    val gamesApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val streamsApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val gameStreamsApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val gameVideosApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val gameClipsApiDefaults = listOf(C.GQL, C.HELIX, C.GQL_PERSISTED_QUERY)
+    val channelVideosApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val channelClipsApiDefaults = listOf(C.GQL, C.HELIX, C.GQL_PERSISTED_QUERY)
+    val searchVideosApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY)
+    val searchStreamsApiDefaults = listOf(C.GQL, C.HELIX)
+    val searchChannelsApiDefaults = listOf(C.GQL, C.HELIX, C.GQL_PERSISTED_QUERY)
+    val searchGamesApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val followedStreamsApiDefaults = listOf(C.GQL, C.HELIX, C.GQL_PERSISTED_QUERY)
+    val followedVideosApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY)
+    val followedChannelsApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
+    val followedGamesApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY)
 
     fun getVideoUrlMapFromPreview(url: String, type: String?): Map<String, String> {
         val qualityList = listOf("chunked", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")

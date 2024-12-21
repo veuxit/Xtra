@@ -126,7 +126,7 @@ class PlayerViewerListDialog : BottomSheetDialogFragment(), IntegrityDialog.Call
                             }
                             if (fullList.count != null) {
                                 userCount.visible()
-                                userCount.text = requireContext().getString(R.string.user_count, TwitchApiHelper.formatCount(requireContext(), fullList.count))
+                                userCount.text = requireContext().getString(R.string.user_count, TwitchApiHelper.formatCount(fullList.count, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)))
                             } else {
                                 userCount.gone()
                             }

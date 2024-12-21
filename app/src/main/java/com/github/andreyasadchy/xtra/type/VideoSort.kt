@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.type
 
-enum class VideoSort {
-    TIME,
-    TIME_ASC,
-    VIEWS
+enum class VideoSort(val rawValue: String) {
+    TIME("TIME"),
+    TIME_ASC("TIME_ASC"),
+    VIEWS("VIEWS"),
 }

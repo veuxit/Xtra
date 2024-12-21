@@ -12,8 +12,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.Emote
+import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
@@ -21,15 +21,11 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
-import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
-import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedDialog
-import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedChatAdapter
-import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -60,25 +56,44 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             }
         }
         with(binding) {
-            val args = requireArguments()
-            val channelId = args.getString(KEY_CHANNEL_ID)
-            val isLive = args.getBoolean(KEY_IS_LIVE)
-            val account = Account.get(requireContext())
-            val isLoggedIn = !account.login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
-            val chatUrl = args.getString(KEY_CHAT_URL)
-            val enableChat = when {
-                requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) -> false
-                isLive -> {
+            if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
+                val args = requireArguments()
+                val channelId = args.getString(KEY_CHANNEL_ID)
+                val isLive = args.getBoolean(KEY_IS_LIVE)
+                val accountLogin = requireContext().tokenPrefs().getString(C.USERNAME, null)
+                val isLoggedIn = !accountLogin.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
+                val chatUrl = args.getString(KEY_CHAT_URL)
+                val enableChat: Boolean
+                if (isLive) {
                     chatView.init(
                         fragment = this@ChatFragment,
                         channelId = channelId,
                         namePaints = viewModel.namePaints,
                         paintUsers = viewModel.paintUsers
                     )
-                    chatView.setCallback(viewModel)
+                    val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
+                    val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
+                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
+                    val accountId = requireContext().tokenPrefs().getString(C.USER_ID, null)
+                    val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
+                    val useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
+                    val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    chatView.setCallback(object : ChatView.ChatViewCallback {
+                        override fun send(message: CharSequence, replyId: String?) {
+                            viewModel.send(message, replyId, helixHeaders, gqlHeaders, accountId, channelId, channelLogin, useApiCommands, useApiChatMessages, checkIntegrity)
+                        }
+
+                        override fun onRaidClicked(raid: Raid) {
+                            viewModel.raidClicked.value = raid
+                        }
+
+                        override fun onRaidClose() {
+                            viewModel.raidClosed = true
+                        }
+                    })
                     if (isLoggedIn) {
-                        chatView.setUsername(account.login)
-                        chatView.addToAutoCompleteList(viewModel.chatters)
+                        chatView.setUsername(accountLogin)
+                        chatView.addToAutoCompleteList(viewModel.chatters.values)
                         viewModel.loadRecentEmotes()
                         viewLifecycleOwner.lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -107,312 +122,272 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             }
                         }
                     }
-                    true
-                }
-                chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) -> {
-                    chatView.init(
-                        fragment = this@ChatFragment,
-                        channelId = channelId,
-                        getEmoteBytes = viewModel::getEmoteBytes,
-                        chatUrl = chatUrl
-                    )
-                    true
-                }
-                else -> {
-                    requireView().findViewById<TextView>(R.id.chatReplayUnavailable)?.visible()
-                    false
-                }
-            }
-            if (enableChat) {
-                chatView.enableChatInteraction(isLive && isLoggedIn)
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.chatMessages.collect {
-                            chatView.submitList(it)
-                        }
+                    enableChat = true
+                } else {
+                    if (chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY))) {
+                        chatView.init(
+                            fragment = this@ChatFragment,
+                            channelId = channelId,
+                            getEmoteBytes = viewModel::getEmoteBytes,
+                            chatUrl = chatUrl
+                        )
+                        enableChat = true
+                    } else {
+                        requireView().findViewById<TextView>(R.id.chatReplayUnavailable)?.visible()
+                        enableChat = false
                     }
                 }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.newMessage.collect {
-                            if (it != null) {
-                                chatView.notifyMessageAdded(it)
-                                viewModel.newMessage.value = null
+                if (enableChat) {
+                    chatView.enableChatInteraction(isLive && isLoggedIn)
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.chatMessages.collect {
+                                chatView.submitList(it)
                             }
                         }
                     }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.localTwitchEmotes.collectLatest {
-                            chatView.addLocalTwitchEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.globalStvEmotes.collectLatest {
-                            chatView.addGlobalStvEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.channelStvEmotes.collectLatest {
-                            chatView.addChannelStvEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.globalBttvEmotes.collectLatest {
-                            chatView.addGlobalBttvEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.channelBttvEmotes.collectLatest {
-                            chatView.addChannelBttvEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.globalFfzEmotes.collectLatest {
-                            chatView.addGlobalFfzEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.channelFfzEmotes.collectLatest {
-                            chatView.addChannelFfzEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.globalBadges.collectLatest {
-                            chatView.addGlobalBadges(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.channelBadges.collectLatest {
-                            chatView.addChannelBadges(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.cheerEmotes.collectLatest {
-                            chatView.addCheerEmotes(it)
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.roomState.collectLatest {
-                            if (it != null) {
-                                chatView.notifyRoomState(it)
-                                viewModel.roomState.value = null
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.reloadMessages.collectLatest {
-                            if (it) {
-                                chatView.notifyEmotesLoaded()
-                                viewModel.reloadMessages.value = false
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.scrollDown.collectLatest {
-                            if (it) {
-                                chatView.scrollToLastPosition()
-                                viewModel.scrollDown.value = false
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.hideRaid.collectLatest {
-                            if (it) {
-                                chatView.hideRaid()
-                                viewModel.hideRaid.value = false
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.raid.collectLatest {
-                            if (it != null) {
-                                onRaidUpdate(it)
-                                viewModel.raid.value = null
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.raidClicked.collectLatest {
-                            if (it != null) {
-                                onRaidClicked(it)
-                                viewModel.raidClicked.value = null
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.playbackMessage.collectLatest {
-                            if (it != null) {
-                                if (it.live != null) {
-                                    (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it, args.getString(KEY_CHANNEL_LOGIN))
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newMessage.collect {
+                                if (it != null) {
+                                    chatView.notifyMessageAdded(it)
+                                    viewModel.newMessage.value = null
                                 }
-                                (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it.viewers)
                             }
                         }
                     }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.streamInfo.collectLatest {
-                            if (it != null) {
-                                (parentFragment as? StreamPlayerFragment)?.updateStreamInfo(it.title, it.gameId, null, it.gameName)
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.localTwitchEmotes.collectLatest {
+                                chatView.addLocalTwitchEmotes(it)
                             }
                         }
                     }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.newPaint.collectLatest {
-                            if (it != null) {
-                                chatView.addPaint(it)
-                                viewModel.newPaint.value = null
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.globalStvEmotes.collectLatest {
+                                chatView.addGlobalStvEmotes(it)
                             }
                         }
                     }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.newPaintUser.collectLatest {
-                            if (it != null) {
-                                chatView.addPaintUser(it)
-                                viewModel.newPaintUser.value = null
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.channelStvEmotes.collectLatest {
+                                chatView.addChannelStvEmotes(it)
                             }
                         }
                     }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.globalBttvEmotes.collectLatest {
+                                chatView.addGlobalBttvEmotes(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.channelBttvEmotes.collectLatest {
+                                chatView.addChannelBttvEmotes(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.globalFfzEmotes.collectLatest {
+                                chatView.addGlobalFfzEmotes(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.channelFfzEmotes.collectLatest {
+                                chatView.addChannelFfzEmotes(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.globalBadges.collectLatest {
+                                chatView.addGlobalBadges(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.channelBadges.collectLatest {
+                                chatView.addChannelBadges(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.cheerEmotes.collectLatest {
+                                chatView.addCheerEmotes(it)
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.roomState.collectLatest {
+                                if (it != null) {
+                                    chatView.notifyRoomState(it)
+                                    viewModel.roomState.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.reloadMessages.collectLatest {
+                                if (it) {
+                                    chatView.notifyEmotesLoaded()
+                                    viewModel.reloadMessages.value = false
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.scrollDown.collectLatest {
+                                if (it) {
+                                    chatView.scrollToLastPosition()
+                                    viewModel.scrollDown.value = false
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.hideRaid.collectLatest {
+                                if (it) {
+                                    chatView.hideRaid()
+                                    viewModel.hideRaid.value = false
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.raid.collectLatest {
+                                if (it != null) {
+                                    onRaidUpdate(it)
+                                    viewModel.raid.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.raidClicked.collectLatest {
+                                if (it != null) {
+                                    onRaidClicked(it)
+                                    viewModel.raidClicked.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.playbackMessage.collectLatest {
+                                if (it != null) {
+                                    if (it.live != null) {
+                                        (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it.live, it.serverTime, args.getString(KEY_CHANNEL_LOGIN))
+                                    }
+                                    (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it.viewers)
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.streamInfo.collectLatest {
+                                if (it != null) {
+                                    (parentFragment as? StreamPlayerFragment)?.updateStreamInfo(it.title, it.gameId, null, it.gameName)
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newPaint.collectLatest {
+                                if (it != null) {
+                                    chatView.addPaint(it)
+                                    viewModel.newPaint.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newPaintUser.collectLatest {
+                                if (it != null) {
+                                    chatView.addPaintUser(it)
+                                    viewModel.newPaintUser.value = null
+                                }
+                            }
+                        }
+                    }
+                    if (chatUrl != null) {
+                        initialize()
+                    }
                 }
-            }
-            if (chatUrl != null) {
-                initialize()
             }
         }
     }
 
     override fun initialize() {
-        val args = requireArguments()
-        val channelId = args.getString(KEY_CHANNEL_ID)
-        val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
-        val channelName = args.getString(KEY_CHANNEL_NAME)
-        val account = Account.get(requireContext())
-        val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
-        val isLoggedIn = !account.login.isNullOrBlank() && (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank())
-        val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
-        val useChatWebSocket = requireContext().prefs().getBoolean(C.CHAT_USE_WEBSOCKET, false)
-        val useSSL = requireContext().prefs().getBoolean(C.CHAT_USE_SSL, true)
-        val usePubSub = requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true)
-        val showNamePaints = requireContext().prefs().getBoolean(C.CHAT_SHOW_PAINTS, true)
-        val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
-        val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
-        val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
-        val showClearMsg = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)
-        val showClearChat = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
-        val collectPoints = requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true)
-        val notifyPoints = requireContext().prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false)
-        val showRaids = requireContext().prefs().getBoolean(C.CHAT_RAIDS_SHOW, true)
-        val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
-        val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
-        val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
-        val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
-        val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
-        val nameDisplay = requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")
-        val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-        val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
-        val useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
-        val useEventSubChat = requireContext().prefs().getBoolean(C.DEBUG_EVENTSUB_CHAT, false)
-        val disableChat = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
-        val isLive = args.getBoolean(KEY_IS_LIVE)
-        if (!disableChat) {
-            if (isLive) {
-                val streamId = args.getString(KEY_STREAM_ID)
-                viewModel.startLive(useChatWebSocket, useSSL, usePubSub, account, isLoggedIn, showNamePaints, helixHeaders, gqlHeaders, channelId, channelLogin, channelName, streamId, messageLimit, emoteQuality, animateGifs, showUserNotice, showClearMsg, showClearChat, collectPoints, notifyPoints, showRaids, enableRecentMsg, recentMsgLimit.toString(), enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity, useApiCommands, useApiChatMessages, useEventSubChat)
+        if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
+            val args = requireArguments()
+            val channelId = args.getString(KEY_CHANNEL_ID)
+            val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
+            if (args.getBoolean(KEY_IS_LIVE)) {
+                viewModel.startLive(channelId, channelLogin, args.getString(KEY_CHANNEL_NAME), args.getString(KEY_STREAM_ID))
             } else {
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
                 if (chatUrl != null || (videoId != null && !args.getBoolean(KEY_START_TIME_EMPTY))) {
-                    val startTime = args.getInt(KEY_START_TIME)
-                    val getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition
-                    val getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
-                    viewModel.startReplay(helixHeaders, gqlHeaders, channelId, channelLogin, chatUrl, videoId, startTime, getCurrentPosition, getCurrentSpeed, messageLimit, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, nameDisplay, checkIntegrity)
+                    viewModel.startReplay(
+                        channelId = channelId,
+                        channelLogin = channelLogin,
+                        chatUrl = chatUrl,
+                        videoId = videoId,
+                        startTime = args.getInt(KEY_START_TIME),
+                        getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
+                        getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                    )
                 }
             }
         }
     }
 
     fun isActive(): Boolean? {
-        return (viewModel.chat as? ChatViewModel.LiveChatController)?.isActive()
+        return viewModel.isActive()
     }
 
     fun disconnect() {
-        (viewModel.chat as? ChatViewModel.LiveChatController)?.disconnect()
+        viewModel.disconnect()
     }
 
     fun reconnect() {
-        (viewModel.chat as? ChatViewModel.LiveChatController)?.start()
         val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
-        val enableRecentMsg = requireContext().prefs().getBoolean(C.CHAT_RECENT, true)
-        val recentMsgLimit = requireContext().prefs().getInt(C.CHAT_RECENT_LIMIT, 100)
-        val showUserNotice = requireContext().prefs().getBoolean(C.CHAT_SHOW_USERNOTICE, true)
-        val showClearMsg = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)
-        val showClearChat = requireContext().prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
-        val nameDisplay = requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")
-        if (channelLogin != null && enableRecentMsg) {
-            viewModel.loadRecentMessages(channelLogin, recentMsgLimit.toString(), showUserNotice, showClearMsg, showClearChat, nameDisplay)
+        if (channelLogin != null) {
+            viewModel.startLiveChat(requireArguments().getString(KEY_CHANNEL_ID), channelLogin)
+            if (requireContext().prefs().getBoolean(C.CHAT_RECENT, true)) {
+                viewModel.loadRecentMessages(channelLogin)
+            }
         }
     }
 
     fun reloadEmotes() {
-        val channelId = requireArguments().getString(KEY_CHANNEL_ID)
-        val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
-        val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext())
-        val emoteQuality =  requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
-        val animateGifs =  requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)
-        val enableStv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_STV, true)
-        val enableBttv = requireContext().prefs().getBoolean(C.CHAT_ENABLE_BTTV, true)
-        val enableFfz = requireContext().prefs().getBoolean(C.CHAT_ENABLE_FFZ, true)
-        val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-        viewModel.reloadEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, animateGifs, enableStv, enableBttv, enableFfz, checkIntegrity)
+        viewModel.reloadEmotes(requireArguments().getString(KEY_CHANNEL_ID), requireArguments().getString(KEY_CHANNEL_LOGIN))
     }
 
     fun updatePosition(position: Long) {
-        (viewModel.chat as? ChatViewModel.VideoChatController)?.updatePosition(position)
+        viewModel.updatePosition(position)
     }
 
     fun updateSpeed(speed: Float) {
-        (viewModel.chat as? ChatViewModel.VideoChatController)?.updateSpeed(speed)
+        viewModel.updateSpeed(speed)
     }
 
     fun updateStreamId(id: String?) {
@@ -491,19 +466,51 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
 
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.start()
+            val args = requireArguments()
+            val channelId = args.getString(KEY_CHANNEL_ID)
+            val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
+            if (args.getBoolean(KEY_IS_LIVE)) {
+                viewModel.resumeLive(channelId, channelLogin)
+            } else {
+                viewModel.resumeReplay(
+                    channelId = channelId,
+                    channelLogin = channelLogin,
+                    chatUrl = args.getString(KEY_CHAT_URL),
+                    videoId = args.getString(KEY_VIDEO_ID),
+                    startTime = args.getInt(KEY_START_TIME),
+                    getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
+                    getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                )
+            }
         }
     }
 
     override fun onMovedToBackground() {
-        if (!requireArguments().getBoolean(KEY_IS_LIVE) || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false) || requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-            viewModel.stop()
+        if (!requireArguments().getBoolean(KEY_IS_LIVE) || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false)) {
+            viewModel.stopLiveChat()
+            viewModel.stopReplayChat()
         }
     }
 
     override fun onMovedToForeground() {
-        if (!requireArguments().getBoolean(KEY_IS_LIVE) || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false) || requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-            viewModel.start()
+        val args = requireArguments()
+        val isLive = args.getBoolean(KEY_IS_LIVE)
+        if (!isLive || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false)) {
+            val channelId = args.getString(KEY_CHANNEL_ID)
+            val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
+            if (isLive) {
+                viewModel.resumeLive(channelId, channelLogin)
+            } else {
+                viewModel.resumeReplay(
+                    channelId = channelId,
+                    channelLogin = channelLogin,
+                    chatUrl = args.getString(KEY_CHAT_URL),
+                    videoId = args.getString(KEY_VIDEO_ID),
+                    startTime = args.getInt(KEY_START_TIME),
+                    getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
+                    getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                )
+            }
         }
     }
 

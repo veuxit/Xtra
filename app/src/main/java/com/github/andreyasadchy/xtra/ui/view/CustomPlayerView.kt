@@ -5,7 +5,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import androidx.media3.ui.PlayerView
-import com.github.andreyasadchy.xtra.ui.isClick
+import com.github.andreyasadchy.xtra.util.isClick
 
 class CustomPlayerView : PlayerView {
 

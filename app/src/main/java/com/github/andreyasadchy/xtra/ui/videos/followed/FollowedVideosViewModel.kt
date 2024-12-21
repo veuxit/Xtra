@@ -1,17 +1,11 @@
 package com.github.andreyasadchy.xtra.ui.videos.followed
 
 import android.content.Context
-import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.offline.SortChannel
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
+import com.github.andreyasadchy.xtra.model.ui.SortChannel
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -21,6 +15,7 @@ import com.github.andreyasadchy.xtra.repository.datasource.FollowedVideosDataSou
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
+import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -28,10 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
@@ -45,83 +37,54 @@ class FollowedVideosViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
-    private val _sortText = MutableStateFlow<CharSequence?>(null)
-    val sortText: StateFlow<CharSequence?> = _sortText
-    private val filter = MutableStateFlow(setUser())
+    val filter = MutableStateFlow<Filter?>(null)
+    val sortText = MutableStateFlow<CharSequence?>(null)
 
-    val sort: VideoSortEnum
-        get() = filter.value.sort
-    val period: VideoPeriodEnum
-        get() = filter.value.period
-    val type: BroadcastTypeEnum
-        get() = filter.value.broadcastType
+    val sort: String
+        get() = filter.value?.sort ?: VideosSortDialog.SORT_TIME
+    val type: String
+        get() = filter.value?.type ?: VideosSortDialog.VIDEO_TYPE_ALL
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
             PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         ) {
-            with(filter) {
-                FollowedVideosDataSource(
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
-                    gqlQueryType = when (broadcastType) {
-                        BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
-                        BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
-                        BroadcastTypeEnum.UPLOAD -> BroadcastType.UPLOAD
-                        else -> null },
-                    gqlQuerySort = when (sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
-                    gqlApi = graphQLRepository,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_FOLLOWED_VIDEOS, ""), TwitchApiHelper.followedVideosApiDefaults))
-            }
+            FollowedVideosDataSource(
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
+                gqlQueryType = when (type) {
+                    VideosSortDialog.VIDEO_TYPE_ALL -> null
+                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> BroadcastType.ARCHIVE
+                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> BroadcastType.HIGHLIGHT
+                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> BroadcastType.UPLOAD
+                    else -> null
+                },
+                gqlQuerySort = when (sort) {
+                    VideosSortDialog.SORT_TIME -> VideoSort.TIME
+                    VideosSortDialog.SORT_VIEWS -> VideoSort.VIEWS
+                    else -> VideoSort.TIME
+                },
+                gqlApi = graphQLRepository,
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_VIDEOS, null)?.split(',') ?: TwitchApiHelper.followedVideosApiDefaults
+            )
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun setUser(): Filter {
-        val sortValues = runBlocking { sortChannelRepository.getById("followed_videos") }
-        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
-            when (sortValues?.videoSort) {
-                VideoSortEnum.VIEWS.value -> ContextCompat.getString(applicationContext, R.string.view_count)
-                else -> ContextCompat.getString(applicationContext, R.string.upload_date)
-            }, ContextCompat.getString(applicationContext, R.string.all_time)
-        )
-        return Filter(
-            sort = when (sortValues?.videoSort) {
-                VideoSortEnum.VIEWS.value -> VideoSortEnum.VIEWS
-                else -> VideoSortEnum.TIME
-            },
-            broadcastType = when (sortValues?.videoType) {
-                BroadcastTypeEnum.ARCHIVE.value -> BroadcastTypeEnum.ARCHIVE
-                BroadcastTypeEnum.HIGHLIGHT.value -> BroadcastTypeEnum.HIGHLIGHT
-                BroadcastTypeEnum.UPLOAD.value -> BroadcastTypeEnum.UPLOAD
-                else -> BroadcastTypeEnum.ALL
-            }
-        )
+    suspend fun getSortChannel(id: String): SortChannel? {
+        return sortChannelRepository.getById(id)
     }
 
-    fun filter(sort: VideoSortEnum, period: VideoPeriodEnum, type: BroadcastTypeEnum, text: CharSequence, saveDefault: Boolean) {
-        filter.value = filter.value.copy(sort = sort, period = period, broadcastType = type)
-        _sortText.value = text
-        if (saveDefault) {
-            viewModelScope.launch {
-                val sortDefaults = sortChannelRepository.getById("followed_videos")
-                (sortDefaults?.apply {
-                    videoSort = sort.value
-                    videoType = type.value
-                } ?: SortChannel(
-                    id = "followed_videos",
-                    videoSort = sort.value,
-                    videoType = type.value
-                )).let { sortChannelRepository.save(it) }
-            }
-        }
-        if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)) {
-            applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, saveDefault) }
-        }
+    suspend fun saveSortChannel(item: SortChannel) {
+        sortChannelRepository.save(item)
     }
 
-    private data class Filter(
-        val sort: VideoSortEnum = VideoSortEnum.TIME,
-        val period: VideoPeriodEnum = VideoPeriodEnum.ALL,
-        val broadcastType: BroadcastTypeEnum = BroadcastTypeEnum.ALL)
+    fun setFilter(sort: String?, type: String?) {
+        filter.value = Filter(sort, type)
+    }
+
+    class Filter(
+        val sort: String?,
+        val type: String?,
+    )
 }

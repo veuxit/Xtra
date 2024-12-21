@@ -51,10 +51,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.NotLoggedIn
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
@@ -298,7 +296,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                             }
                             if (online) {
                                 if (!TwitchApiHelper.checkedValidation && prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                                    viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity)
+                                    viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity.tokenPrefs().getString(C.USER_ID, null), this@MainActivity.tokenPrefs().getString(C.USERNAME, null), this@MainActivity)
                                 }
                                 if (!TwitchApiHelper.checkedUpdates && prefs.getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
                                     (prefs.getString(C.UPDATE_CHECK_FREQUENCY, "7")?.toIntOrNull() ?: 7) * 86400000 + tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) < System.currentTimeMillis()) {
@@ -757,7 +755,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private fun initNavigation() {
         navController = (supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment).navController
         navController.setGraph(navController.navInflater.inflate(R.navigation.nav_graph).also {
-            if ((Account.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1) < 2)) || (Account.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1) == 0))) {
+            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(this, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(this)[C.HEADER_TOKEN].isNullOrBlank()
+            val setting = prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1
+            if ((isLoggedIn && setting < 2) || (!isLoggedIn && setting == 0)) {
                 if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
                     it.setStartDestination(R.id.followPagerFragment)
                 } else {

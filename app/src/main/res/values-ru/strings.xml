@@ -156,8 +156,8 @@
     <string name="settings_chat">ЧАТ</string>
     <string name="settings_player">ПРОИГРЫВАТЕЛЬ</string>
     <string name="token_random_deviceid">Случайный ИД устройства</string>
-    <string name="api_helix">ИД клиента Helix</string>
-    <string name="api_gql">ИД клиента GQL</string>
+    <string name="api_helix_client_id">ИД клиента Helix</string>
+    <string name="api_gql_client_id">ИД клиента GQL</string>
     <string name="playback_speed">Скорость воспроизведения</string>
     <string name="quality">Качество</string>
     <string name="saved_value">Сохранённое значение</string>
@@ -199,8 +199,6 @@
     <string name="user_partner">Партнёр</string>
     <string name="user_affiliate">Компаньон</string>
     <string name="user_staff">Персонал</string>
-    <string name="user_admin">Администратор</string>
-    <string name="user_global_mod">Глобальный мод</string>
     <string name="uptime">В эфире: %s</string>
     <string name="select_language">Выберите язык</string>
     <string name="show_tags">Показать метки</string>
@@ -516,8 +514,6 @@
     <string name="tokens">Токены</string>
     <string name="download_limit">Предел одновременных загрузок</string>
     <string name="followed_only">Только отслеживаемые</string>
-    <string name="api_gql2">ИД клиента GQL 2</string>
-    <string name="api_gql_token2">Токен GQL 2</string>
     <string name="debug_api_commands">Использовать команды API чата</string>
     <string name="skip_video_access_token">Пропустить токен доступа видео</string>
     <string name="skip_clip_access_token">Пропустить токен доступа клипа</string>
@@ -549,7 +545,6 @@
     <string name="show_media_playlist_tags">Показать метки плейлиста медиа</string>
     <string name="show_multivariant_playlist_tags">Показать многовариантные метки плейлиста</string>
     <string name="use_gamepager">Вкладки на странице игр</string>
-    <string name="api_gql_redirect2">Адрес 2 для переправления GQL</string>
     <string name="disable_background_video">Не рисовать видео в фоновом режиме</string>
     <string name="use_background_audio_track">Играть только дорожку аудио в фоновом режиме</string>
     <string name="show_audio_compressor_button">Кнопка компрессора звука</string>
@@ -670,4 +665,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

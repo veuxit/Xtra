@@ -17,7 +17,13 @@ class ChatReadIRC(
     private val useSSL: Boolean,
     private val loggedIn: Boolean,
     channelName: String,
-    private val listener: ChatListener) : Thread() {
+    private val onConnect: () -> Unit,
+    private val onDisconnect: (String, String) -> Unit,
+    private val onChatMessage: (String, Boolean) -> Unit,
+    private val onClearMessage: (String) -> Unit,
+    private val onClearChat: (String) -> Unit,
+    private val onNotice: (String) -> Unit,
+    private val onRoomState: (String) -> Unit) : Thread() {
     private var socketIn: Socket? = null
     private lateinit var readerIn: BufferedReader
     private lateinit var writerIn: BufferedWriter
@@ -38,16 +44,16 @@ class ChatReadIRC(
                     val messageIn = readerIn.readLine()!!
                     messageIn.run {
                         when {
-                            contains("PRIVMSG") -> listener.onChatMessage(this, false)
-                            contains("USERNOTICE") -> listener.onChatMessage(this, true)
-                            contains("CLEARMSG") -> listener.onClearMessage(this)
-                            contains("CLEARCHAT") -> listener.onClearChat(this)
+                            contains("PRIVMSG") -> onChatMessage(this, false)
+                            contains("USERNOTICE") -> onChatMessage(this, true)
+                            contains("CLEARMSG") -> onClearMessage(this)
+                            contains("CLEARCHAT") -> onClearChat(this)
                             contains("NOTICE") -> {
                                 if (!loggedIn) {
-                                    listener.onNotice(this)
+                                    onNotice(this)
                                 }
                             }
-                            contains("ROOMSTATE") -> listener.onRoomState(this)
+                            contains("ROOMSTATE") -> onRoomState(this)
                             startsWith("PING") -> handlePing(writerIn)
                         }
                     }
@@ -55,7 +61,7 @@ class ChatReadIRC(
             } catch (e: IOException) {
                 Log.d(TAG, "Disconnecting from $hashChannelName")
                 if (e.message != "Socket closed" && e.message != "socket is closed" && e.message != "Connection reset" && e.message != "recvfrom failed: ECONNRESET (Connection reset by peer)") {
-                    listener.onDisconnect(e.toString(), e.stackTraceToString())
+                    onDisconnect(e.toString(), e.stackTraceToString())
                 }
                 close()
                 sleep(1000L)
@@ -84,7 +90,7 @@ class ChatReadIRC(
             write("JOIN $hashChannelName", writerIn)
             writerIn.flush()
             Log.d(TAG, "Successfully connected to - $hashChannelName")
-            listener.onConnect()
+            onConnect()
         } catch (e: IOException) {
             Log.e(TAG, "Error connecting to Twitch IRC", e)
             throw e

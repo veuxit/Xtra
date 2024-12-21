@@ -4,7 +4,7 @@ import com.github.andreyasadchy.xtra.model.helix.Pagination
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class VideosResponse(
+class VideosResponse(
     val data: List<Video>,
     val pagination: Pagination? = null,
 )

@@ -5,7 +5,7 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class Video(
+class Video(
     val id: String? = null,
     val channelId: String? = null,
     val channelLogin: String? = null,

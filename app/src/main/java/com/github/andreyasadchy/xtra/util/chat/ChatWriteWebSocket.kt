@@ -18,7 +18,8 @@ class ChatWriteWebSocket(
     channelName: String,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: ChatListener) {
+    private val onNotice: (String) -> Unit,
+    private val onUserState: (String) -> Unit) {
     private val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
     private var isActive = false
@@ -120,9 +121,9 @@ class ChatWriteWebSocket(
                         contains("USERNOTICE") -> {}
                         contains("CLEARMSG") -> {}
                         contains("CLEARCHAT") -> {}
-                        contains("NOTICE") -> listener.onNotice(this)
+                        contains("NOTICE") -> onNotice(this)
                         contains("ROOMSTATE") -> {}
-                        contains("USERSTATE") -> listener.onUserState(this)
+                        contains("USERSTATE") -> onUserState(this)
                         startsWith("PING") -> write("PONG")
                         startsWith("PONG") -> pongReceived = true
                         startsWith("RECONNECT") -> reconnect()

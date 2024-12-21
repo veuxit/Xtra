@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Stream(
+class Stream(
     val id: String? = null,
     @SerialName("user_id")
     val channelId: String? = null,

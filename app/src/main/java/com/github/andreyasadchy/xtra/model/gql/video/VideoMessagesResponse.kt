@@ -5,34 +5,34 @@ import com.github.andreyasadchy.xtra.model.gql.PageInfo
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class VideoMessagesResponse(
+class VideoMessagesResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val video: Video,
     )
 
     @Serializable
-    data class Video(
+    class Video(
         val comments: Comments,
     )
 
     @Serializable
-    data class Comments(
+    class Comments(
         val edges: List<Item>,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: Comment,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class Comment(
+    class Comment(
         val id: String? = null,
         val contentOffsetSeconds: Int? = null,
         val message: Message? = null,
@@ -40,31 +40,31 @@ data class VideoMessagesResponse(
     )
 
     @Serializable
-    data class Message(
+    class Message(
         val fragments: List<Fragment>? = null,
         val userBadges: List<Badge>? = null,
         val userColor: String? = null,
     )
 
     @Serializable
-    data class Fragment(
+    class Fragment(
         val text: String? = null,
         val emote: Emote? = null,
     )
 
     @Serializable
-    data class Emote(
+    class Emote(
         val emoteID: String? = null,
     )
 
     @Serializable
-    data class Badge(
+    class Badge(
         val setID: String? = null,
         val version: String? = null,
     )
 
     @Serializable
-    data class Commenter(
+    class Commenter(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,

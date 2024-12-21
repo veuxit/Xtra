@@ -1,11 +1,11 @@
 package com.github.andreyasadchy.xtra.api
 
-import com.github.andreyasadchy.xtra.model.chat.BttvResponse
-import com.github.andreyasadchy.xtra.model.chat.FfzChannelResponse
-import com.github.andreyasadchy.xtra.model.chat.FfzGlobalResponse
-import com.github.andreyasadchy.xtra.model.chat.RecentMessagesResponse
-import com.github.andreyasadchy.xtra.model.chat.StvChannelResponse
-import com.github.andreyasadchy.xtra.model.chat.StvGlobalResponse
+import com.github.andreyasadchy.xtra.model.misc.BttvResponse
+import com.github.andreyasadchy.xtra.model.misc.FfzChannelResponse
+import com.github.andreyasadchy.xtra.model.misc.FfzGlobalResponse
+import com.github.andreyasadchy.xtra.model.misc.RecentMessagesResponse
+import com.github.andreyasadchy.xtra.model.misc.StvChannelResponse
+import com.github.andreyasadchy.xtra.model.misc.StvGlobalResponse
 import kotlinx.serialization.json.JsonElement
 import okhttp3.RequestBody
 import okhttp3.ResponseBody

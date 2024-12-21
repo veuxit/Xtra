@@ -14,7 +14,7 @@ import androidx.work.WorkerParameters
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -32,7 +32,7 @@ class LiveNotificationWorker @AssistedInject constructor(
     lateinit var shownNotifications: ShownNotificationsRepository
 
     @Inject
-    lateinit var notificationsRepository: NotificationsRepository
+    lateinit var notificationUsersRepository: NotificationUsersRepository
 
     @Inject
     lateinit var graphQLRepository: GraphQLRepository
@@ -44,7 +44,7 @@ class LiveNotificationWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val streams = shownNotifications.getNewStreams(
-            notificationsRepository = notificationsRepository,
+            notificationUsersRepository = notificationUsersRepository,
             gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
             gqlApi = graphQLRepository,
             helixHeaders = TwitchApiHelper.getHelixHeaders(context),

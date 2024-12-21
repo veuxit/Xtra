@@ -28,7 +28,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
-import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -57,15 +56,16 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         private const val KEY_URLS_KEYS = "urls_keys"
         private const val KEY_URLS_VALUES = "urls_values"
         private const val KEY_VIDEO = "video"
-        private const val KEY_VIDEO_INFO = "videoInfo"
+        private const val KEY_VIDEO_TOTAL_DURATION = "totalDuration"
+        private const val KEY_VIDEO_CURRENT_POSITION = "currentPosition"
         private const val KEY_CLIP = "clip"
 
         fun newInstance(stream: Stream, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
             return DownloadDialog().apply { arguments = bundleOf(KEY_STREAM to stream, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values) }
         }
 
-        fun newInstance(video: Video, videoInfo: VideoDownloadInfo? = null): DownloadDialog {
-            return DownloadDialog().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_VIDEO_INFO to videoInfo) }
+        fun newInstance(video: Video, keys: Array<String>? = null, values: Array<String>? = null, totalDuration: Long? = null, currentPosition: Long? = null): DownloadDialog {
+            return DownloadDialog().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values, KEY_VIDEO_TOTAL_DURATION to totalDuration, KEY_VIDEO_CURRENT_POSITION to currentPosition) }
         }
 
         fun newInstance(clip: Clip, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
@@ -214,12 +214,9 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
             if (video != null) {
                 lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.videoInfo.collectLatest {
-                            if (it != null) {
-                                val qualities = viewModel.qualities.value
-                                if (!qualities.isNullOrEmpty()) {
-                                    initVideo(video, qualities, it)
-                                }
+                        viewModel.qualities.collectLatest {
+                            if (!it.isNullOrEmpty()) {
+                                initVideo(video, it, args.getLong(KEY_VIDEO_TOTAL_DURATION).takeIf { it > 0 } ?: video.duration?.let { TwitchApiHelper.getDuration(it)?.times(1000) } ?: 0, args.getLong(KEY_VIDEO_CURRENT_POSITION))
                             }
                         }
                     }
@@ -236,11 +233,10 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 viewModel.setVideo(
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                     video = video,
-                    videoInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        requireArguments().getParcelable(KEY_VIDEO_INFO, VideoDownloadInfo::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        requireArguments().getParcelable(KEY_VIDEO_INFO)
+                    qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                        args.getStringArray(KEY_URLS_VALUES)?.let { values ->
+                            keys.zip(values).toMap(mutableMapOf())
+                        }
                     },
                     playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                     skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
@@ -379,69 +375,67 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         }
     }
 
-    private fun initVideo(video: Video, qualities: Map<String, Pair<String, String>>, videoInfo: VideoDownloadInfo) {
+    private fun initVideo(video: Video, qualities: Map<String, Pair<String, String>>, totalDuration: Long, currentPosition: Long) {
         with(binding) {
-            with(videoInfo) {
-                layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
-                initDialog(qualities)
-                val defaultFrom = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
-                val totalTime = DateUtils.formatElapsedTime(totalDuration / 1000L)
-                val defaultTo = totalTime.let { if (it.length != 5) it else "00:$it" }
-                duration.text = requireContext().getString(R.string.duration, totalTime)
-                timeTo.editText?.hint = defaultTo
-                timeFrom.editText?.hint = defaultFrom
-                timeFrom.editText?.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
-                addTextChangeListener(timeFrom.editText!!)
-                addTextChangeListener(timeTo.editText!!)
+            layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
+            initDialog(qualities)
+            val defaultFrom = DateUtils.formatElapsedTime(currentPosition / 1000L).let { if (it.length == 5) "00:$it" else it }
+            val totalTime = DateUtils.formatElapsedTime(totalDuration / 1000L)
+            val defaultTo = totalTime.let { if (it.length != 5) it else "00:$it" }
+            duration.text = requireContext().getString(R.string.duration, totalTime)
+            timeTo.editText?.hint = defaultTo
+            timeFrom.editText?.hint = defaultFrom
+            timeFrom.editText?.doOnTextChanged { text, _, _, _ -> if (text?.length == 8) timeTo.requestFocus() }
+            addTextChangeListener(timeFrom.editText!!)
+            addTextChangeListener(timeTo.editText!!)
 
-                fun download() {
-                    val from = parseTime(timeFrom.editText!!, defaultFrom) ?: return
-                    val to = parseTime(timeTo.editText!!, defaultTo) ?: return
-                    when {
-                        to > totalDuration -> {
-                            timeTo.requestFocus()
-                            timeTo.editText?.error = getString(R.string.to_is_longer)
-                        }
-                        from < to -> {
-                            val quality = qualities.getValue(spinner.editText?.text.toString())
-                            val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
-                            val path = if (location == 0) sharedPath else downloadPath
-                            val downloadChat = downloadChat.isChecked
-                            val downloadChatEmotes = downloadChatEmotes.isChecked
-                            if (!path.isNullOrBlank()) {
-                                (requireActivity() as? MainActivity)?.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
-                                requireContext().prefs().edit {
-                                    putInt(C.DOWNLOAD_LOCATION, location)
-                                    if (location == 0) {
-                                        putString(C.DOWNLOAD_SHARED_PATH, sharedPath)
-                                    }
-                                    putBoolean(C.DOWNLOAD_CHAT, downloadChat)
-                                    putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
+            fun download() {
+                val from = parseTime(timeFrom.editText!!, defaultFrom) ?: return
+                val to = parseTime(timeTo.editText!!, defaultTo) ?: return
+                when {
+                    to > totalDuration -> {
+                        timeTo.requestFocus()
+                        timeTo.editText?.error = getString(R.string.to_is_longer)
+                    }
+                    from < to -> {
+                        val quality = qualities.getValue(spinner.editText?.text.toString())
+                        val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSelectionContainer.storageSpinner.editText?.text.toString())
+                        val path = if (location == 0) sharedPath else downloadPath
+                        val downloadChat = downloadChat.isChecked
+                        val downloadChatEmotes = downloadChatEmotes.isChecked
+                        if (!path.isNullOrBlank()) {
+                            (requireActivity() as? MainActivity)?.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                            requireContext().prefs().edit {
+                                putInt(C.DOWNLOAD_LOCATION, location)
+                                if (location == 0) {
+                                    putString(C.DOWNLOAD_SHARED_PATH, sharedPath)
                                 }
-                                DownloadUtils.requestNotificationPermission(requireActivity())
+                                putBoolean(C.DOWNLOAD_CHAT, downloadChat)
+                                putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
                             }
-                            dismiss()
+                            DownloadUtils.requestNotificationPermission(requireActivity())
                         }
-                        from >= to -> {
-                            timeFrom.requestFocus()
-                            timeFrom.editText?.error = getString(R.string.from_is_greater)
-                        }
-                        else -> {
-                            timeTo.requestFocus()
-                            timeTo.editText?.error = getString(R.string.to_is_lesser)
-                        }
+                        dismiss()
+                    }
+                    from >= to -> {
+                        timeFrom.requestFocus()
+                        timeFrom.editText?.error = getString(R.string.from_is_greater)
+                    }
+                    else -> {
+                        timeTo.requestFocus()
+                        timeTo.editText?.error = getString(R.string.to_is_lesser)
                     }
                 }
-                timeTo.editText?.setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == EditorInfo.IME_ACTION_DONE) {
-                        download()
-                        true
-                    } else {
-                        false
-                    }
-                }
-                download.setOnClickListener { download() }
             }
+            timeTo.editText?.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    download()
+                    true
+                } else {
+                    false
+                }
+            }
+            download.setOnClickListener { download() }
         }
     }
 

@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Follow(
+class Follow(
     @SerialName("broadcaster_id")
     val channelId: String? = null,
     @SerialName("broadcaster_login")

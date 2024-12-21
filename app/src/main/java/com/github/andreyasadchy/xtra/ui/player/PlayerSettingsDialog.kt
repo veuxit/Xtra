@@ -8,7 +8,6 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.PlayerSettingsBinding
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
@@ -17,6 +16,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -28,7 +28,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
         private const val SPEED = "speed"
         private const val VOD_GAMES = "vod_games"
 
-        fun newInstance(speedText: String?, vodGames: Boolean): PlayerSettingsDialog {
+        fun newInstance(speedText: String? = null, vodGames: Boolean? = false): PlayerSettingsDialog {
             return PlayerSettingsDialog().apply {
                 arguments = bundleOf(SPEED to speedText, VOD_GAMES to vodGames)
             }
@@ -79,7 +79,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                     }
                 }
                 if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                    val isLoggedIn = !Account.get(requireContext()).login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
+                    val isLoggedIn = !requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                     if (isLoggedIn && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_BAR, true)) {
                         menuChatBar.visible()
                         if (requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {

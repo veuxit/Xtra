@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
@@ -23,9 +23,9 @@ class StreamPlayerViewModel @Inject constructor(
     private val repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
     shownNotificationsRepository: ShownNotificationsRepository,
-    notificationsRepository: NotificationsRepository,
+    notificationUsersRepository: NotificationUsersRepository,
     okHttpClient: OkHttpClient,
-    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
+    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val result = MutableStateFlow<String?>(null)
 
@@ -108,16 +108,24 @@ class StreamPlayerViewModel @Inject constructor(
 
     private suspend fun updateStream(stream: Stream, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         repository.loadStream(stream.channelId, stream.channelLogin, helixHeaders, gqlHeaders, checkIntegrity).let {
-            this.stream.value = stream.copy(
+            this.stream.value = Stream(
                 id = if (!it?.id.isNullOrBlank()) {
-                    it?.id
+                    it.id
                 } else stream.id,
+                channelId = stream.channelId,
+                channelLogin = stream.channelLogin,
+                channelName = stream.channelName,
                 gameId = it?.gameId,
                 gameSlug = it?.gameSlug,
                 gameName = it?.gameName,
+                type = stream.type,
                 title = it?.title,
                 viewerCount = it?.viewerCount,
                 startedAt = it?.startedAt,
+                thumbnailUrl = stream.thumbnailUrl,
+                profileImageUrl = stream.profileImageUrl,
+                tags = stream.tags,
+                user = stream.user,
             )
         }
     }

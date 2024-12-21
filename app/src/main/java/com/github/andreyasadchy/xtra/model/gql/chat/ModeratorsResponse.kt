@@ -4,32 +4,32 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ModeratorsResponse(
+class ModeratorsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val user: User,
     )
 
     @Serializable
-    data class User(
+    class User(
         val mods: Mods,
     )
 
     @Serializable
-    data class Mods(
+    class Mods(
         val edges: List<Item>,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: Node,
     )
 
     @Serializable
-    data class Node(
+    class Node(
         val id: String? = null,
         val login: String? = null,
     )

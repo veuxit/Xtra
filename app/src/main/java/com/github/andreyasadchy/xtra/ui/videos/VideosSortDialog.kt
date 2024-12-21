@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.videos
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,22 +10,12 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideosSortBinding
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.ALL
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.DAY
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.MONTH
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum.WEEK
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.TIME
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum.VIEWS
 import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.game.GameVideosFragment
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -35,10 +24,20 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
 
     interface OnFilter {
-        fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean)
+        fun onChange(sort: String, sortText: CharSequence, period: String, periodText: CharSequence, type: String, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean)
     }
 
     companion object {
+        const val PERIOD_DAY = "day"
+        const val PERIOD_WEEK = "week"
+        const val PERIOD_MONTH = "month"
+        const val PERIOD_ALL = "all"
+        const val SORT_TIME = "time"
+        const val SORT_VIEWS = "views"
+        const val VIDEO_TYPE_ALL = "all"
+        const val VIDEO_TYPE_ARCHIVE = "archive"
+        const val VIDEO_TYPE_HIGHLIGHT = "highlight"
+        const val VIDEO_TYPE_UPLOAD = "upload"
 
         private const val SORT = "sort"
         private const val PERIOD = "period"
@@ -50,7 +49,7 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
 
         private const val REQUEST_CODE_LANGUAGE = 0
 
-        fun newInstance(sort: VideoSortEnum? = VIEWS, period: VideoPeriodEnum? = ALL, type: BroadcastTypeEnum? = BroadcastTypeEnum.ALL, languageIndex: Int? = 0, saveSort: Boolean = false, saveDefault: Boolean = false, clipChannel: Boolean = false): VideosSortDialog {
+        fun newInstance(sort: String? = SORT_TIME, period: String? = PERIOD_WEEK, type: String? = VIDEO_TYPE_ALL, languageIndex: Int? = 0, saveSort: Boolean? = false, saveDefault: Boolean? = false, clipChannel: Boolean? = false): VideosSortDialog {
             return VideosSortDialog().apply {
                 arguments = bundleOf(SORT to sort, PERIOD to period, TYPE to type, LANGUAGE to languageIndex, SAVE_SORT to saveSort, SAVE_DEFAULT to saveDefault, CLIP_CHANNEL to clipChannel)
             }
@@ -114,36 +113,24 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
                     saveSort.isVisible = parentFragment?.arguments?.getString(C.GAME_ID).isNullOrBlank() == false
                 }
             }
-            val originalSortId = if (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(SORT, VideoSortEnum::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(SORT) as? VideoSortEnum
-                } == TIME) R.id.time else R.id.views
-            val originalPeriodId = when (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(PERIOD, VideoPeriodEnum::class.java)!!
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(PERIOD) as VideoPeriodEnum
-                }) {
-                DAY -> R.id.today
-                WEEK -> R.id.week
-                MONTH -> R.id.month
-                ALL -> R.id.all
+            val originalSortId = when (args.getString(SORT)) {
+                SORT_TIME -> R.id.time
+                SORT_VIEWS -> R.id.views
+                else -> R.id.time
             }
-            val originalTypeId = when (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(TYPE, BroadcastTypeEnum::class.java)!!
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(TYPE) as BroadcastTypeEnum
-                }) {
-                BroadcastTypeEnum.ARCHIVE -> R.id.typeArchive
-                BroadcastTypeEnum.HIGHLIGHT -> R.id.typeHighlight
-                BroadcastTypeEnum.UPLOAD -> R.id.typeUpload
-                BroadcastTypeEnum.ALL -> R.id.typeAll
+            val originalPeriodId = when (args.getString(PERIOD)) {
+                PERIOD_DAY -> R.id.today
+                PERIOD_WEEK -> R.id.week
+                PERIOD_MONTH -> R.id.month
+                PERIOD_ALL -> R.id.all
+                else -> R.id.week
+            }
+            val originalTypeId = when (args.getString(TYPE)) {
+                VIDEO_TYPE_ALL -> R.id.typeAll
+                VIDEO_TYPE_ARCHIVE -> R.id.typeArchive
+                VIDEO_TYPE_HIGHLIGHT -> R.id.typeHighlight
+                VIDEO_TYPE_UPLOAD -> R.id.typeUpload
+                else -> R.id.typeAll
             }
             val originalLanguageIndex = args.getInt(LANGUAGE)
             val originalSaveSort = args.getBoolean(SAVE_SORT)
@@ -164,20 +151,26 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
                     val sortBtn = view.findViewById<RadioButton>(checkedSortId)
                     val periodBtn = view.findViewById<RadioButton>(checkedPeriodId)
                     listener.onChange(
-                        if (checkedSortId == R.id.time) TIME else VIEWS,
+                        when (checkedSortId) {
+                            R.id.time -> SORT_TIME
+                            R.id.views -> SORT_VIEWS
+                            else -> SORT_TIME
+                        },
                         sortBtn.text,
                         when (checkedPeriodId) {
-                            R.id.today -> DAY
-                            R.id.week -> WEEK
-                            R.id.month -> MONTH
-                            else -> ALL
+                            R.id.today -> PERIOD_DAY
+                            R.id.week -> PERIOD_WEEK
+                            R.id.month -> PERIOD_MONTH
+                            R.id.all -> PERIOD_ALL
+                            else -> PERIOD_WEEK
                         },
                         periodBtn.text,
                         when (checkedTypeId) {
-                            R.id.typeArchive -> BroadcastTypeEnum.ARCHIVE
-                            R.id.typeHighlight -> BroadcastTypeEnum.HIGHLIGHT
-                            R.id.typeUpload -> BroadcastTypeEnum.UPLOAD
-                            else -> BroadcastTypeEnum.ALL
+                            R.id.typeAll -> VIDEO_TYPE_ALL
+                            R.id.typeArchive -> VIDEO_TYPE_ARCHIVE
+                            R.id.typeHighlight -> VIDEO_TYPE_HIGHLIGHT
+                            R.id.typeUpload -> VIDEO_TYPE_UPLOAD
+                            else -> VIDEO_TYPE_ALL
                         },
                         langIndex,
                         checkedSaveSort,
@@ -188,7 +181,7 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
             }
             val langArray = resources.getStringArray(R.array.gqlUserLanguageEntries).toList()
             selectLang.setOnClickListener {
-                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, langArray, langIndex, REQUEST_CODE_LANGUAGE)
+                RadioButtonDialogFragment.newInstance(REQUEST_CODE_LANGUAGE, langArray, null, langIndex).show(childFragmentManager, "closeOnPip")
             }
         }
     }

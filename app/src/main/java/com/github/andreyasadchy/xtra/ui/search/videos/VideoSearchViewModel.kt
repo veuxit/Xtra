@@ -45,7 +45,8 @@ class VideoSearchViewModel @Inject constructor(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlApi = graphQLRepository,
                 checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults))
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_SEARCH_VIDEOS, null)?.split(',') ?: TwitchApiHelper.searchVideosApiDefaults
+            )
         }.flow
     }.cachedIn(viewModelScope)
 

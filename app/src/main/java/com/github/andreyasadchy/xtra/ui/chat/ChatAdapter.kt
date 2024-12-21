@@ -20,9 +20,7 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedChatAdapter
-import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintImageSpan
-import com.github.andreyasadchy.xtra.ui.view.chat.ReplyClickedChatAdapter
+import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
 import java.util.Random
 import kotlin.collections.toMutableList

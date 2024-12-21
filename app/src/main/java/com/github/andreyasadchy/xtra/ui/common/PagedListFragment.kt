@@ -7,7 +7,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
-import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
@@ -18,7 +17,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -54,7 +52,7 @@ abstract class PagedListFragment : BaseNetworkFragment(), IntegrityDialog.Callba
         recyclerView.adapter = adapter
     }
 
-    private fun shouldShowButton(recyclerView: RecyclerView): Boolean {
+    fun shouldShowButton(recyclerView: RecyclerView): Boolean {
         val offset = recyclerView.computeVerticalScrollOffset()
         if (offset < 0) {
             return false
@@ -65,15 +63,8 @@ abstract class PagedListFragment : BaseNetworkFragment(), IntegrityDialog.Callba
         return percentage > 3f
     }
 
-    fun <T : Any, VH : RecyclerView.ViewHolder> initializeAdapter(binding: CommonRecyclerViewLayoutBinding, pagingAdapter: PagingDataAdapter<T, VH>, flow: Flow<PagingData<T>>, enableSwipeRefresh: Boolean = true, enableScrollTopButton: Boolean = true) {
+    fun <T : Any, VH : RecyclerView.ViewHolder> initializeAdapter(binding: CommonRecyclerViewLayoutBinding, pagingAdapter: PagingDataAdapter<T, VH>, enableSwipeRefresh: Boolean = true, enableScrollTopButton: Boolean = true) {
         with(binding) {
-            viewLifecycleOwner.lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    flow.collectLatest { pagingData ->
-                        pagingAdapter.submitData(pagingData)
-                    }
-                }
-            }
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     pagingAdapter.loadStateFlow.collectLatest { loadState ->

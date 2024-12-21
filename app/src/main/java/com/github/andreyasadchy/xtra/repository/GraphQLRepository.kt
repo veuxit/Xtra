@@ -243,7 +243,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUserChannelPage(headers: Map<String, String>, id: String? = null, login: String? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query null(\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName followers { totalCount } lastBroadcast { startedAt } id login profileImageURL(width: 300) roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } stream { createdAt game { id displayName slug } id previewImageURL title type viewersCount } }}")
+            put("query", "query null(\$id: ID, \$login: String) { user(id: \$id, login: \$login, lookupType: ALL) { bannerImageURL createdAt displayName followers { totalCount } lastBroadcast { startedAt } id login profileImageURL(width: 300) roles { isAffiliate isPartner isStaff } stream { createdAt game { id displayName slug } id previewImageURL title type viewersCount } }}")
             putJsonObject("variables") {
                 put("id", id)
                 put("login", login)
@@ -424,7 +424,7 @@ class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
 
     suspend fun loadQueryUsersType(headers: Map<String, String>, ids: List<String>? = null, logins: List<String>? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id roles { isAffiliate isGlobalMod isPartner isSiteAdmin isStaff } }}")
+            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id roles { isAffiliate isPartner isStaff } }}")
             putJsonObject("variables") {
                 putJsonArray("ids") {
                     ids?.forEach {

@@ -4,27 +4,27 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ChannelViewerListResponse(
+class ChannelViewerListResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val user: User,
     )
 
     @Serializable
-    data class User(
+    class User(
         val channel: Channel,
     )
 
     @Serializable
-    data class Channel(
+    class Channel(
         val chatters: Chatters,
     )
 
     @Serializable
-    data class Chatters(
+    class Chatters(
         val broadcasters: List<Chatter>? = null,
         val moderators: List<Chatter>? = null,
         val vips: List<Chatter>? = null,
@@ -33,7 +33,7 @@ data class ChannelViewerListResponse(
     )
 
     @Serializable
-    data class Chatter(
+    class Chatter(
         val login: String? = null,
     )
 }

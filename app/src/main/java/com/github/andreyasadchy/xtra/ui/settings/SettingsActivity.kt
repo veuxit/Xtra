@@ -847,21 +847,21 @@ class SettingsActivity : AppCompatActivity() {
             }
             childFragmentManager.beginTransaction().replace(newId, ApiSettingsFragment()).commit()
             mapOf(
-                getString(R.string.games) to Pair(C.API_PREF_GAMES, TwitchApiHelper.gamesApiDefaults),
-                getString(R.string.streams) to Pair(C.API_PREF_STREAMS, TwitchApiHelper.streamsApiDefaults),
-                getString(R.string.game_streams) to Pair(C.API_PREF_GAME_STREAMS, TwitchApiHelper.gameStreamsApiDefaults),
-                getString(R.string.game_videos) to Pair(C.API_PREF_GAME_VIDEOS, TwitchApiHelper.gameVideosApiDefaults),
-                getString(R.string.game_clips) to Pair(C.API_PREF_GAME_CLIPS, TwitchApiHelper.gameClipsApiDefaults),
-                getString(R.string.channel_videos) to Pair(C.API_PREF_CHANNEL_VIDEOS, TwitchApiHelper.channelVideosApiDefaults),
-                getString(R.string.channel_clips) to Pair(C.API_PREF_CHANNEL_CLIPS, TwitchApiHelper.channelClipsApiDefaults),
-                getString(R.string.search_videos) to Pair(C.API_PREF_SEARCH_VIDEOS, TwitchApiHelper.searchVideosApiDefaults),
-                getString(R.string.search_streams) to Pair(C.API_PREF_SEARCH_STREAMS, TwitchApiHelper.searchStreamsApiDefaults),
-                getString(R.string.search_channels) to Pair(C.API_PREF_SEARCH_CHANNEL, TwitchApiHelper.searchChannelsApiDefaults),
-                getString(R.string.search_games) to Pair(C.API_PREF_SEARCH_GAMES, TwitchApiHelper.searchGamesApiDefaults),
-                getString(R.string.followed_streams) to Pair(C.API_PREF_FOLLOWED_STREAMS, TwitchApiHelper.followedStreamsApiDefaults),
-                getString(R.string.followed_videos) to Pair(C.API_PREF_FOLLOWED_VIDEOS, TwitchApiHelper.followedVideosApiDefaults),
-                getString(R.string.followed_channels) to Pair(C.API_PREF_FOLLOWED_CHANNELS, TwitchApiHelper.followedChannelsApiDefaults),
-                getString(R.string.followed_games) to Pair(C.API_PREF_FOLLOWED_GAMES, TwitchApiHelper.followedGamesApiDefaults),
+                getString(R.string.games) to Pair(C.API_PREFS_GAMES, TwitchApiHelper.gamesApiDefaults),
+                getString(R.string.streams) to Pair(C.API_PREFS_STREAMS, TwitchApiHelper.streamsApiDefaults),
+                getString(R.string.game_streams) to Pair(C.API_PREFS_GAME_STREAMS, TwitchApiHelper.gameStreamsApiDefaults),
+                getString(R.string.game_videos) to Pair(C.API_PREFS_GAME_VIDEOS, TwitchApiHelper.gameVideosApiDefaults),
+                getString(R.string.game_clips) to Pair(C.API_PREFS_GAME_CLIPS, TwitchApiHelper.gameClipsApiDefaults),
+                getString(R.string.channel_videos) to Pair(C.API_PREFS_CHANNEL_VIDEOS, TwitchApiHelper.channelVideosApiDefaults),
+                getString(R.string.channel_clips) to Pair(C.API_PREFS_CHANNEL_CLIPS, TwitchApiHelper.channelClipsApiDefaults),
+                getString(R.string.search_videos) to Pair(C.API_PREFS_SEARCH_VIDEOS, TwitchApiHelper.searchVideosApiDefaults),
+                getString(R.string.search_streams) to Pair(C.API_PREFS_SEARCH_STREAMS, TwitchApiHelper.searchStreamsApiDefaults),
+                getString(R.string.search_channels) to Pair(C.API_PREFS_SEARCH_CHANNEL, TwitchApiHelper.searchChannelsApiDefaults),
+                getString(R.string.search_games) to Pair(C.API_PREFS_SEARCH_GAMES, TwitchApiHelper.searchGamesApiDefaults),
+                getString(R.string.followed_streams) to Pair(C.API_PREFS_FOLLOWED_STREAMS, TwitchApiHelper.followedStreamsApiDefaults),
+                getString(R.string.followed_videos) to Pair(C.API_PREFS_FOLLOWED_VIDEOS, TwitchApiHelper.followedVideosApiDefaults),
+                getString(R.string.followed_channels) to Pair(C.API_PREFS_FOLLOWED_CHANNELS, TwitchApiHelper.followedChannelsApiDefaults),
+                getString(R.string.followed_games) to Pair(C.API_PREFS_FOLLOWED_GAMES, TwitchApiHelper.followedGamesApiDefaults),
             ).forEach { entry ->
                 newId++
                 view.addView(TextView(requireContext()).apply {
@@ -873,7 +873,14 @@ class SettingsActivity : AppCompatActivity() {
                         TextViewCompat.setTextAppearance(this, it.getResourceId(0, 0))
                     }
                 })
-                val list = TwitchApiHelper.listFromPrefs(requireActivity().prefs().getString(entry.value.first, ""), entry.value.second)
+                val list = (requireContext().prefs().getString(entry.value.first, null)?.split(',') ?: entry.value.second).map {
+                    Pair(when (it) {
+                        C.HELIX -> requireContext().getString(R.string.api_helix)
+                        C.GQL -> requireContext().getString(R.string.api_gql)
+                        C.GQL_PERSISTED_QUERY -> requireContext().getString(R.string.api_gql_persisted_query)
+                        else -> ""
+                    }, it)
+                }
                 view.addView((inflater.inflate(R.layout.drag_list_layout, container, false) as DragListView).apply {
                     id = newId
                     setLayoutManager(LinearLayoutManager(context))
@@ -885,11 +892,9 @@ class SettingsActivity : AppCompatActivity() {
 
                         override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
                             if (fromPosition != toPosition) {
-                                var str = ""
-                                adapter.itemList.forEachIndexed { index, item ->
-                                    str = "$str${index}:${(item as Pair<*, *>).second},"
+                                requireContext().prefs().edit {
+                                    putString(entry.value.first, adapter.itemList.map { (it as Pair<*, *>).second }.joinToString(","))
                                 }
-                                requireActivity().prefs().edit { putString(entry.value.first, str) }
                             }
                         }
                     })
@@ -901,7 +906,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        class DragListAdapter(list: ArrayList<Pair<Long?, String?>?>?) : DragItemAdapter<Pair<Long?, String?>?, DragListAdapter.ViewHolder>() {
+        class DragListAdapter(list: List<Pair<String, String>>) : DragItemAdapter<Pair<String, String>, DragListAdapter.ViewHolder>() {
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.drag_list_item, parent, false)
                 return ViewHolder(view)
@@ -909,10 +914,10 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 super.onBindViewHolder(holder, position)
-                holder.mText.text = mItemList[position]!!.second!!
+                holder.mText.text = mItemList[position].first
             }
 
-            override fun getUniqueItemId(position: Int): Long = mItemList[position]!!.first!!
+            override fun getUniqueItemId(position: Int): Long = mItemList[position].second.hashCode().toLong()
 
             class ViewHolder(itemView: View) : DragItemAdapter.ViewHolder(itemView, R.id.image, false) {
                 val mText: TextView = itemView.findViewById(R.id.text)
