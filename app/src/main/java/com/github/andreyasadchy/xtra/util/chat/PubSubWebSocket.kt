@@ -23,7 +23,13 @@ class PubSubWebSocket(
     private val showRaids: Boolean,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: PubSubListener) {
+    private val onPlaybackMessage: (JSONObject) -> Unit,
+    private val onStreamInfo: (JSONObject) -> Unit,
+    private val onRewardMessage: (JSONObject) -> Unit,
+    private val onPointsEarned: (JSONObject) -> Unit,
+    private val onClaimAvailable: () -> Unit,
+    private val onMinuteWatched: () -> Unit,
+    private val onRaidUpdate: (JSONObject, Boolean) -> Unit) {
     private var socket: WebSocket? = null
     private var isActive = false
     private var pongReceived = false
@@ -115,7 +121,7 @@ class PubSubWebSocket(
     private fun minuteWatched() {
         tickerFlowActive(60).onCompletion {
             if (isActive) {
-                listener.onMinuteWatched()
+                onMinuteWatched()
                 minuteWatched()
             }
         }.launchIn(coroutineScope)
@@ -153,25 +159,25 @@ class PubSubWebSocket(
                         val messageType = message?.optString("type")
                         if (topic != null && messageType != null) {
                             when {
-                                topic.startsWith("video-playback-by-id") -> listener.onPlaybackMessage(message)
-                                topic.startsWith("broadcast-settings-update") && messageType.startsWith("broadcast_settings_update") -> listener.onStreamInfo(message)
-                                topic.startsWith("community-points-channel") && messageType.startsWith("reward-redeemed") -> listener.onRewardMessage(message)
+                                topic.startsWith("video-playback-by-id") -> onPlaybackMessage(message)
+                                topic.startsWith("broadcast-settings-update") && messageType.startsWith("broadcast_settings_update") -> onStreamInfo(message)
+                                topic.startsWith("community-points-channel") && messageType.startsWith("reward-redeemed") -> onRewardMessage(message)
                                 topic.startsWith("community-points-user") -> {
                                     when {
                                         messageType.startsWith("points-earned") && notifyPoints -> {
                                             val messageData = message.optJSONObject("data")
                                             val messageChannelId = messageData?.optString("channel_id")
                                             if (channelId == messageChannelId) {
-                                                listener.onPointsEarned(message)
+                                                onPointsEarned(message)
                                             }
                                         }
-                                        messageType.startsWith("claim-available") && collectPoints -> listener.onClaimAvailable()
+                                        messageType.startsWith("claim-available") && collectPoints -> onClaimAvailable()
                                     }
                                 }
                                 topic.startsWith("raid") && showRaids -> {
                                     when {
-                                        messageType.startsWith("raid_update") -> listener.onRaidUpdate(message, false)
-                                        messageType.startsWith("raid_go") -> listener.onRaidUpdate(message, true)
+                                        messageType.startsWith("raid_update") -> onRaidUpdate(message, false)
+                                        messageType.startsWith("raid_go") -> onRaidUpdate(message, true)
                                     }
                                 }
                             }

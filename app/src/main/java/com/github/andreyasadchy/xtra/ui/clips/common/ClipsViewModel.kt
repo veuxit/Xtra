@@ -1,8 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.clips.common
 
 import android.content.Context
-import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,9 +10,8 @@ import androidx.paging.cachedIn
 import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.offline.SortChannel
-import com.github.andreyasadchy.xtra.model.offline.SortGame
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
+import com.github.andreyasadchy.xtra.model.ui.SortChannel
+import com.github.andreyasadchy.xtra.model.ui.SortGame
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.SortGameRepository
@@ -23,6 +20,7 @@ import com.github.andreyasadchy.xtra.repository.datasource.GameClipsDataSource
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
+import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -30,10 +28,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
@@ -46,41 +41,51 @@ class ClipsViewModel @Inject constructor(
     private val sortGameRepository: SortGameRepository,
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
-    private val _sortText = MutableStateFlow<CharSequence?>(null)
-    val sortText: StateFlow<CharSequence?> = _sortText
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val filter = MutableStateFlow(loadClips())
+    val filter = MutableStateFlow<Filter?>(null)
+    val sortText = MutableStateFlow<CharSequence?>(null)
 
-    val period: VideoPeriodEnum
-        get() = filter.value.period
+    val period: String
+        get() = filter.value?.period ?: VideosSortDialog.PERIOD_WEEK
     val languageIndex: Int
-        get() = filter.value.languageIndex
+        get() = filter.value?.languageIndex ?: 0
     val saveSort: Boolean
-        get() = filter.value.saveSort == true
+        get() = filter.value?.saveSort == true
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
             PagingConfig(pageSize = 20, prefetchDistance = 3, initialLoadSize = 20)
         ) {
-            val started = when (filter.period) {
-                VideoPeriodEnum.ALL -> null
-                else -> TwitchApiHelper.getClipTime(filter.period)
+            val started = when (period) {
+                VideosSortDialog.PERIOD_ALL -> null
+                else -> TwitchApiHelper.getClipTime(
+                    when (period) {
+                        VideosSortDialog.PERIOD_DAY -> 1
+                        VideosSortDialog.PERIOD_WEEK -> 7
+                        VideosSortDialog.PERIOD_MONTH -> 30
+                        else -> 7
+                    }
+                )
             }
-            val ended = when (filter.period) {
-                VideoPeriodEnum.ALL -> null
-                else -> TwitchApiHelper.getClipTime()
+            val ended = when (period) {
+                VideosSortDialog.PERIOD_ALL -> null
+                else -> TwitchApiHelper.getClipTime(0)
             }
-            val gqlQueryPeriod = when (filter.period) {
-                VideoPeriodEnum.DAY -> ClipsPeriod.LAST_DAY
-                VideoPeriodEnum.WEEK -> ClipsPeriod.LAST_WEEK
-                VideoPeriodEnum.MONTH -> ClipsPeriod.LAST_MONTH
-                else -> ClipsPeriod.ALL_TIME }
-            val gqlPeriod = when (filter.period) {
-                VideoPeriodEnum.DAY -> "LAST_DAY"
-                VideoPeriodEnum.WEEK -> "LAST_WEEK"
-                VideoPeriodEnum.MONTH -> "LAST_MONTH"
-                else -> "ALL_TIME" }
+            val gqlQueryPeriod = when (period) {
+                VideosSortDialog.PERIOD_DAY -> ClipsPeriod.LAST_DAY
+                VideosSortDialog.PERIOD_WEEK -> ClipsPeriod.LAST_WEEK
+                VideosSortDialog.PERIOD_MONTH -> ClipsPeriod.LAST_MONTH
+                VideosSortDialog.PERIOD_ALL -> ClipsPeriod.ALL_TIME
+                else -> ClipsPeriod.LAST_WEEK
+            }
+            val gqlPeriod = when (period) {
+                VideosSortDialog.PERIOD_DAY -> "LAST_DAY"
+                VideosSortDialog.PERIOD_WEEK -> "LAST_WEEK"
+                VideosSortDialog.PERIOD_MONTH -> "LAST_MONTH"
+                VideosSortDialog.PERIOD_ALL -> "ALL_TIME"
+                else -> "LAST_WEEK"
+            }
             if (args.channelId != null || args.channelLogin != null) {
                 ChannelClipsDataSource(
                     channelId = args.channelId,
@@ -95,12 +100,13 @@ class ClipsViewModel @Inject constructor(
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
                     checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults
+                )
             } else {
                 val langList = mutableListOf<Language>()
-                val langValues = applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
-                if (filter.languageIndex != 0) {
-                    val item = Language.values().find { lang -> lang.rawValue == langValues.elementAt(filter.languageIndex) }
+                if (languageIndex != 0) {
+                    val langValues = applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
+                    val item = Language.entries.find { lang -> lang.rawValue == langValues.elementAt(languageIndex) }
                     if (item != null) {
                         langList.add(item)
                     }
@@ -120,132 +126,35 @@ class ClipsViewModel @Inject constructor(
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
                     checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults))
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults
+                )
             }
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun loadClips(): Filter {
-        var sortValuesGame: SortGame? = null
-        var sortValuesChannel: SortChannel? = null
-        if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
-            sortValuesGame = args.gameId?.let { runBlocking { sortGameRepository.getById(it) } }
-            if (sortValuesGame?.saveSort != true) {
-                sortValuesGame = runBlocking { sortGameRepository.getById("default") }
-            }
-        } else {
-            if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
-                sortValuesChannel = args.channelId?.let { runBlocking { sortChannelRepository.getById(it) } }
-                if (sortValuesChannel?.saveSort != true) {
-                    sortValuesChannel = runBlocking { sortChannelRepository.getById("default") }
-                }
-            }
-        }
-        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
-            ContextCompat.getString(applicationContext, R.string.view_count),
-            when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                VideoPeriodEnum.DAY.value -> ContextCompat.getString(applicationContext, R.string.today)
-                VideoPeriodEnum.MONTH.value -> ContextCompat.getString(applicationContext, R.string.this_month)
-                VideoPeriodEnum.ALL.value -> ContextCompat.getString(applicationContext, R.string.all_time)
-                else -> ContextCompat.getString(applicationContext, R.string.this_week)
-            }
-        )
-        return Filter(
-            saveSort = sortValuesGame?.saveSort ?: sortValuesChannel?.saveSort,
-            period = when (sortValuesGame?.clipPeriod ?: sortValuesChannel?.clipPeriod) {
-                VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
-                VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
-                VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
-                else -> VideoPeriodEnum.WEEK
-            },
-            languageIndex = sortValuesGame?.clipLanguageIndex ?: 0
-        )
+    suspend fun getSortGame(id: String): SortGame? {
+        return sortGameRepository.getById(id)
     }
 
-    fun filter(period: VideoPeriodEnum, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
-        filter.value = filter.value.copy(saveSort = saveSort, period = period, languageIndex = languageIndex)
-        _sortText.value = text
-        viewModelScope.launch {
-            if (!args.gameId.isNullOrBlank() || !args.gameName.isNullOrBlank()) {
-                val sortValues = args.gameId?.let { sortGameRepository.getById(it) }
-                if (saveSort) {
-                    sortValues?.apply {
-                        this.saveSort = true
-                        clipPeriod = period.value
-                        clipLanguageIndex = languageIndex
-                    } ?: args.gameId?.let { SortGame(
-                        id = it,
-                        saveSort = true,
-                        clipPeriod = period.value,
-                        clipLanguageIndex = languageIndex)
-                    }
-                } else {
-                    sortValues?.apply {
-                        this.saveSort = false
-                    }
-                }?.let { sortGameRepository.save(it) }
-                if (saveDefault) {
-                    (sortValues?.apply {
-                        this.saveSort = saveSort
-                    } ?: args.gameId?.let { SortGame(
-                        id = it,
-                        saveSort = saveSort)
-                    })?.let { sortGameRepository.save(it) }
-                    val sortDefaults = sortGameRepository.getById("default")
-                    (sortDefaults?.apply {
-                        clipPeriod = period.value
-                        clipLanguageIndex = languageIndex
-                    } ?: SortGame(
-                        id = "default",
-                        clipPeriod = period.value,
-                        clipLanguageIndex = languageIndex
-                    )).let { sortGameRepository.save(it) }
-                }
-                if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false)) {
-                    applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_CLIPS, saveDefault) }
-                }
-            } else {
-                if (!args.channelId.isNullOrBlank() || !args.channelLogin.isNullOrBlank()) {
-                    val sortValues = args.channelId?.let { sortChannelRepository.getById(it) }
-                    if (saveSort) {
-                        sortValues?.apply {
-                            this.saveSort = true
-                            clipPeriod = period.value
-                        } ?: args.channelId?.let { SortChannel(
-                            id = it,
-                            saveSort = true,
-                            clipPeriod = period.value)
-                        }
-                    } else {
-                        sortValues?.apply {
-                            this.saveSort = false
-                        }
-                    }?.let { sortChannelRepository.save(it) }
-                    if (saveDefault) {
-                        (sortValues?.apply {
-                            this.saveSort = saveSort
-                        } ?: args.channelId?.let { SortChannel(
-                            id = it,
-                            saveSort = saveSort)
-                        })?.let { sortChannelRepository.save(it) }
-                        val sortDefaults = sortChannelRepository.getById("default")
-                        (sortDefaults?.apply {
-                            clipPeriod = period.value
-                        } ?: SortChannel(
-                            id = "default",
-                            clipPeriod = period.value
-                        )).let { sortChannelRepository.save(it) }
-                    }
-                    if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)) {
-                        applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, saveDefault) }
-                    }
-                }
-            }
-        }
+    suspend fun saveSortGame(item: SortGame) {
+        sortGameRepository.save(item)
     }
 
-    private data class Filter(
+    suspend fun getSortChannel(id: String): SortChannel? {
+        return sortChannelRepository.getById(id)
+    }
+
+    suspend fun saveSortChannel(item: SortChannel) {
+        sortChannelRepository.save(item)
+    }
+
+    fun setFilter(period: String?, languageIndex: Int?, saveSort: Boolean?) {
+        filter.value = Filter(period, languageIndex, saveSort)
+    }
+
+    class Filter(
+        val period: String?,
+        val languageIndex: Int?,
         val saveSort: Boolean?,
-        val period: VideoPeriodEnum = VideoPeriodEnum.WEEK,
-        val languageIndex: Int = 0)
+    )
 }

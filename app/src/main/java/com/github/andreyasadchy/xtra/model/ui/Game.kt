@@ -5,7 +5,7 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class Game(
+class Game(
     val gameId: String? = null,
     val gameSlug: String? = null,
     val gameName: String? = null,
@@ -20,6 +20,6 @@ data class Game(
     var followAccount: Boolean = false,
     val followLocal: Boolean = false) : Parcelable {
 
-        val boxArt: String?
-                get() = TwitchApiHelper.getTemplateUrl(boxArtUrl, "game")
+    val boxArt: String?
+        get() = TwitchApiHelper.getTemplateUrl(boxArtUrl, "game")
 }

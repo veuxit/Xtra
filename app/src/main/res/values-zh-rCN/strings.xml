@@ -156,8 +156,8 @@
     <string name="settings_chat">聊天室</string>
     <string name="settings_player">播放器</string>
     <string name="token_random_deviceid">随机设备 ID</string>
-    <string name="api_helix">Helix 客户端 ID</string>
-    <string name="api_gql">GQL 客户端 ID</string>
+    <string name="api_helix_client_id">Helix 客户端 ID</string>
+    <string name="api_gql_client_id">GQL 客户端 ID</string>
     <string name="playback_speed">播放速度</string>
     <string name="quality">质量</string>
     <string name="saved_value">储存的值</string>
@@ -199,8 +199,6 @@
     <string name="user_partner">合作伙伴</string>
     <string name="user_affiliate">直播盟友</string>
     <string name="user_staff">工作人员</string>
-    <string name="user_admin">管理员</string>
-    <string name="user_global_mod">全球模式</string>
     <string name="uptime">%s 直播时间</string>
     <string name="select_language">选择语言</string>
     <string name="show_tags">显示标签</string>
@@ -516,8 +514,6 @@
     <string name="tokens">令牌</string>
     <string name="download_limit">下载并行限制</string>
     <string name="followed_only">仅已关注</string>
-    <string name="api_gql2">GQL 客户端 ID 2</string>
-    <string name="api_gql_token2">GQL 令牌 2</string>
     <string name="debug_api_commands">使用 API 聊天指令</string>
     <string name="skip_video_access_token">跳过视频存取令牌</string>
     <string name="skip_clip_access_token">跳过剪辑存取令牌</string>
@@ -549,7 +545,6 @@
     <string name="show_media_playlist_tags">显示媒体播放清单标签</string>
     <string name="show_multivariant_playlist_tags">显示多变量播放清单标签</string>
     <string name="use_gamepager">对于游戏页面使用分页布局</string>
-    <string name="api_gql_redirect2">GQL 重定向 URL 2</string>
     <string name="disable_background_video">禁止视频在后台渲染</string>
     <string name="use_background_audio_track">在背景切换到仅音频轨道</string>
     <string name="show_audio_compressor_button">显示音频压缩器按钮</string>
@@ -670,4 +665,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

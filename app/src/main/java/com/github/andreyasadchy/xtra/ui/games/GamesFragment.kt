@@ -9,6 +9,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.AppBarConfiguration
@@ -17,8 +20,6 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentGamesBinding
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
@@ -28,11 +29,15 @@ import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlin.text.isNullOrBlank
 
 @AndroidEntryPoint
 class GamesFragment : PagedListFragment(), Scrollable {
@@ -52,11 +57,11 @@ class GamesFragment : PagedListFragment(), Scrollable {
         super.onViewCreated(view, savedInstanceState)
         with(binding) {
             val activity = requireActivity() as MainActivity
-            val account = Account.get(activity)
+            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()
             val navController = findNavController()
             val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
             toolbar.setupWithNavController(navController, appBarConfiguration)
-            toolbar.menu.findItem(R.id.login).title = if (account !is NotLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
+            toolbar.menu.findItem(R.id.login).title = if (isLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
             toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.search -> {
@@ -68,15 +73,15 @@ class GamesFragment : PagedListFragment(), Scrollable {
                         true
                     }
                     R.id.login -> {
-                        if (account is NotLoggedIn) {
-                            activity.loginResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
-                        } else {
+                        if (isLoggedIn) {
                             activity.getAlertDialogBuilder().apply {
                                 setTitle(getString(R.string.logout_title))
-                                account.login?.nullIfEmpty()?.let { user -> setMessage(getString(R.string.logout_msg, user)) }
+                                requireContext().tokenPrefs().getString(C.USERNAME, null)?.let { setMessage(getString(R.string.logout_msg, it)) }
                                 setNegativeButton(getString(R.string.no), null)
                                 setPositiveButton(getString(R.string.yes)) { _, _ -> activity.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java)) }
                             }.show()
+                        } else {
+                            activity.loginResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                         }
                         true
                     }
@@ -113,7 +118,14 @@ class GamesFragment : PagedListFragment(), Scrollable {
     }
 
     override fun initialize() {
-        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, viewModel.flow, enableScrollTopButton = !args.tags.isNullOrEmpty())
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+        }
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, enableScrollTopButton = !args.tags.isNullOrEmpty())
         with(binding) {
             sortBar.root.visible()
             sortBar.root.setOnClickListener { findNavController().navigate(TagSearchFragmentDirections.actionGlobalTagSearchFragment(getGameTags = true)) }

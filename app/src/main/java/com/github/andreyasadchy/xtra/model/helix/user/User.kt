@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class User(
+class User(
     @SerialName("id")
     val channelId: String? = null,
     @SerialName("login")

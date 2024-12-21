@@ -156,8 +156,8 @@
     <string name="settings_chat">チャット</string>
     <string name="settings_player">プレーヤー</string>
     <string name="token_random_deviceid">ランダムデバイス ID</string>
-    <string name="api_helix">Helix クライアント ID</string>
-    <string name="api_gql">GQL クライアント ID</string>
+    <string name="api_helix_client_id">Helix クライアント ID</string>
+    <string name="api_gql_client_id">GQL クライアント ID</string>
     <string name="playback_speed">再生速度</string>
     <string name="quality">画質</string>
     <string name="saved_value">保存された値</string>
@@ -199,8 +199,6 @@
     <string name="user_partner">パートナー</string>
     <string name="user_affiliate">アフェリエイト</string>
     <string name="user_staff">スタッフ</string>
-    <string name="user_admin">管理者</string>
-    <string name="user_global_mod">グローバルモデレーター</string>
     <string name="uptime">%s 経過</string>
     <string name="select_language">言語を選択</string>
     <string name="show_tags">タグの表示</string>
@@ -516,8 +514,6 @@
     <string name="tokens">トークン</string>
     <string name="download_limit">同時ダウンロード制限</string>
     <string name="followed_only">[フォロー中] タブのみ</string>
-    <string name="api_gql2">GQL クライアント ID 2</string>
-    <string name="api_gql_token2">GQL トークン 2</string>
     <string name="debug_api_commands">API チャットコマンドを使用</string>
     <string name="skip_video_access_token">動画アクセストークンをスキップ</string>
     <string name="skip_clip_access_token">クリップアクセストークンをスキップ</string>
@@ -549,7 +545,6 @@
     <string name="show_media_playlist_tags">メディアプレイリストのタグの表示</string>
     <string name="show_multivariant_playlist_tags">マルチバリアントプレイリストのタグの表示</string>
     <string name="use_gamepager">[ゲーム] ページにタブ UI を使用</string>
-    <string name="api_gql_redirect2">GQL リダイレクト URL 2</string>
     <string name="disable_background_video">バックグラウンド動画の描画を無効化</string>
     <string name="use_background_audio_track">バックグラウンドで音声のみに切り替え</string>
     <string name="show_audio_compressor_button">オーディオコンプレッサーボタンの表示</string>
@@ -670,4 +665,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

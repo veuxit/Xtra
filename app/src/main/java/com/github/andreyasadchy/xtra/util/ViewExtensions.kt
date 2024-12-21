@@ -2,23 +2,18 @@ package com.github.andreyasadchy.xtra.util
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
-import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
-import androidx.annotation.ColorRes
-import androidx.appcompat.widget.AppCompatTextView
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.signature.ObjectKey
 
@@ -51,26 +46,13 @@ fun ImageView.loadImage(fragment: Fragment, url: String?, changes: Boolean = fal
                 val key = if (lastMinute < 5) minutes - lastMinute else minutes - (lastMinute - 5)
                 request.signature(ObjectKey(key))
             }
-            if (circle && context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+            if (circle) {
                 request.circleCrop()
             }
             request.into(this)
         } catch (e: IllegalArgumentException) {
         }
         return
-    }
-}
-
-fun ImageView.loadBitmap(url: String) {
-    if (context.isActivityResumed) {
-        try {
-            Glide.with(context)
-                    .asBitmap()
-                    .load(url)
-                    .transition(BitmapTransitionOptions.withCrossFade())
-                    .into(this)
-        } catch (e: IllegalArgumentException) {
-        }
     }
 }
 
@@ -89,11 +71,6 @@ val View.isKeyboardShown: Boolean
         val keypadHeight = screenHeight - rect.bottom
         return keypadHeight > screenHeight * 0.15
     }
-
-fun ImageView.setTint(@ColorRes tint: Int) {
-    val color = ContextCompat.getColor(context, tint)
-    drawable.setTint(color)
-}
 
 fun ImageView.enable() {
     isEnabled = true
@@ -118,10 +95,16 @@ fun ViewPager2.reduceDragSensitivity() {
     } catch (e: Exception) {}
 }
 
-class TextWithCanvas(context: Context, attrs: AttributeSet) : AppCompatTextView(context, attrs) {
-    override fun draw(canvas: Canvas) {
-        for (i in 0..6) {
-            super.draw(canvas)
+fun MotionEvent.isClick(outDownLocation: FloatArray): Boolean {
+    return when (actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+            outDownLocation[0] = x
+            outDownLocation[1] = y
+            false
         }
+        MotionEvent.ACTION_UP -> {
+            outDownLocation[0] in x - 50..x + 50 && outDownLocation[1] in y - 50..y + 50 && eventTime - downTime <= 500
+        }
+        else -> false
     }
 }

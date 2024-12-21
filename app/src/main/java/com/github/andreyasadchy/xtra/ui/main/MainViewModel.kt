@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.Constraints
@@ -14,11 +15,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.LoggedIn
-import com.github.andreyasadchy.xtra.model.NotValidated
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Clip
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -30,8 +28,8 @@ import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -389,42 +387,41 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun validate(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, activity: Activity) {
-        val account = Account.get(activity)
-        if (account is NotValidated) {
-            viewModelScope.launch {
-                try {
-                    val helixToken = helixHeaders[C.HEADER_TOKEN]
-                    if (!helixToken.isNullOrBlank()) {
-                        val response = authRepository.validate(helixToken)
-                        if (response.clientId.isNotBlank() && response.clientId == helixHeaders[C.HEADER_CLIENT_ID]) {
-                            if ((!response.userId.isNullOrBlank() && response.userId != account.id) || (!response.login.isNullOrBlank() && response.login != account.login)) {
-                                Account.set(activity, LoggedIn(response.userId?.nullIfEmpty() ?: account.id, response.login?.nullIfEmpty() ?: account.login))
+    fun validate(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, accountId: String?, accountLogin: String?, activity: Activity) {
+        viewModelScope.launch {
+            try {
+                val helixToken = helixHeaders[C.HEADER_TOKEN]
+                if (!helixToken.isNullOrBlank()) {
+                    val response = authRepository.validate(helixToken)
+                    if (response.clientId.isNotBlank() && response.clientId == helixHeaders[C.HEADER_CLIENT_ID]) {
+                        if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
+                            activity.tokenPrefs().edit {
+                                putString(C.USER_ID, response.userId?.takeIf { it.isNotBlank() } ?: accountId)
+                                putString(C.USERNAME, response.login?.takeIf { it.isNotBlank() } ?: accountLogin)
                             }
-                        } else {
-                            throw IllegalStateException("401")
                         }
+                    } else {
+                        throw IllegalStateException("401")
                     }
-                    val gqlToken = gqlHeaders[C.HEADER_TOKEN]
-                    if (!gqlToken.isNullOrBlank()) {
-                        val response = authRepository.validate(gqlToken)
-                        if (response.clientId.isNotBlank() && response.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
-                            if ((!response.userId.isNullOrBlank() && response.userId != account.id) || (!response.login.isNullOrBlank() && response.login != account.login)) {
-                                Account.set(activity, LoggedIn(response.userId?.nullIfEmpty() ?: account.id, response.login?.nullIfEmpty() ?: account.login))
+                }
+                val gqlToken = gqlHeaders[C.HEADER_TOKEN]
+                if (!gqlToken.isNullOrBlank()) {
+                    val response = authRepository.validate(gqlToken)
+                    if (response.clientId.isNotBlank() && response.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
+                        if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
+                            activity.tokenPrefs().edit {
+                                putString(C.USER_ID, response.userId?.takeIf { it.isNotBlank() } ?: accountId)
+                                putString(C.USERNAME, response.login?.takeIf { it.isNotBlank() } ?: accountLogin)
                             }
-                        } else {
-                            throw IllegalStateException("401")
                         }
+                    } else {
+                        throw IllegalStateException("401")
                     }
-                    if (!helixToken.isNullOrBlank() || !gqlToken.isNullOrBlank()) {
-                        Account.validated()
-                    }
-                } catch (e: Exception) {
-                    if ((e is IllegalStateException && e.message == "401") || (e is HttpException && e.code() == 401)) {
-                        Account.set(activity, null)
-                        activity.toast(R.string.token_expired)
-                        (activity as? MainActivity)?.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
-                    }
+                }
+            } catch (e: Exception) {
+                if ((e is IllegalStateException && e.message == "401") || (e is HttpException && e.code() == 401)) {
+                    activity.toast(R.string.token_expired)
+                    (activity as? MainActivity)?.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                 }
             }
         }

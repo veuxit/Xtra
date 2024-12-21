@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class EmoteTemplate(
+class EmoteTemplate(
     val id: String? = null,
     val name: String? = null,
     val format: List<String>? = null,

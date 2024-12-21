@@ -1,31 +1,30 @@
 package com.github.andreyasadchy.xtra.model.gql.followed
 
 import com.github.andreyasadchy.xtra.model.gql.Error
-import com.github.andreyasadchy.xtra.model.gql.game.GamesResponse.Data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FollowedGamesResponse(
+class FollowedGamesResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val currentUser: FollowedData,
     )
 
     @Serializable
-    data class FollowedData(
+    class FollowedData(
         val followedGames: Games,
     )
 
     @Serializable
-    data class Games(
+    class Games(
         val nodes: List<Game>,
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val id: String? = null,
         val displayName: String? = null,
         val boxArtURL: String? = null,
@@ -34,7 +33,7 @@ data class FollowedGamesResponse(
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val id: String? = null,
         val localizedName: String? = null,
     )

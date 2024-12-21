@@ -2,38 +2,37 @@ package com.github.andreyasadchy.xtra.model.gql.followed
 
 import com.github.andreyasadchy.xtra.model.gql.Error
 import com.github.andreyasadchy.xtra.model.gql.PageInfo
-import com.github.andreyasadchy.xtra.model.gql.game.GamesResponse.Data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FollowedChannelsResponse(
+class FollowedChannelsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val user: FollowedData,
     )
 
     @Serializable
-    data class FollowedData(
+    class FollowedData(
         val follows: Users,
     )
 
     @Serializable
-    data class Users(
+    class Users(
         val edges: List<Item>,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: User,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
@@ -42,12 +41,12 @@ data class FollowedChannelsResponse(
     )
 
     @Serializable
-    data class Self(
+    class Self(
         val follower: Follower? = null,
     )
 
     @Serializable
-    data class Follower(
+    class Follower(
         val followedAt: String? = null,
     )
 }

@@ -2,33 +2,32 @@ package com.github.andreyasadchy.xtra.model.gql.stream
 
 import com.github.andreyasadchy.xtra.model.gql.Error
 import com.github.andreyasadchy.xtra.model.gql.PageInfo
-import com.github.andreyasadchy.xtra.model.gql.game.GamesResponse.Data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class StreamsResponse(
+class StreamsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val streams: Streams,
     )
 
     @Serializable
-    data class Streams(
+    class Streams(
         val edges: List<Item>,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: Stream,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class Stream(
+    class Stream(
         val id: String? = null,
         val broadcaster: User? = null,
         val game: Game? = null,
@@ -40,7 +39,7 @@ data class StreamsResponse(
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
@@ -48,14 +47,14 @@ data class StreamsResponse(
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val id: String? = null,
         val slug: String? = null,
         val displayName: String? = null,
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val name: String? = null,
     )
 }

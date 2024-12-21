@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.follow.channels
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,29 +9,27 @@ import android.widget.RadioButton
 import androidx.core.os.bundleOf
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogFollowedChannelsSortBinding
-import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
-import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum.ASC
-import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum.DESC
-import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
-import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.ALPHABETICALLY
-import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.FOLLOWED_AT
-import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum.LAST_BROADCAST
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class FollowedChannelsSortDialog : BottomSheetDialogFragment() {
 
     interface OnFilter {
-        fun onChange(sort: FollowSortEnum, sortText: CharSequence, order: FollowOrderEnum, orderText: CharSequence, saveDefault: Boolean)
+        fun onChange(sort: String, sortText: CharSequence, order: String, orderText: CharSequence, saveDefault: Boolean)
     }
 
     companion object {
+        const val ORDER_ASC = "asc"
+        const val ORDER_DESC = "desc"
+        const val SORT_FOLLOWED_AT = "created_at"
+        const val SORT_ALPHABETICALLY = "login"
+        const val SORT_LAST_BROADCAST = "last_broadcast"
 
         private const val SORT = "sort"
         private const val ORDER = "order"
         private const val SAVE_DEFAULT = "save_default"
 
-        fun newInstance(sort: FollowSortEnum, order: FollowOrderEnum, saveDefault: Boolean = false): FollowedChannelsSortDialog {
+        fun newInstance(sort: String?, order: String?, saveDefault: Boolean?): FollowedChannelsSortDialog {
             return FollowedChannelsSortDialog().apply {
                 arguments = bundleOf(SORT to sort, ORDER to order, SAVE_DEFAULT to saveDefault)
             }
@@ -60,24 +57,17 @@ class FollowedChannelsSortDialog : BottomSheetDialogFragment() {
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         with(binding) {
             val args = requireArguments()
-            val originalSortId = when (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(SORT, FollowSortEnum::class.java)!!
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(SORT) as FollowSortEnum
-                }) {
-                FOLLOWED_AT -> R.id.time_followed
-                ALPHABETICALLY -> R.id.alphabetically
-                LAST_BROADCAST -> R.id.last_broadcast
+            val originalSortId = when (args.getString(SORT)) {
+                SORT_FOLLOWED_AT -> R.id.time_followed
+                SORT_ALPHABETICALLY -> R.id.alphabetically
+                SORT_LAST_BROADCAST -> R.id.last_broadcast
+                else -> R.id.last_broadcast
             }
-            val originalOrderId = if (
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getSerializable(ORDER, FollowOrderEnum::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getSerializable(ORDER) as? FollowOrderEnum
-                } == DESC) R.id.newest_first else R.id.oldest_first
+            val originalOrderId = when (args.getString(ORDER)) {
+                ORDER_DESC -> R.id.newest_first
+                ORDER_ASC -> R.id.oldest_first
+                else -> R.id.newest_first
+            }
             val originalSaveDefault = args.getBoolean(SAVE_DEFAULT)
             sort.check(originalSortId)
             order.check(originalOrderId)
@@ -91,12 +81,17 @@ class FollowedChannelsSortDialog : BottomSheetDialogFragment() {
                     val orderBtn = view.findViewById<RadioButton>(checkedOrderId)
                     listener.onChange(
                         when (checkedSortId) {
-                            R.id.time_followed -> FOLLOWED_AT
-                            R.id.alphabetically -> ALPHABETICALLY
-                            else -> LAST_BROADCAST
+                            R.id.time_followed -> SORT_FOLLOWED_AT
+                            R.id.alphabetically -> SORT_ALPHABETICALLY
+                            R.id.last_broadcast -> SORT_LAST_BROADCAST
+                            else -> SORT_LAST_BROADCAST
                         },
                         sortBtn.text,
-                        if (checkedOrderId == R.id.newest_first) DESC else ASC,
+                        when (checkedOrderId) {
+                            R.id.newest_first -> ORDER_DESC
+                            R.id.oldest_first -> ORDER_ASC
+                            else -> ORDER_DESC
+                        },
                         orderBtn.text,
                         checkedSaveDefault
                     )

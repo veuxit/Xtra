@@ -4,22 +4,22 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ViewerCountResponse(
+class ViewerCountResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val user: User,
     )
 
     @Serializable
-    data class User(
+    class User(
         val stream: Stream? = null,
     )
 
     @Serializable
-    data class Stream(
+    class Stream(
         val id: String? = null,
         val viewersCount: Int? = null,
     )

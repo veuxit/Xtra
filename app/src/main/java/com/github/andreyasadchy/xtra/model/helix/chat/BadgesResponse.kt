@@ -4,18 +4,18 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class BadgesResponse(
+class BadgesResponse(
     val data: List<Set>,
 ) {
     @Serializable
-    data class Set(
+    class Set(
         @SerialName("set_id")
         val setId: String? = null,
         val versions: List<Version>? = null,
     )
 
     @Serializable
-    data class Version(
+    class Version(
         val id: String? = null,
         @SerialName("image_url_1x")
         val url1x: String? = null,

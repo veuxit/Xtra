@@ -2,7 +2,7 @@ package com.github.andreyasadchy.xtra.ui.games
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
+import com.github.andreyasadchy.xtra.model.ui.LocalFollowGame
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C

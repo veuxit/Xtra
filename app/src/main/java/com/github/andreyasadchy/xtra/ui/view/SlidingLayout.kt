@@ -22,10 +22,10 @@ import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
 import androidx.customview.widget.ViewDragHelper
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.ui.isClick
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.getActivity
 import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.isClick
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
 import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.prefs

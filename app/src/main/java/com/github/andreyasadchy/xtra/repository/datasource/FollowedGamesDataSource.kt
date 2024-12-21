@@ -17,7 +17,7 @@ class FollowedGamesDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Game>() {
+    private val apiPref: List<String>) : PagingSource<Int, Game>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
         return try {
@@ -33,17 +33,17 @@ class FollowedGamesDataSource(
                     ))
                 }
                 try {
-                    when (apiPref.elementAt(0)?.second) {
-                        C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
+                    when (apiPref.getOrNull(0)) {
+                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                        C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
-                        when (apiPref.elementAt(1)?.second) {
-                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
+                        when (apiPref.getOrNull(1)) {
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
+                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {

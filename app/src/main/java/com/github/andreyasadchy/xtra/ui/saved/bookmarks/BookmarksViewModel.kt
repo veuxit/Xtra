@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.model.offline.Bookmark
-import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
+import com.github.andreyasadchy.xtra.model.ui.Bookmark
+import com.github.andreyasadchy.xtra.model.ui.VodBookmarkIgnoredUser
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository

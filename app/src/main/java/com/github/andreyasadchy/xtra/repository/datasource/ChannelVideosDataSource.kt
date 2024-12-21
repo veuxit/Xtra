@@ -6,11 +6,8 @@ import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.api.Optional
 import com.github.andreyasadchy.xtra.UserVideosQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
@@ -20,9 +17,9 @@ class ChannelVideosDataSource(
     private val channelId: String?,
     private val channelLogin: String?,
     private val helixHeaders: Map<String, String>,
-    private val helixPeriod: VideoPeriodEnum,
-    private val helixBroadcastTypes: BroadcastTypeEnum,
-    private val helixSort: VideoSortEnum,
+    private val helixPeriod: String,
+    private val helixBroadcastTypes: String,
+    private val helixSort: String,
     private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
     private val gqlQueryType: BroadcastType?,
@@ -32,7 +29,7 @@ class ChannelVideosDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
+    private val apiPref: List<String>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -40,28 +37,28 @@ class ChannelVideosDataSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
         return try {
             val response = try {
-                when (apiPref.elementAt(0)?.second) {
+                when (apiPref.getOrNull(0)) {
                     C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    C.GQL -> if (helixPeriod == "all") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL_PERSISTED_QUERY -> if (helixPeriod == "all") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
-                    when (apiPref.elementAt(1)?.second) {
+                    when (apiPref.getOrNull(1)) {
                         C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                        C.GQL -> if (helixPeriod == "all") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL_PERSISTED_QUERY -> if (helixPeriod == "all") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
-                        when (apiPref.elementAt(2)?.second) {
+                        when (apiPref.getOrNull(2)) {
                             C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                            C.GQL -> if (helixPeriod == VideoPeriodEnum.ALL) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                            C.GQL -> if (helixPeriod == "all") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
+                            C.GQL_PERSISTED_QUERY -> if (helixPeriod == "all") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {

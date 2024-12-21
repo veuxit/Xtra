@@ -2,39 +2,37 @@ package com.github.andreyasadchy.xtra.model.gql.game
 
 import com.github.andreyasadchy.xtra.model.gql.Error
 import com.github.andreyasadchy.xtra.model.gql.PageInfo
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamsResponse.Game
-import com.github.andreyasadchy.xtra.model.gql.stream.StreamsResponse.Tag
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GameVideosResponse(
+class GameVideosResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val game: Game,
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val videos: Videos,
     )
 
     @Serializable
-    data class Videos(
+    class Videos(
         val edges: List<Item>,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: Video,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class Video(
+    class Video(
         val id: String? = null,
         val owner: User? = null,
         val title: String? = null,
@@ -47,7 +45,7 @@ data class GameVideosResponse(
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
@@ -55,7 +53,7 @@ data class GameVideosResponse(
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val id: String? = null,
         val localizedName: String? = null,
     )

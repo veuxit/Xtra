@@ -4,23 +4,23 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class BadgesResponse(
+class BadgesResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val badges: List<Badge>? = null,
         val user: UserBadges? = null,
     )
 
     @Serializable
-    data class UserBadges(
+    class UserBadges(
         val broadcastBadges: List<Badge>,
     )
 
     @Serializable
-    data class Badge(
+    class Badge(
         val setID: String? = null,
         val version: String? = null,
         val image1x: String? = null,

@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.repository
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

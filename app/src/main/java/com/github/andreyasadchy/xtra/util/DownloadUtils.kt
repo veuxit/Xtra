@@ -48,8 +48,9 @@ object DownloadUtils {
         return list
     }
 
-    data class Storage(
-            val id: Int,
-            val name: String,
-            val path: String)
+    class Storage(
+        val id: Int,
+        val name: String,
+        val path: String
+    )
 }

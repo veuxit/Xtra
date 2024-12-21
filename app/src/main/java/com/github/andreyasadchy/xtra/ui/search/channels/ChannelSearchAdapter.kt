@@ -53,7 +53,7 @@ class ChannelSearchAdapter(
                     }
                     if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = true)
+                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
                     } else {
                         userImage.gone()
                     }
@@ -73,7 +73,7 @@ class ChannelSearchAdapter(
                     }
                     if (item.followersCount != null) {
                         userFollowers.visible()
-                        userFollowers.text = context.getString(R.string.followers, TwitchApiHelper.formatCount(context, item.followersCount))
+                        userFollowers.text = context.getString(R.string.followers, TwitchApiHelper.formatCount(item.followersCount, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false)))
                     } else {
                         userFollowers.gone()
                     }

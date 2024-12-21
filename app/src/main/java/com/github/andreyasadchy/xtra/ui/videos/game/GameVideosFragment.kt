@@ -4,23 +4,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.edit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.navArgs
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.databinding.SortBarBinding
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.SortGame
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
@@ -34,12 +35,14 @@ import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.getValue
 
 @AndroidEntryPoint
 class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSortDialog.OnFilter {
 
     private var _binding: CommonRecyclerViewLayoutBinding? = null
     private val binding get() = _binding!!
+    private val args: GamePagerFragmentArgs by navArgs()
     private val viewModel: GameVideosViewModel by viewModels()
     private lateinit var pagingAdapter: PagingDataAdapter<Video, out RecyclerView.ViewHolder>
 
@@ -61,7 +64,44 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
     }
 
     override fun initialize() {
-        initializeAdapter(binding, pagingAdapter, viewModel.flow)
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (viewModel.filter.value == null) {
+                val sortValues = args.gameId?.let { viewModel.getSortGame(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortGame("default")
+                viewModel.setFilter(
+                    sort = sortValues?.videoSort,
+                    period = if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) {
+                        sortValues?.videoPeriod
+                    } else null,
+                    type = sortValues?.videoType,
+                    languageIndex = sortValues?.videoLanguageIndex,
+                    saveSort = sortValues?.saveSort,
+                )
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                    requireContext().getString(
+                        when (viewModel.sort) {
+                            VideosSortDialog.SORT_TIME -> R.string.upload_date
+                            VideosSortDialog.SORT_VIEWS -> R.string.view_count
+                            else -> R.string.view_count
+                        }
+                    ),
+                    requireContext().getString(
+                        when (viewModel.period) {
+                            VideosSortDialog.PERIOD_DAY -> R.string.today
+                            VideosSortDialog.PERIOD_WEEK -> R.string.this_week
+                            VideosSortDialog.PERIOD_MONTH -> R.string.this_month
+                            VideosSortDialog.PERIOD_ALL -> R.string.all_time
+                            else -> R.string.this_week
+                        }
+                    )
+                )
+            }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+        }
+        initializeAdapter(binding, pagingAdapter)
         initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
     }
 
@@ -86,20 +126,78 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
         }
     }
 
-    override fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
+    override fun onChange(sort: String, sortText: CharSequence, period: String, periodText: CharSequence, type: String, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
         if ((parentFragment as? FragmentHost)?.currentFragment == this) {
             viewLifecycleOwner.lifecycleScope.launch {
                 binding.scrollTop.gone()
                 pagingAdapter.submitData(PagingData.empty())
-                viewModel.filter(
-                    sort = sort,
-                    period = period,
-                    type = type,
-                    languageIndex = languageIndex,
-                    text = getString(R.string.sort_and_period, sortText, periodText),
-                    saveSort = saveSort,
-                    saveDefault = saveDefault
-                )
+                viewModel.setFilter(sort, period, type, languageIndex, saveSort)
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period, sortText, periodText)
+                val sortValues = args.gameId?.let { viewModel.getSortGame(it) }
+                if (saveSort) {
+                    if (sortValues != null) {
+                        sortValues.apply {
+                            this.saveSort = true
+                            videoSort = sort
+                            if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) {
+                                videoPeriod = period
+                            }
+                            videoType = type
+                            videoLanguageIndex = languageIndex
+                        }
+                    } else {
+                        args.gameId?.let {
+                            SortGame(
+                                id = it,
+                                saveSort = true,
+                                videoSort = sort,
+                                videoPeriod = if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) period else null,
+                                videoType = type,
+                                videoLanguageIndex = languageIndex
+                            )
+                        }
+                    }
+                } else {
+                    sortValues?.apply {
+                        this.saveSort = false
+                    }
+                }?.let { viewModel.saveSortGame(it) }
+                if (saveDefault) {
+                    if (sortValues != null) {
+                        sortValues.apply {
+                            this.saveSort = saveSort
+                        }
+                    } else {
+                        args.gameId?.let {
+                            SortGame(
+                                id = it,
+                                saveSort = saveSort
+                            )
+                        }
+                    }?.let { viewModel.saveSortGame(it) }
+                    val sortDefaults = viewModel.getSortGame("default")
+                    if (sortDefaults != null) {
+                        sortDefaults.apply {
+                            videoSort = sort
+                            if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) {
+                                videoPeriod = period
+                            }
+                            videoType = type
+                            videoLanguageIndex = languageIndex
+                        }
+                    } else {
+                        SortGame(
+                            id = "default",
+                            videoSort = sort,
+                            videoPeriod = if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) period else null,
+                            videoType = type,
+                            videoLanguageIndex = languageIndex
+                        )
+                    }.let { viewModel.saveSortGame(it) }
+                }
+                if (saveDefault != requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_VIDEOS, false)) {
+                    requireContext().prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_VIDEOS, saveDefault) }
+                }
             }
         }
     }

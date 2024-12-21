@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.util.chat
 
 import com.github.andreyasadchy.xtra.model.chat.ChannelPointReward
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
+import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import org.json.JSONObject
 
@@ -77,4 +78,22 @@ object PubSubUtils {
             )
         } else null
     }
+
+    class PlaybackMessage(
+        val live: Boolean? = null,
+        val serverTime: Long? = null,
+        val viewers: Int? = null,
+    )
+
+    class StreamInfo(
+        val title: String? = null,
+        val gameId: String? = null,
+        val gameName: String? = null,
+    )
+
+    class PointsEarned(
+        val pointsGained: Int? = null,
+        val timestamp: Long? = null,
+        val fullMsg: String? = null,
+    )
 }

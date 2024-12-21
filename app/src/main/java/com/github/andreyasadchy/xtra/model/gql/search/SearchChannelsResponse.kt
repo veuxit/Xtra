@@ -4,33 +4,33 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SearchChannelsResponse(
+class SearchChannelsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val searchFor: Search,
     )
 
     @Serializable
-    data class Search(
+    class Search(
         val channels: Users,
     )
 
     @Serializable
-    data class Users(
+    class Users(
         val edges: List<Item>,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val item: User,
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
@@ -40,12 +40,12 @@ data class SearchChannelsResponse(
     )
 
     @Serializable
-    data class Followers(
+    class Followers(
         val totalCount: Int? = null,
     )
 
     @Serializable
-    data class Stream(
+    class Stream(
         val type: String? = null,
     )
 }

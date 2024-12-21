@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Clip(
+class Clip(
     val id: String? = null,
     @SerialName("broadcaster_id")
     val channelId: String? = null,

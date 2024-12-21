@@ -89,7 +89,7 @@ class StreamsCompactAdapter(
                     }
                     if (item.channelLogo != null)  {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = true)
+                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
@@ -124,7 +124,7 @@ class StreamsCompactAdapter(
                     }
                     if (item.viewerCount != null) {
                         viewers.visible()
-                        viewers.text = TwitchApiHelper.formatCount(context, item.viewerCount ?: 0)
+                        viewers.text = TwitchApiHelper.formatCount(item.viewerCount ?: 0, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
                     } else {
                         viewers.gone()
                     }

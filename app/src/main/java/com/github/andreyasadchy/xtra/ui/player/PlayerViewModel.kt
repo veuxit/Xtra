@@ -2,13 +2,12 @@ package com.github.andreyasadchy.xtra.ui.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.Notification
+import com.github.andreyasadchy.xtra.model.NotificationUser
 import com.github.andreyasadchy.xtra.model.ShownNotification
-import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
+import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -27,7 +26,7 @@ abstract class PlayerViewModel(
     private val repository: ApiRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
-    private val notificationsRepository: NotificationsRepository,
+    private val notificationUsersRepository: NotificationUsersRepository,
     private val okHttpClient: OkHttpClient) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
@@ -35,19 +34,19 @@ abstract class PlayerViewModel(
     var started = false
     var background = false
     var pipMode = false
-    var playerMode = PlayerMode.NORMAL
+    var playerMode = PlaybackService.PLAYER_MODE_NORMAL
     val loaded = MutableStateFlow(false)
     private val _isFollowing = MutableStateFlow<Boolean?>(null)
     val isFollowing: StateFlow<Boolean?> = _isFollowing
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
 
-    fun isFollowingChannel(helixHeaders: Map<String, String>, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, accountId: String?, accountLogin: String?, setting: Int, channelId: String?, channelLogin: String?) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
-                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin) ||
-                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId)) {
-                        val response = repository.loadUserFollowing(helixHeaders, channelId, account.id, gqlHeaders, channelLogin)
+                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!accountLogin.isNullOrBlank() && !channelLogin.isNullOrBlank() && accountLogin != channelLogin) ||
+                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !accountId.isNullOrBlank() && !channelId.isNullOrBlank() && accountId != channelId)) {
+                        val response = repository.loadUserFollowing(helixHeaders, channelId, accountId, gqlHeaders, channelLogin)
                         _isFollowing.value = response.first
                     } else {
                         channelId?.let {
@@ -100,7 +99,7 @@ abstract class PlayerViewModel(
                         localFollowsChannel.saveFollow(LocalFollowChannel(channelId, channelLogin, channelName, downloadedLogo))
                         _isFollowing.value = true
                         follow.value = Pair(true, null)
-                        notificationsRepository.saveUser(Notification(channelId))
+                        notificationUsersRepository.saveUser(NotificationUser(channelId))
                         if (notificationsEnabled) {
                             startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
                                 shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
@@ -134,7 +133,7 @@ abstract class PlayerViewModel(
                         localFollowsChannel.getFollowByUserId(channelId)?.let { localFollowsChannel.deleteFollow(it) }
                         _isFollowing.value = false
                         follow.value = Pair(false, null)
-                        notificationsRepository.deleteUser(Notification(channelId))
+                        notificationUsersRepository.deleteUser(NotificationUser(channelId))
                     }
                 }
             } catch (e: Exception) {

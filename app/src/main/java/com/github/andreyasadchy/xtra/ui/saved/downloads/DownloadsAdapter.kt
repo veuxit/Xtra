@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentDownloadsListItemBinding
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
@@ -121,7 +121,7 @@ class DownloadsAdapter(
                     }
                     if (item.channelLogo != null)  {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = true, diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()

@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ChannelSearch(
+class ChannelSearch(
     @SerialName("id")
     val channelId: String? = null,
     @SerialName("broadcaster_login")
