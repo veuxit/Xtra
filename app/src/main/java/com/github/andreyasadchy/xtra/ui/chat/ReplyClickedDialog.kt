@@ -161,7 +161,7 @@ class ReplyClickedDialog : BottomSheetDialogFragment() {
         }
     }
 
-    fun updatePaint(userId: String) {
+    fun updateUserMessages(userId: String) {
         adapter?.let { adapter ->
             adapter.messages?.toList()?.let { messages ->
                 messages.filter { it.userId == userId }.forEach { message ->

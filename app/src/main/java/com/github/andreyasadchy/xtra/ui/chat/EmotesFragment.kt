@@ -81,6 +81,15 @@ class EmotesFragment : Fragment() {
             }
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.userPersonalEmoteSet.collectLatest {
+                        if (it != null) {
+                            updateList(emotesAdapter)
+                        }
+                    }
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.globalStvEmotes.collectLatest {
                         if (it != null) {
                             updateList(emotesAdapter)
@@ -141,6 +150,7 @@ class EmotesFragment : Fragment() {
             0 -> {
                 if (recentEmotes.isNotEmpty()) {
                     val list = (viewModel.userEmotes.value ?: emptyList()) +
+                            (viewModel.userPersonalEmoteSet.value?.second ?: emptyList()) +
                             (viewModel.channelStvEmotes.value ?: emptyList()) +
                             (viewModel.channelBttvEmotes.value ?: emptyList()) +
                             (viewModel.channelFfzEmotes.value ?: emptyList()) +
@@ -152,7 +162,8 @@ class EmotesFragment : Fragment() {
             }
             1 -> emotesAdapter.submitList(viewModel.userEmotes.value ?: emptyList())
             else -> {
-                emotesAdapter.submitList((viewModel.channelStvEmotes.value ?: emptyList()) +
+                emotesAdapter.submitList((viewModel.userPersonalEmoteSet.value?.second ?: emptyList()) +
+                        (viewModel.channelStvEmotes.value ?: emptyList()) +
                         (viewModel.channelBttvEmotes.value ?: emptyList()) +
                         (viewModel.channelFfzEmotes.value ?: emptyList()) +
                         (viewModel.globalStvEmotes.value ?: emptyList()) +

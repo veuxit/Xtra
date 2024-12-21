@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
 import com.github.andreyasadchy.xtra.model.chat.RoomState
+import com.github.andreyasadchy.xtra.model.chat.StvBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -38,7 +39,7 @@ import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.PubSubUtils
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.RecentMessageUtils
-import com.github.andreyasadchy.xtra.util.chat.STVEventApiWebSocket
+import com.github.andreyasadchy.xtra.util.chat.StvEventApiWebSocket
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,7 +74,7 @@ class ChatViewModel @Inject constructor(
     private var chatWriteWebSocket: ChatWriteWebSocket? = null
     private var eventSub: EventSubWebSocket? = null
     private var pubSub: PubSubWebSocket? = null
-    private var stvEventApi: STVEventApiWebSocket? = null
+    private var stvEventApi: StvEventApiWebSocket? = null
     private var stvUserId: String? = null
     private var stvLastPresenceUpdate: Long? = null
     private val allEmotes = mutableListOf<Emote>()
@@ -87,6 +88,8 @@ class ChatViewModel @Inject constructor(
     private val _userEmotes = MutableStateFlow<List<Emote>?>(null)
     val userEmotes: StateFlow<List<Emote>?> = _userEmotes
     private var loadedUserEmotes = false
+    private val _userPersonalEmoteSet = MutableStateFlow<Pair<String, List<Emote>>?>(null)
+    val userPersonalEmoteSet: StateFlow<Pair<String, List<Emote>>?> = _userPersonalEmoteSet
     private val _localTwitchEmotes = MutableStateFlow<List<TwitchEmote>?>(null)
     val localTwitchEmotes: StateFlow<List<TwitchEmote>?> = _localTwitchEmotes
     private val _globalStvEmotes = MutableStateFlow<List<Emote>?>(null)
@@ -119,9 +122,18 @@ class ChatViewModel @Inject constructor(
     var streamId: String? = null
     private val rewardList = mutableListOf<ChatMessage>()
     val namePaints = mutableListOf<NamePaint>()
-    val paintUsers = mutableMapOf<String, String>()
     val newPaint = MutableStateFlow<NamePaint?>(null)
+    val paintUsers = mutableMapOf<String, String>()
     val newPaintUser = MutableStateFlow<Pair<String, String>?>(null)
+    val stvBadges = mutableListOf<StvBadge>()
+    val newStvBadge = MutableStateFlow<StvBadge?>(null)
+    val stvBadgeUsers = mutableMapOf<String, String>()
+    val newStvBadgeUser = MutableStateFlow<Pair<String, String>?>(null)
+    val personalEmoteSets = mutableMapOf<String, List<Emote>>()
+    val newPersonalEmoteSet = MutableStateFlow<Pair<String, List<Emote>>?>(null)
+    val personalEmoteSetUsers = mutableMapOf<String, String>()
+    val newPersonalEmoteSetUser = MutableStateFlow<Pair<String, String>?>(null)
+    var channelStvEmoteSetId: String? = null
 
     val reloadMessages = MutableStateFlow(false)
     val scrollDown = MutableStateFlow(false)
@@ -247,9 +259,10 @@ class ChatViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         playerRepository.loadStvEmotes(channelId).let {
-                            if (it.isNotEmpty()) {
-                                addEmotes(it)
-                                _channelStvEmotes.value = it
+                            if (it.second.isNotEmpty()) {
+                                channelStvEmoteSetId = it.first
+                                addEmotes(it.second)
+                                _channelStvEmotes.value = it.second
                                 if (!reloadMessages.value) {
                                     reloadMessages.value = true
                                 }
@@ -755,22 +768,86 @@ class ChatViewModel @Inject constructor(
             ).apply { connect() }
         }
         val showNamePaints = applicationContext.prefs().getBoolean(C.CHAT_SHOW_PAINTS, true)
-        if (showNamePaints && !channelId.isNullOrBlank()) {
-            stvEventApi = STVEventApiWebSocket(
+        val showStvBadges = applicationContext.prefs().getBoolean(C.CHAT_SHOW_STV_BADGES, true)
+        val showPersonalEmotes = applicationContext.prefs().getBoolean(C.CHAT_SHOW_PERSONAL_EMOTES, true)
+        val stvLiveUpdates = applicationContext.prefs().getBoolean(C.CHAT_STV_LIVE_UPDATES, true)
+        if ((showNamePaints || showStvBadges || showPersonalEmotes || stvLiveUpdates) && !channelId.isNullOrBlank()) {
+            stvEventApi = StvEventApiWebSocket(
                 channelId = channelId,
                 client = okHttpClient,
                 coroutineScope = viewModelScope,
-                onPaintUpdate = { paint ->
-                    namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
-                    namePaints.add(paint)
-                    newPaint.value = paint
+                onPaint = { paint ->
+                    if (showNamePaints) {
+                        namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+                        namePaints.add(paint)
+                        newPaint.value = paint
+                    }
                 },
-                onUserUpdate = { userId, paintId ->
-                    val item = paintUsers.entries.find { it.key == userId }
-                    if (item == null || item.value != paintId) {
-                        item?.let { paintUsers.remove(it.key) }
-                        paintUsers.put(userId, paintId)
-                        newPaintUser.value = Pair(userId, paintId)
+                onBadge = { badge ->
+                    if (showStvBadges) {
+                        stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+                        stvBadges.add(badge)
+                        newStvBadge.value = badge
+                    }
+                },
+                onEmoteSet = { setId, added, removed, updated ->
+                    if (setId == channelStvEmoteSetId) {
+                        if (stvLiveUpdates) {
+                            val removedEmotes = (removed + updated.map { it.first }).map { it.name }
+                            val newEmotes = added + updated.map { it.second }
+                            allEmotes.removeAll { it.name in removedEmotes }
+                            allEmotes.addAll(newEmotes.filter { it !in allEmotes })
+                            val existingSet = channelStvEmotes.value?.filter { it.name !in removedEmotes } ?: emptyList()
+                            _channelStvEmotes.value = existingSet + newEmotes
+                            if (!reloadMessages.value) {
+                                reloadMessages.value = true
+                            }
+                        }
+                    } else {
+                        if (showPersonalEmotes) {
+                            val removedEmotes = (removed + updated.map { it.first }).map { it.name }
+                            val existingSet = personalEmoteSets[setId]?.filter { it.name !in removedEmotes } ?: emptyList()
+                            personalEmoteSets.remove(setId)
+                            val set = existingSet + added + updated.map { it.second }
+                            personalEmoteSets.put(setId, set)
+                            newPersonalEmoteSet.value = Pair(setId, set)
+                            if (isLoggedIn && !accountId.isNullOrBlank() && setId == _userPersonalEmoteSet.value?.first) {
+                                _userPersonalEmoteSet.value = Pair(setId, set)
+                            }
+                        }
+                    }
+                },
+                onPaintUser = { userId, paintId ->
+                    if (showNamePaints) {
+                        val item = paintUsers.entries.find { it.key == userId }
+                        if (item == null || item.value != paintId) {
+                            item?.let { paintUsers.remove(it.key) }
+                            paintUsers.put(userId, paintId)
+                            newPaintUser.value = Pair(userId, paintId)
+                        }
+                    }
+                },
+                onBadgeUser = { userId, badgeId ->
+                    if (showStvBadges) {
+                        val item = stvBadgeUsers.entries.find { it.key == userId }
+                        if (item == null || item.value != badgeId) {
+                            item?.let { stvBadgeUsers.remove(it.key) }
+                            stvBadgeUsers.put(userId, badgeId)
+                            newStvBadgeUser.value = Pair(userId, badgeId)
+                        }
+                    }
+                },
+                onEmoteSetUser = { userId, setId ->
+                    if (showPersonalEmotes) {
+                        val item = personalEmoteSetUsers.entries.find { it.key == userId }
+                        if (item == null || item.value != setId) {
+                            item?.let { personalEmoteSetUsers.remove(it.key) }
+                            personalEmoteSetUsers.put(userId, setId)
+                            newPersonalEmoteSetUser.value = Pair(userId, setId)
+                            if (isLoggedIn && !accountId.isNullOrBlank() && userId == accountId) {
+                                _userPersonalEmoteSet.value = Pair(setId, personalEmoteSets[setId] ?: emptyList())
+                            }
+                        }
                     }
                 },
                 onUpdatePresence = { sessionId ->

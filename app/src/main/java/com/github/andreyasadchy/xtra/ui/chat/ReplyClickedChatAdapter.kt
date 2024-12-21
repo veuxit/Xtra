@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
+import com.github.andreyasadchy.xtra.model.chat.StvBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
@@ -45,6 +46,12 @@ class ReplyClickedChatAdapter(
     private val showNamePaints: Boolean,
     val namePaints: MutableList<NamePaint>?,
     val paintUsers: MutableMap<String, String>?,
+    private val showStvBadges: Boolean,
+    val stvBadges: MutableList<StvBadge>?,
+    val stvBadgeUsers: MutableMap<String, String>?,
+    private val showPersonalEmotes: Boolean,
+    val personalEmoteSets: MutableMap<String, List<Emote>>?,
+    val personalEmoteSetUsers: MutableMap<String, String>?,
     private val showSystemMessageEmotes: Boolean,
     private val chatUrl: String?,
     private val getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?,
@@ -100,9 +107,10 @@ class ReplyClickedChatAdapter(
             rewardChatMsg, false, replyMessage, null,
             { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers,
-            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes,
-            channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes,
-            savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes,
+            loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes,
+            channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes, savedLocalBadges,
+            savedLocalCheerEmotes, savedLocalEmotes
         )
         if (chatMessage == selectedMessage) {
             holder.textView.setBackgroundResource(R.color.chatMessageSelected)

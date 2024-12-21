@@ -34,6 +34,7 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.chat.RoomState
+import com.github.andreyasadchy.xtra.model.chat.StvBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
@@ -108,7 +109,7 @@ class ChatView : ConstraintLayout {
         _binding = ViewChatBinding.inflate(LayoutInflater.from(context), this, true)
     }
 
-    fun init(fragment: Fragment, channelId: String?, namePaints: List<NamePaint>? = null, paintUsers: Map<String, String>? = null, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)? = null, chatUrl: String? = null) {
+    fun init(fragment: Fragment, channelId: String?, namePaints: List<NamePaint>? = null, paintUsers: Map<String, String>? = null, stvBadges: List<StvBadge>? = null, stvBadgeUsers: Map<String, String>? = null, personalEmoteSets: Map<String, List<Emote>>? = null, personalEmoteSetUsers: Map<String, String>? = null, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)? = null, chatUrl: String? = null) {
         this.fragment = fragment
         with(binding) {
             adapter = ChatAdapter(
@@ -128,6 +129,12 @@ class ChatView : ConstraintLayout {
                 showNamePaints = context.prefs().getBoolean(C.CHAT_SHOW_PAINTS, true),
                 namePaintsList = namePaints,
                 paintUsersMap = paintUsers,
+                showStvBadges = context.prefs().getBoolean(C.CHAT_SHOW_STV_BADGES, true),
+                stvBadgesList = stvBadges,
+                stvBadgeUsersMap = stvBadgeUsers,
+                showPersonalEmotes = context.prefs().getBoolean(C.CHAT_SHOW_PERSONAL_EMOTES, true),
+                personalEmoteSetsMap = personalEmoteSets,
+                personalEmoteSetUsersMap = personalEmoteSetUsers,
                 showSystemMessageEmotes = context.prefs().getBoolean(C.CHAT_SYSTEM_MESSAGE_EMOTES, true),
                 chatUrl = chatUrl,
                 getEmoteBytes = getEmoteBytes,
@@ -433,27 +440,93 @@ class ChatView : ConstraintLayout {
     }
 
     fun addPaintUser(pair: Pair<String, String>) {
-        adapter.paintUsers?.let { paintUsers ->
-            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
-            paintUsers.put(pair.first, pair.second)
+        adapter.paintUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
         }
+        messageDialog?.adapter?.paintUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        replyDialog?.adapter?.paintUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        updateUserMessages(pair.first)
+    }
+
+    fun addStvBadge(badge: StvBadge) {
+        adapter.stvBadges?.let { stvBadges ->
+            stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+            stvBadges.add(badge)
+        }
+        messageDialog?.adapter?.stvBadges?.let { stvBadges ->
+            stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+            stvBadges.add(badge)
+        }
+        replyDialog?.adapter?.stvBadges?.let { stvBadges ->
+            stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+            stvBadges.add(badge)
+        }
+    }
+
+    fun addStvBadgeUser(pair: Pair<String, String>) {
+        adapter.stvBadgeUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        messageDialog?.adapter?.stvBadgeUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        replyDialog?.adapter?.stvBadgeUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        updateUserMessages(pair.first)
+    }
+
+    fun addPersonalEmoteSet(pair: Pair<String, List<Emote>>) {
+        adapter.personalEmoteSets?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        messageDialog?.adapter?.personalEmoteSets?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        replyDialog?.adapter?.personalEmoteSets?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+    }
+
+    fun addPersonalEmoteSetUser(pair: Pair<String, String>) {
+        adapter.personalEmoteSetUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        messageDialog?.adapter?.personalEmoteSetUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        replyDialog?.adapter?.personalEmoteSetUsers?.let {
+            it.remove(pair.first)
+            it.put(pair.first, pair.second)
+        }
+        updateUserMessages(pair.first)
+    }
+
+    private fun updateUserMessages(userId: String) {
         adapter.messages?.toList()?.let { messages ->
-            messages.filter { it.userId == pair.first }.forEach { message ->
+            messages.filter { it.userId == userId }.forEach { message ->
                 messages.indexOf(message).takeIf { it != -1 }?.let {
                     adapter.notifyItemChanged(it)
                 }
             }
         }
-        messageDialog?.adapter?.paintUsers?.let { paintUsers ->
-            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
-            paintUsers.put(pair.first, pair.second)
-        }
-        messageDialog?.updatePaint(pair.first)
-        replyDialog?.adapter?.paintUsers?.let { paintUsers ->
-            paintUsers.entries.find { it.key == pair.first }?.let { paintUsers.remove(it.key) }
-            paintUsers.put(pair.first, pair.second)
-        }
-        replyDialog?.updatePaint(pair.first)
+        messageDialog?.updateUserMessages(userId)
+        replyDialog?.updateUserMessages(userId)
     }
 
     fun setUsername(username: String?) {

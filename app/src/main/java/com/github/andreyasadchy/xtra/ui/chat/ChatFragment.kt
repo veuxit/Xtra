@@ -69,7 +69,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         fragment = this@ChatFragment,
                         channelId = channelId,
                         namePaints = viewModel.namePaints,
-                        paintUsers = viewModel.paintUsers
+                        paintUsers = viewModel.paintUsers,
+                        stvBadges = viewModel.stvBadges,
+                        stvBadgeUsers = viewModel.stvBadgeUsers,
+                        personalEmoteSets = viewModel.personalEmoteSets,
+                        personalEmoteSetUsers = viewModel.personalEmoteSetUsers
                     )
                     val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
                     val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
@@ -323,6 +327,46 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                                 if (it != null) {
                                     chatView.addPaintUser(it)
                                     viewModel.newPaintUser.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newStvBadge.collectLatest {
+                                if (it != null) {
+                                    chatView.addStvBadge(it)
+                                    viewModel.newStvBadge.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newStvBadgeUser.collectLatest {
+                                if (it != null) {
+                                    chatView.addStvBadgeUser(it)
+                                    viewModel.newStvBadgeUser.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newPersonalEmoteSet.collectLatest {
+                                if (it != null) {
+                                    chatView.addPersonalEmoteSet(it)
+                                    viewModel.newPersonalEmoteSet.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.newPersonalEmoteSetUser.collectLatest {
+                                if (it != null) {
+                                    chatView.addPersonalEmoteSetUser(it)
+                                    viewModel.newPersonalEmoteSetUser.value = null
                                 }
                             }
                         }

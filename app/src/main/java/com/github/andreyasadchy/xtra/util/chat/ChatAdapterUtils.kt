@@ -29,6 +29,7 @@ import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.Image
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
+import com.github.andreyasadchy.xtra.model.chat.StvBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.chat.ImageClickedDialog
@@ -53,7 +54,7 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Triple<SpannableStringBuilder, ArrayList<Image>, Triple<NamePaint, String, Int>?> {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, showReplies: Boolean, replyMessage: String, replyClick: (() -> Unit)?, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showStvBadges: Boolean, stvBadges: List<StvBadge>?, stvBadgeUsers: Map<String, String>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Triple<SpannableStringBuilder, ArrayList<Image>, Triple<NamePaint, String, Int>?> {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
         var imagePaint: Triple<NamePaint, String, Int>? = null
@@ -72,7 +73,7 @@ object ChatAdapterUtils {
                 builder.append(chatMessage.systemMsg)
                 builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + chatMessage.systemMsg.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                 if (showSystemMessageEmotes) {
-                    prepareEmotes(chatMessage, chatMessage.systemMsg, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                    prepareEmotes(chatMessage, chatMessage.systemMsg, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
                 }
                 builderIndex = builder.length
             } else {
@@ -90,7 +91,7 @@ object ChatAdapterUtils {
                     builder.append("$string ")
                     builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + string.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                     if (showSystemMessageEmotes) {
-                        prepareEmotes(chatMessage, string, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                        prepareEmotes(chatMessage, string, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
                     }
                     builderIndex = builder.length
                     builder.append(". ")
@@ -213,6 +214,32 @@ object ChatAdapterUtils {
                     badgesCount++
                 }
             }
+            if (showStvBadges && !chatMessage.userId.isNullOrBlank()) {
+                stvBadgeUsers?.get(chatMessage.userId)?.let { badgeId -> stvBadges?.find { it.id == badgeId } }?.let { badge ->
+                    builder.append(". ")
+                    builder.setSpan(ForegroundColorSpan(Color.TRANSPARENT), builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (imageClick != null) {
+                        builder.setSpan(object : ClickableSpan() {
+                            override fun onClick(widget: View) {
+                                imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.name, null, badge.format, true, null)
+                            }
+
+                            override fun updateDrawState(ds: TextPaint) {}
+                        }, builderIndex, builderIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    images.add(Image(
+                        url1x = badge.url1x,
+                        url2x = badge.url2x,
+                        url3x = badge.url3x,
+                        url4x = badge.url4x,
+                        format = badge.format,
+                        isAnimated = true,
+                        start = builderIndex++,
+                        end = builderIndex++
+                    ))
+                    badgesCount++
+                }
+            }
             val color = if (chatMessage.color != null) {
                 getSavedColor(chatMessage.color, savedColors, useReadableColors, isLightTheme)
             } else {
@@ -273,7 +300,7 @@ object ChatAdapterUtils {
                 if (chatMessage.isAction) {
                     builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.message.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
-                prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes) == true
+                prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, badgesCount, images, imageClick, useReadableColors, isLightTheme, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes) == true
             } else false
             when {
                 chatMessage.isFirst && firstMsgVisibility < 2 -> itemView.setBackgroundResource(R.color.chatMessageFirst)
@@ -318,7 +345,7 @@ object ChatAdapterUtils {
         return ColorUtils.HSLToColor(colorArray)
     }
 
-    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, builderIndex: Int, badgesCount: Int, images: ArrayList<Image>, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useReadableColors: Boolean, isLightTheme: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
+    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, builderIndex: Int, badgesCount: Int, images: ArrayList<Image>, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useReadableColors: Boolean, isLightTheme: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
         return try {
             var builderIndex = builderIndex
             chatMessage.emotes?.let { emotes ->
@@ -385,6 +412,9 @@ object ChatAdapterUtils {
                     ))
                 }
             }
+            val personalEmotes = if (showPersonalEmotes && !chatMessage.userId.isNullOrBlank()) {
+                personalEmoteSetUsers?.get(chatMessage.userId)?.let { setId -> personalEmoteSets?.entries?.find { it.key == setId } }?.value
+            } else null
             val split = builder.substring(builderIndex).split(" ")
             var emotesFound = 0
             var wasMentioned = false
@@ -439,7 +469,8 @@ object ChatAdapterUtils {
                 } else null
                 if (cheerEmote == null) {
                     var source: String? = null
-                    val emote = channelStvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_STV } ?:
+                    val emote = personalEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.PERSONAL_STV } ?:
+                    channelStvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_STV } ?:
                     channelBttvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_BTTV } ?:
                     channelFfzEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.CHANNEL_FFZ } ?:
                     globalStvEmotes?.find { it.name == value }?.also { source = ImageClickedDialog.GLOBAL_STV } ?:
