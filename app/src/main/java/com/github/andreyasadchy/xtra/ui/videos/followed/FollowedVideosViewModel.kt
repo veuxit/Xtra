@@ -42,6 +42,8 @@ class FollowedVideosViewModel @Inject constructor(
 
     val sort: String
         get() = filter.value?.sort ?: VideosSortDialog.SORT_TIME
+    val period: String
+        get() = filter.value?.period ?: VideosSortDialog.PERIOD_ALL
     val type: String
         get() = filter.value?.type ?: VideosSortDialog.VIDEO_TYPE_ALL
 
@@ -80,11 +82,12 @@ class FollowedVideosViewModel @Inject constructor(
     }
 
     fun setFilter(sort: String?, type: String?) {
-        filter.value = Filter(sort, type)
+        filter.value = Filter(sort, null, type)
     }
 
     class Filter(
         val sort: String?,
+        val period: String?,
         val type: String?,
     )
 }
