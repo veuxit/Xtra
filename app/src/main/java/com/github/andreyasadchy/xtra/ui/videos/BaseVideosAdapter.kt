@@ -4,7 +4,7 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.model.ui.Bookmark
 
 abstract class BaseVideosAdapter<T: Any, VH : RecyclerView.ViewHolder>(diffCallback: DiffUtil.ItemCallback<T>) : PagingDataAdapter<T, VH>(diffCallback) {
 

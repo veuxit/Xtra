@@ -18,7 +18,13 @@ class ChatReadWebSocket(
     channelName: String,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: ChatListener? = null,
+    private val onConnect: (() -> Unit)? = null,
+    private val onDisconnect: ((String, String) -> Unit)? = null,
+    private val onChatMessage: ((String, Boolean) -> Unit)? = null,
+    private val onClearMessage: ((String) -> Unit)? = null,
+    private val onClearChat: ((String) -> Unit)? = null,
+    private val onNotice: ((String) -> Unit)? = null,
+    private val onRoomState: ((String) -> Unit)? = null,
     private val webSocketListener: WebSocketListener? = null) {
     val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
@@ -104,7 +110,7 @@ class ChatReadWebSocket(
             write("CAP REQ :twitch.tv/tags twitch.tv/commands")
             write("NICK justinfan${Random().nextInt(((9999 - 1000) + 1)) + 1000}") //random number between 1000 and 9999
             write("JOIN $hashChannelName")
-            listener?.onConnect()
+            onConnect?.invoke()
             ping()
         }
 
@@ -112,16 +118,16 @@ class ChatReadWebSocket(
             text.removeSuffix("\r\n").split("\r\n").forEach {
                 it.run {
                     when {
-                        contains("PRIVMSG") -> listener?.onChatMessage(this, false)
-                        contains("USERNOTICE") -> listener?.onChatMessage(this, true)
-                        contains("CLEARMSG") -> listener?.onClearMessage(this)
-                        contains("CLEARCHAT") -> listener?.onClearChat(this)
+                        contains("PRIVMSG") -> onChatMessage?.invoke(this, false)
+                        contains("USERNOTICE") -> onChatMessage?.invoke(this, true)
+                        contains("CLEARMSG") -> onClearMessage?.invoke(this)
+                        contains("CLEARCHAT") -> onClearChat?.invoke(this)
                         contains("NOTICE") -> {
                             if (!loggedIn) {
-                                listener?.onNotice(this)
+                                onNotice?.invoke(this)
                             }
                         }
-                        contains("ROOMSTATE") -> listener?.onRoomState(this)
+                        contains("ROOMSTATE") -> onRoomState?.invoke(this)
                         startsWith("PING") -> write("PONG")
                         startsWith("PONG") -> pongReceived = true
                         startsWith("RECONNECT") -> reconnect()
@@ -131,7 +137,7 @@ class ChatReadWebSocket(
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            listener?.onDisconnect(t.toString(), t.stackTraceToString())
+            onDisconnect?.invoke(t.toString(), t.stackTraceToString())
         }
     }
 }

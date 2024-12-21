@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.repository
 
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
-import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
+import com.github.andreyasadchy.xtra.model.ui.LocalFollowGame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

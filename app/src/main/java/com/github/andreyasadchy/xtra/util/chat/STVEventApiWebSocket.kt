@@ -16,7 +16,9 @@ class STVEventApiWebSocket(
     private val channelId: String,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
-    private val listener: STVEventApiListener) {
+    private val onPaintUpdate: (NamePaint) -> Unit,
+    private val onUserUpdate: (String, String) -> Unit,
+    private val onUpdatePresence: (String) -> Unit) {
     private var socket: WebSocket? = null
     private var isActive = false
 
@@ -114,7 +116,7 @@ class STVEventApiWebSocket(
                                                                 }
                                                             }
                                                         }
-                                                        listener.onPaintUpdate(NamePaint(
+                                                        onPaintUpdate(NamePaint(
                                                             id = id,
                                                             type = function,
                                                             colors = colors.toIntArray(),
@@ -127,7 +129,7 @@ class STVEventApiWebSocket(
                                                     "URL" -> {
                                                         val imageUrl = objectData.optString("image_url")
                                                         if (imageUrl != null) {
-                                                            listener.onPaintUpdate(NamePaint(
+                                                            onPaintUpdate(NamePaint(
                                                                 id = id,
                                                                 type = function,
                                                                 imageUrl = imageUrl,
@@ -162,10 +164,7 @@ class STVEventApiWebSocket(
                                                 "PAINT" -> {
                                                     val paintId = style?.optString("paint_id")
                                                     if (paintId != null) {
-                                                        listener.onUserUpdate(
-                                                            userId = userId,
-                                                            paintId = paintId
-                                                        )
+                                                        onUserUpdate(userId, paintId)
                                                     }
                                                 }
                                             }
@@ -179,7 +178,7 @@ class STVEventApiWebSocket(
                         val data = json.optJSONObject("d")
                         val sessionId = data?.optString("session_id")
                         if (sessionId != null) {
-                            listener.onUpdatePresence(sessionId, true)
+                            onUpdatePresence(sessionId)
                         }
                     }
                     OPCODE_RECONNECT -> reconnect()

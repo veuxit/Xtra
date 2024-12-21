@@ -4,23 +4,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.edit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.navArgs
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.databinding.SortBarBinding
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
+import com.github.andreyasadchy.xtra.model.ui.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
+import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
@@ -33,12 +34,14 @@ import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.getValue
 
 @AndroidEntryPoint
 class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSortDialog.OnFilter {
 
     private var _binding: CommonRecyclerViewLayoutBinding? = null
     private val binding get() = _binding!!
+    private val args: GamePagerFragmentArgs by navArgs()
     private val viewModel: FollowedVideosViewModel by viewModels()
     private lateinit var pagingAdapter: PagingDataAdapter<Video, out RecyclerView.ViewHolder>
 
@@ -60,7 +63,31 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
     }
 
     override fun initialize() {
-        initializeAdapter(binding, pagingAdapter, viewModel.flow, enableScrollTopButton = false)
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (viewModel.filter.value == null) {
+                val sortValues = args.channelId?.let { viewModel.getSortChannel(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortChannel("followed_videos")
+                viewModel.setFilter(
+                    sort = sortValues?.videoSort,
+                    type = sortValues?.videoType,
+                )
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                    requireContext().getString(
+                        when (viewModel.sort) {
+                            VideosSortDialog.SORT_TIME -> R.string.upload_date
+                            VideosSortDialog.SORT_VIEWS -> R.string.view_count
+                            else -> R.string.upload_date
+                        }
+                    ),
+                    requireContext().getString(R.string.all_time)
+                )
+            }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.flow.collectLatest { pagingData ->
+                    pagingAdapter.submitData(pagingData)
+                }
+            }
+        }
+        initializeAdapter(binding, pagingAdapter, enableScrollTopButton = false)
         initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
     }
 
@@ -69,7 +96,6 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
         sortBar.root.setOnClickListener {
             VideosSortDialog.newInstance(
                 sort = viewModel.sort,
-                period = viewModel.period,
                 type = viewModel.type,
                 saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)
             ).show(childFragmentManager, null)
@@ -83,18 +109,31 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
         }
     }
 
-    override fun onChange(sort: VideoSortEnum, sortText: CharSequence, period: VideoPeriodEnum, periodText: CharSequence, type: BroadcastTypeEnum, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
+    override fun onChange(sort: String, sortText: CharSequence, period: String, periodText: CharSequence, type: String, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
         if ((parentFragment as? FragmentHost)?.currentFragment == this) {
             viewLifecycleOwner.lifecycleScope.launch {
                 binding.scrollTop.gone()
                 pagingAdapter.submitData(PagingData.empty())
-                viewModel.filter(
-                    sort = sort,
-                    period = period,
-                    type = type,
-                    text = getString(R.string.sort_and_period, sortText, periodText),
-                    saveDefault = saveDefault
-                )
+                viewModel.setFilter(sort, type)
+                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period, sortText, periodText)
+                if (saveDefault) {
+                    val sortDefaults = viewModel.getSortChannel("followed_videos")
+                    if (sortDefaults != null) {
+                        sortDefaults.apply {
+                            videoSort = sort
+                            videoType = type
+                        }
+                    } else {
+                        SortChannel(
+                            id = "followed_videos",
+                            videoSort = sort,
+                            videoType = type
+                        )
+                    }.let { viewModel.saveSortChannel(it) }
+                }
+                if (saveDefault != requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)) {
+                    requireContext().prefs().edit { putBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, saveDefault) }
+                }
             }
         }
     }

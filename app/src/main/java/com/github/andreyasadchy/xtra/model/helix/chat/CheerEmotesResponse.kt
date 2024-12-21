@@ -4,17 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CheerEmotesResponse(
+class CheerEmotesResponse(
     val data: List<Set>,
 ) {
     @Serializable
-    data class Set(
+    class Set(
         val prefix: String,
         val tiers: List<Tier>,
     )
 
     @Serializable
-    data class Tier(
+    class Tier(
         @SerialName("min_bits")
         val minBits: Int,
         val color: String? = null,
@@ -22,19 +22,19 @@ data class CheerEmotesResponse(
     )
 
     @Serializable
-    data class Themes(
+    class Themes(
         val dark: Formats? = null,
         val light: Formats? = null,
     )
 
     @Serializable
-    data class Formats(
+    class Formats(
         val animated: Urls? = null,
         val static: Urls? = null,
     )
 
     @Serializable
-    data class Urls(
+    class Urls(
         @SerialName("1")
         val url1x: String? = null,
         @SerialName("2")

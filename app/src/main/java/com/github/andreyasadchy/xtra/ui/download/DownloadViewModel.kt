@@ -5,7 +5,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -26,8 +25,6 @@ class DownloadViewModel @Inject constructor(
 
     val integrity = MutableStateFlow<String?>(null)
 
-    private val _videoInfo = MutableStateFlow<VideoDownloadInfo?>(null)
-    val videoInfo: StateFlow<VideoDownloadInfo?> = _videoInfo
     private val _qualities = MutableStateFlow<Map<String, Pair<String, String>>?>(null)
     val qualities: StateFlow<Map<String, Pair<String, String>>?> = _qualities
     val dismiss = MutableStateFlow(false)
@@ -108,11 +105,11 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun setVideo(gqlHeaders: Map<String, String>, video: Video, videoInfo: VideoDownloadInfo?, playerType: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
+    fun setVideo(gqlHeaders: Map<String, String>, video: Video, qualities: Map<String, String>?, playerType: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
-            if (videoInfo != null && !videoInfo.qualities.isNullOrEmpty()) {
+            if (!qualities.isNullOrEmpty()) {
                 val map = mutableMapOf<String, Pair<String, String>>()
-                videoInfo.qualities.forEach {
+                qualities.entries.forEach {
                     if (it.key.equals("source", true)) {
                         map[ContextCompat.getString(applicationContext, R.string.source)] = Pair(it.key, it.value)
                     } else {
@@ -127,7 +124,6 @@ class DownloadViewModel @Inject constructor(
                     }
                 }
                 _qualities.value = map
-                _videoInfo.value = videoInfo
             } else {
                 viewModelScope.launch {
                     try {
@@ -211,10 +207,6 @@ class DownloadViewModel @Inject constructor(
                             }
                         }
                         _qualities.value = map
-                        _videoInfo.value = VideoDownloadInfo(
-                            totalDuration = video.duration?.let { TwitchApiHelper.getDuration(it)?.times(1000) } ?: 0,
-                            currentPosition = 0
-                        )
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
                             integrity.value = "refresh"

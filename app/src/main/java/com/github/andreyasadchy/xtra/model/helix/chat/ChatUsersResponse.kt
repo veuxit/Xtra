@@ -5,12 +5,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ChatUsersResponse(
+class ChatUsersResponse(
     val data: List<User>,
     val pagination: Pagination? = null,
 ) {
     @Serializable
-    data class User(
+    class User(
         @SerialName("user_id")
         val channelId: String? = null,
         @SerialName("user_login")

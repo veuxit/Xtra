@@ -8,7 +8,7 @@ import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.db.BookmarksDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.LocalFollowsGameDao
-import com.github.andreyasadchy.xtra.db.NotificationsDao
+import com.github.andreyasadchy.xtra.db.NotificationUsersDao
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.ShownNotificationsDao
 import com.github.andreyasadchy.xtra.db.SortChannelDao
@@ -19,7 +19,7 @@ import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
@@ -69,7 +69,7 @@ class DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesNotificationsRepository(notificationsDao: NotificationsDao): NotificationsRepository = NotificationsRepository(notificationsDao)
+    fun providesNotificationUsersRepository(notificationUsersDao: NotificationUsersDao): NotificationUsersRepository = NotificationUsersRepository(notificationUsersDao)
 
     @Singleton
     @Provides
@@ -113,7 +113,7 @@ class DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesNotificationsDao(database: AppDatabase): NotificationsDao = database.notificationsDao()
+    fun providesNotificationUsersDao(database: AppDatabase): NotificationUsersDao = database.notificationsDao()
 
     @Singleton
     @Provides

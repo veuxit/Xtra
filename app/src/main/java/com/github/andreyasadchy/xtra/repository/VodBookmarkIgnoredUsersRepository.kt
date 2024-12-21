@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.repository
 
 import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
-import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
+import com.github.andreyasadchy.xtra.model.ui.VodBookmarkIgnoredUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject

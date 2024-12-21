@@ -5,34 +5,34 @@ import com.github.andreyasadchy.xtra.model.gql.PageInfo
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FollowedStreamsResponse(
+class FollowedStreamsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val currentUser: FollowedData,
     )
 
     @Serializable
-    data class FollowedData(
+    class FollowedData(
         val followedLiveUsers: Users,
     )
 
     @Serializable
-    data class Users(
+    class Users(
         val edges: List<Item>,
         val pageInfo: PageInfo? = null,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: User,
         val cursor: String? = null,
     )
 
     @Serializable
-    data class User(
+    class User(
         val id: String? = null,
         val login: String? = null,
         val displayName: String? = null,
@@ -41,7 +41,7 @@ data class FollowedStreamsResponse(
     )
 
     @Serializable
-    data class Stream(
+    class Stream(
         val id: String? = null,
         val game: Game? = null,
         val type: String? = null,
@@ -52,13 +52,13 @@ data class FollowedStreamsResponse(
     )
 
     @Serializable
-    data class Game(
+    class Game(
         val id: String? = null,
         val displayName: String? = null,
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val name: String? = null,
     )
 }

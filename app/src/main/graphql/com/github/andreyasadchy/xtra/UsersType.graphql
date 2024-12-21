@@ -3,9 +3,7 @@ query UsersType($ids: [ID!], $logins: [String!]) {
         id
         roles {
             isAffiliate
-            isGlobalMod
             isPartner
-            isSiteAdmin
             isStaff
         }
     }

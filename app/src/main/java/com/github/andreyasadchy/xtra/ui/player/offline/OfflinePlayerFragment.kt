@@ -17,15 +17,15 @@ import androidx.media3.session.SessionCommand
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerOfflineBinding
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlaybackService
+import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -33,9 +33,6 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class OfflinePlayerFragment : BasePlayerFragment() {
-//    override fun play(obj: Parcelable) {
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//    }
 
     private var _binding: FragmentPlayerOfflineBinding? = null
     private val binding get() = _binding!!
@@ -68,10 +65,9 @@ class OfflinePlayerFragment : BasePlayerFragment() {
             requireView().findViewById<ImageButton>(R.id.playerMenu)?.apply {
                 visible()
                 setOnClickListener {
-                    FragmentUtils.showPlayerSettingsDialog(
-                        fragmentManager = childFragmentManager,
+                    PlayerSettingsDialog.newInstance(
                         speedText = prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.find { it == player?.playbackParameters?.speed.toString() },
-                    )
+                    ).show(childFragmentManager, "closeOnPip")
                 }
             }
         }

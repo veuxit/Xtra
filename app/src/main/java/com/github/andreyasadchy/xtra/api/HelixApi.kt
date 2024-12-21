@@ -12,9 +12,6 @@ import com.github.andreyasadchy.xtra.model.helix.game.GamesResponse
 import com.github.andreyasadchy.xtra.model.helix.stream.StreamsResponse
 import com.github.andreyasadchy.xtra.model.helix.user.UsersResponse
 import com.github.andreyasadchy.xtra.model.helix.video.VideosResponse
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import retrofit2.Response
@@ -80,9 +77,9 @@ interface HelixApi {
         @Query("id") ids: List<String>? = null,
         @Query("game_id") gameId: String? = null,
         @Query("user_id") channelId: String? = null,
-        @Query("period") period: VideoPeriodEnum? = null,
-        @Query("type") broadcastType: BroadcastTypeEnum? = null,
-        @Query("sort") sort: VideoSortEnum? = null,
+        @Query("period") period: String? = null,
+        @Query("type") broadcastType: String? = null,
+        @Query("sort") sort: String? = null,
         @Query("language") language: String? = null,
         @Query("first") limit: Int? = null,
         @Query("after") offset: String? = null

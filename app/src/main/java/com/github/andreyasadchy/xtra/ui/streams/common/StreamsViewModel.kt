@@ -9,7 +9,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GameStreamsDataSource
 import com.github.andreyasadchy.xtra.repository.datasource.StreamsDataSource
@@ -34,10 +33,10 @@ class StreamsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val filter = MutableStateFlow(Filter())
+    val filter = MutableStateFlow<Filter?>(null)
 
-    val sort: StreamSortEnum
-        get() = filter.value.sort
+    val sort: String
+        get() = filter.value?.sort ?: StreamsSortDialog.SORT_VIEWERS
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
@@ -57,7 +56,7 @@ class StreamsViewModel @Inject constructor(
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
                     checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_STREAMS, ""), TwitchApiHelper.streamsApiDefaults)
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_STREAMS, null)?.split(',') ?: TwitchApiHelper.streamsApiDefaults
                 )
             } else {
                 GameStreamsDataSource(
@@ -67,26 +66,31 @@ class StreamsViewModel @Inject constructor(
                     helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                     helixApi = helix,
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
-                    gqlQuerySort = when (filter.sort) {
-                        StreamSortEnum.VIEWERS_HIGH -> StreamSort.VIEWER_COUNT
-                        StreamSortEnum.VIEWERS_LOW -> StreamSort.VIEWER_COUNT_ASC
-                        else -> null },
-                    gqlSort = filter.sort,
+                    gqlQuerySort = when (sort) {
+                        StreamsSortDialog.SORT_VIEWERS -> StreamSort.VIEWER_COUNT
+                        StreamsSortDialog.SORT_VIEWERS_ASC -> StreamSort.VIEWER_COUNT_ASC
+                        else -> StreamSort.VIEWER_COUNT
+                    },
+                    gqlSort = when (sort) {
+                        StreamsSortDialog.SORT_VIEWERS -> "VIEWER_COUNT"
+                        StreamsSortDialog.SORT_VIEWERS_ASC -> "VIEWER_COUNT_ASC"
+                        else -> "VIEWER_COUNT"
+                    },
                     tags = args.tags?.toList(),
                     gqlApi = graphQLRepository,
                     apolloClient = apolloClient,
                     checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_STREAMS, ""), TwitchApiHelper.gameStreamsApiDefaults)
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_STREAMS, null)?.split(',') ?: TwitchApiHelper.gameStreamsApiDefaults
                 )
             }
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun filter(sort: StreamSortEnum) {
-        filter.value = filter.value.copy(sort = sort)
+    fun setFilter(sort: String?) {
+        filter.value = Filter(sort)
     }
 
-    data class Filter(
-        val sort: StreamSortEnum = StreamSortEnum.VIEWERS_HIGH
+    class Filter(
+        val sort: String?,
     )
 }

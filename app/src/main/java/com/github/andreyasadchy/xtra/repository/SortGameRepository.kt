@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.repository
 
 import com.github.andreyasadchy.xtra.db.SortGameDao
-import com.github.andreyasadchy.xtra.model.offline.SortGame
+import com.github.andreyasadchy.xtra.model.ui.SortGame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject

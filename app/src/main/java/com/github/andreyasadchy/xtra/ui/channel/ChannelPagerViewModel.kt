@@ -5,16 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.Account
-import com.github.andreyasadchy.xtra.model.Notification
+import com.github.andreyasadchy.xtra.model.NotificationUser
 import com.github.andreyasadchy.xtra.model.ShownNotification
-import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
+import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -39,7 +38,7 @@ class ChannelPagerViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
-    private val notificationsRepository: NotificationsRepository,
+    private val notificationUsersRepository: NotificationUsersRepository,
     private val apolloClient: ApolloClient,
     private val helixApi: HelixApi,
     private val okHttpClient: OkHttpClient,
@@ -116,7 +115,7 @@ class ChannelPagerViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    notificationsRepository.saveUser(Notification(channelId))
+                    notificationUsersRepository.saveUser(NotificationUser(channelId))
                     _notificationsEnabled.value = true
                     notifications.value = Pair(true, null)
                     if (notificationsEnabled) {
@@ -147,7 +146,7 @@ class ChannelPagerViewModel @Inject constructor(
                         notifications.value = Pair(false, errorMessage)
                     }
                 } else {
-                    notificationsRepository.deleteUser(Notification(channelId))
+                    notificationUsersRepository.deleteUser(NotificationUser(channelId))
                     _notificationsEnabled.value = false
                     notifications.value = Pair(false, null)
                 }
@@ -159,27 +158,27 @@ class ChannelPagerViewModel @Inject constructor(
 
     fun updateNotifications(gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch {
-            shownNotificationsRepository.getNewStreams(notificationsRepository, gqlHeaders, apolloClient, helixHeaders, helixApi)
+            shownNotificationsRepository.getNewStreams(notificationUsersRepository, gqlHeaders, apolloClient, helixHeaders, helixApi)
         }
     }
 
-    fun isFollowingChannel(helixHeaders: Map<String, String>, account: Account, gqlHeaders: Map<String, String>, setting: Int, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, accountId: String?, accountLogin: String?, setting: Int, channelId: String?, channelLogin: String?) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
-                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!account.login.isNullOrBlank() && !channelLogin.isNullOrBlank() && account.login != channelLogin) ||
-                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !account.id.isNullOrBlank() && !channelId.isNullOrBlank() && account.id != channelId)) {
-                        val response = repository.loadUserFollowing(helixHeaders, channelId, account.id, gqlHeaders, channelLogin)
+                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!accountLogin.isNullOrBlank() && !channelLogin.isNullOrBlank() && accountLogin != channelLogin) ||
+                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !accountId.isNullOrBlank() && !channelId.isNullOrBlank() && accountId != channelId)) {
+                        val response = repository.loadUserFollowing(helixHeaders, channelId, accountId, gqlHeaders, channelLogin)
                         _isFollowing.value = response.first
                         _notificationsEnabled.value = if (response.first && response.second != null) {
                             response.second
                         } else {
-                            channelId?.let { notificationsRepository.getByUserId(it) != null }
+                            channelId?.let { notificationUsersRepository.getByUserId(it) != null }
                         }
                     } else {
                         channelId?.let {
                             _isFollowing.value = localFollowsChannel.getFollowByUserId(it) != null
-                            _notificationsEnabled.value = notificationsRepository.getByUserId(channelId) != null
+                            _notificationsEnabled.value = notificationUsersRepository.getByUserId(channelId) != null
                         }
                     }
                 } catch (e: Exception) {
@@ -229,7 +228,7 @@ class ChannelPagerViewModel @Inject constructor(
                         localFollowsChannel.saveFollow(LocalFollowChannel(channelId, channelLogin, channelName, downloadedLogo))
                         _isFollowing.value = true
                         follow.value = Pair(true, null)
-                        notificationsRepository.saveUser(Notification(channelId))
+                        notificationUsersRepository.saveUser(NotificationUser(channelId))
                         _notificationsEnabled.value = true
                         if (notificationsEnabled) {
                             _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
@@ -265,7 +264,7 @@ class ChannelPagerViewModel @Inject constructor(
                         localFollowsChannel.getFollowByUserId(channelId)?.let { localFollowsChannel.deleteFollow(it) }
                         _isFollowing.value = false
                         follow.value = Pair(false, null)
-                        notificationsRepository.deleteUser(Notification(channelId))
+                        notificationUsersRepository.deleteUser(NotificationUser(channelId))
                         _notificationsEnabled.value = false
                     }
                 }

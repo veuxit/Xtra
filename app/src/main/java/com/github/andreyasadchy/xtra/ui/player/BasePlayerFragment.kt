@@ -44,7 +44,6 @@ import androidx.media3.session.SessionToken
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -56,7 +55,6 @@ import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.CustomPlayerView
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
@@ -68,6 +66,7 @@ import com.github.andreyasadchy.xtra.util.isKeyboardShown
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
+import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -193,12 +192,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 player.sendCustomCommand(SessionCommand(PlaybackService.MOVE_FOREGROUND, Bundle.EMPTY), Bundle.EMPTY).let { result ->
                     result.addListener({
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
-                            } else {
-                                @Suppress("DEPRECATION")
-                                result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
-                            }?.let {
+                            result.get().extras.getString(PlaybackService.RESULT)?.let {
                                 changePlayerMode(it)
                             }
                         }
@@ -337,12 +331,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     player?.sendCustomCommand(SessionCommand(PlaybackService.SWITCH_AUDIO_MODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
                         result.addListener({
                             if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
-                                }?.let {
+                                result.get().extras.getString(PlaybackService.RESULT)?.let {
                                     changePlayerMode(it)
                                 }
                             }
@@ -368,7 +357,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
         if (this is StreamPlayerFragment) {
-            if (!Account.get(activity).login.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(activity, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(activity)[C.HEADER_TOKEN].isNullOrBlank())) {
+            if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(activity, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(activity)[C.HEADER_TOKEN].isNullOrBlank())) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
                     view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
                         visible()
@@ -518,12 +507,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 player?.sendCustomCommand(SessionCommand(PlaybackService.CHANGE_QUALITY, bundleOf(PlaybackService.INDEX to index)), Bundle.EMPTY)?.let { result ->
                     result.addListener({
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
-                            } else {
-                                @Suppress("DEPRECATION")
-                                result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
-                            }?.let {
+                            result.get().extras.getString(PlaybackService.RESULT)?.let {
                                 changePlayerMode(it)
                                 (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
                             }
@@ -546,8 +530,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     override fun changeVolume(volume: Float) {
         player?.volume = volume
     }
-
-    //    abstract fun play(obj: Parcelable) //TODO instead maybe add livedata in mainactivity and observe it
 
     fun setResizeMode() {
         resizeMode = (resizeMode + 1).let { if (it < 5) it else 0 }
@@ -594,7 +576,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                     val qualities = result.get().extras.getStringArray(PlaybackService.RESULT)?.toList()
                     val qualityIndex = result.get().extras.getInt(PlaybackService.INDEX)
                     if (!qualities.isNullOrEmpty()) {
-                        FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, qualities, qualityIndex, REQUEST_CODE_QUALITY)
+                        RadioButtonDialogFragment.newInstance(REQUEST_CODE_QUALITY, qualities, null, qualityIndex).show(childFragmentManager, "closeOnPip")
                     }
                 }
             }, MoreExecutors.directExecutor())
@@ -604,13 +586,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     fun showSpeedDialog() {
         player?.playbackParameters?.speed?.let {
             prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.let { speeds ->
-                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, speeds, speeds.indexOf(it.toString()), REQUEST_CODE_SPEED)
+                RadioButtonDialogFragment.newInstance(REQUEST_CODE_SPEED, speeds, null, speeds.indexOf(it.toString())).show(childFragmentManager, "closeOnPip")
             }
         }
     }
 
     fun showVolumeDialog() {
-        FragmentUtils.showPlayerVolumeDialog(childFragmentManager, player?.volume)
+        PlayerVolumeDialog.newInstance(player?.volume).show(childFragmentManager, "closeOnPip")
     }
 
     fun minimize() {
@@ -622,7 +604,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun enterPictureInPicture(): Boolean {
-        return viewModel.playerMode == PlayerMode.NORMAL
+        return viewModel.playerMode == PlaybackService.PLAYER_MODE_NORMAL
     }
 
     private fun initLayout() {
@@ -839,12 +821,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         )), Bundle.EMPTY)?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        result.get().extras.getSerializable(PlaybackService.RESULT, PlayerMode::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        result.get().extras.getSerializable(PlaybackService.RESULT) as? PlayerMode
-                    }?.let {
+                    result.get().extras.getString(PlaybackService.RESULT)?.let {
                         changePlayerMode(it)
                         releaseController()
                     }
@@ -879,9 +856,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
-    private fun changePlayerMode(mode: PlayerMode) {
+    private fun changePlayerMode(mode: String) {
         viewModel.playerMode = mode
-        if (mode == PlayerMode.NORMAL) {
+        if (mode == PlaybackService.PLAYER_MODE_NORMAL) {
             playerView.controllerHideOnTouch = true
             playerView.controllerShowTimeoutMs = controllerShowTimeoutMs
             if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {

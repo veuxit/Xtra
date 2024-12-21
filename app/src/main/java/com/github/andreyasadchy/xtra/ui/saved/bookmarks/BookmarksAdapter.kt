@@ -14,9 +14,9 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentVideosListItemBinding
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.offline.Bookmark
-import com.github.andreyasadchy.xtra.model.offline.VodBookmarkIgnoredUser
+import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Video
+import com.github.andreyasadchy.xtra.model.ui.VodBookmarkIgnoredUser
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
@@ -103,7 +103,7 @@ class BookmarksAdapter(
                     }
                     val getDuration = item.duration?.let { TwitchApiHelper.getDuration(it) }
                     val position = item.videoId?.toLongOrNull()?.let { id -> positions?.find { it.id == id }?.position }
-                    val ignore = ignored?.find { it.user_id == item.userId } != null
+                    val ignore = ignored?.find { it.userId == item.userId } != null
                     val userType = item.userType ?: item.userBroadcasterType
                     root.setOnClickListener {
                         (fragment.activity as MainActivity).startVideo(Video(
@@ -171,7 +171,7 @@ class BookmarksAdapter(
                     }
                     if (item.userLogo != null)  {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.userLogo, circle = true, diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(fragment, item.userLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()

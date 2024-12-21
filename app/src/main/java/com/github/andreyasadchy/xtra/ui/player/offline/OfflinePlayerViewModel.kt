@@ -1,10 +1,10 @@
 package com.github.andreyasadchy.xtra.ui.player.offline
 
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.NotificationsRepository
+import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
@@ -19,9 +19,9 @@ class OfflinePlayerViewModel @Inject constructor(
     repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
     shownNotificationsRepository: ShownNotificationsRepository,
-    notificationsRepository: NotificationsRepository,
+    notificationUsersRepository: NotificationUsersRepository,
     okHttpClient: OkHttpClient,
-    private val offlineRepository: OfflineRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationsRepository, okHttpClient) {
+    private val offlineRepository: OfflineRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val video = MutableSharedFlow<OfflineVideo?>()
 

@@ -1,8 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.videos.game
 
 import android.content.Context
-import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -11,10 +9,7 @@ import androidx.paging.cachedIn
 import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.offline.SortGame
-import com.github.andreyasadchy.xtra.model.ui.BroadcastTypeEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoPeriodEnum
-import com.github.andreyasadchy.xtra.model.ui.VideoSortEnum
+import com.github.andreyasadchy.xtra.model.ui.SortGame
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -25,6 +20,7 @@ import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
+import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -32,10 +28,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
@@ -52,162 +45,106 @@ class GameVideosViewModel @Inject constructor(
     private val apolloClient: ApolloClient,
     private val sortGameRepository: SortGameRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
-    private val _sortText = MutableStateFlow<CharSequence?>(null)
-    val sortText: StateFlow<CharSequence?> = _sortText
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val filter = MutableStateFlow(setGame())
+    val filter = MutableStateFlow<Filter?>(null)
+    val sortText = MutableStateFlow<CharSequence?>(null)
 
-    val sort: VideoSortEnum
-        get() = filter.value.sort
-    val period: VideoPeriodEnum
-        get() = filter.value.period
-    val type: BroadcastTypeEnum
-        get() = filter.value.broadcastType
+    val sort: String
+        get() = filter.value?.sort ?: VideosSortDialog.SORT_VIEWS
+    val period: String
+        get() = filter.value?.period ?: VideosSortDialog.PERIOD_WEEK
+    val type: String
+        get() = filter.value?.type ?: VideosSortDialog.VIDEO_TYPE_ALL
     val languageIndex: Int
-        get() = filter.value.languageIndex
+        get() = filter.value?.languageIndex ?: 0
     val saveSort: Boolean
-        get() = filter.value.saveSort == true
+        get() = filter.value?.saveSort == true
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
             PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         ) {
-            with(filter) {
-                val langValues = applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
-                val language = if (languageIndex != 0) {
-                    langValues.elementAt(languageIndex)
-                } else null
-                GameVideosDataSource(
-                    gameId = args.gameId,
-                    gameSlug = args.gameSlug,
-                    gameName = args.gameName,
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                    helixPeriod = period,
-                    helixBroadcastTypes = broadcastType,
-                    helixLanguage = language?.lowercase(),
-                    helixSort = sort,
-                    helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
-                    gqlQueryLanguages = if (language != null) {
-                        listOf(language)
-                    } else null,
-                    gqlQueryType = when (broadcastType) {
-                        BroadcastTypeEnum.ARCHIVE -> BroadcastType.ARCHIVE
-                        BroadcastTypeEnum.HIGHLIGHT -> BroadcastType.HIGHLIGHT
-                        BroadcastTypeEnum.UPLOAD -> BroadcastType.UPLOAD
-                        else -> null },
-                    gqlQuerySort = when (sort) { VideoSortEnum.TIME -> VideoSort.TIME else -> VideoSort.VIEWS },
-                    gqlType = if (broadcastType == BroadcastTypeEnum.ALL) { null }
-                    else { broadcastType.value.uppercase() },
-                    gqlSort = sort.value.uppercase(),
-                    gqlApi = graphQLRepository,
-                    apolloClient = apolloClient,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = TwitchApiHelper.listFromPrefs(applicationContext.prefs().getString(C.API_PREF_GAME_VIDEOS, ""), TwitchApiHelper.gameVideosApiDefaults))
-            }
+            val language = if (languageIndex != 0) {
+                applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList().elementAt(languageIndex)
+            } else null
+            GameVideosDataSource(
+                gameId = args.gameId,
+                gameSlug = args.gameSlug,
+                gameName = args.gameName,
+                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                helixPeriod = when (period) {
+                    VideosSortDialog.PERIOD_DAY -> "day"
+                    VideosSortDialog.PERIOD_WEEK -> "week"
+                    VideosSortDialog.PERIOD_MONTH -> "month"
+                    VideosSortDialog.PERIOD_ALL -> "all"
+                    else -> "week"
+                },
+                helixBroadcastTypes = when (type) {
+                    VideosSortDialog.VIDEO_TYPE_ALL -> "all"
+                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> "archive"
+                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> "highlight"
+                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> "upload"
+                    else -> "all"
+                },
+                helixLanguage = language?.lowercase(),
+                helixSort = when (sort) {
+                    VideosSortDialog.SORT_TIME -> "time"
+                    VideosSortDialog.SORT_VIEWS -> "views"
+                    else -> "views"
+                },
+                helixApi = helix,
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                gqlQueryLanguages = language?.let { listOf(it) },
+                gqlQueryType = when (type) {
+                    VideosSortDialog.VIDEO_TYPE_ALL -> null
+                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> BroadcastType.ARCHIVE
+                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> BroadcastType.HIGHLIGHT
+                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> BroadcastType.UPLOAD
+                    else -> null
+                },
+                gqlQuerySort = when (sort) {
+                    VideosSortDialog.SORT_TIME -> VideoSort.TIME
+                    VideosSortDialog.SORT_VIEWS -> VideoSort.VIEWS
+                    else -> VideoSort.VIEWS
+                },
+                gqlType = when (type) {
+                    VideosSortDialog.VIDEO_TYPE_ALL -> null
+                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> "ARCHIVE"
+                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> "HIGHLIGHT"
+                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> "UPLOAD"
+                    else -> null
+                },
+                gqlSort = when (sort) {
+                    VideosSortDialog.SORT_TIME -> "TIME"
+                    VideosSortDialog.SORT_VIEWS -> "VIEWS"
+                    else -> "VIEWS"
+                },
+                gqlApi = graphQLRepository,
+                apolloClient = apolloClient,
+                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_VIDEOS, null)?.split(',') ?: TwitchApiHelper.gameVideosApiDefaults
+            )
         }.flow
     }.cachedIn(viewModelScope)
 
-    private fun setGame(): Filter {
-        var sortValues = args.gameId?.let { runBlocking { sortGameRepository.getById(it) } }
-        if (sortValues?.saveSort != true) {
-            sortValues = runBlocking { sortGameRepository.getById("default") }
-        }
-        _sortText.value = ContextCompat.getString(applicationContext, R.string.sort_and_period).format(
-            when (sortValues?.videoSort) {
-                VideoSortEnum.TIME.value -> ContextCompat.getString(applicationContext, R.string.upload_date)
-                else -> ContextCompat.getString(applicationContext, R.string.view_count)
-            },
-            when (sortValues?.videoPeriod) {
-                VideoPeriodEnum.DAY.value -> ContextCompat.getString(applicationContext, R.string.today)
-                VideoPeriodEnum.MONTH.value -> ContextCompat.getString(applicationContext, R.string.this_month)
-                VideoPeriodEnum.ALL.value -> ContextCompat.getString(applicationContext, R.string.all_time)
-                else -> ContextCompat.getString(applicationContext, R.string.this_week)
-            }
-        )
-        return Filter(
-            saveSort = sortValues?.saveSort,
-            sort = when (sortValues?.videoSort) {
-                VideoSortEnum.TIME.value -> VideoSortEnum.TIME
-                else -> VideoSortEnum.VIEWS
-            },
-            period = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) {
-                VideoPeriodEnum.WEEK
-            } else {
-                when (sortValues?.videoPeriod) {
-                    VideoPeriodEnum.DAY.value -> VideoPeriodEnum.DAY
-                    VideoPeriodEnum.MONTH.value -> VideoPeriodEnum.MONTH
-                    VideoPeriodEnum.ALL.value -> VideoPeriodEnum.ALL
-                    else -> VideoPeriodEnum.WEEK
-                }
-            },
-            broadcastType = when (sortValues?.videoType) {
-                BroadcastTypeEnum.ARCHIVE.value -> BroadcastTypeEnum.ARCHIVE
-                BroadcastTypeEnum.HIGHLIGHT.value -> BroadcastTypeEnum.HIGHLIGHT
-                BroadcastTypeEnum.UPLOAD.value -> BroadcastTypeEnum.UPLOAD
-                else -> BroadcastTypeEnum.ALL
-            },
-            languageIndex = sortValues?.videoLanguageIndex ?: 0
-        )
+    suspend fun getSortGame(id: String): SortGame? {
+        return sortGameRepository.getById(id)
     }
 
-    fun filter(sort: VideoSortEnum, period: VideoPeriodEnum, type: BroadcastTypeEnum, languageIndex: Int, text: CharSequence, saveSort: Boolean, saveDefault: Boolean) {
-        filter.value = filter.value.copy(saveSort = saveSort, sort = sort, period = period, broadcastType = type, languageIndex = languageIndex)
-        _sortText.value = text
-        viewModelScope.launch {
-            val sortValues = args.gameId?.let { sortGameRepository.getById(it) }
-            if (saveSort) {
-                sortValues?.apply {
-                    this.saveSort = true
-                    videoSort = sort.value
-                    if (!TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) videoPeriod = period.value
-                    videoType = type.value
-                    videoLanguageIndex = languageIndex
-                } ?: args.gameId?.let { SortGame(
-                    id = it,
-                    saveSort = true,
-                    videoSort = sort.value,
-                    videoPeriod = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) null else period.value,
-                    videoType = type.value,
-                    videoLanguageIndex = languageIndex)
-                }
-            } else {
-                sortValues?.apply {
-                    this.saveSort = false
-                }
-            }?.let { sortGameRepository.save(it) }
-            if (saveDefault) {
-                (sortValues?.apply {
-                    this.saveSort = saveSort
-                } ?: args.gameId?.let { SortGame(
-                    id = it,
-                    saveSort = saveSort)
-                })?.let { sortGameRepository.save(it) }
-                val sortDefaults = sortGameRepository.getById("default")
-                (sortDefaults?.apply {
-                    videoSort = sort.value
-                    if (!TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) videoPeriod = period.value
-                    videoType = type.value
-                    videoLanguageIndex = languageIndex
-                } ?: SortGame(
-                    id = "default",
-                    videoSort = sort.value,
-                    videoPeriod = if (TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank()) null else period.value,
-                    videoType = type.value,
-                    videoLanguageIndex = languageIndex
-                )).let { sortGameRepository.save(it) }
-            }
-        }
-        if (saveDefault != applicationContext.prefs().getBoolean(C.SORT_DEFAULT_GAME_VIDEOS, false)) {
-            applicationContext.prefs().edit { putBoolean(C.SORT_DEFAULT_GAME_VIDEOS, saveDefault) }
-        }
+    suspend fun saveSortGame(item: SortGame) {
+        sortGameRepository.save(item)
     }
 
-    private data class Filter(
+    fun setFilter(sort: String?, period: String?, type: String?, languageIndex: Int?, saveSort: Boolean?) {
+        filter.value = Filter(sort, period, type, languageIndex, saveSort)
+    }
+
+    class Filter(
+        val sort: String?,
+        val period: String?,
+        val type: String?,
+        val languageIndex: Int?,
         val saveSort: Boolean?,
-        val sort: VideoSortEnum = VideoSortEnum.VIEWS,
-        val period: VideoPeriodEnum = VideoPeriodEnum.WEEK,
-        val broadcastType: BroadcastTypeEnum = BroadcastTypeEnum.ALL,
-        val languageIndex: Int = 0)
+    )
 }

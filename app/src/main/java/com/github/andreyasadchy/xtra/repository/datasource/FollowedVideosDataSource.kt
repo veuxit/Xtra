@@ -19,7 +19,7 @@ class FollowedVideosDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
+    private val apiPref: List<String>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -27,17 +27,17 @@ class FollowedVideosDataSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
         return try {
             val response = try {
-                when (apiPref.elementAt(0)?.second) {
-                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                when (apiPref.getOrNull(0)) {
+                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
+                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
-                    when (apiPref.elementAt(1)?.second) {
-                        C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL; gqlLoad(params) } else throw Exception()
+                    when (apiPref.getOrNull(1)) {
+                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
+                        C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {

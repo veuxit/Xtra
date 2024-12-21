@@ -7,8 +7,6 @@ import com.apollographql.apollo.api.Optional
 import com.github.andreyasadchy.xtra.UserFollowedUsersQuery
 import com.github.andreyasadchy.xtra.UsersLastBroadcastQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
-import com.github.andreyasadchy.xtra.model.ui.FollowOrderEnum
-import com.github.andreyasadchy.xtra.model.ui.FollowSortEnum
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -39,9 +37,9 @@ class FollowedChannelsDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    private val sort: FollowSortEnum,
-    private val order: FollowOrderEnum) : PagingSource<Int, User>() {
+    private val apiPref: List<String>,
+    private val sort: String,
+    private val order: String) : PagingSource<Int, User>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -52,8 +50,8 @@ class FollowedChannelsDataSource(
                 if (!offset.isNullOrBlank()) {
                     val list = when (api) {
                         C.HELIX -> helixLoad()
-                        C.GQL_QUERY -> if (nextPage) gqlQueryLoad() else listOf()
-                        C.GQL -> if (nextPage) gqlLoad() else listOf()
+                        C.GQL -> if (nextPage) gqlQueryLoad() else listOf()
+                        C.GQL_PERSISTED_QUERY -> if (nextPage) gqlLoad() else listOf()
                         else -> listOf()
                     }
                     list.filter { it.lastBroadcast == null || it.profileImageUrl == null }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
@@ -75,7 +73,7 @@ class FollowedChannelsDataSource(
                     list
                 } else {
                     val list = mutableListOf<User>()
-                    (localFollowsChannel.loadFollows().let { if (order == FollowOrderEnum.ASC) it.asReversed() else it }).forEach {
+                    (localFollowsChannel.loadFollows().let { if (order == "asc") it.asReversed() else it }).forEach {
                         list.add(User(
                             channelId = it.userId,
                             channelLogin = it.userLogin,
@@ -85,28 +83,28 @@ class FollowedChannelsDataSource(
                         ))
                     }
                     try {
-                        when (apiPref.elementAt(0)?.second) {
+                        when (apiPref.getOrNull(0)) {
                             C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
-                            when (apiPref.elementAt(1)?.second) {
+                            when (apiPref.getOrNull(1)) {
                                 C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                                C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
                             if (e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
-                                when (apiPref.elementAt(2)?.second) {
+                                when (apiPref.getOrNull(2)) {
                                     C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {
@@ -149,17 +147,17 @@ class FollowedChannelsDataSource(
                             }
                         }
                     }
-                    if (order == FollowOrderEnum.ASC) {
+                    if (order == "asc") {
                         when (sort) {
-                            FollowSortEnum.FOLLOWED_AT -> list.sortedWith(compareBy(nullsLast()) { it.followedAt })
-                            FollowSortEnum.LAST_BROADCAST -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
-                            else -> list.sortedWith(compareBy(nullsLast()) { it.channelLogin })
+                            "created_at" -> list.sortedWith(compareBy(nullsLast()) { it.followedAt })
+                            "login" -> list.sortedWith(compareBy(nullsLast()) { it.channelLogin })
+                            else -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
                         }
                     } else {
                         when (sort) {
-                            FollowSortEnum.FOLLOWED_AT -> list.sortedWith(compareByDescending(nullsFirst()) { it.followedAt })
-                            FollowSortEnum.LAST_BROADCAST -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
-                            else -> list.sortedWith(compareByDescending(nullsFirst()) { it.channelLogin })
+                            "created_at" -> list.sortedWith(compareByDescending(nullsFirst()) { it.followedAt })
+                            "login" -> list.sortedWith(compareByDescending(nullsFirst()) { it.channelLogin })
+                            else -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
                         }
                     }
                 }

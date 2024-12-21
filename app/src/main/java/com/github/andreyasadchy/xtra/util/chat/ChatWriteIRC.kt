@@ -14,7 +14,9 @@ class ChatWriteIRC(
     private val userLogin: String?,
     private val userToken: String?,
     channelName: String,
-    private val listener: ChatListener) : Thread() {
+    private val onSendMessageError: (String, String) -> Unit,
+    private val onNotice: (String) -> Unit,
+    private val onUserState: (String) -> Unit) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter
@@ -40,9 +42,9 @@ class ChatWriteIRC(
                             contains("USERNOTICE") -> {}
                             contains("CLEARMSG") -> {}
                             contains("CLEARCHAT") -> {}
-                            contains("NOTICE") -> listener.onNotice(this)
+                            contains("NOTICE") -> onNotice(this)
                             contains("ROOMSTATE") -> {}
-                            contains("USERSTATE") -> listener.onUserState(this)
+                            contains("USERSTATE") -> onUserState(this)
                             startsWith("PING") -> handlePing(writerOut)
                         }
                     }
@@ -110,7 +112,7 @@ class ChatWriteIRC(
                 Log.d(TAG, "Sent message to $hashChannelName: $message")
             } catch (e: Exception) {
                 Log.e(TAG, "Error sending message", e)
-                listener.onSendMessageError(e.toString(), e.stackTraceToString())
+                onSendMessageError(e.toString(), e.stackTraceToString())
             }
         }
     }

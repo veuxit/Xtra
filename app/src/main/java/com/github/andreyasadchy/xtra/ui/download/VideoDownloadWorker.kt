@@ -29,7 +29,7 @@ import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesResponse
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository

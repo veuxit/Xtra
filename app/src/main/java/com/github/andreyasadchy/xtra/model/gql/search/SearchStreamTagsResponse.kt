@@ -4,27 +4,27 @@ import com.github.andreyasadchy.xtra.model.gql.Error
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SearchStreamTagsResponse(
+class SearchStreamTagsResponse(
     val errors: List<Error>? = null,
     val data: Data? = null,
 ) {
     @Serializable
-    data class Data(
+    class Data(
         val searchFreeformTags: Tags,
     )
 
     @Serializable
-    data class Tags(
+    class Tags(
         val edges: List<Item>,
     )
 
     @Serializable
-    data class Item(
+    class Item(
         val node: Tag,
     )
 
     @Serializable
-    data class Tag(
+    class Tag(
         val tagName: String? = null,
     )
 }

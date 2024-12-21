@@ -31,10 +31,10 @@ import com.github.andreyasadchy.xtra.model.chat.Image
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
-import com.github.andreyasadchy.xtra.ui.view.chat.CenteredImageSpan
-import com.github.andreyasadchy.xtra.ui.view.chat.ImageClickedDialog
-import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintImageSpan
-import com.github.andreyasadchy.xtra.ui.view.chat.NamePaintSpan
+import com.github.andreyasadchy.xtra.ui.chat.ImageClickedDialog
+import com.github.andreyasadchy.xtra.ui.view.CenteredImageSpan
+import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
+import com.github.andreyasadchy.xtra.ui.view.NamePaintSpan
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.Random
 import kotlin.collections.forEach

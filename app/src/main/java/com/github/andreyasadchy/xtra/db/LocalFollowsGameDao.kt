@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.db
 
 import androidx.room.*
-import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
+import com.github.andreyasadchy.xtra.model.ui.LocalFollowGame
 
 @Dao
 interface LocalFollowsGameDao {

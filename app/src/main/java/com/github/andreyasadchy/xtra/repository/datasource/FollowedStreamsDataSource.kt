@@ -21,7 +21,7 @@ class FollowedStreamsDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Stream>() {
+    private val apiPref: List<String>) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -32,8 +32,8 @@ class FollowedStreamsDataSource(
                 if (!offset.isNullOrBlank()) {
                     when (api) {
                         C.HELIX -> helixLoad()
-                        C.GQL_QUERY -> if (nextPage) gqlQueryLoad() else listOf()
-                        C.GQL -> gqlLoad()
+                        C.GQL -> if (nextPage) gqlQueryLoad() else listOf()
+                        C.GQL_PERSISTED_QUERY -> gqlLoad()
                         else -> listOf()
                     }
                 } else {
@@ -53,28 +53,28 @@ class FollowedStreamsDataSource(
                         } else listOf()
                     }.let { list.addAll(it) }
                     try {
-                        when (apiPref.elementAt(0)?.second) {
+                        when (apiPref.getOrNull(0)) {
                             C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
-                            when (apiPref.elementAt(1)?.second) {
+                            when (apiPref.getOrNull(1)) {
                                 C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                                C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                                 else -> throw Exception()
                             }
                         } catch (e: Exception) {
                             if (e.message == "failed integrity check") return LoadResult.Error(e)
                             try {
-                                when (apiPref.elementAt(2)?.second) {
+                                when (apiPref.getOrNull(2)) {
                                     C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_QUERY; gqlQueryLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlLoad() } else throw Exception()
+                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
+                                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
                                     else -> throw Exception()
                                 }
                             } catch (e: Exception) {

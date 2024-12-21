@@ -156,8 +156,8 @@
     <string name="settings_chat">Chat</string>
     <string name="settings_player">Reprodutor</string>
     <string name="token_random_deviceid">ID aleatório do dispositivo </string>
-    <string name="api_helix">ID do cliente Helix</string>
-    <string name="api_gql">ID do cliente GQL</string>
+    <string name="api_helix_client_id">ID do cliente Helix</string>
+    <string name="api_gql_client_id">ID do cliente GQL</string>
     <string name="playback_speed">Velocidade de reprodução</string>
     <string name="quality">Qualidade</string>
     <string name="saved_value">Valor salvo</string>
@@ -199,8 +199,6 @@
     <string name="user_partner">Parceiro</string>
     <string name="user_affiliate">Afiliado</string>
     <string name="user_staff">Staff</string>
-    <string name="user_admin">Administrador</string>
-    <string name="user_global_mod">Mod global</string>
     <string name="uptime">%s de atividade</string>
     <string name="select_language">Selecione o idioma</string>
     <string name="show_tags">Mostrar etiqueta</string>
@@ -516,8 +514,6 @@
     <string name="tokens">Tokens</string>
     <string name="download_limit">Limite de download simultâneo</string>
     <string name="followed_only">Apenas seguido</string>
-    <string name="api_gql2">GQL client id 2</string>
-    <string name="api_gql_token2">GQL token 2</string>
     <string name="debug_api_commands">Use api de comandos de bate-papo</string>
     <string name="skip_video_access_token">Pular token de acesso ao vídeo</string>
     <string name="skip_clip_access_token">Pular token de acesso ao clipe</string>
@@ -549,7 +545,6 @@
     <string name="show_media_playlist_tags">Mostrar etiqueta de mídia na lista de reprodução</string>
     <string name="show_multivariant_playlist_tags">Mostrar tags de lista de reprodução multivariada</string>
     <string name="use_gamepager">Usar o layout da abas jogos</string>
-    <string name="api_gql_redirect2">GQL redirect url 2</string>
     <string name="disable_background_video">Desative a renderização de vídeo em segundo plano</string>
     <string name="use_background_audio_track">Alternar para somente áudio em segundo plano</string>
     <string name="show_audio_compressor_button">Mostrar botão do compressor de áudio</string>
@@ -670,4 +665,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

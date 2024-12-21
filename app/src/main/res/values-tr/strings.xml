@@ -156,8 +156,8 @@
     <string name="settings_chat">SOHBET</string>
     <string name="settings_player">OYNATICI</string>
     <string name="token_random_deviceid">Rastgele cihaz kimliği</string>
-    <string name="api_helix">Helix istemci kimliği</string>
-    <string name="api_gql">GQL istemci kimliği</string>
+    <string name="api_helix_client_id">Helix istemci kimliği</string>
+    <string name="api_gql_client_id">GQL istemci kimliği</string>
     <string name="playback_speed">Oynatma hızı</string>
     <string name="quality">Kalite</string>
     <string name="saved_value">Kaydedilen değer</string>
@@ -199,8 +199,6 @@
     <string name="user_partner">Ortak</string>
     <string name="user_affiliate">İştirak</string>
     <string name="user_staff">Personel</string>
-    <string name="user_admin">Yönetici</string>
-    <string name="user_global_mod">Küresel mod</string>
     <string name="uptime">Yayın süresi %s</string>
     <string name="select_language">Dil seç</string>
     <string name="show_tags">Etiketleri göster</string>
@@ -516,8 +514,6 @@
     <string name="tokens">Tokenler</string>
     <string name="download_limit">Eşzamanlı indirme sınırı</string>
     <string name="followed_only">Sadece takip edilen</string>
-    <string name="api_gql2">GQL istemci kimliği 2</string>
-    <string name="api_gql_token2">GQL token 2</string>
     <string name="debug_api_commands">API sohbet komutlarını kullan</string>
     <string name="skip_video_access_token">Video erişim tokenini atla</string>
     <string name="skip_clip_access_token">Klip erişim tokenini atla</string>
@@ -549,7 +545,6 @@
     <string name="show_media_playlist_tags">Medya oynatma listesi etiketlerini göster</string>
     <string name="show_multivariant_playlist_tags">Farklı oynatma listesi etiketlerini göster</string>
     <string name="use_gamepager">Oyun sayfası için sekmeler düzenini kullan</string>
-    <string name="api_gql_redirect2">GQL yönlendirme URL\'si 2</string>
     <string name="disable_background_video">Arka planda video işlemeyi devre dışı bırak</string>
     <string name="use_background_audio_track">Arka planda yalnızca ses parçasına geç</string>
     <string name="show_audio_compressor_button">Ses kompresörü düğmesini göster</string>
@@ -670,4 +665,7 @@
     <string name="channel_follower_emote">%s follower emote</string>
     <string name="bits_reward_emote">%d bits reward</string>
     <string name="show_name_paints">Show 7TV name paints</string>
+    <string name="api_helix">Helix</string>
+    <string name="api_gql">GQL</string>
+    <string name="api_gql_persisted_query">GQL persisted query</string>
 </resources>

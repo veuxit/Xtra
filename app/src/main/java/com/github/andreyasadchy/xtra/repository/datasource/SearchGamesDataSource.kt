@@ -19,7 +19,7 @@ class SearchGamesDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>?) : PagingSource<Int, Game>() {
+    private val apiPref: List<String>) : PagingSource<Int, Game>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -27,28 +27,28 @@ class SearchGamesDataSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
         return try {
             val response = if (query.isBlank()) listOf() else try {
-                when (apiPref?.elementAt(0)?.second) {
+                when (apiPref.getOrNull(0)) {
                     C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                    C.GQL -> { api = C.GQL; gqlLoad() }
+                    C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                    C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
                     else -> throw Exception()
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check") return LoadResult.Error(e)
                 try {
-                    when (apiPref?.elementAt(1)?.second) {
+                    when (apiPref.getOrNull(1)) {
                         C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                        C.GQL -> { api = C.GQL; gqlLoad() }
+                        C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                        C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
                         else -> throw Exception()
                     }
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
-                        when (apiPref?.elementAt(2)?.second) {
+                        when (apiPref.getOrNull(2)) {
                             C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL_QUERY -> { api = C.GQL_QUERY; gqlQueryLoad(params) }
-                            C.GQL -> { api = C.GQL; gqlLoad() }
+                            C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
+                            C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
                             else -> throw Exception()
                         }
                     } catch (e: Exception) {
@@ -60,7 +60,7 @@ class SearchGamesDataSource(
             LoadResult.Page(
                 data = response,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL_QUERY || nextPage)) {
+                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL || nextPage)) {
                     nextPage = false
                     (params.key ?: 1) + 1
                 } else null

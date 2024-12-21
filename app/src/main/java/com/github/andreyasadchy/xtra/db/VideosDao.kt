@@ -6,7 +6,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
-import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
+import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 
 @Dao
 interface VideosDao {
