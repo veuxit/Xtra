@@ -9,7 +9,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.navArgs
 import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -21,7 +20,6 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.common.FragmentHost
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.Sortable
-import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
@@ -41,7 +39,6 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
 
     private var _binding: CommonRecyclerViewLayoutBinding? = null
     private val binding get() = _binding!!
-    private val args: GamePagerFragmentArgs by navArgs()
     private val viewModel: FollowedVideosViewModel by viewModels()
     private lateinit var pagingAdapter: PagingDataAdapter<Video, out RecyclerView.ViewHolder>
 
@@ -65,7 +62,7 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
     override fun initialize() {
         viewLifecycleOwner.lifecycleScope.launch {
             if (viewModel.filter.value == null) {
-                val sortValues = args.channelId?.let { viewModel.getSortChannel(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortChannel("followed_videos")
+                val sortValues = viewModel.getSortChannel("followed_videos")
                 viewModel.setFilter(
                     sort = sortValues?.videoSort,
                     type = sortValues?.videoType,
@@ -96,6 +93,7 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
         sortBar.root.setOnClickListener {
             VideosSortDialog.newInstance(
                 sort = viewModel.sort,
+                period = viewModel.period,
                 type = viewModel.type,
                 saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_VIDEOS, false)
             ).show(childFragmentManager, null)
