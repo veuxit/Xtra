@@ -668,4 +668,8 @@
     <string name="api_helix">Helix</string>
     <string name="api_gql">GQL</string>
     <string name="api_gql_persisted_query">GQL persisted query</string>
+    <string name="show_stv_badges">Show 7TV badges</string>
+    <string name="show_stv_personal_emotes">Show 7TV personal emotes</string>
+    <string name="stv_live_updates">7TV live emote updates</string>
+    <string name="personal_stv_emote">Personal 7TV emote</string>
 </resources>

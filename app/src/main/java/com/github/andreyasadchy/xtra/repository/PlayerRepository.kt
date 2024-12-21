@@ -247,8 +247,9 @@ class PlayerRepository @Inject constructor(
         parseStvEmotes(misc.getGlobalStvEmotes().emotes)
     }
 
-    suspend fun loadStvEmotes(channelId: String): List<Emote> = withContext(Dispatchers.IO) {
-        parseStvEmotes(misc.getStvEmotes(channelId).emoteSet.emotes)
+    suspend fun loadStvEmotes(channelId: String): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
+        val set = misc.getStvEmotes(channelId).emoteSet
+        Pair(set.id, parseStvEmotes(set.emotes))
     }
 
     private fun parseStvEmotes(response: List<StvResponse>): List<Emote> {

@@ -651,7 +651,7 @@ class StreamDownloadWorker @AssistedInject constructor(
             val emoteList = mutableListOf<Emote>().apply {
                 if (downloadEmotes) {
                     if (channelId != null) {
-                        try { addAll(playerRepository.loadStvEmotes(channelId)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadStvEmotes(channelId).second) } catch (e: Exception) {}
                         try { addAll(playerRepository.loadBttvEmotes(channelId)) } catch (e: Exception) {}
                         try { addAll(playerRepository.loadFfzEmotes(channelId)) } catch (e: Exception) {}
                     }

@@ -18,6 +18,7 @@ import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
+import com.github.andreyasadchy.xtra.model.chat.StvBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
@@ -42,6 +43,12 @@ class ChatAdapter(
     private val showNamePaints: Boolean,
     namePaintsList: List<NamePaint>?,
     paintUsersMap: Map<String, String>?,
+    private val showStvBadges: Boolean,
+    stvBadgesList: List<StvBadge>?,
+    stvBadgeUsersMap: Map<String, String>?,
+    private val showPersonalEmotes: Boolean,
+    personalEmoteSetsMap: Map<String, List<Emote>>?,
+    personalEmoteSetUsersMap: Map<String, String>?,
     private val showSystemMessageEmotes: Boolean,
     private val chatUrl: String?,
     private val getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?,
@@ -80,6 +87,10 @@ class ChatAdapter(
     var cheerEmotes: List<CheerEmote>? = null
     val namePaints: MutableList<NamePaint>? = namePaintsList?.toMutableList()
     val paintUsers: MutableMap<String, String>? = paintUsersMap?.toMutableMap()
+    val stvBadges: MutableList<StvBadge>? = stvBadgesList?.toMutableList()
+    val stvBadgeUsers: MutableMap<String, String>? = stvBadgeUsersMap?.toMutableMap()
+    val personalEmoteSets: MutableMap<String, List<Emote>>? = personalEmoteSetsMap?.toMutableMap()
+    val personalEmoteSetUsers: MutableMap<String, String>? = personalEmoteSetUsersMap?.toMutableMap()
     private val savedLocalTwitchEmotes = mutableMapOf<String, ByteArray>()
     private val savedLocalBadges = mutableMapOf<String, ByteArray>()
     private val savedLocalCheerEmotes = mutableMapOf<String, ByteArray>()
@@ -99,9 +110,10 @@ class ChatAdapter(
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
             rewardChatMsg, true, replyMessage, null, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
-            showNamePaints, namePaints, paintUsers, showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors,
-            localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges,
-            channelBadges, cheerEmotes, savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            showNamePaints, namePaints, paintUsers, showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers,
+            showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes,
+            channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes,
+            savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         holder.bind(chatMessage, pair.first)
         ChatAdapterUtils.loadImages(
@@ -115,9 +127,10 @@ class ChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { chatMessage -> selectedMessage = chatMessage; replyClickListener?.invoke() },
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
-            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showSystemMessageEmotes,
-            chatUrl, getEmoteBytes, fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages,
-            userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
+            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
+            stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
+            fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors,
+            savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
             channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
@@ -126,9 +139,10 @@ class ChatAdapter(
         return ReplyClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
-            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showSystemMessageEmotes,
-            chatUrl, getEmoteBytes, fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages,
-            userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
+            useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
+            stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
+            fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors,
+            savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
             channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
