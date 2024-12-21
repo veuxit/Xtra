@@ -40,6 +40,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         private const val IMAGE_ANIMATED = "image_animated"
         private const val EMOTE_ID = "emote_id"
 
+        const val PERSONAL_STV = "personal_stv"
         const val CHANNEL_STV = "channel_stv"
         const val CHANNEL_BTTV = "channel_bttv"
         const val CHANNEL_FFZ = "channel_ffz"
@@ -98,6 +99,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
             args.getString(IMAGE_SOURCE)?.let {
                 imageSource.visible()
                 imageSource.text = when (it) {
+                    PERSONAL_STV -> requireContext().getString(R.string.personal_stv_emote)
                     CHANNEL_STV -> requireContext().getString(R.string.channel_stv_emote)
                     CHANNEL_BTTV -> requireContext().getString(R.string.channel_bttv_emote)
                     CHANNEL_FFZ -> requireContext().getString(R.string.channel_ffz_emote)
