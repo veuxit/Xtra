@@ -78,15 +78,19 @@ class MessageClickedChatAdapter(
     var globalBadges: List<TwitchBadge>?,
     var channelBadges: List<TwitchBadge>?,
     var cheerEmotes: List<CheerEmote>?,
-    var selectedMessage: ChatMessage?) : RecyclerView.Adapter<MessageClickedChatAdapter.ViewHolder>() {
+    var selectedMessage: ChatMessage?,
+) : RecyclerView.Adapter<MessageClickedChatAdapter.ViewHolder>() {
 
     val userId = selectedMessage?.userId
     val userLogin = selectedMessage?.userLogin
-    var messages: MutableList<ChatMessage>? = if (!userId.isNullOrBlank() || !userLogin.isNullOrBlank()) {
-        messages?.filter {
-            (!userId.isNullOrBlank() && it.userId == userId) || (!userLogin.isNullOrBlank() && it.userLogin == userLogin)
-        }?.toMutableList()
-    } else null ?: selectedMessage?.let { mutableListOf(it) }
+    var messages: MutableList<ChatMessage>? =
+        if (!userId.isNullOrBlank() || !userLogin.isNullOrBlank()) {
+            messages?.filter {
+                (!userId.isNullOrBlank() && it.userId == userId) || (!userLogin.isNullOrBlank() && it.userLogin == userLogin)
+            }?.toMutableList()
+        } else {
+            null
+        } ?: selectedMessage?.let { mutableListOf(it) }
         set(value) {
             val oldSize = field?.size ?: 0
             if (oldSize > 0) {

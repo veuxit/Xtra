@@ -18,7 +18,8 @@ class Game(
     val vodDuration: Int? = null,
 
     var followAccount: Boolean = false,
-    val followLocal: Boolean = false) : Parcelable {
+    val followLocal: Boolean = false,
+) : Parcelable {
 
     val boxArt: String?
         get() = TwitchApiHelper.getTemplateUrl(boxArtUrl, "game")

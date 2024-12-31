@@ -9,7 +9,8 @@ class Raid(
     val targetName: String? = null,
     val targetProfileImage: String? = null,
     val viewerCount: Int? = null,
-    val openStream: Boolean) {
+    val openStream: Boolean,
+) {
 
     val targetLogo: String?
         get() = TwitchApiHelper.getTemplateUrl(targetProfileImage, "profileimage")

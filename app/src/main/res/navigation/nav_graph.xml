@@ -51,16 +51,16 @@
         android:name="com.github.andreyasadchy.xtra.ui.follow.FollowPagerFragment" />
     <fragment
         android:id="@+id/followMediaFragment"
-        android:name="com.github.andreyasadchy.xtra.ui.follow.FollowMediaFragment"/>
+        android:name="com.github.andreyasadchy.xtra.ui.follow.FollowMediaFragment" />
     <fragment
         android:id="@+id/savedPagerFragment"
-        android:name="com.github.andreyasadchy.xtra.ui.saved.SavedPagerFragment"/>
+        android:name="com.github.andreyasadchy.xtra.ui.saved.SavedPagerFragment" />
     <fragment
         android:id="@+id/savedMediaFragment"
-        android:name="com.github.andreyasadchy.xtra.ui.saved.SavedMediaFragment"/>
+        android:name="com.github.andreyasadchy.xtra.ui.saved.SavedMediaFragment" />
     <fragment
         android:id="@+id/searchPagerFragment"
-        android:name="com.github.andreyasadchy.xtra.ui.search.SearchPagerFragment"/>
+        android:name="com.github.andreyasadchy.xtra.ui.search.SearchPagerFragment" />
     <action
         android:id="@+id/action_global_searchPagerFragment"
         app:destination="@id/searchPagerFragment" />

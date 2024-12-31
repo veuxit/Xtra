@@ -17,4 +17,5 @@ class ChatMessage(
     val reward: ChannelPointReward? = null,
     val reply: Reply? = null,
     val timestamp: Long? = null,
-    val fullMsg: String? = null)
+    val fullMsg: String? = null,
+)

@@ -36,8 +36,12 @@ class ReplyClickedDialog : BottomSheetDialogFragment() {
     companion object {
         private const val KEY_MESSAGING = "messaging"
 
-        fun newInstance(messagingEnabled: Boolean) = ReplyClickedDialog().apply {
-            arguments = bundleOf(KEY_MESSAGING to messagingEnabled)
+        fun newInstance(messagingEnabled: Boolean): ReplyClickedDialog {
+            return ReplyClickedDialog().apply {
+                arguments = bundleOf(
+                    KEY_MESSAGING to messagingEnabled,
+                )
+            }
         }
     }
 

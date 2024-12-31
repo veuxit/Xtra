@@ -192,7 +192,11 @@ class SlidingLayout : LinearLayout {
                 maximizedSecondViewVisibility = it.visibility
             }
         }
-        return bundleOf("superState" to super.onSaveInstanceState(), "isMaximized" to isMaximized, "secondViewVisibility" to maximizedSecondViewVisibility)
+        return bundleOf(
+            "superState" to super.onSaveInstanceState(),
+            "isMaximized" to isMaximized,
+            "secondViewVisibility" to maximizedSecondViewVisibility
+        )
     }
 
     override fun onRestoreInstanceState(state: Parcelable?) {
@@ -217,7 +221,7 @@ class SlidingLayout : LinearLayout {
         secondView?.apply {
             requestLayout()
             visibility = if (isPortrait) {
-                View.VISIBLE
+                VISIBLE
             } else {
                 shouldUpdateDragLayout = true
                 maximizedSecondViewVisibility!!
@@ -387,7 +391,7 @@ class SlidingLayout : LinearLayout {
         }
 
         override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
-            return if (isMaximized) Math.min(Math.max(top, topBound), bottomBound) else if (debug) top else child.top
+            return if (isMaximized) top.coerceAtLeast(topBound).coerceAtMost(bottomBound) else if (debug) top else child.top
         }
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {

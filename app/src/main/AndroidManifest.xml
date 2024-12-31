@@ -43,19 +43,19 @@
                 <data android:host="twitch.tv" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.settings.SettingsActivity"/>
+        <activity android:name=".ui.settings.SettingsActivity" />
         <activity
             android:name=".ui.login.LoginActivity"
             android:configChanges="orientation|screenSize"
-            android:windowSoftInputMode="adjustResize"/>
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".ui.player.PlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true">
             <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService"/>
-                <action android:name="android.media.browse.MediaBrowserService"/>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
 

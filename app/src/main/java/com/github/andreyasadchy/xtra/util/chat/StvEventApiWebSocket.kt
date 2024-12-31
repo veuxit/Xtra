@@ -24,12 +24,16 @@ class StvEventApiWebSocket(
     private val onPaintUser: (String, String) -> Unit,
     private val onBadgeUser: (String, String) -> Unit,
     private val onEmoteSetUser: (String, String) -> Unit,
-    private val onUpdatePresence: (String) -> Unit) {
+    private val onUpdatePresence: (String) -> Unit,
+) {
     private var socket: WebSocket? = null
     private var isActive = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://events.7tv.io/v3").build(), STVEventApiWebSocketListener())
+        socket = client.newWebSocket(
+            Request.Builder().url("wss://events.7tv.io/v3").build(),
+            STVEventApiWebSocketListener()
+        )
     }
 
     fun disconnect() {

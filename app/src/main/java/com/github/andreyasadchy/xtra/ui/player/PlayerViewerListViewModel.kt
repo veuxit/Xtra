@@ -11,7 +11,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class PlayerViewerListViewModel @Inject constructor(private val graphQLRepository: GraphQLRepository) : ViewModel() {
+class PlayerViewerListViewModel @Inject constructor(
+    private val graphQLRepository: GraphQLRepository,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

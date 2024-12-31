@@ -418,7 +418,7 @@
     <string name="cleared">Очищено</string>
     <string name="irc_msgid_highlighted_message">Выделенное сообщение</string>
     <string name="irc_msgid_announcement">Объявление</string>
-	<string name="debug_secondview">Разрешить перемещение картинки-в-картинке</string>
+    <string name="debug_secondview">Разрешить перемещение картинки-в-картинке</string>
     <string name="add_bookmark">Добавить в закладки</string>
     <string name="show_vod_time_left">Показывать оставшееся время в видео из закладок</string>
     <string name="vod_time_left">Автоудаление через %s</string>
@@ -476,7 +476,7 @@
     <string name="include_gql_token">Включить токен GQL</string>
     <string name="sub_only_summary">Только для содержимого подписчиков</string>
     <string name="follow_button">Кнопка отслеживания</string>
-	<string name="follow_account">Следить через учётную запись Твича</string>
+    <string name="follow_account">Следить через учётную запись Твича</string>
     <string name="follow_local">Отслеживать локально</string>
     <string name="hide">Скрыть</string>
     <string name="chat_ssl">Подключение через SSL</string>

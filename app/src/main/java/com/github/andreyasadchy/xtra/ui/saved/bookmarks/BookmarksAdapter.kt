@@ -33,7 +33,8 @@ class BookmarksAdapter(
     private val refreshVideo: (String?) -> Unit,
     private val showDownloadDialog: (Video) -> Unit,
     private val vodIgnoreUser: (String) -> Unit,
-    private val deleteVideo: (Bookmark) -> Unit) : PagingDataAdapter<Bookmark, BookmarksAdapter.PagingViewHolder>(
+    private val deleteVideo: (Bookmark) -> Unit,
+) : PagingDataAdapter<Bookmark, BookmarksAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Bookmark>() {
         override fun areItemsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean =
             oldItem.id == newItem.id
@@ -72,18 +73,23 @@ class BookmarksAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentVideosListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Bookmark?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    val channelListener: (View) -> Unit = { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.userId,
-                        channelLogin = item.userLogin,
-                        channelName = item.userName,
-                        channelLogo = item.userLogo,
-                        updateLocal = true
-                    )) }
+                    val channelListener: (View) -> Unit = {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.userId,
+                                channelLogin = item.userLogin,
+                                channelName = item.userName,
+                                channelLogo = item.userLogo,
+                                updateLocal = true
+                            )
+                        )
+                    }
                     val gameListener: (View) -> Unit = {
                         fragment.findNavController().navigate(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
@@ -106,25 +112,31 @@ class BookmarksAdapter(
                     val ignore = ignored?.find { it.userId == item.userId } != null
                     val userType = item.userType ?: item.userBroadcasterType
                     root.setOnClickListener {
-                        (fragment.activity as MainActivity).startVideo(Video(
-                            id = item.videoId,
-                            channelId = item.userId,
-                            channelLogin = item.userLogin,
-                            channelName = item.userName,
-                            profileImageUrl = item.userLogo,
-                            gameId = item.gameId,
-                            gameSlug = item.gameSlug,
-                            gameName = item.gameName,
-                            title = item.title,
-                            uploadDate = item.createdAt,
-                            thumbnailUrl = item.thumbnail,
-                            type = item.type,
-                            duration = item.duration,
-                            animatedPreviewURL = item.animatedPreviewURL,
-                        ), position?.toDouble())
+                        (fragment.activity as MainActivity).startVideo(
+                            Video(
+                                id = item.videoId,
+                                channelId = item.userId,
+                                channelLogin = item.userLogin,
+                                channelName = item.userName,
+                                profileImageUrl = item.userLogo,
+                                gameId = item.gameId,
+                                gameSlug = item.gameSlug,
+                                gameName = item.gameName,
+                                title = item.title,
+                                uploadDate = item.createdAt,
+                                thumbnailUrl = item.thumbnail,
+                                type = item.type,
+                                duration = item.duration,
+                                animatedPreviewURL = item.animatedPreviewURL,
+                            ), position?.toDouble()
+                        )
                     }
                     root.setOnLongClickListener { deleteVideo(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     if (item.createdAt != null) {
                         val text = TwitchApiHelper.formatTimeString(context, item.createdAt)
                         if (text != null) {
@@ -142,7 +154,8 @@ class BookmarksAdapter(
                                 "" -> 14
                                 "affiliate" -> 14
                                 else -> 60
-                            })
+                            }
+                        )
                         if (!time.isNullOrBlank()) {
                             views.visible()
                             views.text = context.getString(R.string.vod_time_left, time)
@@ -169,14 +182,19 @@ class BookmarksAdapter(
                     } else {
                         type.gone()
                     }
-                    if (item.userLogo != null)  {
+                    if (item.userLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.userLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(
+                            fragment,
+                            item.userLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true),
+                            diskCacheStrategy = DiskCacheStrategy.NONE,
+                        )
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
                     }
-                    if (item.userName != null)  {
+                    if (item.userName != null) {
                         username.visible()
                         username.text = if (item.userLogin != null && !item.userLogin.equals(item.userName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
@@ -197,13 +215,13 @@ class BookmarksAdapter(
                     } else {
                         progressBar.gone()
                     }
-                    if (item.title != null)  {
+                    if (item.title != null) {
                         title.visible()
                         title.text = item.title.trim()
                     } else {
                         title.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -226,23 +244,25 @@ class BookmarksAdapter(
                                 }
                             }
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.delete -> deleteVideo(item)
-                                    R.id.download -> showDownloadDialog(Video(
-                                        id = item.videoId,
-                                        channelId = item.userId,
-                                        channelLogin = item.userLogin,
-                                        channelName = item.userName,
-                                        profileImageUrl = item.userLogo,
-                                        gameId = item.gameId,
-                                        gameName = item.gameName,
-                                        title = item.title,
-                                        uploadDate = item.createdAt,
-                                        thumbnailUrl = item.thumbnail,
-                                        type = item.type,
-                                        duration = item.duration,
-                                        animatedPreviewURL = item.animatedPreviewURL,
-                                    ))
+                                    R.id.download -> showDownloadDialog(
+                                        Video(
+                                            id = item.videoId,
+                                            channelId = item.userId,
+                                            channelLogin = item.userLogin,
+                                            channelName = item.userName,
+                                            profileImageUrl = item.userLogo,
+                                            gameId = item.gameId,
+                                            gameName = item.gameName,
+                                            title = item.title,
+                                            uploadDate = item.createdAt,
+                                            thumbnailUrl = item.thumbnail,
+                                            type = item.type,
+                                            duration = item.duration,
+                                            animatedPreviewURL = item.animatedPreviewURL,
+                                        )
+                                    )
                                     R.id.vodIgnore -> item.userId?.let { id -> vodIgnoreUser(id) }
                                     R.id.refresh -> refreshVideo(item.videoId)
                                     else -> menu.close()

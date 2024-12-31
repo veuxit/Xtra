@@ -4,7 +4,6 @@ package com.github.andreyasadchy.xtra.ui.view
 
 import android.content.Context
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.max
 
@@ -23,7 +22,7 @@ class GridAutofitLayoutManager : GridLayoutManager {
 
     override fun onLayoutChildren(recycler: RecyclerView.Recycler?, state: RecyclerView.State) {
         if (widthChanged && width > 0 && height > 0) {
-            val totalSpace: Int = if (orientation == LinearLayoutManager.VERTICAL) {
+            val totalSpace: Int = if (orientation == VERTICAL) {
                 width - paddingRight - paddingLeft
             } else {
                 height - paddingTop - paddingBottom

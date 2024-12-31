@@ -84,12 +84,14 @@ class OfflinePlayerFragment : BasePlayerFragment() {
                     item.channelName
                 }
                 setOnClickListener {
-                    findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo
-                    ))
+                    findNavController().navigate(
+                        ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                            channelId = item.channelId,
+                            channelLogin = item.channelLogin,
+                            channelName = item.channelName,
+                            channelLogo = item.channelLogo
+                        )
+                    )
                     slidingLayout.minimize()
                 }
             }
@@ -141,19 +143,27 @@ class OfflinePlayerFragment : BasePlayerFragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.video.collectLatest {
-                        player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                            PlaybackService.ITEM to (it ?: item),
-                            PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
-                        )), Bundle.EMPTY)
+                        player?.sendCustomCommand(
+                            SessionCommand(
+                                PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                                    PlaybackService.ITEM to (it ?: item),
+                                    PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
+                                )
+                            ), Bundle.EMPTY
+                        )
                     }
                 }
             }
             viewModel.getVideo(item.id)
         } else {
-            player?.sendCustomCommand(SessionCommand(PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                PlaybackService.ITEM to item,
-                PlaybackService.PLAYBACK_POSITION to 0L,
-            )), Bundle.EMPTY)
+            player?.sendCustomCommand(
+                SessionCommand(
+                    PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                        PlaybackService.ITEM to item,
+                        PlaybackService.PLAYBACK_POSITION to 0L,
+                    )
+                ), Bundle.EMPTY
+            )
         }
     }
 
@@ -182,7 +192,11 @@ class OfflinePlayerFragment : BasePlayerFragment() {
         private const val KEY_VIDEO = "video"
 
         fun newInstance(video: OfflineVideo): OfflinePlayerFragment {
-            return OfflinePlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video) }
+            return OfflinePlayerFragment().apply {
+                arguments = bundleOf(
+                    KEY_VIDEO to video
+                )
+            }
         }
     }
 }

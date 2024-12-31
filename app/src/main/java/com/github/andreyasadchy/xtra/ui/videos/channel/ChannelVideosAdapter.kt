@@ -34,7 +34,8 @@ import com.github.andreyasadchy.xtra.util.visible
 class ChannelVideosAdapter(
     private val fragment: Fragment,
     private val showDownloadDialog: (Video) -> Unit,
-    private val saveBookmark: (Video) -> Unit) : BaseVideosAdapter<Video, ChannelVideosAdapter.PagingViewHolder>(
+    private val saveBookmark: (Video) -> Unit,
+) : BaseVideosAdapter<Video, ChannelVideosAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Video>() {
         override fun areItemsTheSame(oldItem: Video, newItem: Video): Boolean =
             oldItem.id == newItem.id
@@ -57,7 +58,8 @@ class ChannelVideosAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentVideosListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Video?) {
             with(binding) {
                 if (item != null) {
@@ -85,7 +87,11 @@ class ChannelVideosAdapter(
                         (fragment.activity as MainActivity).startVideo(item, position?.toDouble())
                     }
                     root.setOnLongClickListener { showDownloadDialog(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     if (item.uploadDate != null) {
                         val text = TwitchApiHelper.formatTimeString(context, item.uploadDate)
                         if (text != null) {
@@ -126,13 +132,13 @@ class ChannelVideosAdapter(
                     } else {
                         progressBar.gone()
                     }
-                    if (item.title != null && item.title != "")  {
+                    if (item.title != null && item.title != "") {
                         title.visible()
                         title.text = item.title.trim()
                     } else {
                         title.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -143,7 +149,10 @@ class ChannelVideosAdapter(
                         tagsLayout.removeAllViews()
                         tagsLayout.visible()
                         val tagsFlowLayout = Flow(context).apply {
-                            layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            layoutParams = ConstraintLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply {
                                 topToTop = tagsLayout.id
                                 bottomToBottom = tagsLayout.id
                                 startToStart = tagsLayout.id
@@ -164,9 +173,11 @@ class ChannelVideosAdapter(
                             }
                             if (tag.name != null) {
                                 text.setOnClickListener {
-                                    fragment.findNavController().navigate(GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                        tags = arrayOf(tag.name),
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                            tags = arrayOf(tag.name),
+                                        )
+                                    )
                                 }
                             }
                             val padding = context.convertDpToPixels(5f)
@@ -189,7 +200,7 @@ class ChannelVideosAdapter(
                                 }
                             }
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.bookmark -> saveBookmark(item)
                                     R.id.share -> {

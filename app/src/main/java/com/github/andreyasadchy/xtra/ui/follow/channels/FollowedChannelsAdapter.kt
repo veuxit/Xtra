@@ -20,7 +20,8 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
 class FollowedChannelsAdapter(
-    private val fragment: Fragment) : PagingDataAdapter<User, FollowedChannelsAdapter.PagingViewHolder>(
+    private val fragment: Fragment,
+) : PagingDataAdapter<User, FollowedChannelsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<User>() {
         override fun areItemsTheSame(oldItem: User, newItem: User): Boolean =
             oldItem.channelId == newItem.channelId
@@ -39,25 +40,35 @@ class FollowedChannelsAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentFollowedChannelsListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: User?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    root.setOnClickListener { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo,
-                        updateLocal = item.followLocal
-                    )) }
-                    if (item.channelLogo != null)  {
+                    root.setOnClickListener {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                                updateLocal = item.followLocal
+                            )
+                        )
+                    }
+                    if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true),
+                            diskCacheStrategy = DiskCacheStrategy.NONE
+                        )
                     } else {
                         userImage.gone()
                     }
-                    if (item.channelName != null)  {
+                    if (item.channelName != null) {
                         username.visible()
                         username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {

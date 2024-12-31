@@ -10,4 +10,5 @@ class CheerEmote(
     val format: String? = null,
     val isAnimated: Boolean = true,
     val minBits: Int,
-    val color: String? = null)
+    val color: String? = null,
+)

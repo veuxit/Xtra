@@ -52,8 +52,13 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
         private const val KEY_CHANNEL_ID = "channelId"
         private val savedUsers = mutableListOf<Pair<User, String?>>()
 
-        fun newInstance(messagingEnabled: Boolean, channelId: String?) = MessageClickedDialog().apply {
-            arguments = bundleOf(KEY_MESSAGING to messagingEnabled, KEY_CHANNEL_ID to channelId)
+        fun newInstance(messagingEnabled: Boolean, channelId: String?): MessageClickedDialog {
+            return MessageClickedDialog().apply {
+                arguments = bundleOf(
+                    KEY_MESSAGING to messagingEnabled,
+                    KEY_CHANNEL_ID to channelId
+                )
+            }
         }
     }
 
@@ -84,7 +89,11 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -133,10 +142,19 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                         if (item != null) {
                             updateUserLayout(item.first)
                             item.first.channelName?.let { channelName ->
-                                if (requireArguments().getBoolean(KEY_MESSAGING) && !selectedMessage.id.isNullOrBlank() && selectedMessage.userName.isNullOrBlank() && channelName.isNotBlank()) {
+                                if (requireArguments().getBoolean(KEY_MESSAGING) &&
+                                    !selectedMessage.id.isNullOrBlank() &&
+                                    selectedMessage.userName.isNullOrBlank() &&
+                                    channelName.isNotBlank()
+                                ) {
                                     reply.visible()
                                     reply.setOnClickListener {
-                                        listener.onReplyClicked(selectedMessage.id, selectedMessage.userLogin, channelName, selectedMessage.message)
+                                        listener.onReplyClicked(
+                                            selectedMessage.id,
+                                            selectedMessage.userLogin,
+                                            channelName,
+                                            selectedMessage.message
+                                        )
                                         dismiss()
                                     }
                                 }
@@ -148,7 +166,8 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                                 targetId = if (selectedMessage.userId != targetId) targetId else null,
                                 helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                             )
                             viewLifecycleOwner.lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -160,10 +179,19 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                                                 savedUsers.add(Pair(user, targetId))
                                                 updateUserLayout(user)
                                                 adapter.selectedMessage?.let { selectedMessage ->
-                                                    if (requireArguments().getBoolean(KEY_MESSAGING) && !selectedMessage.id.isNullOrBlank() && selectedMessage.userName.isNullOrBlank() && !user.channelName.isNullOrBlank()) {
+                                                    if (requireArguments().getBoolean(KEY_MESSAGING) &&
+                                                        !selectedMessage.id.isNullOrBlank() &&
+                                                        selectedMessage.userName.isNullOrBlank() &&
+                                                        !user.channelName.isNullOrBlank()
+                                                    ) {
                                                         reply.visible()
                                                         reply.setOnClickListener {
-                                                            listener.onReplyClicked(selectedMessage.id, selectedMessage.userLogin, user.channelName, selectedMessage.message)
+                                                            listener.onReplyClicked(
+                                                                selectedMessage.id,
+                                                                selectedMessage.userLogin,
+                                                                user.channelName,
+                                                                selectedMessage.message
+                                                            )
                                                             dismiss()
                                                         }
                                                     }
@@ -227,14 +255,18 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
             if (user.bannerImageURL != null) {
                 userLayout.visible()
                 bannerImage.visible()
-                bannerImage.loadImage(requireParentFragment(), user.bannerImageURL)
+                bannerImage.loadImage(this@MessageClickedDialog, user.bannerImageURL)
             } else {
                 bannerImage.gone()
             }
             if (user.channelLogo != null) {
                 userLayout.visible()
                 userImage.visible()
-                userImage.loadImage(requireParentFragment(), user.channelLogo, circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+                userImage.loadImage(
+                    this@MessageClickedDialog,
+                    user.channelLogo,
+                    circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                )
                 userImage.setOnClickListener {
                     listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)
                     dismiss()
@@ -338,7 +370,8 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                             targetId = if (userId != targetId) targetId else null,
                             helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                            checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                                    requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                         )
                     }
                 }

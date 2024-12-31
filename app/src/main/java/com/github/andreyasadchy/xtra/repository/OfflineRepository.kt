@@ -12,9 +12,10 @@ import javax.inject.Singleton
 
 @Singleton
 class OfflineRepository @Inject constructor(
-        private val videosDao: VideosDao,
-        private val localFollowsChannelDao: LocalFollowsChannelDao,
-        private val bookmarksDao: BookmarksDao) {
+    private val videosDao: VideosDao,
+    private val localFollowsChannelDao: LocalFollowsChannelDao,
+    private val bookmarksDao: BookmarksDao,
+) {
 
     fun loadAllVideos() = videosDao.getAll()
 

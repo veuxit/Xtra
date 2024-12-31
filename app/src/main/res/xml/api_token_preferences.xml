@@ -43,7 +43,10 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <PreferenceCategory android:title="@string/api_current_login" app:iconSpaceReserved="false"/>
+    <PreferenceCategory
+        android:title="@string/api_current_login"
+        app:iconSpaceReserved="false" />
+
     <EditTextPreference
         android:key="user_id"
         android:title="@string/api_user_id"

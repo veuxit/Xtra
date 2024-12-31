@@ -18,7 +18,8 @@ class ChatReplayManagerLocal @Inject constructor(
     private val getCurrentSpeed: () -> Float?,
     private val onMessage: (ChatMessage) -> Unit,
     private val clearMessages: () -> Unit,
-    private val coroutineScope: CoroutineScope) {
+    private val coroutineScope: CoroutineScope,
+) {
 
     private val list = mutableListOf<ChatMessage>()
     private var isLoading = false
@@ -68,23 +69,25 @@ class ChatReplayManagerLocal @Inject constructor(
                     if (!isActive) {
                         break
                     }
-                    onMessage(ChatMessage(
-                        id = message.id,
-                        userId = message.userId,
-                        userLogin = message.userLogin,
-                        userName = message.userName,
-                        message = message.message,
-                        color = message.color,
-                        emotes = message.emotes,
-                        badges = message.badges,
-                        isAction = message.isAction,
-                        isFirst = message.isFirst,
-                        bits = message.bits,
-                        systemMsg = message.systemMsg,
-                        msgId = message.msgId,
-                        reward = message.reward,
-                        fullMsg = message.fullMsg
-                    ))
+                    onMessage(
+                        ChatMessage(
+                            id = message.id,
+                            userId = message.userId,
+                            userLogin = message.userLogin,
+                            userName = message.userName,
+                            message = message.message,
+                            color = message.color,
+                            emotes = message.emotes,
+                            badges = message.badges,
+                            isAction = message.isAction,
+                            isFirst = message.isFirst,
+                            bits = message.bits,
+                            systemMsg = message.systemMsg,
+                            msgId = message.msgId,
+                            reward = message.reward,
+                            fullMsg = message.fullMsg
+                        )
+                    )
                 } else if (!isActive) break
                 list.remove(message)
             }

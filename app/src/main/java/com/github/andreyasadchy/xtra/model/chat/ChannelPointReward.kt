@@ -6,4 +6,5 @@ class ChannelPointReward(
     val cost: Int? = null,
     val url1x: String? = null,
     val url2x: String? = null,
-    val url4x: String? = null)
+    val url4x: String? = null,
+)

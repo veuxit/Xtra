@@ -67,7 +67,11 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -213,8 +217,16 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
     private fun viewUserResult() {
         userResult?.let {
             when (it.first) {
-                0 -> findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(channelId = it.second))
-                1 -> findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(channelLogin = it.second))
+                0 -> findNavController().navigate(
+                    ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                        channelId = it.second
+                    )
+                )
+                1 -> findNavController().navigate(
+                    ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                        channelLogin = it.second
+                    )
+                )
                 else -> {}
             }
         }

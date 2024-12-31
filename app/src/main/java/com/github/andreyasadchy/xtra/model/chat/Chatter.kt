@@ -9,9 +9,7 @@ class Chatter(val name: String?) {
 
         other as Chatter
 
-        if (name != other.name) return false
-
-        return true
+        return name == other.name
     }
 
     override fun hashCode(): Int {

@@ -39,7 +39,8 @@ class FollowedChannelsDataSource(
     private val checkIntegrity: Boolean,
     private val apiPref: List<String>,
     private val sort: String,
-    private val order: String) : PagingSource<Int, User>() {
+    private val order: String,
+) : PagingSource<Int, User>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -222,7 +223,7 @@ class FollowedChannelsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 
@@ -245,7 +246,7 @@ class FollowedChannelsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 

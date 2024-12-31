@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 class StvChannelResponse(
     @SerialName("emote_set")
-    val emoteSet: StvGlobalResponse
+    val emoteSet: StvGlobalResponse,
 )

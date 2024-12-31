@@ -19,14 +19,18 @@ class ChatWriteWebSocket(
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
     private val onNotice: (String) -> Unit,
-    private val onUserState: (String) -> Unit) {
+    private val onUserState: (String) -> Unit,
+) {
     private val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
     private var isActive = false
     private var pongReceived = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(), ChatWriteWebSocketListener())
+        socket = client.newWebSocket(
+            Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(),
+            ChatWriteWebSocketListener()
+        )
     }
 
     fun disconnect() {

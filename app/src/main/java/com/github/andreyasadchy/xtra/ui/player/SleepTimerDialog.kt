@@ -37,8 +37,8 @@ class SleepTimerDialog : DialogFragment() {
         _binding = DialogSleepTimerBinding.inflate(layoutInflater)
         val context = requireContext()
         val builder = context.getAlertDialogBuilder()
-                .setTitle(getString(R.string.sleep_timer))
-                .setView(binding.root)
+            .setTitle(getString(R.string.sleep_timer))
+            .setView(binding.root)
         with(binding) {
             hours.apply {
                 minValue = 0

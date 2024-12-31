@@ -67,21 +67,26 @@ class ClipsFragment : BaseClipsFragment(), Scrollable, Sortable, VideosSortDialo
         viewLifecycleOwner.lifecycleScope.launch {
             if (viewModel.filter.value == null) {
                 if (args.channelId != null || args.channelLogin != null) {
-                    val sortValues = args.channelId?.let { viewModel.getSortChannel(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortChannel("default")
+                    val sortValues = args.channelId?.let {
+                        viewModel.getSortChannel(it)?.takeIf { it.saveSort == true }
+                    } ?: viewModel.getSortChannel("default")
                     viewModel.setFilter(
                         period = sortValues?.clipPeriod,
                         languageIndex = 0,
                         saveSort = sortValues?.saveSort,
                     )
                 } else {
-                    val sortValues = args.gameId?.let { viewModel.getSortGame(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortGame("default")
+                    val sortValues = args.gameId?.let {
+                        viewModel.getSortGame(it)?.takeIf { it.saveSort == true }
+                    } ?: viewModel.getSortGame("default")
                     viewModel.setFilter(
                         period = sortValues?.clipPeriod,
                         languageIndex = sortValues?.clipLanguageIndex,
                         saveSort = sortValues?.saveSort,
                     )
                 }
-                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_and_period,
                     requireContext().getString(R.string.view_count),
                     requireContext().getString(
                         when (viewModel.period) {

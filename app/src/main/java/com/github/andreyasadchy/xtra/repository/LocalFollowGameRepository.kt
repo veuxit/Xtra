@@ -10,7 +10,8 @@ import javax.inject.Singleton
 
 @Singleton
 class LocalFollowGameRepository @Inject constructor(
-        private val localFollowsGameDao: LocalFollowsGameDao) {
+    private val localFollowsGameDao: LocalFollowsGameDao,
+) {
 
     suspend fun loadFollows() = withContext(Dispatchers.IO) {
         localFollowsGameDao.getAll()

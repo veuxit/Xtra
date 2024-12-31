@@ -43,7 +43,7 @@ class IntegrityDialog : DialogFragment() {
         _binding = DialogIntegrityBinding.inflate(layoutInflater)
         val context = requireContext()
         val builder = context.getAlertDialogBuilder()
-                .setView(binding.root)
+            .setView(binding.root)
         CookieManager.getInstance().removeAllCookies(null)
         val token = TwitchApiHelper.getGQLHeaders(context, true)[C.HEADER_TOKEN]?.removePrefix("OAuth ")
         if (!token.isNullOrBlank()) {

@@ -64,7 +64,8 @@ class SettingsViewModel @Inject constructor(
     private val helixApi: HelixApi,
     private val appDatabase: AppDatabase,
     private val okHttpClient: OkHttpClient,
-    private val json: Json) : ViewModel() {
+    private val json: Json,
+) : ViewModel() {
 
     val updateUrl = MutableSharedFlow<String?>()
 
@@ -149,24 +150,26 @@ class SettingsViewModel @Inject constructor(
 
                                                 }
                                             }
-                                            offlineRepository.saveVideo(OfflineVideo(
-                                                url = playlistFile.path,
-                                                name = if (!title.isNullOrBlank()) title else null ?: file.name,
-                                                channelId = if (!channelId.isNullOrBlank()) channelId else null,
-                                                channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
-                                                channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                                                thumbnail = file.path + File.separator + segments.getOrNull(max(0, (segments.size / 2) - 1))?.uri,
-                                                gameId = if (!gameId.isNullOrBlank()) gameId else null,
-                                                gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
-                                                gameName = if (!gameName.isNullOrBlank()) gameName else null,
-                                                duration = totalDuration,
-                                                uploadDate = if (uploadDate != null) uploadDate else null,
-                                                progress = 100,
-                                                maxProgress = 100,
-                                                status = OfflineVideo.STATUS_DOWNLOADED,
-                                                videoId = if (!id.isNullOrBlank()) id else null,
-                                                chatUrl = chatFile
-                                            ))
+                                            offlineRepository.saveVideo(
+                                                OfflineVideo(
+                                                    url = playlistFile.path,
+                                                    name = if (!title.isNullOrBlank()) title else null ?: file.name,
+                                                    channelId = if (!channelId.isNullOrBlank()) channelId else null,
+                                                    channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
+                                                    channelName = if (!channelName.isNullOrBlank()) channelName else null,
+                                                    thumbnail = file.path + File.separator + segments.getOrNull(max(0, (segments.size / 2) - 1))?.uri,
+                                                    gameId = if (!gameId.isNullOrBlank()) gameId else null,
+                                                    gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
+                                                    gameName = if (!gameName.isNullOrBlank()) gameName else null,
+                                                    duration = totalDuration,
+                                                    uploadDate = uploadDate,
+                                                    progress = 100,
+                                                    maxProgress = 100,
+                                                    status = OfflineVideo.STATUS_DOWNLOADED,
+                                                    videoId = if (!id.isNullOrBlank()) id else null,
+                                                    chatUrl = chatFile
+                                                )
+                                            )
                                         }
                                     }
                             } else if (file.isFile && (file.name.endsWith(".mp4") || file.name.endsWith(".ts"))) {
@@ -218,23 +221,25 @@ class SettingsViewModel @Inject constructor(
 
                                         }
                                     }
-                                    offlineRepository.saveVideo(OfflineVideo(
-                                        url = file.path,
-                                        name = if (!title.isNullOrBlank()) title else null ?: fileName,
-                                        channelId = if (!channelId.isNullOrBlank()) channelId else null,
-                                        channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
-                                        channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                                        thumbnail = file.path,
-                                        gameId = if (!gameId.isNullOrBlank()) gameId else null,
-                                        gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
-                                        gameName = if (!gameName.isNullOrBlank()) gameName else null,
-                                        uploadDate = if (uploadDate != null) uploadDate else null,
-                                        progress = 100,
-                                        maxProgress = 100,
-                                        status = OfflineVideo.STATUS_DOWNLOADED,
-                                        videoId = if (!id.isNullOrBlank()) id else null,
-                                        chatUrl = chatFile
-                                    ))
+                                    offlineRepository.saveVideo(
+                                        OfflineVideo(
+                                            url = file.path,
+                                            name = if (!title.isNullOrBlank()) title else null ?: fileName,
+                                            channelId = if (!channelId.isNullOrBlank()) channelId else null,
+                                            channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
+                                            channelName = if (!channelName.isNullOrBlank()) channelName else null,
+                                            thumbnail = file.path,
+                                            gameId = if (!gameId.isNullOrBlank()) gameId else null,
+                                            gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
+                                            gameName = if (!gameName.isNullOrBlank()) gameName else null,
+                                            uploadDate = uploadDate,
+                                            progress = 100,
+                                            maxProgress = 100,
+                                            status = OfflineVideo.STATUS_DOWNLOADED,
+                                            videoId = if (!id.isNullOrBlank()) id else null,
+                                            chatUrl = chatFile
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -271,14 +276,23 @@ class SettingsViewModel @Inject constructor(
             okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                 if (response.isSuccessful) {
                     val packageInstaller = applicationContext.packageManager.packageInstaller
-                    val sessionId = packageInstaller.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
+                    val sessionId = packageInstaller.createSession(
+                        PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+                    )
                     val session = packageInstaller.openSession(sessionId)
                     session.openWrite("package", 0, -1).sink().buffer().use { sink ->
                         sink.writeAll(response.body.source())
                     }
-                    session.commit(PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MainActivity::class.java).apply {
-                        setAction(MainActivity.INTENT_INSTALL_UPDATE)
-                    }, PendingIntent.FLAG_MUTABLE).intentSender)
+                    session.commit(
+                        PendingIntent.getActivity(
+                            applicationContext,
+                            0,
+                            Intent(applicationContext, MainActivity::class.java).apply {
+                                setAction(MainActivity.INTENT_INSTALL_UPDATE)
+                            },
+                            PendingIntent.FLAG_MUTABLE
+                        ).intentSender
+                    )
                     session.close()
                 }
             }
@@ -326,9 +340,11 @@ class SettingsViewModel @Inject constructor(
                     database.sink().buffer().use { sink ->
                         sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
                     }
-                    applicationContext.startActivity(Intent(applicationContext, MainActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    })
+                    applicationContext.startActivity(
+                        Intent(applicationContext, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    )
                     exitProcess(0)
                 }
             }

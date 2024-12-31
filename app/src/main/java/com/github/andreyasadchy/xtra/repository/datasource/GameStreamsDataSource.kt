@@ -24,7 +24,8 @@ class GameStreamsDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: List<String>) : PagingSource<Int, Stream>() {
+    private val apiPref: List<String>,
+) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -149,7 +150,7 @@ class GameStreamsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 
@@ -180,7 +181,7 @@ class GameStreamsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 

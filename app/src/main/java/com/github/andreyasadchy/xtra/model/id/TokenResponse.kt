@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 class TokenResponse(
     @SerialName("access_token")
-    val token: String
+    val token: String,
 )

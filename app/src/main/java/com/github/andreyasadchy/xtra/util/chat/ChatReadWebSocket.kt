@@ -25,14 +25,18 @@ class ChatReadWebSocket(
     private val onClearChat: ((String) -> Unit)? = null,
     private val onNotice: ((String) -> Unit)? = null,
     private val onRoomState: ((String) -> Unit)? = null,
-    private val webSocketListener: WebSocketListener? = null) {
+    private val webSocketListener: WebSocketListener? = null,
+) {
     val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
     var isActive = false
     var pongReceived = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(), webSocketListener ?: ChatReadWebSocketListener())
+        socket = client.newWebSocket(
+            Request.Builder().url("wss://irc-ws.chat.twitch.tv").build(),
+            webSocketListener ?: ChatReadWebSocketListener()
+        )
     }
 
     fun disconnect() {

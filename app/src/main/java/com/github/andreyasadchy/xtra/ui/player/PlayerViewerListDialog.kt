@@ -67,7 +67,11 @@ class PlayerViewerListDialog : BottomSheetDialogFragment(), IntegrityDialog.Call
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.integrity.collectLatest {
-                        if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        if (it != null &&
+                            it != "done" &&
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                        ) {
                             IntegrityDialog.show(childFragmentManager, it)
                             viewModel.integrity.value = "done"
                         }
@@ -208,17 +212,9 @@ class PlayerViewerListDialog : BottomSheetDialogFragment(), IntegrityDialog.Call
             return mData.size
         }
 
-        inner class ViewHolder internal constructor(itemView: View) :
-            RecyclerView.ViewHolder(itemView),
-            View.OnClickListener {
-            var textView: TextView = itemView.findViewById(R.id.userName)
-            override fun onClick(view: View) {
+        inner class ViewHolder internal constructor(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-            }
-
-            init {
-                itemView.setOnClickListener(this)
-            }
+            val textView = itemView as TextView
         }
     }
 }

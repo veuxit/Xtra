@@ -182,6 +182,12 @@ class EmotesFragment : Fragment() {
     companion object {
         private const val KEY_POSITION = "position"
 
-        fun newInstance(position: Int) = EmotesFragment().apply { arguments = bundleOf(KEY_POSITION to position) }
+        fun newInstance(position: Int): EmotesFragment {
+            return EmotesFragment().apply {
+                arguments = bundleOf(
+                    KEY_POSITION to position
+                )
+            }
+        }
     }
 }

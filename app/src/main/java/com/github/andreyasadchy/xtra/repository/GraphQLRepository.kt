@@ -49,7 +49,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
+class GraphQLRepository @Inject constructor(
+    private val graphQL: GraphQLApi,
+) {
 
     fun getPlaybackAccessTokenRequestBody(login: String?, vodId: String?, playerType: String?): JsonObject {
         return buildJsonObject {

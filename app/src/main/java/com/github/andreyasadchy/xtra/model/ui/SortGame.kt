@@ -13,4 +13,5 @@ class SortGame(
     var videoType: String? = null,
     var videoLanguageIndex: Int? = null,
     var clipPeriod: String? = null,
-    var clipLanguageIndex: Int? = null)
+    var clipLanguageIndex: Int? = null,
+)

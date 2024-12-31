@@ -9,7 +9,8 @@ import javax.inject.Singleton
 
 @Singleton
 class VodBookmarkIgnoredUsersRepository @Inject constructor(
-    private val vodBookmarkIgnoredUsersDao: VodBookmarkIgnoredUsersDao) {
+    private val vodBookmarkIgnoredUsersDao: VodBookmarkIgnoredUsersDao,
+) {
 
     fun loadUsersFlow() = vodBookmarkIgnoredUsersDao.getAllFlow()
 

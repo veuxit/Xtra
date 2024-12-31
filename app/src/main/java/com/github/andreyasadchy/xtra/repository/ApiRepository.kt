@@ -48,7 +48,8 @@ class ApiRepository @Inject constructor(
     private val apolloClient: ApolloClient,
     private val helix: HelixApi,
     private val gql: GraphQLRepository,
-    private val misc: MiscApi) {
+    private val misc: MiscApi,
+) {
 
     private fun getApolloClient(gqlHeaders: Map<String, String>): ApolloClient {
         return apolloClient.newBuilder().apply {
@@ -153,7 +154,7 @@ class ApiRepository @Inject constructor(
                         duration = it.lengthSeconds?.toString(),
                         thumbnailUrl = it.previewThumbnailURL,
                         profileImageUrl = it.owner?.profileImageURL,
-                        animatedPreviewURL =  it.animatedPreviewURL,
+                        animatedPreviewURL = it.animatedPreviewURL,
                     )
                 }
             }
@@ -448,28 +449,33 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadGlobalBadges(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, emoteQuality: String, checkIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
         try {
-            val response = getApolloClient(gqlHeaders).query(BadgesQuery(Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}))).execute()
+            val response = getApolloClient(gqlHeaders).query(BadgesQuery(Optional.Present(
+                when (emoteQuality) {
+                    "4" -> BadgeImageSize.QUADRUPLE
+                    "3" -> BadgeImageSize.QUADRUPLE
+                    "2" -> BadgeImageSize.DOUBLE
+                    else -> BadgeImageSize.NORMAL
+                }
+            ))).execute()
             if (checkIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
             response.data!!.badges?.mapNotNull {
-                if (it != null) {
-                    it.setID?.let { setId ->
-                        it.version?.let { version ->
-                            it.imageURL?.let { url ->
-                                TwitchBadge(
-                                    setId = setId,
-                                    version = version,
-                                    url1x = url,
-                                    url2x = url,
-                                    url3x = url,
-                                    url4x = url,
-                                    title = it.title
-                                )
-                            }
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
                         }
                     }
-                } else null
+                }
             } ?: emptyList()
         } catch (e: Exception) {
             if (e.message == "failed integrity check") throw e
@@ -522,29 +528,34 @@ class ApiRepository @Inject constructor(
             val response = getApolloClient(gqlHeaders).query(UserBadgesQuery(
                 id = if (!channelId.isNullOrBlank()) Optional.Present(channelId) else Optional.Absent,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) Optional.Present(channelLogin) else Optional.Absent,
-                quality = Optional.Present(when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL})
+                quality = Optional.Present(
+                    when (emoteQuality) {
+                        "4" -> BadgeImageSize.QUADRUPLE
+                        "3" -> BadgeImageSize.QUADRUPLE
+                        "2" -> BadgeImageSize.DOUBLE
+                        else -> BadgeImageSize.NORMAL
+                    }
+                )
             )).execute()
             if (checkIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
             response.data!!.user?.broadcastBadges?.mapNotNull {
-                if (it != null) {
-                    it.setID?.let { setId ->
-                        it.version?.let { version ->
-                            it.imageURL?.let { url ->
-                                TwitchBadge(
-                                    setId = setId,
-                                    version = version,
-                                    url1x = url,
-                                    url2x = url,
-                                    url3x = url,
-                                    url4x = url,
-                                    title = it.title
-                                )
-                            }
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
                         }
                     }
-                } else null
+                }
             } ?: emptyList()
         } catch (e: Exception) {
             if (e.message == "failed integrity check") throw e

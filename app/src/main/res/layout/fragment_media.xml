@@ -37,7 +37,7 @@
 
         <include
             android:id="@+id/sortBar"
-            layout="@layout/sort_bar"/>
+            layout="@layout/sort_bar" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -45,7 +45,6 @@
         android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

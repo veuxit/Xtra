@@ -9,7 +9,7 @@
         android:id="@+id/slidingLayout"
         android:layout_height="match_parent"
         android:layout_width="match_parent"
-        android:layoutDirection="ltr" >
+        android:layoutDirection="ltr">
 
         <androidx.media3.ui.AspectRatioFrameLayout
             android:id="@+id/aspectRatioFrameLayout"

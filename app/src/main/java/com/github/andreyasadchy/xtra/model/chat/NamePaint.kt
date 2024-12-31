@@ -8,12 +8,13 @@ class NamePaint(
     val imageUrl: String? = null,
     val angle: Int? = null,
     val repeat: Boolean? = null,
-    val shadows: List<Shadow>? = null) {
+    val shadows: List<Shadow>? = null,
+) {
 
     class Shadow(
         val xOffset: Float,
         val yOffset: Float,
         val radius: Float,
-        val color: Int
+        val color: Int,
     )
 }

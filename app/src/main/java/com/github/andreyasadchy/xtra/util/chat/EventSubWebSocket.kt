@@ -21,7 +21,8 @@ class EventSubWebSocket(
     private val onChatMessage: (JSONObject, String?) -> Unit,
     private val onUserNotice: (JSONObject, String?) -> Unit,
     private val onClearChat: (JSONObject, String?) -> Unit,
-    private val onRoomState: (JSONObject, String?) -> Unit) {
+    private val onRoomState: (JSONObject, String?) -> Unit,
+) {
     private var socket: WebSocket? = null
     var isActive = false
     private var pongReceived = false
@@ -30,7 +31,10 @@ class EventSubWebSocket(
     private val handledMessageIds = mutableListOf<String>()
 
     fun connect(reconnectUrl: String? = null) {
-        socket = client.newWebSocket(Request.Builder().url(reconnectUrl ?: "wss://eventsub.wss.twitch.tv/ws").build(), EventSubWebSocketListener())
+        socket = client.newWebSocket(
+            Request.Builder().url(reconnectUrl ?: "wss://eventsub.wss.twitch.tv/ws").build(),
+            EventSubWebSocketListener()
+        )
     }
 
     fun disconnect() {

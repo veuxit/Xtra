@@ -9,5 +9,5 @@ class ValidationResponse(
     val clientId: String,
     val login: String? = null,
     @SerialName("user_id")
-    val userId: String? = null
+    val userId: String? = null,
 )

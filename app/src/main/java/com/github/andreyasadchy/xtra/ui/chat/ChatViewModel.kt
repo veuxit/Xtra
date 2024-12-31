@@ -64,7 +64,8 @@ class ChatViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val graphQLRepository: GraphQLRepository,
     private val playerRepository: PlayerRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
@@ -156,7 +157,9 @@ class ChatViewModel @Inject constructor(
             if (applicationContext.prefs().getBoolean(C.CHAT_RECENT, true)) {
                 loadRecentMessages(channelLogin)
             }
-            val isLoggedIn = !applicationContext.tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(applicationContext, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank())
+            val isLoggedIn = !applicationContext.tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
+                    (!TwitchApiHelper.getGQLHeaders(applicationContext, true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                            !TwitchApiHelper.getHelixHeaders(applicationContext)[C.HEADER_TOKEN].isNullOrBlank())
             if (isLoggedIn) {
                 loadUserEmotes(channelId)
             }
@@ -200,7 +203,8 @@ class ChatViewModel @Inject constructor(
         val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
         val emoteQuality = applicationContext.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs = applicationContext.prefs().getBoolean(C.ANIMATED_EMOTES, true)
-        val checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+        val checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         savedGlobalBadges.also { saved ->
             if (!saved.isNullOrEmpty()) {
                 _globalBadges.value = saved
@@ -405,22 +409,28 @@ class ChatViewModel @Inject constructor(
     private fun loadUserEmotes(channelId: String?) {
         savedUserEmotes.also { saved ->
             if (!saved.isNullOrEmpty()) {
-                addEmotes(saved.map { Emote(
-                    name = it.name,
-                    url1x = it.url1x,
-                    url2x = it.url2x,
-                    url3x = it.url3x,
-                    url4x = it.url4x,
-                    format = it.format
-                ) })
-                _userEmotes.value = saved.sortedByDescending { it.ownerId == channelId }.map { Emote(
-                    name = it.name,
-                    url1x = it.url1x,
-                    url2x = it.url2x,
-                    url3x = it.url3x,
-                    url4x = it.url4x,
-                    format = it.format
-                ) }
+                addEmotes(
+                    saved.map {
+                        Emote(
+                            name = it.name,
+                            url1x = it.url1x,
+                            url2x = it.url2x,
+                            url3x = it.url3x,
+                            url4x = it.url4x,
+                            format = it.format
+                        )
+                    }
+                )
+                _userEmotes.value = saved.sortedByDescending { it.ownerId == channelId }.map {
+                    Emote(
+                        name = it.name,
+                        url1x = it.url1x,
+                        url2x = it.url2x,
+                        url3x = it.url3x,
+                        url4x = it.url4x,
+                        format = it.format
+                    )
+                }
             } else {
                 val helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext)
                 val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
@@ -429,26 +439,33 @@ class ChatViewModel @Inject constructor(
                         try {
                             val accountId = applicationContext.tokenPrefs().getString(C.USER_ID, null)
                             val animateGifs =  applicationContext.prefs().getBoolean(C.ANIMATED_EMOTES, true)
-                            val checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            val checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                                    applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                             repository.loadUserEmotes(helixHeaders, gqlHeaders, channelId, accountId, animateGifs, checkIntegrity).let { emotes ->
                                 if (emotes.isNotEmpty()) {
                                     val sorted = emotes.sortedByDescending { it.setId }
-                                    addEmotes(sorted.map { Emote(
-                                        name = it.name,
-                                        url1x = it.url1x,
-                                        url2x = it.url2x,
-                                        url3x = it.url3x,
-                                        url4x = it.url4x,
-                                        format = it.format
-                                    ) })
-                                    _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
-                                        name = it.name,
-                                        url1x = it.url1x,
-                                        url2x = it.url2x,
-                                        url3x = it.url3x,
-                                        url4x = it.url4x,
-                                        format = it.format
-                                    ) }
+                                    addEmotes(
+                                        sorted.map {
+                                            Emote(
+                                                name = it.name,
+                                                url1x = it.url1x,
+                                                url2x = it.url2x,
+                                                url3x = it.url3x,
+                                                url4x = it.url4x,
+                                                format = it.format
+                                            )
+                                        }
+                                    )
+                                    _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map {
+                                        Emote(
+                                            name = it.name,
+                                            url1x = it.url1x,
+                                            url2x = it.url2x,
+                                            url3x = it.url3x,
+                                            url4x = it.url4x,
+                                            format = it.format
+                                        )
+                                    }
                                     loadedUserEmotes = true
                                 }
                             }
@@ -1038,22 +1055,28 @@ class ChatViewModel @Inject constructor(
                     if (emotes.isNotEmpty()) {
                         val sorted = emotes.sortedByDescending { it.setId }
                         savedUserEmotes = sorted
-                        addEmotes(sorted.map { Emote(
-                            name = it.name,
-                            url1x = it.url1x,
-                            url2x = it.url2x,
-                            url3x = it.url3x,
-                            url4x = it.url4x,
-                            format = it.format
-                        ) })
-                        _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map { Emote(
-                            name = it.name,
-                            url1x = it.url1x,
-                            url2x = it.url2x,
-                            url3x = it.url3x,
-                            url4x = it.url4x,
-                            format = it.format
-                        ) }
+                        addEmotes(
+                            sorted.map {
+                                Emote(
+                                    name = it.name,
+                                    url1x = it.url1x,
+                                    url2x = it.url2x,
+                                    url3x = it.url3x,
+                                    url4x = it.url4x,
+                                    format = it.format
+                                )
+                            }
+                        )
+                        _userEmotes.value = sorted.sortedByDescending { it.ownerId == channelId }.map {
+                            Emote(
+                                name = it.name,
+                                url1x = it.url1x,
+                                url2x = it.url2x,
+                                url3x = it.url3x,
+                                url4x = it.url4x,
+                                format = it.format
+                            )
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to load emote sets", e)

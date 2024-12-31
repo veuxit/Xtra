@@ -20,7 +20,8 @@ class Bookmark(
     val thumbnail: String? = null,
     val type: String? = null,
     val duration: String? = null,
-    val animatedPreviewURL: String? = null) {
+    val animatedPreviewURL: String? = null,
+) {
 
     @PrimaryKey(autoGenerate = true)
     var id = 0

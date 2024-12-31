@@ -10,7 +10,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SearchPagerViewModel @Inject constructor(
-    private val repository: ApiRepository) : ViewModel() {
+    private val repository: ApiRepository,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

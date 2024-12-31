@@ -24,7 +24,8 @@ class GamesViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
     private val apolloClient: ApolloClient,
-    savedStateHandle: SavedStateHandle) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
     private val args = GamesFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val flow = Pager(

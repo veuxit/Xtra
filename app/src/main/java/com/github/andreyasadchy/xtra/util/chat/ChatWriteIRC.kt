@@ -16,7 +16,8 @@ class ChatWriteIRC(
     channelName: String,
     private val onSendMessageError: (String, String) -> Unit,
     private val onNotice: (String) -> Unit,
-    private val onUserState: (String) -> Unit) : Thread() {
+    private val onUserState: (String) -> Unit,
+) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter

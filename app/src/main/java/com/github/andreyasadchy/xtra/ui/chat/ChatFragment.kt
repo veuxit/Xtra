@@ -48,7 +48,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -61,7 +65,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 val channelId = args.getString(KEY_CHANNEL_ID)
                 val isLive = args.getBoolean(KEY_IS_LIVE)
                 val accountLogin = requireContext().tokenPrefs().getString(C.USERNAME, null)
-                val isLoggedIn = !accountLogin.isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
+                val isLoggedIn = !accountLogin.isNullOrBlank() &&
+                        (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                                !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 val enableChat: Boolean
                 if (isLive) {
@@ -81,7 +87,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     val accountId = requireContext().tokenPrefs().getString(C.USER_ID, null)
                     val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
                     val useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
-                    val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                     chatView.setCallback(object : ChatView.ChatViewCallback {
                         override fun send(message: CharSequence, replyId: String?) {
                             viewModel.send(message, replyId, helixHeaders, gqlHeaders, accountId, channelId, channelLogin, useApiCommands, useApiChatMessages, checkIntegrity)
@@ -423,7 +430,10 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     fun reloadEmotes() {
-        viewModel.reloadEmotes(requireArguments().getString(KEY_CHANNEL_ID), requireArguments().getString(KEY_CHANNEL_LOGIN))
+        viewModel.reloadEmotes(
+            requireArguments().getString(KEY_CHANNEL_ID),
+            requireArguments().getString(KEY_CHANNEL_LOGIN)
+        )
     }
 
     fun updatePosition(position: Long) {
@@ -452,12 +462,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     private fun onRaidClicked(raid: Raid) {
-        (requireActivity() as MainActivity).startStream(Stream(
-            channelId = raid.targetId,
-            channelLogin = raid.targetLogin,
-            channelName = raid.targetName,
-            profileImageUrl = raid.targetProfileImage,
-        ))
+        (requireActivity() as MainActivity).startStream(
+            Stream(
+                channelId = raid.targetId,
+                channelLogin = raid.targetLogin,
+                channelName = raid.targetName,
+                profileImageUrl = raid.targetProfileImage,
+            )
+        )
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
@@ -499,12 +511,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     override fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?) {
-        findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-            channelId = id,
-            channelLogin = login,
-            channelName = name,
-            channelLogo = channelLogo
-        ))
+        findNavController().navigate(
+            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                channelId = id,
+                channelLogin = login,
+                channelName = name,
+                channelLogo = channelLogo
+            )
+        )
         (parentFragment as? BasePlayerFragment)?.minimize()
     }
 
@@ -574,36 +588,42 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         private const val KEY_START_TIME_EMPTY = "startTime_empty"
         private const val KEY_START_TIME = "startTime"
 
-        fun newInstance(channelId: String?, channelLogin: String?, channelName: String?, streamId: String?) = ChatFragment().apply {
-            arguments = Bundle().apply {
-                putBoolean(KEY_IS_LIVE, true)
-                putString(KEY_CHANNEL_ID, channelId)
-                putString(KEY_CHANNEL_LOGIN, channelLogin)
-                putString(KEY_CHANNEL_NAME, channelName)
-                putString(KEY_STREAM_ID, streamId)
-            }
-        }
-
-        fun newInstance(channelId: String?, channelLogin: String?, videoId: String?, startTime: Int?) = ChatFragment().apply {
-            arguments = Bundle().apply {
-                putBoolean(KEY_IS_LIVE, false)
-                putString(KEY_CHANNEL_ID, channelId)
-                putString(KEY_CHANNEL_LOGIN, channelLogin)
-                putString(KEY_VIDEO_ID, videoId)
-                if (startTime != null) {
-                    putBoolean(KEY_START_TIME_EMPTY, false)
-                    putInt(KEY_START_TIME, startTime)
-                } else {
-                    putBoolean(KEY_START_TIME_EMPTY, true)
+        fun newInstance(channelId: String?, channelLogin: String?, channelName: String?, streamId: String?): ChatFragment {
+            return ChatFragment().apply {
+                arguments = Bundle().apply {
+                    putBoolean(KEY_IS_LIVE, true)
+                    putString(KEY_CHANNEL_ID, channelId)
+                    putString(KEY_CHANNEL_LOGIN, channelLogin)
+                    putString(KEY_CHANNEL_NAME, channelName)
+                    putString(KEY_STREAM_ID, streamId)
                 }
             }
         }
 
-        fun newLocalInstance(channelId: String?, channelLogin: String?, chatUrl: String?) = ChatFragment().apply {
-            arguments = Bundle().apply {
-                putString(KEY_CHANNEL_ID, channelId)
-                putString(KEY_CHANNEL_LOGIN, channelLogin)
-                putString(KEY_CHAT_URL, chatUrl)
+        fun newInstance(channelId: String?, channelLogin: String?, videoId: String?, startTime: Int?): ChatFragment {
+            return ChatFragment().apply {
+                arguments = Bundle().apply {
+                    putBoolean(KEY_IS_LIVE, false)
+                    putString(KEY_CHANNEL_ID, channelId)
+                    putString(KEY_CHANNEL_LOGIN, channelLogin)
+                    putString(KEY_VIDEO_ID, videoId)
+                    if (startTime != null) {
+                        putBoolean(KEY_START_TIME_EMPTY, false)
+                        putInt(KEY_START_TIME, startTime)
+                    } else {
+                        putBoolean(KEY_START_TIME_EMPTY, true)
+                    }
+                }
+            }
+        }
+
+        fun newLocalInstance(channelId: String?, channelLogin: String?, chatUrl: String?): ChatFragment {
+            return ChatFragment().apply {
+                arguments = Bundle().apply {
+                    putString(KEY_CHANNEL_ID, channelId)
+                    putString(KEY_CHANNEL_LOGIN, channelLogin)
+                    putString(KEY_CHAT_URL, chatUrl)
+                }
             }
         }
     }

@@ -57,15 +57,35 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         private const val KEY_CLIP = "clip"
 
         fun newInstance(stream: Stream, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
-            return DownloadDialog().apply { arguments = bundleOf(KEY_STREAM to stream, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values) }
+            return DownloadDialog().apply {
+                arguments = bundleOf(
+                    KEY_STREAM to stream,
+                    KEY_URLS_KEYS to keys,
+                    KEY_URLS_VALUES to values
+                )
+            }
         }
 
         fun newInstance(video: Video, keys: Array<String>? = null, values: Array<String>? = null, totalDuration: Long? = null, currentPosition: Long? = null): DownloadDialog {
-            return DownloadDialog().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values, KEY_VIDEO_TOTAL_DURATION to totalDuration, KEY_VIDEO_CURRENT_POSITION to currentPosition) }
+            return DownloadDialog().apply {
+                arguments = bundleOf(
+                    KEY_VIDEO to video,
+                    KEY_URLS_KEYS to keys,
+                    KEY_URLS_VALUES to values,
+                    KEY_VIDEO_TOTAL_DURATION to totalDuration,
+                    KEY_VIDEO_CURRENT_POSITION to currentPosition
+                )
+            }
         }
 
         fun newInstance(clip: Clip, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
-            return DownloadDialog().apply { arguments = bundleOf(KEY_CLIP to clip, KEY_URLS_KEYS to keys, KEY_URLS_VALUES to values) }
+            return DownloadDialog().apply {
+                arguments = bundleOf(
+                    KEY_CLIP to clip,
+                    KEY_URLS_KEYS to keys,
+                    KEY_URLS_VALUES to values
+                )
+            }
         }
     }
 
@@ -93,7 +113,11 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }

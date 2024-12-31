@@ -77,10 +77,13 @@ class ReplyClickedChatAdapter(
     var globalBadges: List<TwitchBadge>?,
     var channelBadges: List<TwitchBadge>?,
     var cheerEmotes: List<CheerEmote>?,
-    var selectedMessage: ChatMessage?) : RecyclerView.Adapter<ReplyClickedChatAdapter.ViewHolder>() {
+    var selectedMessage: ChatMessage?,
+) : RecyclerView.Adapter<ReplyClickedChatAdapter.ViewHolder>() {
 
     val threadParentId = selectedMessage?.reply?.threadParentId
-    var messages: MutableList<ChatMessage>? = messages?.filter { it.reply?.threadParentId == threadParentId || it.id == threadParentId }?.toMutableList() ?: selectedMessage?.let { mutableListOf(it) }
+    var messages: MutableList<ChatMessage>? =
+        messages?.filter { it.reply?.threadParentId == threadParentId || it.id == threadParentId }?.toMutableList()
+            ?: selectedMessage?.let { mutableListOf(it) }
         set(value) {
             val oldSize = field?.size ?: 0
             if (oldSize > 0) {

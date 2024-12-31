@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 class StvGlobalResponse(
     val id: String? = null,
-    val emotes: List<StvResponse>
+    val emotes: List<StvResponse>,
 )
