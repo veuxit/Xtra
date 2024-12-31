@@ -41,7 +41,8 @@ class DownloadsAdapter(
     private val moveVideo: (OfflineVideo) -> Unit,
     private val updateChatUrl: (OfflineVideo) -> Unit,
     private val shareVideo: (OfflineVideo) -> Unit,
-    private val deleteVideo: (OfflineVideo) -> Unit) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
+    private val deleteVideo: (OfflineVideo) -> Unit,
+) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<OfflineVideo>() {
         override fun areItemsTheSame(oldItem: OfflineVideo, newItem: OfflineVideo): Boolean {
             return oldItem.id == newItem.id
@@ -63,18 +64,23 @@ class DownloadsAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentDownloadsListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: OfflineVideo?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    val channelListener: (View) -> Unit = { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo,
-                        updateLocal = true
-                    )) }
+                    val channelListener: (View) -> Unit = {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                                updateLocal = true
+                            )
+                        )
+                    }
                     val gameListener: (View) -> Unit = {
                         fragment.findNavController().navigate(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
@@ -96,7 +102,11 @@ class DownloadsAdapter(
                         (fragment.activity as MainActivity).startOfflineVideo(item)
                     }
                     root.setOnLongClickListener { deleteVideo(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     item.uploadDate?.let {
                         date.visible()
                         date.text = context.getString(R.string.uploaded_date, TwitchApiHelper.formatTime(context, it))
@@ -120,14 +130,19 @@ class DownloadsAdapter(
                     } else {
                         type.gone()
                     }
-                    if (item.channelLogo != null)  {
+                    if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true), diskCacheStrategy = DiskCacheStrategy.NONE)
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true),
+                            diskCacheStrategy = DiskCacheStrategy.NONE
+                        )
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
                     }
-                    if (item.channelName != null)  {
+                    if (item.channelName != null) {
                         username.visible()
                         username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
@@ -148,7 +163,7 @@ class DownloadsAdapter(
                     } ?: {
                         title.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -212,11 +227,13 @@ class DownloadsAdapter(
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         menu.findItem(R.id.moveVideo).apply {
                                             isVisible = true
-                                            title = context.getString(if (item.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
-                                                R.string.move_to_app_storage
-                                            } else {
-                                                R.string.move_to_shared_storage
-                                            })
+                                            title = context.getString(
+                                                if (item.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
+                                                    R.string.move_to_app_storage
+                                                } else {
+                                                    R.string.move_to_shared_storage
+                                                }
+                                            )
                                         }
                                     }
                                     if (item.url?.endsWith(".m3u8") == true) {
@@ -229,7 +246,7 @@ class DownloadsAdapter(
                                 }
                             }
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.stopDownload -> stopDownload(item)
                                     R.id.resumeDownload -> resumeDownload(item)
                                     R.id.convertVideo -> convertVideo(item)
@@ -271,7 +288,12 @@ class DownloadsAdapter(
                             chatDownloadProgress.gone()
                         }
                         status.visible()
-                        if (item.status == OfflineVideo.STATUS_DOWNLOADING || item.status == OfflineVideo.STATUS_BLOCKED || item.status == OfflineVideo.STATUS_QUEUED || item.status == OfflineVideo.STATUS_QUEUED_WIFI || item.status == OfflineVideo.STATUS_WAITING_FOR_STREAM) {
+                        if (item.status == OfflineVideo.STATUS_DOWNLOADING ||
+                            item.status == OfflineVideo.STATUS_BLOCKED ||
+                            item.status == OfflineVideo.STATUS_QUEUED ||
+                            item.status == OfflineVideo.STATUS_QUEUED_WIFI ||
+                            item.status == OfflineVideo.STATUS_WAITING_FOR_STREAM
+                        ) {
                             checkDownloadStatus(item)
                         }
                     }

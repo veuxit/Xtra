@@ -28,7 +28,8 @@ class StreamsViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
-    savedStateHandle: SavedStateHandle) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val filter = MutableStateFlow<Filter?>(null)

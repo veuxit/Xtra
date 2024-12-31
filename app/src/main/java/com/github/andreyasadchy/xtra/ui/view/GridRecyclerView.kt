@@ -49,12 +49,22 @@ class GridRecyclerView : RecyclerView {
     }
 
     fun getColumnsForConfiguration(configuration: Configuration): Int {
-        return if (configuration.orientation == Configuration.ORIENTATION_PORTRAIT) portraitColumns else landscapeColumns
+        return if (configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            portraitColumns
+        } else {
+            landscapeColumns
+        }
     }
 
     private fun addItemDecoration(columns: Int) {
         if (!material3) {
-            addItemDecoration(if (columns <= 1) DividerItemDecoration(context, GridLayoutManager.VERTICAL) else MarginItemDecoration(context.resources.getDimension(R.dimen.divider_margin).toInt(), columns))
+            addItemDecoration(
+                if (columns <= 1) {
+                    DividerItemDecoration(context, GridLayoutManager.VERTICAL)
+                } else {
+                    MarginItemDecoration(context.resources.getDimension(R.dimen.divider_margin).toInt(), columns)
+                }
+            )
         }
     }
 }

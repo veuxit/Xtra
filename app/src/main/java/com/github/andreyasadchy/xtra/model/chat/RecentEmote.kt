@@ -9,7 +9,8 @@ class RecentEmote(
     @PrimaryKey
     val name: String,
     @ColumnInfo(name = "used_at")
-    val usedAt: Long) {
+    val usedAt: Long,
+) {
 
     companion object {
         const val MAX_SIZE = 50

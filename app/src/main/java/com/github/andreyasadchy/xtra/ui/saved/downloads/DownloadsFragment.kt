@@ -117,7 +117,9 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
         }, {
             if (it.live) {
                 if (it.status != OfflineVideo.STATUS_PENDING) {
-                    it.channelLogin?.let { channelLogin -> WorkManager.getInstance(requireContext()).cancelUniqueWork(channelLogin) }
+                    it.channelLogin?.let { channelLogin ->
+                        WorkManager.getInstance(requireContext()).cancelUniqueWork(channelLogin)
+                    }
                 } else {
                     viewModel.finishDownload(it)
                 }
@@ -135,11 +137,13 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                             .setInputData(workDataOf(StreamDownloadWorker.KEY_VIDEO_ID to it.id))
                             .setConstraints(
                                 Constraints.Builder()
-                                    .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
-                                        NetworkType.UNMETERED
-                                    } else {
-                                        NetworkType.CONNECTED
-                                    })
+                                    .setRequiredNetworkType(
+                                        if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
+                                            NetworkType.UNMETERED
+                                        } else {
+                                            NetworkType.CONNECTED
+                                        }
+                                    )
                                     .build()
                             )
                             .build()
@@ -155,11 +159,13 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                         .addTag(it.id.toString())
                         .setConstraints(
                             Constraints.Builder()
-                                .setRequiredNetworkType(if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
-                                    NetworkType.UNMETERED
-                                } else {
-                                    NetworkType.CONNECTED
-                                })
+                                .setRequiredNetworkType(
+                                    if (requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)) {
+                                        NetworkType.UNMETERED
+                                    } else {
+                                        NetworkType.CONNECTED
+                                    }
+                                )
                                 .build()
                         )
                         .build()

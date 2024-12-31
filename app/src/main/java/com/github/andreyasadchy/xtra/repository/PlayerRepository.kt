@@ -50,7 +50,8 @@ class PlayerRepository @Inject constructor(
     private val misc: MiscApi,
     private val graphQL: GraphQLRepository,
     private val recentEmotes: RecentEmotesDao,
-    private val videoPositions: VideoPositionsDao) {
+    private val videoPositions: VideoPositionsDao,
+) {
 
     suspend fun getMediaPlaylist(url: String): MediaPlaylist = withContext(Dispatchers.IO) {
         okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
@@ -271,7 +272,7 @@ class PlayerRepository @Inject constructor(
                                 url3x = urls?.getOrNull(2) ?: if (urls.isNullOrEmpty()) "https:${template}/3x.webp" else null,
                                 url4x = urls?.getOrNull(3) ?: if (urls.isNullOrEmpty()) "https:${template}/4x.webp" else null,
                                 format = urls?.getOrNull(0)?.substringAfterLast(".") ?: "webp",
-                                isAnimated = data.animated ?: true,
+                                isAnimated = data.animated != false,
                                 isZeroWidth = emote.flags == 1
                             )
                         }
@@ -322,7 +323,7 @@ class PlayerRepository @Inject constructor(
                         url3x = "https://cdn.betterttv.net/emote/$id/2x.webp",
                         url4x = "https://cdn.betterttv.net/emote/$id/3x.webp",
                         format = "webp",
-                        isAnimated = emote.animated ?: true,
+                        isAnimated = emote.animated != false,
                         isZeroWidth = list.contains(name)
                     )
                 }

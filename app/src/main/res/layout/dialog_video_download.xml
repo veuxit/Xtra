@@ -26,7 +26,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible"/>
+            tools:visibility="visible" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/spinner"
@@ -151,7 +151,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toBottomOf="@id/timeLayout"
-            tools:visibility="visible"/>
+            tools:visibility="visible" />
 
         <CheckBox
             android:id="@+id/downloadChat"
@@ -190,7 +190,7 @@
             app:layout_constraintEnd_toStartOf="@id/guideline"
             app:layout_constraintRight_toLeftOf="@id/guideline"
             app:layout_constraintTop_toBottomOf="@id/downloadChatEmotes"
-            tools:visibility="visible"/>
+            tools:visibility="visible" />
 
         <Button
             android:id="@+id/download"
@@ -215,14 +215,14 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.47"/>
+            app:layout_constraintGuide_percent="0.47" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

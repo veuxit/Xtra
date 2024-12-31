@@ -37,7 +37,8 @@ class ClipsViewModel @Inject constructor(
     private val helix: HelixApi,
     private val sortChannelRepository: SortChannelRepository,
     private val sortGameRepository: SortGameRepository,
-    savedStateHandle: SavedStateHandle) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val filter = MutableStateFlow<Filter?>(null)
@@ -103,7 +104,9 @@ class ClipsViewModel @Inject constructor(
                 val langList = mutableListOf<Language>()
                 if (languageIndex != 0) {
                     val langValues = applicationContext.resources.getStringArray(R.array.gqlUserLanguageValues).toList()
-                    val item = Language.entries.find { lang -> lang.rawValue == langValues.elementAt(languageIndex) }
+                    val item = Language.entries.find { lang ->
+                        lang.rawValue == langValues.elementAt(languageIndex)
+                    }
                     if (item != null) {
                         langList.add(item)
                     }

@@ -309,7 +309,11 @@ class ChatView : ConstraintLayout {
             raidLayout.visible()
             raidLayout.setOnClickListener { callback?.onRaidClicked(raid) }
             raidImage.visible()
-            raidImage.loadImage(fragment, raid.targetLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+            raidImage.loadImage(
+                fragment,
+                raid.targetLogo,
+                circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+            )
             raidText.visible()
             raidClose.visible()
             raidClose.setOnClickListener {
@@ -785,10 +789,11 @@ class ChatView : ConstraintLayout {
     }
 
     inner class AutoCompleteAdapter(
-            context: Context,
-            private val fragment: Fragment,
-            list: List<Any>,
-            private val emoteQuality: String) : ArrayAdapter<Any>(context, 0, list) {
+        context: Context,
+        private val fragment: Fragment,
+        list: List<Any>,
+        private val emoteQuality: String,
+    ) : ArrayAdapter<Any>(context, 0, list) {
 
         private var mFilter: ArrayFilter? = null
 
@@ -848,12 +853,16 @@ class ChatView : ConstraintLayout {
                     }
                     viewHolder.containerView.apply {
                         item as Emote
-                        findViewById<ImageView>(R.id.image)?.loadImage(fragment, when (emoteQuality) {
-                            "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
-                            "3" -> item.url3x ?: item.url2x ?: item.url1x
-                            "2" -> item.url2x ?: item.url1x
-                            else -> item.url1x
-                        }, diskCacheStrategy = DiskCacheStrategy.DATA)
+                        findViewById<ImageView>(R.id.image)?.loadImage(
+                            fragment,
+                            when (emoteQuality) {
+                                "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
+                                "3" -> item.url3x ?: item.url2x ?: item.url1x
+                                "2" -> item.url2x ?: item.url1x
+                                else -> item.url1x
+                            },
+                            diskCacheStrategy = DiskCacheStrategy.DATA
+                        )
                         findViewById<TextView>(R.id.name)?.text = item.name
                     }
                 }

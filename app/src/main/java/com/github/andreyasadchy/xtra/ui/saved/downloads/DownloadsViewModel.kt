@@ -38,7 +38,8 @@ import kotlin.math.max
 @HiltViewModel
 class DownloadsViewModel @Inject internal constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val repository: OfflineRepository) : ViewModel() {
+    private val repository: OfflineRepository,
+) : ViewModel() {
 
     var selectedVideo: OfflineVideo? = null
     private val videosInUse = mutableListOf<OfflineVideo>()

@@ -27,7 +27,8 @@ abstract class PlayerViewModel(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

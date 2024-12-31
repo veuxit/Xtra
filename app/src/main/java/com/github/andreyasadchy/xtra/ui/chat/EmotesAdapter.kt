@@ -13,32 +13,40 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.util.loadImage
 
 class EmotesAdapter(
-        private val fragment: Fragment,
-        private val clickListener: (Emote) -> Unit,
-        private val emoteQuality: String) : ListAdapter<Emote, RecyclerView.ViewHolder>(object : DiffUtil.ItemCallback<Emote>() {
-    override fun areItemsTheSame(oldItem: Emote, newItem: Emote): Boolean {
-        return oldItem.name == newItem.name
-    }
+    private val fragment: Fragment,
+    private val clickListener: (Emote) -> Unit,
+    private val emoteQuality: String,
+) : ListAdapter<Emote, RecyclerView.ViewHolder>(
+    object : DiffUtil.ItemCallback<Emote>() {
+        override fun areItemsTheSame(oldItem: Emote, newItem: Emote): Boolean {
+            return oldItem.name == newItem.name
+        }
 
-    override fun areContentsTheSame(oldItem: Emote, newItem: Emote): Boolean {
-        return true
+        override fun areContentsTheSame(oldItem: Emote, newItem: Emote): Boolean {
+            return true
+        }
     }
-
-}) {
+) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.fragment_emotes_list_item, parent, false)) {}
+        return object : RecyclerView.ViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.fragment_emotes_list_item, parent, false)
+        ) {}
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val emote = getItem(position)
         (holder.itemView as ImageView).apply {
-            loadImage(fragment, when (emoteQuality) {
-                "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                "2" -> emote.url2x ?: emote.url1x
-                else -> emote.url1x
-            }, diskCacheStrategy = DiskCacheStrategy.DATA)
+            loadImage(
+                fragment,
+                when (emoteQuality) {
+                    "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                    "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                    "2" -> emote.url2x ?: emote.url1x
+                    else -> emote.url1x
+                },
+                diskCacheStrategy = DiskCacheStrategy.DATA
+            )
             setOnClickListener { clickListener(emote) }
         }
     }

@@ -5,25 +5,31 @@
     android:layout_height="match_parent">
 
     <View style="@style/PlayerShadow" />
+
     <ImageButton
         style="@style/PlayerPlayPause"
         tools:src="@drawable/baseline_pause_black_48" />
 
     <LinearLayout style="@style/PlayerTopLeftPanel">
+
         <ImageButton
             style="@style/PlayerMinimize"
             android:layout_marginEnd="5dp"
             android:layout_marginRight="5dp"
             tools:visibility="visible" />
+
         <LinearLayout style="@style/PlayerTopLeftChannelSubPanel">
+
             <TextView
                 style="@style/PlayerChannel"
                 android:layout_marginBottom="1dp"
                 tools:visibility="visible" />
+
             <TextView
                 style="@style/PlayerTitle"
                 android:layout_marginBottom="1dp"
                 tools:visibility="visible" />
+
             <TextView
                 style="@style/PlayerCategory"
                 android:layout_marginBottom="1dp"
@@ -32,39 +38,50 @@
     </LinearLayout>
 
     <LinearLayout style="@style/PlayerTopRightPanel">
+
         <ImageButton
             style="@style/PlayerDownload"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerFollow"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerSleep"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerRatio"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerSettings"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerMenu"
             tools:visibility="visible" />
     </LinearLayout>
 
     <LinearLayout style="@style/PlayerBotLeftPanel">
+
         <ImageButton
             style="@style/PlayerRestart"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerSeekLive"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerVolume"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerAudioCompressor"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerMode"
             tools:visibility="visible" />
@@ -122,17 +139,21 @@
 
 
     <LinearLayout style="@style/PlayerBotRightPanel">
+
         <ImageButton
             style="@style/PlayerSubtitleToggle"
             tools:src="@drawable/exo_ic_subtitle_off"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerChatBarToggle"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerChatToggle"
             tools:src="@drawable/baseline_speaker_notes_black_24"
             tools:visibility="visible" />
+
         <ImageButton
             style="@style/PlayerFullscreenToggle"
             tools:src="@drawable/baseline_fullscreen_black_24"

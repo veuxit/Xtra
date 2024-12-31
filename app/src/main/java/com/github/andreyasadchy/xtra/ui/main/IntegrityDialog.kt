@@ -44,7 +44,7 @@ class IntegrityDialog : DialogFragment() {
         _binding = DialogIntegrityBinding.inflate(layoutInflater)
         val context = requireContext()
         val builder = context.getAlertDialogBuilder()
-                .setView(binding.root)
+            .setView(binding.root)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             CookieManager.getInstance().removeAllCookies(null)
         } else {

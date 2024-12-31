@@ -18,7 +18,8 @@ class NamePaintSpan(
     private val colorPositions: FloatArray,
     private val angle: Int?,
     private val repeat: Boolean?,
-    private val shadows: List<NamePaint.Shadow>?) : ReplacementSpan() {
+    private val shadows: List<NamePaint.Shadow>?,
+) : ReplacementSpan() {
 
     override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         if (fm != null) {
@@ -48,12 +49,35 @@ class NamePaintSpan(
                 val matrix = Matrix()
                 matrix.setRotate(((angle ?: 0) - 90).toFloat(), x + (width / 2), top + (height / 2))
                 matrix.mapPoints(points)
-                paint.shader = LinearGradient(points[0], min(points[1], bottom.toFloat()), points[2], max(points[3], topFloat), colors, colorPositions, if (repeat == true) Shader.TileMode.REPEAT else Shader.TileMode.CLAMP)
+                paint.shader = LinearGradient(
+                    points[0],
+                    min(points[1], bottom.toFloat()),
+                    points[2],
+                    max(points[3], topFloat),
+                    colors,
+                    colorPositions,
+                    if (repeat == true) {
+                        Shader.TileMode.REPEAT
+                    } else {
+                        Shader.TileMode.CLAMP
+                    }
+                )
             }
             "RADIAL_GRADIENT" -> {
                 val halfWidth = paint.measureText(name) / 2
                 val height = (bottom - top).toFloat()
-                paint.shader = RadialGradient(x + halfWidth, top + (height / 2), halfWidth, colors, colorPositions, if (repeat == true) Shader.TileMode.REPEAT else Shader.TileMode.CLAMP)
+                paint.shader = RadialGradient(
+                    x + halfWidth,
+                    top + (height / 2),
+                    halfWidth,
+                    colors,
+                    colorPositions,
+                    if (repeat == true) {
+                        Shader.TileMode.REPEAT
+                    } else {
+                        Shader.TileMode.CLAMP
+                    }
+                )
             }
         }
         canvas.drawText(name, x, yOffset, paint)

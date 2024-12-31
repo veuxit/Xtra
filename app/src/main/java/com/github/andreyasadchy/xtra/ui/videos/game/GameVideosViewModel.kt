@@ -41,7 +41,8 @@ class GameVideosViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
-    private val sortGameRepository: SortGameRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
+    private val sortGameRepository: SortGameRepository,
+) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val filter = MutableStateFlow<Filter?>(null)

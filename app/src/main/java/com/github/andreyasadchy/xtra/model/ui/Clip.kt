@@ -22,7 +22,8 @@ class Clip(
     var gameName: String? = null,
     var channelLogin: String? = null,
     var profileImageUrl: String? = null,
-    val videoAnimatedPreviewURL: String? = null) : Parcelable {
+    val videoAnimatedPreviewURL: String? = null,
+) : Parcelable {
 
     val thumbnail: String?
         get() = TwitchApiHelper.getTemplateUrl(thumbnailUrl, "clip")

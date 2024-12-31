@@ -10,4 +10,5 @@ class VideoChatMessage(
     val color: String?,
     val emotes: List<TwitchEmote>?,
     val badges: List<Badge>?,
-    val fullMsg: String?)
+    val fullMsg: String?,
+)

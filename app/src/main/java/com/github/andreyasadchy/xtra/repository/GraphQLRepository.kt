@@ -50,7 +50,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GraphQLRepository @Inject constructor(private val graphQL: GraphQLApi) {
+class GraphQLRepository @Inject constructor(
+    private val graphQL: GraphQLApi,
+) {
 
     suspend fun loadQueryBadges(headers: Map<String, String>, quality: String): QueryResponse {
         val json = buildJsonObject {

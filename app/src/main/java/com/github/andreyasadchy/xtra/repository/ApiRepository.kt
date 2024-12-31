@@ -32,7 +32,8 @@ import javax.inject.Singleton
 class ApiRepository @Inject constructor(
     private val helix: HelixApi,
     private val gql: GraphQLRepository,
-    private val misc: MiscApi) {
+    private val misc: MiscApi,
+) {
 
     suspend fun loadGameBoxArt(gameId: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>): String? = withContext(Dispatchers.IO) {
         try {
@@ -136,7 +137,7 @@ class ApiRepository @Inject constructor(
                         duration = it.lengthSeconds?.toString(),
                         thumbnailUrl = it.previewThumbnailURL,
                         profileImageUrl = it.owner?.profileImageURL,
-                        animatedPreviewURL =  it.animatedPreviewURL,
+                        animatedPreviewURL = it.animatedPreviewURL,
                     )
                 }
             }
@@ -439,29 +440,32 @@ class ApiRepository @Inject constructor(
         try {
             val response = gql.loadQueryBadges(
                 headers = gqlHeaders,
-                quality = when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}.toString()
+                quality = when (emoteQuality) {
+                    "4" -> BadgeImageSize.QUADRUPLE
+                    "3" -> BadgeImageSize.QUADRUPLE
+                    "2" -> BadgeImageSize.DOUBLE
+                    else -> BadgeImageSize.NORMAL
+                }.toString()
             )
             if (checkIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
             response.data!!.badges?.mapNotNull {
-                if (it != null) {
-                    it.setID?.let { setId ->
-                        it.version?.let { version ->
-                            it.imageURL?.let { url ->
-                                TwitchBadge(
-                                    setId = setId,
-                                    version = version,
-                                    url1x = url,
-                                    url2x = url,
-                                    url3x = url,
-                                    url4x = url,
-                                    title = it.title
-                                )
-                            }
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
                         }
                     }
-                } else null
+                }
             } ?: emptyList()
         } catch (e: Exception) {
             if (e.message == "failed integrity check") throw e
@@ -515,29 +519,32 @@ class ApiRepository @Inject constructor(
                 headers = gqlHeaders,
                 id = if (!channelId.isNullOrBlank()) channelId else null,
                 login = if (channelId.isNullOrBlank() && !channelLogin.isNullOrBlank()) channelLogin else null,
-                quality = when (emoteQuality) {"4" -> BadgeImageSize.QUADRUPLE "3" -> BadgeImageSize.QUADRUPLE "2" -> BadgeImageSize.DOUBLE else -> BadgeImageSize.NORMAL}.toString()
+                quality = when (emoteQuality) {
+                    "4" -> BadgeImageSize.QUADRUPLE
+                    "3" -> BadgeImageSize.QUADRUPLE
+                    "2" -> BadgeImageSize.DOUBLE
+                    else -> BadgeImageSize.NORMAL
+                }.toString()
             )
             if (checkIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
             response.data!!.user?.broadcastBadges?.mapNotNull {
-                if (it != null) {
-                    it.setID?.let { setId ->
-                        it.version?.let { version ->
-                            it.imageURL?.let { url ->
-                                TwitchBadge(
-                                    setId = setId,
-                                    version = version,
-                                    url1x = url,
-                                    url2x = url,
-                                    url3x = url,
-                                    url4x = url,
-                                    title = it.title
-                                )
-                            }
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
                         }
                     }
-                } else null
+                }
             } ?: emptyList()
         } catch (e: Exception) {
             if (e.message == "failed integrity check") throw e

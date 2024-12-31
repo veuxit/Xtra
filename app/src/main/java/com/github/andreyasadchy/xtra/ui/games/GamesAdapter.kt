@@ -25,7 +25,8 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
 class GamesAdapter(
-    private val fragment: Fragment) : PagingDataAdapter<Game, GamesAdapter.PagingViewHolder>(
+    private val fragment: Fragment,
+) : PagingDataAdapter<Game, GamesAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Game>() {
         override fun areItemsTheSame(oldItem: Game, newItem: Game): Boolean =
             oldItem.gameId == newItem.gameId
@@ -45,7 +46,8 @@ class GamesAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentGamesListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Game?) {
             with(binding) {
                 if (item != null) {
@@ -67,13 +69,13 @@ class GamesAdapter(
                             }
                         )
                     }
-                    if (item.boxArt != null)  {
+                    if (item.boxArt != null) {
                         gameImage.visible()
                         gameImage.loadImage(fragment, item.boxArt)
                     } else {
                         gameImage.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                     } else {
@@ -95,7 +97,10 @@ class GamesAdapter(
                         tagsLayout.removeAllViews()
                         tagsLayout.visible()
                         val tagsFlowLayout = Flow(context).apply {
-                            layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            layoutParams = ConstraintLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply {
                                 topToTop = tagsLayout.id
                                 bottomToBottom = tagsLayout.id
                                 startToStart = tagsLayout.id
@@ -116,9 +121,11 @@ class GamesAdapter(
                             }
                             if (tag.id != null) {
                                 text.setOnClickListener {
-                                    fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
-                                        tags = arrayOf(tag.id)
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        GamesFragmentDirections.actionGlobalGamesFragment(
+                                            tags = arrayOf(tag.id)
+                                        )
+                                    )
                                 }
                             }
                             val padding = context.convertDpToPixels(5f)

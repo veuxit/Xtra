@@ -27,7 +27,8 @@ import com.github.andreyasadchy.xtra.util.visible
 
 class ChannelClipsAdapter(
     private val fragment: Fragment,
-    private val showDownloadDialog: (Clip) -> Unit) : PagingDataAdapter<Clip, ChannelClipsAdapter.PagingViewHolder>(
+    private val showDownloadDialog: (Clip) -> Unit,
+) : PagingDataAdapter<Clip, ChannelClipsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Clip>() {
         override fun areItemsTheSame(oldItem: Clip, newItem: Clip): Boolean =
             oldItem.id == newItem.id
@@ -48,7 +49,8 @@ class ChannelClipsAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentVideosListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Clip?) {
             with(binding) {
                 if (item != null) {
@@ -74,7 +76,11 @@ class ChannelClipsAdapter(
                         (fragment.activity as MainActivity).startClip(item)
                     }
                     root.setOnLongClickListener { showDownloadDialog(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     if (item.uploadDate != null) {
                         val text = item.uploadDate.let { TwitchApiHelper.formatTimeString(context, it) }
                         if (text != null) {
@@ -98,13 +104,13 @@ class ChannelClipsAdapter(
                     } else {
                         duration.gone()
                     }
-                    if (item.title != null && item.title != "")  {
+                    if (item.title != null && item.title != "") {
                         title.visible()
                         title.text = item.title.trim()
                     } else {
                         title.gone()
                     }
-                    if (item.gameName != null)  {
+                    if (item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -115,7 +121,7 @@ class ChannelClipsAdapter(
                         PopupMenu(context, it).apply {
                             inflate(R.menu.media_item)
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.share -> {
                                         context.startActivity(Intent.createChooser(Intent().apply {

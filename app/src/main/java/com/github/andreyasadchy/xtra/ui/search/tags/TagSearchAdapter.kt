@@ -20,7 +20,8 @@ import com.github.andreyasadchy.xtra.util.visible
 
 class TagSearchAdapter(
     private val fragment: Fragment,
-    private val args: TagSearchFragmentArgs) : PagingDataAdapter<Tag, TagSearchAdapter.PagingViewHolder>(
+    private val args: TagSearchFragmentArgs,
+) : PagingDataAdapter<Tag, TagSearchAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Tag>() {
         override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
             oldItem.name == newItem.name
@@ -40,7 +41,8 @@ class TagSearchAdapter(
     inner class PagingViewHolder(
         private val binding: FragmentSearchChannelsListItemBinding,
         private val fragment: Fragment,
-        private val args: TagSearchFragmentArgs): RecyclerView.ViewHolder(binding.root) {
+        private val args: TagSearchFragmentArgs,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Tag?) {
             with(binding) {
                 if (item != null) {
@@ -54,9 +56,11 @@ class TagSearchAdapter(
                     if (item.scope == "CATEGORY") {
                         if (item.id != null) {
                             root.setOnClickListener {
-                                fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
-                                    tags = arrayOf(item.id)
-                                ))
+                                fragment.findNavController().navigate(
+                                    GamesFragmentDirections.actionGlobalGamesFragment(
+                                        tags = arrayOf(item.id)
+                                    )
+                                )
                             }
                         }
                     } else {
@@ -83,9 +87,11 @@ class TagSearchAdapter(
                                 }
                             } else {
                                 root.setOnClickListener {
-                                    fragment.findNavController().navigate(TopFragmentDirections.actionGlobalTopFragment(
-                                        tags = arrayOf(item.name)
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        TopFragmentDirections.actionGlobalTopFragment(
+                                            tags = arrayOf(item.name)
+                                        )
+                                    )
                                 }
                             }
                         }

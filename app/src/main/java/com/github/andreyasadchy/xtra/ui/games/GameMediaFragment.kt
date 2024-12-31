@@ -75,7 +75,11 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -84,7 +88,8 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
         }
         with(binding) {
             val activity = requireActivity() as MainActivity
-            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()
+            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                    !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()
             val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
             val navController = findNavController()
             val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
@@ -99,10 +104,24 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                                 requireContext().getAlertDialogBuilder()
                                     .setMessage(requireContext().getString(R.string.unfollow_channel, args.gameName))
                                     .setNegativeButton(getString(R.string.no), null)
-                                    .setPositiveButton(getString(R.string.yes)) { _, _ -> viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId) }
+                                    .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                        viewModel.deleteFollowGame(
+                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            setting,
+                                            args.gameId
+                                        )
+                                    }
                                     .show()
                             } else {
-                                viewModel.saveFollowGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameSlug, args.gameName)
+                                viewModel.saveFollowGame(
+                                    requireContext().filesDir.path,
+                                    TwitchApiHelper.getHelixHeaders(requireContext()),
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    setting,
+                                    args.gameId,
+                                    args.gameSlug,
+                                    args.gameName
+                                )
                             }
                         }
                         true
@@ -229,10 +248,21 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
     override fun initialize() {
         val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (setting < 2) {
-            viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
+            viewModel.isFollowingGame(
+                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                setting,
+                args.gameId,
+                args.gameName
+            )
         }
         if (args.updateLocal) {
-            viewModel.updateLocalGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), args.gameId, args.gameName)
+            viewModel.updateLocalGame(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                args.gameId,
+                args.gameName
+            )
         }
     }
 
@@ -266,11 +296,28 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                         "refresh" -> {
                             val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
                             if (setting < 2) {
-                                viewModel.isFollowingGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, args.gameId, args.gameName)
+                                viewModel.isFollowingGame(
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    setting,
+                                    args.gameId,
+                                    args.gameName
+                                )
                             }
                         }
-                        "follow" -> viewModel.saveFollowGame(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId, args.gameSlug, args.gameName)
-                        "unfollow" -> viewModel.deleteFollowGame(TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, args.gameId)
+                        "follow" -> viewModel.saveFollowGame(
+                            requireContext().filesDir.path,
+                            TwitchApiHelper.getHelixHeaders(requireContext()),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            args.gameId,
+                            args.gameSlug,
+                            args.gameName
+                        )
+                        "unfollow" -> viewModel.deleteFollowGame(
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            args.gameId
+                        )
                     }
                 }
             }

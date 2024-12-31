@@ -35,7 +35,8 @@ import com.github.andreyasadchy.xtra.util.visible
 class StreamsAdapter(
     private val fragment: Fragment,
     private val args: GamePagerFragmentArgs? = null,
-    private val hideGame: Boolean = false) : PagingDataAdapter<Stream, StreamsAdapter.PagingViewHolder>(
+    private val hideGame: Boolean = false,
+) : PagingDataAdapter<Stream, StreamsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Stream>() {
         override fun areItemsTheSame(oldItem: Stream, newItem: Stream): Boolean =
             oldItem.id == newItem.id
@@ -59,18 +60,23 @@ class StreamsAdapter(
         private val binding: FragmentStreamsListItemBinding,
         private val fragment: Fragment,
         private val args: GamePagerFragmentArgs?,
-        private val hideGame: Boolean): RecyclerView.ViewHolder(binding.root) {
+        private val hideGame: Boolean,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Stream?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    val channelListener: (View) -> Unit = { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo,
-                        streamId = item.id
-                    )) }
+                    val channelListener: (View) -> Unit = {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                                streamId = item.id
+                            )
+                        )
+                    }
                     val gameListener: (View) -> Unit = {
                         fragment.findNavController().navigate(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
@@ -91,14 +97,18 @@ class StreamsAdapter(
                     root.setOnClickListener {
                         (fragment.activity as MainActivity).startStream(item)
                     }
-                    if (item.channelLogo != null)  {
+                    if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        )
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
                     }
-                    if (item.channelName != null)  {
+                    if (item.channelName != null) {
                         username.visible()
                         username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
@@ -113,13 +123,13 @@ class StreamsAdapter(
                     } else {
                         username.gone()
                     }
-                    if (item.title != null && item.title != "")  {
+                    if (item.title != null && item.title != "") {
                         title.visible()
                         title.text = item.title?.trim()
                     } else {
                         title.gone()
                     }
-                    if (!hideGame && item.gameName != null)  {
+                    if (!hideGame && item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -128,7 +138,12 @@ class StreamsAdapter(
                     }
                     if (item.thumbnailUrl != null) {
                         thumbnail.visible()
-                        thumbnail.loadImage(fragment, item.thumbnail, true, diskCacheStrategy = DiskCacheStrategy.NONE)
+                        thumbnail.loadImage(
+                            fragment,
+                            item.thumbnail,
+                            changes = true,
+                            diskCacheStrategy = DiskCacheStrategy.NONE
+                        )
                     } else {
                         thumbnail.gone()
                     }
@@ -164,7 +179,10 @@ class StreamsAdapter(
                         tagsLayout.removeAllViews()
                         tagsLayout.visible()
                         val tagsFlowLayout = Flow(context).apply {
-                            layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            layoutParams = ConstraintLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply {
                                 topToTop = tagsLayout.id
                                 bottomToBottom = tagsLayout.id
                                 startToStart = tagsLayout.id
@@ -185,15 +203,19 @@ class StreamsAdapter(
                             }
                             text.setOnClickListener {
                                 if (args?.gameId != null && args.gameName != null) {
-                                    fragment.findNavController().navigate(GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                        gameId = args.gameId,
-                                        gameName = args.gameName,
-                                        tags = arrayOf(tag),
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                            gameId = args.gameId,
+                                            gameName = args.gameName,
+                                            tags = arrayOf(tag),
+                                        )
+                                    )
                                 } else {
-                                    fragment.findNavController().navigate(TopFragmentDirections.actionGlobalTopFragment(
-                                        tags = arrayOf(tag)
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        TopFragmentDirections.actionGlobalTopFragment(
+                                            tags = arrayOf(tag)
+                                        )
+                                    )
                                 }
                             }
                             val padding = context.convertDpToPixels(5f)

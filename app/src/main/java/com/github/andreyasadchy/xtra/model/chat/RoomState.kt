@@ -5,4 +5,5 @@ class RoomState(
     val followers: String?,
     val unique: String?,
     val slow: String?,
-    val subs: String?)
+    val subs: String?,
+)

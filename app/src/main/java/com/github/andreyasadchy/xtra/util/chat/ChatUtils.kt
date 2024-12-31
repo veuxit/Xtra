@@ -84,12 +84,14 @@ object ChatUtils {
                 systemMsg = systemMsg,
                 msgId = prefixes["msg-id"],
                 reward = prefixes["custom-reward-id"]?.let { ChannelPointReward(id = it) },
-                reply = prefixes["reply-thread-parent-msg-id"]?.let { Reply(
-                    threadParentId = it,
-                    userLogin = prefixes["reply-parent-user-login"],
-                    userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
-                    message = prefixes["reply-parent-msg-body"]?.replace("\\s", " ")
-                ) },
+                reply = prefixes["reply-thread-parent-msg-id"]?.let {
+                    Reply(
+                        threadParentId = it,
+                        userLogin = prefixes["reply-parent-user-login"],
+                        userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
+                        message = prefixes["reply-parent-msg-body"]?.replace("\\s", " ")
+                    )
+                },
                 timestamp = prefixes["tmi-sent-ts"]?.toLong(),
                 fullMsg = message
             )
@@ -103,12 +105,14 @@ object ChatUtils {
         val messageInfo = parts[1]
         val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
         val msg = if (msgIndex != -1) messageInfo.substring(msgIndex + 1) else null
-        return Pair(ChatMessage(
-            userLogin = login,
-            message = msg,
-            timestamp = prefixes["tmi-sent-ts"]?.toLong(),
-            fullMsg = message
-        ), prefixes["target-msg-id"])
+        return Pair(
+            ChatMessage(
+                userLogin = login,
+                message = msg,
+                timestamp = prefixes["tmi-sent-ts"]?.toLong(),
+                fullMsg = message
+            ), prefixes["target-msg-id"]
+        )
     }
 
     fun parseClearChat(context: Context, message: String): ChatMessage {
@@ -142,10 +146,12 @@ object ChatUtils {
         val messageInfo = parts[1]
         val msgId = prefixes["msg-id"]
         val text = messageInfo.substring(messageInfo.indexOf(":", messageInfo.indexOf(":") + 1) + 1)
-        return Pair(ChatMessage(
-            systemMsg = TwitchApiHelper.getNoticeString(context, msgId, text),
-            fullMsg = message
-        ), msgId == "unraid_success")
+        return Pair(
+            ChatMessage(
+                systemMsg = TwitchApiHelper.getNoticeString(context, msgId, text),
+                fullMsg = message
+            ), msgId == "unraid_success"
+        )
     }
 
     fun parseRoomState(message: String): RoomState {

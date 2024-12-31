@@ -35,7 +35,8 @@ class FollowedChannelsViewModel @Inject constructor(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val filter = MutableStateFlow<Filter?>(null)
     val sortText = MutableStateFlow<CharSequence?>(null)

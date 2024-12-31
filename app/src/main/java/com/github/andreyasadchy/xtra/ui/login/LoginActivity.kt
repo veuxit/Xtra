@@ -135,8 +135,8 @@ class LoginActivity : AppCompatActivity() {
             "channel:manage:raids", // raids
             "channel:manage:vips", // channels/vips
             "channel:moderate",
-            "chat:edit", // TODO remove
-            "chat:read", // TODO remove
+            "chat:edit", // irc
+            "chat:read", // irc
             "moderator:manage:announcements", // chat/announcements
             "moderator:manage:banned_users", // moderation/bans
             "moderator:manage:chat_messages", // moderation/chat
@@ -169,7 +169,10 @@ class LoginActivity : AppCompatActivity() {
                     }
                     .setNeutralButton(R.string.to_enter_url) { _, _ ->
                         val editText = EditText(this@LoginActivity).apply {
-                            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
                         }
                         this@LoginActivity.getAlertDialogBuilder()
                             .setTitle(R.string.enter_url)
@@ -378,14 +381,16 @@ class LoginActivity : AppCompatActivity() {
                                     when (api) {
                                         C.HELIX -> TwitchApiHelper.addTokenPrefixHelix(token)
                                         else -> TwitchApiHelper.addTokenPrefixGQL(token)
-                                    })
-                                if (!response?.clientId.isNullOrBlank() && response?.clientId ==
-                                    when (api) {
+                                    }
+                                )
+                                if (response.clientId.isNotBlank() &&
+                                    response.clientId == when (api) {
                                         C.HELIX -> helixClientId
                                         else -> gqlClientId
-                                    }) {
-                                    response?.userId?.let { userId = it }
-                                    response?.login?.let { userLogin = it }
+                                    }
+                                ) {
+                                    response.userId?.let { userId = it }
+                                    response.login?.let { userLogin = it }
                                     when (api) {
                                         C.HELIX -> helixToken = token
                                         C.GQL -> gqlToken = token

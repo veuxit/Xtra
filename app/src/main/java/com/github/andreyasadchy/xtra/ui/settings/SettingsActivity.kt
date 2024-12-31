@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.settings
 
 import android.Manifest
-import android.app.Activity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.ContentResolver
@@ -121,11 +120,11 @@ class SettingsActivity : AppCompatActivity() {
             super.onCreate(savedInstanceState)
             changed = savedInstanceState?.getBoolean(KEY_CHANGED) == true
             if (changed) {
-                requireActivity().setResult(Activity.RESULT_OK)
+                requireActivity().setResult(RESULT_OK)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 backupResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                    if (result.resultCode == Activity.RESULT_OK) {
+                    if (result.resultCode == RESULT_OK) {
                         result.data?.data?.let {
                             viewModel.backupSettings(it.toString())
                         }
@@ -133,7 +132,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } else {
                 backupResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                    if (result.resultCode == Activity.RESULT_OK) {
+                    if (result.resultCode == RESULT_OK) {
                         result.data?.data?.let {
                             val isShared = it.scheme == ContentResolver.SCHEME_CONTENT
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && isShared) {
@@ -161,7 +160,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 restoreResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                    if (result.resultCode == Activity.RESULT_OK) {
+                    if (result.resultCode == RESULT_OK) {
                         val list = mutableListOf<String>()
                         result.data?.clipData?.let { clipData ->
                             for (i in 0 until clipData.itemCount) {
@@ -182,7 +181,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } else {
                 restoreResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                    if (result.resultCode == Activity.RESULT_OK) {
+                    if (result.resultCode == RESULT_OK) {
                         val list = mutableListOf<String>()
                         result.data?.clipData?.let { clipData ->
                             for (i in 0 until clipData.itemCount) {
@@ -234,9 +233,14 @@ class SettingsActivity : AppCompatActivity() {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.updateUrl.collectLatest {
                         if (it != null) {
-                            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
-                                !requireContext().packageManager.canRequestPackageInstalls()) {
-                                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                                !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
+                                !requireContext().packageManager.canRequestPackageInstalls()
+                            ) {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    Uri.parse("package:${requireContext().packageName}")
+                                )
                                 if (intent.resolveActivity(requireContext().packageManager) != null) {
                                     requireContext().startActivity(intent)
                                 }
@@ -302,13 +306,15 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
                 setOnPreferenceChangeListener { _, value ->
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(
-                        if (value.toString() == "auto") {
-                            null
-                        } else {
-                            value.toString()
-                        }
-                    ))
+                    AppCompatDelegate.setApplicationLocales(
+                        LocaleListCompat.forLanguageTags(
+                            if (value.toString() == "auto") {
+                                null
+                            } else {
+                                value.toString()
+                            }
+                        )
+                    )
                     true
                 }
             }
@@ -424,9 +430,15 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<SwitchPreferenceCompat>("update_check_enabled")?.setOnPreferenceChangeListener { _, newValue ->
-                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && newValue == true && !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
-                    !requireContext().packageManager.canRequestPackageInstalls()) {
-                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                    newValue == true &&
+                    !requireContext().prefs().getBoolean(C.UPDATE_USE_BROWSER, false) &&
+                    !requireContext().packageManager.canRequestPackageInstalls()
+                ) {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${requireContext().packageName}")
+                    )
                     if (intent.resolveActivity(requireContext().packageManager) != null) {
                         requireContext().startActivity(intent)
                     }
@@ -443,9 +455,15 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<SwitchPreferenceCompat>("update_use_browser")?.setOnPreferenceChangeListener { _, newValue ->
-                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && newValue == false && requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
-                    !requireContext().packageManager.canRequestPackageInstalls()) {
-                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${requireContext().packageName}"))
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                    newValue == false &&
+                    requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                    !requireContext().packageManager.canRequestPackageInstalls()
+                ) {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${requireContext().packageName}")
+                    )
                     if (intent.resolveActivity(requireContext().packageManager) != null) {
                         requireContext().startActivity(intent)
                     }
@@ -504,7 +522,8 @@ class SettingsActivity : AppCompatActivity() {
 
             findPreference<SwitchPreferenceCompat>("live_notifications_enabled")?.setOnPreferenceChangeListener { _, newValue ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                    ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                ) {
                     ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
                 }
                 viewModel.toggleNotifications(
@@ -540,7 +559,7 @@ class SettingsActivity : AppCompatActivity() {
         private fun setResult() {
             if (!changed) {
                 changed = true
-                requireActivity().setResult(Activity.RESULT_OK)
+                requireActivity().setResult(RESULT_OK)
             }
         }
 
@@ -557,7 +576,7 @@ class SettingsActivity : AppCompatActivity() {
             super.onCreate(savedInstanceState)
             changed = savedInstanceState?.getBoolean(SettingsFragment.KEY_CHANGED) == true
             if (changed) {
-                requireActivity().setResult(Activity.RESULT_OK)
+                requireActivity().setResult(RESULT_OK)
             }
         }
 
@@ -866,7 +885,10 @@ class SettingsActivity : AppCompatActivity() {
                 newId++
                 view.addView(TextView(requireContext()).apply {
                     text = entry.key
-                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
                         setMargins(context.convertDpToPixels(10F), context.convertDpToPixels(3F), 0, context.convertDpToPixels(3F))
                     }
                     context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceTitleMedium)).use {
@@ -874,12 +896,14 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 })
                 val list = (requireContext().prefs().getString(entry.value.first, null)?.split(',') ?: entry.value.second).map {
-                    Pair(when (it) {
-                        C.HELIX -> requireContext().getString(R.string.api_helix)
-                        C.GQL -> requireContext().getString(R.string.api_gql)
-                        C.GQL_PERSISTED_QUERY -> requireContext().getString(R.string.api_gql_persisted_query)
-                        else -> ""
-                    }, it)
+                    Pair(
+                        when (it) {
+                            C.HELIX -> requireContext().getString(R.string.api_helix)
+                            C.GQL -> requireContext().getString(R.string.api_gql)
+                            C.GQL_PERSISTED_QUERY -> requireContext().getString(R.string.api_gql_persisted_query)
+                            else -> ""
+                        }, it
+                    )
                 }
                 view.addView((inflater.inflate(R.layout.drag_list_layout, container, false) as DragListView).apply {
                     id = newId

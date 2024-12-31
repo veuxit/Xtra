@@ -54,7 +54,12 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.saveBookmark(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                it
+            )
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -67,7 +72,8 @@ class FollowedVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Video
                     sort = sortValues?.videoSort,
                     type = sortValues?.videoType,
                 )
-                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_and_period,
                     requireContext().getString(
                         when (viewModel.sort) {
                             VideosSortDialog.SORT_TIME -> R.string.upload_date

@@ -24,7 +24,8 @@ import javax.inject.Inject
 class GameSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi) : ViewModel() {
+    private val helix: HelixApi,
+) : ViewModel() {
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query

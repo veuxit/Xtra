@@ -35,7 +35,8 @@ class FollowedVideosViewModel @Inject constructor(
     bookmarksRepository: BookmarksRepository,
     okHttpClient: OkHttpClient,
     private val graphQLRepository: GraphQLRepository,
-    private val sortChannelRepository: SortChannelRepository) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
+    private val sortChannelRepository: SortChannelRepository,
+) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
     val filter = MutableStateFlow<Filter?>(null)
     val sortText = MutableStateFlow<CharSequence?>(null)

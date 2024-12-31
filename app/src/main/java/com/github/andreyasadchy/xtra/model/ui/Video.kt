@@ -22,7 +22,8 @@ class Video(
     var gameName: String? = null,
     var profileImageUrl: String? = null,
     val tags: List<Tag>? = null,
-    val animatedPreviewURL: String? = null) : Parcelable {
+    val animatedPreviewURL: String? = null,
+) : Parcelable {
 
     val thumbnail: String?
         get() = TwitchApiHelper.getTemplateUrl(thumbnailUrl, "video")

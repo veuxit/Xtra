@@ -10,7 +10,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class MessageClickedViewModel @Inject constructor(private val repository: ApiRepository) : ViewModel() {
+class MessageClickedViewModel @Inject constructor(
+    private val repository: ApiRepository,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

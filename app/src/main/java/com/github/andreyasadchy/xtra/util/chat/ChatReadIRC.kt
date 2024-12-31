@@ -23,7 +23,8 @@ class ChatReadIRC(
     private val onClearMessage: (String) -> Unit,
     private val onClearChat: (String) -> Unit,
     private val onNotice: (String) -> Unit,
-    private val onRoomState: (String) -> Unit) : Thread() {
+    private val onRoomState: (String) -> Unit,
+) : Thread() {
     private var socketIn: Socket? = null
     private lateinit var readerIn: BufferedReader
     private lateinit var writerIn: BufferedWriter

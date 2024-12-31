@@ -28,7 +28,8 @@ class GameVideosDataSource(
     private val gqlSort: String?,
     private val gqlApi: GraphQLRepository,
     private val checkIntegrity: Boolean,
-    private val apiPref: List<String>) : PagingSource<Int, Video>() {
+    private val apiPref: List<String>,
+) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -156,12 +157,12 @@ class GameVideosDataSource(
                             name = tag.localizedName
                         )
                     },
-                    animatedPreviewURL =  it.animatedPreviewURL
+                    animatedPreviewURL = it.animatedPreviewURL
                 )
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 
@@ -194,12 +195,12 @@ class GameVideosDataSource(
                             name = tag.localizedName
                         )
                     },
-                    animatedPreviewURL =  it.animatedPreviewURL
+                    animatedPreviewURL = it.animatedPreviewURL
                 )
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage ?: true
+        nextPage = data.pageInfo?.hasNextPage != false
         return list
     }
 

@@ -20,7 +20,8 @@ class ChannelClipsDataSource(
     private val gqlPeriod: String?,
     private val gqlApi: GraphQLRepository,
     private val checkIntegrity: Boolean,
-    private val apiPref: List<String>) : PagingSource<Int, Clip>() {
+    private val apiPref: List<String>,
+) : PagingSource<Int, Clip>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
@@ -146,7 +147,7 @@ class ChannelClipsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.clips.pageInfo?.hasNextPage ?: true
+        nextPage = data.clips.pageInfo?.hasNextPage != false
         return list
     }
 
@@ -176,7 +177,7 @@ class ChannelClipsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.clips.pageInfo?.hasNextPage ?: true
+        nextPage = data.clips.pageInfo?.hasNextPage != false
         return list
     }
 

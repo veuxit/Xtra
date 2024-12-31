@@ -25,7 +25,8 @@ class ChatReplayManager @Inject constructor(
     private val onMessage: (ChatMessage) -> Unit,
     private val clearMessages: () -> Unit,
     private val getIntegrityToken: () -> Unit,
-    private val coroutineScope: CoroutineScope) {
+    private val coroutineScope: CoroutineScope,
+) {
 
     private var cursor: String? = null
     private val list = mutableListOf<VideoChatMessage>()
@@ -128,18 +129,20 @@ class ChatReplayManager @Inject constructor(
                     if (!isActive) {
                         break
                     }
-                    onMessage(ChatMessage(
-                        id = message.id,
-                        userId = message.userId,
-                        userLogin = message.userLogin,
-                        userName = message.userName,
-                        message = message.message,
-                        color = message.color,
-                        emotes = message.emotes,
-                        badges = message.badges,
-                        bits = 0,
-                        fullMsg = message.fullMsg
-                    ))
+                    onMessage(
+                        ChatMessage(
+                            id = message.id,
+                            userId = message.userId,
+                            userLogin = message.userLogin,
+                            userName = message.userName,
+                            message = message.message,
+                            color = message.color,
+                            emotes = message.emotes,
+                            badges = message.badges,
+                            bits = 0,
+                            fullMsg = message.fullMsg
+                        )
+                    )
                     if (list.size <= 25 && !cursor.isNullOrBlank() && !isLoading) {
                         load()
                     }

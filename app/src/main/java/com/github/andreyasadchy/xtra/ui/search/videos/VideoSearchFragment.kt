@@ -46,7 +46,12 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.saveBookmark(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                it
+            )
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -65,15 +70,22 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
                     pagingAdapter.loadStateFlow.collectLatest { loadState ->
                         progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
                         nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0 && viewModel.query.value.isNotBlank()
-                        if ((loadState.refresh as? LoadState.Error ?: loadState.append as? LoadState.Error ?: loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
-                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                        if ((loadState.refresh as? LoadState.Error ?:
+                            loadState.append as? LoadState.Error ?:
+                            loadState.prepend as? LoadState.Error)?.error?.message == "failed integrity check" &&
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                        ) {
                             IntegrityDialog.show(childFragmentManager, "refresh")
                         }
                     }
                 }
             }
         }
-        if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) && TwitchApiHelper.isIntegrityTokenExpired(requireContext())) {
+        if (requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true) &&
+            TwitchApiHelper.isIntegrityTokenExpired(requireContext())
+        ) {
             IntegrityDialog.show(childFragmentManager, "refresh")
         }
         initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)

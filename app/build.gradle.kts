@@ -65,7 +65,6 @@ android {
             "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",
             "androidx.hilt:hilt-work:1.1.0",
-            "androidx.lifecycle:lifecycle-livedata:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-process:2.7.0-alpha03",
             "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0-alpha03",
             "androidx.media3:media3-exoplayer:1.2.1",

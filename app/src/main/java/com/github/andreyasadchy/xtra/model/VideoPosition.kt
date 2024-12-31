@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 class VideoPosition(
     @PrimaryKey
     val id: Long,
-    val position: Long)
+    val position: Long,
+)

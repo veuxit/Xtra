@@ -23,7 +23,8 @@ import javax.inject.Inject
 class GamePagerViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val localFollowsGame: LocalFollowGameRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

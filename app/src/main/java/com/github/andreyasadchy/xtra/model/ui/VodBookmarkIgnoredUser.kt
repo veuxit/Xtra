@@ -8,4 +8,5 @@ import androidx.room.PrimaryKey
 class VodBookmarkIgnoredUser(
     @PrimaryKey
     @ColumnInfo(name = "user_id")
-    val userId: String)
+    val userId: String,
+)

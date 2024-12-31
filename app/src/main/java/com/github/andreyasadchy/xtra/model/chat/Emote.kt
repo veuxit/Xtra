@@ -9,7 +9,8 @@ class Emote(
     val url4x: String? = null,
     val format: String? = null,
     val isAnimated: Boolean = true,
-    val isZeroWidth: Boolean = false) {
+    val isZeroWidth: Boolean = false,
+) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

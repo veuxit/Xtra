@@ -40,55 +40,55 @@ class XtraModule {
     @Provides
     fun providesHelixApi(client: OkHttpClient, jsonConverterFactory: Converter.Factory): HelixApi {
         return Retrofit.Builder()
-                .baseUrl("https://api.twitch.tv/helix/")
-                .client(client)
-                .addConverterFactory(jsonConverterFactory)
-                .build()
-                .create(HelixApi::class.java)
+            .baseUrl("https://api.twitch.tv/helix/")
+            .client(client)
+            .addConverterFactory(jsonConverterFactory)
+            .build()
+            .create(HelixApi::class.java)
     }
 
     @Singleton
     @Provides
     fun providesUsherApi(client: OkHttpClient, jsonConverterFactory: Converter.Factory): UsherApi {
         return Retrofit.Builder()
-                .baseUrl("https://usher.ttvnw.net/")
-                .client(client)
-                .addConverterFactory(jsonConverterFactory)
-                .build()
-                .create(UsherApi::class.java)
+            .baseUrl("https://usher.ttvnw.net/")
+            .client(client)
+            .addConverterFactory(jsonConverterFactory)
+            .build()
+            .create(UsherApi::class.java)
     }
 
     @Singleton
     @Provides
     fun providesMiscApi(client: OkHttpClient, jsonConverterFactory: Converter.Factory): MiscApi {
         return Retrofit.Builder()
-                .baseUrl("https://api.twitch.tv/") //placeholder url
-                .client(client)
-                .addConverterFactory(jsonConverterFactory)
-                .build()
-                .create(MiscApi::class.java)
+            .baseUrl("https://api.twitch.tv/") //placeholder url
+            .client(client)
+            .addConverterFactory(jsonConverterFactory)
+            .build()
+            .create(MiscApi::class.java)
     }
 
     @Singleton
     @Provides
     fun providesIdApi(client: OkHttpClient, jsonConverterFactory: Converter.Factory): IdApi {
         return Retrofit.Builder()
-                .baseUrl("https://id.twitch.tv/oauth2/")
-                .client(client)
-                .addConverterFactory(jsonConverterFactory)
-                .build()
-                .create(IdApi::class.java)
+            .baseUrl("https://id.twitch.tv/oauth2/")
+            .client(client)
+            .addConverterFactory(jsonConverterFactory)
+            .build()
+            .create(IdApi::class.java)
     }
 
     @Singleton
     @Provides
     fun providesGraphQLApi(client: OkHttpClient, jsonConverterFactory: Converter.Factory): GraphQLApi {
         return Retrofit.Builder()
-                .baseUrl("https://gql.twitch.tv/gql/")
-                .client(client)
-                .addConverterFactory(jsonConverterFactory)
-                .build()
-                .create(GraphQLApi::class.java)
+            .baseUrl("https://gql.twitch.tv/gql/")
+            .client(client)
+            .addConverterFactory(jsonConverterFactory)
+            .build()
+            .create(GraphQLApi::class.java)
     }
 
     @Singleton

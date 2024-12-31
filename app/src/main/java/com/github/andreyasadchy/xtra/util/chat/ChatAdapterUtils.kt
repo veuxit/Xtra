@@ -272,7 +272,20 @@ object ChatAdapterUtils {
                         when (paint.type) {
                             "LINEAR_GRADIENT", "RADIAL_GRADIENT" -> {
                                 if (paint.colors != null && paint.colorPositions != null) {
-                                    builder.setSpan(NamePaintSpan(userName, paint.type, paint.colors, paint.colorPositions, paint.angle, paint.repeat, paint.shadows), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                    builder.setSpan(
+                                        NamePaintSpan(
+                                            userName,
+                                            paint.type,
+                                            paint.colors,
+                                            paint.colorPositions,
+                                            paint.angle,
+                                            paint.repeat,
+                                            paint.shadows
+                                        ),
+                                        builderIndex,
+                                        builderIndex + userName.length,
+                                        SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
                                 }
                             }
                             "URL" -> {
@@ -516,7 +529,12 @@ object ChatAdapterUtils {
                             if (value.startsWith('@') && useBoldNames) {
                                 builder.setSpan(StyleSpan(Typeface.BOLD), builderIndex, builderIndex + value.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                             }
-                            if (!wasMentioned && !loggedInUser.isNullOrBlank() && value.contains(loggedInUser, true) && chatMessage.userId != null && chatMessage.userLogin != loggedInUser) {
+                            if (!wasMentioned &&
+                                !loggedInUser.isNullOrBlank() &&
+                                value.contains(loggedInUser, true) &&
+                                chatMessage.userId != null &&
+                                chatMessage.userLogin != loggedInUser
+                            ) {
                                 wasMentioned = true
                             }
                         }
@@ -607,7 +625,18 @@ object ChatAdapterUtils {
                             (resource as Animatable).start()
                         }
                         try {
-                            builder.setSpan(NamePaintImageSpan(imagePaint.second, paint.shadows, (itemView.background as? ColorDrawable)?.color, backgroundColor, resource), imagePaint.third, imagePaint.third + imagePaint.second.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            builder.setSpan(
+                                NamePaintImageSpan(
+                                    imagePaint.second,
+                                    paint.shadows,
+                                    (itemView.background as? ColorDrawable)?.color,
+                                    backgroundColor,
+                                    resource
+                                ),
+                                imagePaint.third,
+                                imagePaint.third + imagePaint.second.length,
+                                SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
                         } catch (e: IndexOutOfBoundsException) {
                         }
                         bind(builder)

@@ -74,11 +74,13 @@ class StreamsSortDialog : BottomSheetDialogFragment() {
                 dismiss()
             }
             selectTags.setOnClickListener {
-                findNavController().navigate(TagSearchFragmentDirections.actionGlobalTagSearchFragment(
-                    gameId = parentFragment?.arguments?.getString(C.GAME_ID),
-                    gameSlug = parentFragment?.arguments?.getString(C.GAME_SLUG),
-                    gameName = parentFragment?.arguments?.getString(C.GAME_NAME)
-                ))
+                findNavController().navigate(
+                    TagSearchFragmentDirections.actionGlobalTagSearchFragment(
+                        gameId = parentFragment?.arguments?.getString(C.GAME_ID),
+                        gameSlug = parentFragment?.arguments?.getString(C.GAME_SLUG),
+                        gameName = parentFragment?.arguments?.getString(C.GAME_NAME)
+                    )
+                )
                 dismiss()
             }
         }

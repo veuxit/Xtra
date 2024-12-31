@@ -29,7 +29,8 @@ import com.github.andreyasadchy.xtra.util.visible
 class ClipsAdapter(
     private val fragment: Fragment,
     private val showDownloadDialog: (Clip) -> Unit,
-    private val hideGame: Boolean = false) : PagingDataAdapter<Clip, ClipsAdapter.PagingViewHolder>(
+    private val hideGame: Boolean = false,
+) : PagingDataAdapter<Clip, ClipsAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Clip>() {
         override fun areItemsTheSame(oldItem: Clip, newItem: Clip): Boolean =
             oldItem.id == newItem.id
@@ -51,17 +52,22 @@ class ClipsAdapter(
     inner class PagingViewHolder(
         private val binding: FragmentVideosListItemBinding,
         private val fragment: Fragment,
-        private val hideGame: Boolean): RecyclerView.ViewHolder(binding.root) {
+        private val hideGame: Boolean,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Clip?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    val channelListener: (View) -> Unit = { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo,
-                    )) }
+                    val channelListener: (View) -> Unit = {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                            )
+                        )
+                    }
                     val gameListener: (View) -> Unit = {
                         fragment.findNavController().navigate(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
@@ -83,7 +89,11 @@ class ClipsAdapter(
                         (fragment.activity as MainActivity).startClip(item)
                     }
                     root.setOnLongClickListener { showDownloadDialog(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     if (item.uploadDate != null) {
                         val text = item.uploadDate.let { TwitchApiHelper.formatTimeString(context, it) }
                         if (text != null) {
@@ -107,14 +117,18 @@ class ClipsAdapter(
                     } else {
                         duration.gone()
                     }
-                    if (item.channelLogo != null)  {
+                    if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        )
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
                     }
-                    if (item.channelName != null)  {
+                    if (item.channelName != null) {
                         username.visible()
                         username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
@@ -129,13 +143,13 @@ class ClipsAdapter(
                     } else {
                         username.gone()
                     }
-                    if (item.title != null && item.title != "")  {
+                    if (item.title != null && item.title != "") {
                         title.visible()
                         title.text = item.title.trim()
                     } else {
                         title.gone()
                     }
-                    if (!hideGame && item.gameName != null)  {
+                    if (!hideGame && item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -146,7 +160,7 @@ class ClipsAdapter(
                         PopupMenu(context, it).apply {
                             inflate(R.menu.media_item)
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.share -> {
                                         context.startActivity(Intent.createChooser(Intent().apply {

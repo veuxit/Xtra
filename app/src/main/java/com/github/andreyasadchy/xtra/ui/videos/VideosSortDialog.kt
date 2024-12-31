@@ -51,7 +51,15 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
 
         fun newInstance(sort: String? = SORT_TIME, period: String? = PERIOD_WEEK, type: String? = VIDEO_TYPE_ALL, languageIndex: Int? = 0, saveSort: Boolean? = false, saveDefault: Boolean? = false, clipChannel: Boolean? = false): VideosSortDialog {
             return VideosSortDialog().apply {
-                arguments = bundleOf(SORT to sort, PERIOD to period, TYPE to type, LANGUAGE to languageIndex, SAVE_SORT to saveSort, SAVE_DEFAULT to saveDefault, CLIP_CHANNEL to clipChannel)
+                arguments = bundleOf(
+                    SORT to sort,
+                    PERIOD to period,
+                    TYPE to type,
+                    LANGUAGE to languageIndex,
+                    SAVE_SORT to saveSort,
+                    SAVE_DEFAULT to saveDefault,
+                    CLIP_CHANNEL to clipChannel
+                )
             }
         }
     }
@@ -147,7 +155,13 @@ class VideosSortDialog : BottomSheetDialogFragment(), RadioButtonDialogFragment.
                 val checkedTypeId = sortType.checkedRadioButtonId
                 val checkedSaveSort = saveSort.isChecked
                 val checkedSaveDefault = saveDefault.isChecked
-                if (checkedPeriodId != originalPeriodId || checkedSortId != originalSortId || checkedTypeId != originalTypeId || langIndex != originalLanguageIndex || checkedSaveSort != originalSaveSort || checkedSaveDefault != originalSaveDefault) {
+                if (checkedPeriodId != originalPeriodId ||
+                    checkedSortId != originalSortId ||
+                    checkedTypeId != originalTypeId ||
+                    langIndex != originalLanguageIndex ||
+                    checkedSaveSort != originalSaveSort ||
+                    checkedSaveDefault != originalSaveDefault
+                ) {
                     val sortBtn = view.findViewById<RadioButton>(checkedSortId)
                     val periodBtn = view.findViewById<RadioButton>(checkedPeriodId)
                     listener.onChange(

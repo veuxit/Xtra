@@ -24,7 +24,8 @@ import kotlin.math.max
 @HiltViewModel
 class SavedPagerViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val offlineRepository: OfflineRepository) : ViewModel() {
+    private val offlineRepository: OfflineRepository,
+) : ViewModel() {
 
     fun saveFolders(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -112,7 +113,7 @@ class SavedPagerViewModel @Inject constructor(
                                     gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
                                     gameName = if (!gameName.isNullOrBlank()) gameName else null,
                                     duration = totalDuration,
-                                    uploadDate = if (uploadDate != null) uploadDate else null,
+                                    uploadDate = uploadDate,
                                     progress = 100,
                                     maxProgress = 100,
                                     status = OfflineVideo.STATUS_DOWNLOADED,
@@ -207,7 +208,7 @@ class SavedPagerViewModel @Inject constructor(
                                     gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
                                     gameName = if (!gameName.isNullOrBlank()) gameName else null,
                                     duration = totalDuration,
-                                    uploadDate = if (uploadDate != null) uploadDate else null,
+                                    uploadDate = uploadDate,
                                     progress = 100,
                                     maxProgress = 100,
                                     status = OfflineVideo.STATUS_DOWNLOADED,
@@ -281,23 +282,25 @@ class SavedPagerViewModel @Inject constructor(
 
                         }
                     }
-                    offlineRepository.saveVideo(OfflineVideo(
-                        url = url,
-                        name = if (!title.isNullOrBlank()) title else null ?: fileName,
-                        channelId = if (!channelId.isNullOrBlank()) channelId else null,
-                        channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
-                        channelName = if (!channelName.isNullOrBlank()) channelName else null,
-                        thumbnail = url,
-                        gameId = if (!gameId.isNullOrBlank()) gameId else null,
-                        gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
-                        gameName = if (!gameName.isNullOrBlank()) gameName else null,
-                        uploadDate = if (uploadDate != null) uploadDate else null,
-                        progress = 100,
-                        maxProgress = 100,
-                        status = OfflineVideo.STATUS_DOWNLOADED,
-                        videoId = if (!id.isNullOrBlank()) id else null,
-                        chatUrl = chatFile
-                    ))
+                    offlineRepository.saveVideo(
+                        OfflineVideo(
+                            url = url,
+                            name = if (!title.isNullOrBlank()) title else null ?: fileName,
+                            channelId = if (!channelId.isNullOrBlank()) channelId else null,
+                            channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
+                            channelName = if (!channelName.isNullOrBlank()) channelName else null,
+                            thumbnail = url,
+                            gameId = if (!gameId.isNullOrBlank()) gameId else null,
+                            gameSlug = if (!gameSlug.isNullOrBlank()) gameSlug else null,
+                            gameName = if (!gameName.isNullOrBlank()) gameName else null,
+                            uploadDate = uploadDate,
+                            progress = 100,
+                            maxProgress = 100,
+                            status = OfflineVideo.STATUS_DOWNLOADED,
+                            videoId = if (!id.isNullOrBlank()) id else null,
+                            chatUrl = chatFile
+                        )
+                    )
                 }
             }
         }

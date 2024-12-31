@@ -58,7 +58,12 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.saveBookmark(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                it
+            )
         }, true)
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -66,7 +71,9 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
     override fun initialize() {
         viewLifecycleOwner.lifecycleScope.launch {
             if (viewModel.filter.value == null) {
-                val sortValues = args.gameId?.let { viewModel.getSortGame(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortGame("default")
+                val sortValues = args.gameId?.let {
+                    viewModel.getSortGame(it)?.takeIf { it.saveSort == true }
+                } ?: viewModel.getSortGame("default")
                 viewModel.setFilter(
                     sort = sortValues?.videoSort,
                     period = if (!TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()) {
@@ -76,7 +83,8 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
                     languageIndex = sortValues?.videoLanguageIndex,
                     saveSort = sortValues?.saveSort,
                 )
-                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_and_period,
                     requireContext().getString(
                         when (viewModel.sort) {
                             VideosSortDialog.SORT_TIME -> R.string.upload_date

@@ -23,7 +23,8 @@ class FollowedStreamsViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
-    private val localFollowsChannel: LocalFollowChannelRepository) : ViewModel() {
+    private val localFollowsChannel: LocalFollowChannelRepository,
+) : ViewModel() {
 
     val flow = Pager(
         if (applicationContext.prefs().getString(C.COMPACT_STREAMS, "disabled") != "disabled") {

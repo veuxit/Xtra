@@ -21,7 +21,8 @@ class OfflinePlayerViewModel @Inject constructor(
     shownNotificationsRepository: ShownNotificationsRepository,
     notificationUsersRepository: NotificationUsersRepository,
     okHttpClient: OkHttpClient,
-    private val offlineRepository: OfflineRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
+    private val offlineRepository: OfflineRepository,
+) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val video = MutableSharedFlow<OfflineVideo?>()
 

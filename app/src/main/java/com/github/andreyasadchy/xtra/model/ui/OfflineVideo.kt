@@ -56,7 +56,8 @@ class OfflineVideo(
     var chatUrl: String? = null,
     val playlistToFile: Boolean = false,
     val live: Boolean = false,
-    var lastSegmentUrl: String? = null) : Parcelable {
+    var lastSegmentUrl: String? = null,
+) : Parcelable {
 
     @IgnoredOnParcel
     @PrimaryKey(autoGenerate = true)

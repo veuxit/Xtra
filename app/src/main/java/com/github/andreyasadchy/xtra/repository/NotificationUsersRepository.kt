@@ -9,7 +9,8 @@ import javax.inject.Singleton
 
 @Singleton
 class NotificationUsersRepository @Inject constructor(
-    private val notificationUsersDao: NotificationUsersDao) {
+    private val notificationUsersDao: NotificationUsersDao,
+) {
 
     suspend fun loadUsers() = withContext(Dispatchers.IO) {
         notificationUsersDao.getAll()
