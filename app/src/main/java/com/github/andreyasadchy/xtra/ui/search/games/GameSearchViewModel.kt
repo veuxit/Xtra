@@ -26,7 +26,8 @@ class GameSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helix: HelixApi,
-    private val apolloClient: ApolloClient) : ViewModel() {
+    private val apolloClient: ApolloClient,
+) : ViewModel() {
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query

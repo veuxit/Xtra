@@ -50,7 +50,8 @@ class MainViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository,
     private val authRepository: AuthRepository,
     private val okHttpClient: OkHttpClient,
-    private val json: Json) : ViewModel() {
+    private val json: Json,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
@@ -174,25 +175,27 @@ class MainViewModel @Inject constructor(
                             filePath
                         }
                     }
-                    val videoId = offlineRepository.saveVideo(OfflineVideo(
-                        name = title,
-                        channelId = channelId,
-                        channelLogin = channelLogin,
-                        channelName = channelName,
-                        channelLogo = downloadedLogo,
-                        thumbnail = downloadedThumbnail,
-                        gameId = gameId,
-                        gameSlug = gameSlug,
-                        gameName = gameName,
-                        uploadDate = startedAt?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                        downloadDate = System.currentTimeMillis(),
-                        downloadPath = path,
-                        status = OfflineVideo.STATUS_BLOCKED,
-                        quality = if (!quality.contains("Audio", true)) quality else "audio",
-                        downloadChat = downloadChat,
-                        downloadChatEmotes = downloadChatEmotes,
-                        live = true
-                    )).toInt()
+                    val videoId = offlineRepository.saveVideo(
+                        OfflineVideo(
+                            name = title,
+                            channelId = channelId,
+                            channelLogin = channelLogin,
+                            channelName = channelName,
+                            channelLogo = downloadedLogo,
+                            thumbnail = downloadedThumbnail,
+                            gameId = gameId,
+                            gameSlug = gameSlug,
+                            gameName = gameName,
+                            uploadDate = startedAt?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                            downloadDate = System.currentTimeMillis(),
+                            downloadPath = path,
+                            status = OfflineVideo.STATUS_BLOCKED,
+                            quality = if (!quality.contains("Audio", true)) quality else "audio",
+                            downloadChat = downloadChat,
+                            downloadChatEmotes = downloadChatEmotes,
+                            live = true
+                        )
+                    ).toInt()
                     WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                         channelLogin,
                         ExistingWorkPolicy.REPLACE,
@@ -253,30 +256,32 @@ class MainViewModel @Inject constructor(
                         filePath
                     }
                 }
-                val videoId = offlineRepository.saveVideo(OfflineVideo(
-                    sourceUrl = url,
-                    name = title,
-                    channelId = channelId,
-                    channelLogin = channelLogin,
-                    channelName = channelName,
-                    channelLogo = downloadedLogo,
-                    thumbnail = downloadedThumbnail,
-                    gameId = gameId,
-                    gameSlug = gameSlug,
-                    gameName = gameName,
-                    uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                    downloadDate = System.currentTimeMillis(),
-                    downloadPath = path,
-                    fromTime = from,
-                    toTime = to,
-                    status = OfflineVideo.STATUS_BLOCKED,
-                    type = type,
-                    videoId = id,
-                    quality = if (!quality.contains("Audio", true)) quality else "audio",
-                    downloadChat = downloadChat,
-                    downloadChatEmotes = downloadChatEmotes,
-                    playlistToFile = playlistToFile
-                )).toInt()
+                val videoId = offlineRepository.saveVideo(
+                    OfflineVideo(
+                        sourceUrl = url,
+                        name = title,
+                        channelId = channelId,
+                        channelLogin = channelLogin,
+                        channelName = channelName,
+                        channelLogo = downloadedLogo,
+                        thumbnail = downloadedThumbnail,
+                        gameId = gameId,
+                        gameSlug = gameSlug,
+                        gameName = gameName,
+                        uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                        downloadDate = System.currentTimeMillis(),
+                        downloadPath = path,
+                        fromTime = from,
+                        toTime = to,
+                        status = OfflineVideo.STATUS_BLOCKED,
+                        type = type,
+                        videoId = id,
+                        quality = if (!quality.contains("Audio", true)) quality else "audio",
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes,
+                        playlistToFile = playlistToFile
+                    )
+                ).toInt()
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                     "download",
                     ExistingWorkPolicy.APPEND_OR_REPLACE,
@@ -337,29 +342,31 @@ class MainViewModel @Inject constructor(
                         filePath
                     }
                 }
-                val videoId = offlineRepository.saveVideo(OfflineVideo(
-                    sourceUrl = url,
-                    sourceStartPosition = vodOffset?.toLong()?.times(1000L),
-                    name = title,
-                    channelId = channelId,
-                    channelLogin = channelLogin,
-                    channelName = channelName,
-                    channelLogo = downloadedLogo,
-                    thumbnail = downloadedThumbnail,
-                    gameId = gameId,
-                    gameSlug = gameSlug,
-                    gameName = gameName,
-                    duration = duration?.toLong()?.times(1000L),
-                    uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                    downloadDate = System.currentTimeMillis(),
-                    downloadPath = path,
-                    status = OfflineVideo.STATUS_BLOCKED,
-                    videoId = videoId,
-                    clipId = id,
-                    quality = if (!quality.contains("Audio", true)) quality else "audio",
-                    downloadChat = downloadChat,
-                    downloadChatEmotes = downloadChatEmotes
-                )).toInt()
+                val videoId = offlineRepository.saveVideo(
+                    OfflineVideo(
+                        sourceUrl = url,
+                        sourceStartPosition = vodOffset?.toLong()?.times(1000L),
+                        name = title,
+                        channelId = channelId,
+                        channelLogin = channelLogin,
+                        channelName = channelName,
+                        channelLogo = downloadedLogo,
+                        thumbnail = downloadedThumbnail,
+                        gameId = gameId,
+                        gameSlug = gameSlug,
+                        gameName = gameName,
+                        duration = duration?.toLong()?.times(1000L),
+                        uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                        downloadDate = System.currentTimeMillis(),
+                        downloadPath = path,
+                        status = OfflineVideo.STATUS_BLOCKED,
+                        videoId = videoId,
+                        clipId = id,
+                        quality = if (!quality.contains("Audio", true)) quality else "audio",
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes
+                    )
+                ).toInt()
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                     "download",
                     ExistingWorkPolicy.APPEND_OR_REPLACE,

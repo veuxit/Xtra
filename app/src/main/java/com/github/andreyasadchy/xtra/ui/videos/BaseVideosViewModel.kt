@@ -19,7 +19,8 @@ abstract class BaseVideosViewModel(
     playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
     private val repository: ApiRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val positions = playerRepository.loadVideoPositions()
     val bookmarks = bookmarksRepository.loadBookmarksFlow()
@@ -75,24 +76,26 @@ abstract class BaseVideosViewModel(
                 } catch (e: Exception) {
                     null
                 }
-                bookmarksRepository.saveBookmark(Bookmark(
-                    videoId = video.id,
-                    userId = video.channelId,
-                    userLogin = video.channelLogin,
-                    userName = video.channelName,
-                    userType = userTypes?.type,
-                    userBroadcasterType = userTypes?.broadcasterType,
-                    userLogo = downloadedLogo,
-                    gameId = video.gameId,
-                    gameSlug = video.gameSlug,
-                    gameName = video.gameName,
-                    title = video.title,
-                    createdAt = video.uploadDate,
-                    thumbnail = downloadedThumbnail,
-                    type = video.type,
-                    duration = video.duration,
-                    animatedPreviewURL = video.animatedPreviewURL
-                ))
+                bookmarksRepository.saveBookmark(
+                    Bookmark(
+                        videoId = video.id,
+                        userId = video.channelId,
+                        userLogin = video.channelLogin,
+                        userName = video.channelName,
+                        userType = userTypes?.type,
+                        userBroadcasterType = userTypes?.broadcasterType,
+                        userLogo = downloadedLogo,
+                        gameId = video.gameId,
+                        gameSlug = video.gameSlug,
+                        gameName = video.gameName,
+                        title = video.title,
+                        createdAt = video.uploadDate,
+                        thumbnail = downloadedThumbnail,
+                        type = video.type,
+                        duration = video.duration,
+                        animatedPreviewURL = video.animatedPreviewURL
+                    )
+                )
             }
         }
     }

@@ -36,8 +36,8 @@ abstract class BaseNetworkFragment : Fragment() {
         super.onCreate(savedInstanceState)
         if (enableNetworkCheck) {
             lastIsOnlineState = savedInstanceState?.getBoolean(LAST_KEY) ?: requireContext().isNetworkAvailable
-            shouldRestore = savedInstanceState?.getBoolean(RESTORE_KEY) ?: false
-            created = savedInstanceState?.getBoolean(CREATED_KEY) ?: false
+            shouldRestore = savedInstanceState?.getBoolean(RESTORE_KEY) == true
+            created = savedInstanceState?.getBoolean(CREATED_KEY) == true
         }
     }
 

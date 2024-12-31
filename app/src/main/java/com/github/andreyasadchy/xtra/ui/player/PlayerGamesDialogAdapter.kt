@@ -15,7 +15,8 @@ import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.visible
 
 class PlayerGamesDialogAdapter(
-    private val fragment: Fragment) : ListAdapter<Game, PlayerGamesDialogAdapter.ViewHolder>(
+    private val fragment: Fragment,
+) : ListAdapter<Game, PlayerGamesDialogAdapter.ViewHolder>(
     object : DiffUtil.ItemCallback<Game>() {
         override fun areItemsTheSame(oldItem: Game, newItem: Game): Boolean =
             oldItem.vodPosition == newItem.vodPosition
@@ -34,21 +35,24 @@ class PlayerGamesDialogAdapter(
 
     inner class ViewHolder(
         private val binding: FragmentGamesListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Game?) {
             with(binding) {
                 val context = fragment.requireContext()
                 root.setOnClickListener {
-                    item?.vodPosition?.let { position -> (fragment as? PlayerGamesDialog)?.listener?.seek(position.toLong()) }
+                    item?.vodPosition?.let { position ->
+                        (fragment as? PlayerGamesDialog)?.listener?.seek(position.toLong())
+                    }
                     (fragment as? PlayerGamesDialog)?.dismiss()
                 }
-                if (item?.boxArt != null)  {
+                if (item?.boxArt != null) {
                     gameImage.visible()
                     gameImage.loadImage(fragment, item.boxArt)
                 } else {
                     gameImage.gone()
                 }
-                if (item?.gameName != null)  {
+                if (item?.gameName != null) {
                     gameName.visible()
                     gameName.text = item.gameName
                 } else {

@@ -22,7 +22,8 @@ import javax.inject.Inject
 class TagSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
-    savedStateHandle: SavedStateHandle) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
     private val args = TagSearchFragmentArgs.fromSavedStateHandle(savedStateHandle)
     private val _query = MutableStateFlow("")
@@ -37,7 +38,8 @@ class TagSearchViewModel @Inject constructor(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 getGameTags = args.getGameTags,
                 query = query,
-                api = graphQLRepository)
+                api = graphQLRepository
+            )
         }.flow
     }.cachedIn(viewModelScope)
 

@@ -22,7 +22,8 @@ class FollowedGamesViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val apolloClient: ApolloClient,
-    private val localFollowsGame: LocalFollowGameRepository) : ViewModel() {
+    private val localFollowsGame: LocalFollowGameRepository,
+) : ViewModel() {
 
     val flow = Pager(
         PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)

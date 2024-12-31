@@ -117,12 +117,21 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         prefs = activity.prefs()
         isPortrait = activity.isInPortraitOrientation
         activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
-        WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        WindowCompat.getInsetsController(
+            requireActivity().window,
+            requireActivity().window.decorView
+        ).systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
     override fun onStart() {
         super.onStart()
-        controllerFuture = MediaController.Builder(requireActivity(), SessionToken(requireActivity(), ComponentName(requireActivity(), PlaybackService::class.java))).buildAsync()
+        controllerFuture = MediaController.Builder(
+            requireActivity(),
+            SessionToken(
+                requireActivity(),
+                ComponentName(requireActivity(), PlaybackService::class.java)
+            )
+        ).buildAsync()
         controllerFuture.addListener({
             val player = controllerFuture.get()
             requireView().findViewById<CustomPlayerView>(R.id.playerView)?.player = player
@@ -189,7 +198,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             })
             if (viewModel.background) {
                 viewModel.background = false
-                player.sendCustomCommand(SessionCommand(PlaybackService.MOVE_FOREGROUND, Bundle.EMPTY), Bundle.EMPTY).let { result ->
+                player.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.MOVE_FOREGROUND,
+                        Bundle.EMPTY
+                    ), Bundle.EMPTY
+                ).let { result ->
                     result.addListener({
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                             result.get().extras.getString(PlaybackService.RESULT)?.let {
@@ -200,7 +214,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 }
             }
             if (!viewModel.started) {
-                player.sendCustomCommand(SessionCommand(PlaybackService.CLEAR, Bundle.EMPTY), Bundle.EMPTY)
+                player.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.CLEAR,
+                        Bundle.EMPTY
+                    ),
+                    Bundle.EMPTY
+                )
                 if ((isInitialized || !enableNetworkCheck)) {
                     startPlayer()
                 }
@@ -212,7 +232,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         super.onViewCreated(view, savedInstanceState)
         slidingLayout = view.findViewById(R.id.slidingLayout)
         slidingLayout.updateBackgroundColor(isPortrait)
-        chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
+        chatLayout = if (this is ClipPlayerFragment) {
+            view.findViewById(R.id.clipChatContainer)
+        } else {
+            view.findViewById(R.id.chatFragmentContainer)
+        }
         val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
             val insets = if (!isPortrait && ignoreCutouts) {
@@ -244,7 +268,11 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -328,7 +356,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             view.findViewById<ImageButton>(R.id.playerMode)?.apply {
                 visible()
                 setOnClickListener {
-                    player?.sendCustomCommand(SessionCommand(PlaybackService.SWITCH_AUDIO_MODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                    player?.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.SWITCH_AUDIO_MODE,
+                            Bundle.EMPTY
+                        ), Bundle.EMPTY
+                    )?.let { result ->
                         result.addListener({
                             if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                                 result.get().extras.getString(PlaybackService.RESULT)?.let {
@@ -345,7 +378,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
                 visible()
                 setImageResource(if (prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR, false)) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
                 setOnClickListener {
-                    player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_DYNAMICS_PROCESSING, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+                    player?.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.TOGGLE_DYNAMICS_PROCESSING,
+                            Bundle.EMPTY
+                        ), Bundle.EMPTY
+                    )?.let { result ->
                         result.addListener({
                             if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                                 val state = result.get().extras.getBoolean(PlaybackService.RESULT)
@@ -357,7 +395,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             }
         }
         if (this is StreamPlayerFragment) {
-            if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() && (!TwitchApiHelper.getGQLHeaders(activity, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(activity)[C.HEADER_TOKEN].isNullOrBlank())) {
+            if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
+                (!TwitchApiHelper.getGQLHeaders(activity, true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                        !TwitchApiHelper.getHelixHeaders(activity)[C.HEADER_TOKEN].isNullOrBlank())
+            ) {
                 if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
                     view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
                         visible()
@@ -487,11 +528,23 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     override fun onSleepTimerChanged(durationMs: Long, hours: Int, minutes: Int, lockScreen: Boolean) {
         val context = requireContext()
         if (durationMs > 0L) {
-            context.toast(when {
-                hours == 0 -> getString(R.string.playback_will_stop, resources.getQuantityString(R.plurals.minutes, minutes, minutes))
-                minutes == 0 -> getString(R.string.playback_will_stop, resources.getQuantityString(R.plurals.hours, hours, hours))
-                else -> getString(R.string.playback_will_stop_hours_minutes, resources.getQuantityString(R.plurals.hours, hours, hours), resources.getQuantityString(R.plurals.minutes, minutes, minutes))
-            })
+            context.toast(
+                when {
+                    hours == 0 -> getString(
+                        R.string.playback_will_stop,
+                        resources.getQuantityString(R.plurals.minutes, minutes, minutes)
+                    )
+                    minutes == 0 -> getString(
+                        R.string.playback_will_stop,
+                        resources.getQuantityString(R.plurals.hours, hours, hours)
+                    )
+                    else -> getString(
+                        R.string.playback_will_stop_hours_minutes,
+                        resources.getQuantityString(R.plurals.hours, hours, hours),
+                        resources.getQuantityString(R.plurals.minutes, minutes, minutes)
+                    )
+                }
+            )
         } else if (((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0) > 0L) {
             context.toast(R.string.timer_canceled)
         }
@@ -504,7 +557,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {
         when (requestCode) {
             REQUEST_CODE_QUALITY -> {
-                player?.sendCustomCommand(SessionCommand(PlaybackService.CHANGE_QUALITY, bundleOf(PlaybackService.INDEX to index)), Bundle.EMPTY)?.let { result ->
+                player?.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.CHANGE_QUALITY,
+                        bundleOf(PlaybackService.INDEX to index)
+                    ), Bundle.EMPTY
+                )?.let { result ->
                     result.addListener({
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                             result.get().extras.getString(PlaybackService.RESULT)?.let {
@@ -570,7 +628,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     fun showQualityDialog() {
-        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY),
+            Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val qualities = result.get().extras.getStringArray(PlaybackService.RESULT)?.toList()
@@ -744,11 +805,17 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     private fun showStatusBar() {
-        WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        WindowCompat.getInsetsController(
+            requireActivity().window,
+            requireActivity().window.decorView
+        ).show(WindowInsetsCompat.Type.systemBars())
     }
 
     private fun hideStatusBar() {
-        WindowCompat.getInsetsController(requireActivity().window, requireActivity().window.decorView).hide(WindowInsetsCompat.Type.systemBars())
+        WindowCompat.getInsetsController(
+            requireActivity().window,
+            requireActivity().window.decorView
+        ).hide(WindowInsetsCompat.Type.systemBars())
     }
 
     fun setSubtitles(available: Boolean = null ?: subtitlesAvailable(), enabled: Boolean = null ?: subtitlesEnabled()) {
@@ -815,10 +882,14 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     override fun onMovedToBackground() {
         viewModel.background = true
-        player?.sendCustomCommand(SessionCommand(PlaybackService.MOVE_BACKGROUND, bundleOf(
-            PlaybackService.PIP_MODE to viewModel.pipMode,
-            PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
-        )), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(
+                PlaybackService.MOVE_BACKGROUND, bundleOf(
+                    PlaybackService.PIP_MODE to viewModel.pipMode,
+                    PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+                )
+            ), Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     result.get().extras.getString(PlaybackService.RESULT)?.let {
@@ -841,12 +912,16 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             delay(1500L)
             try {
                 player?.prepare()
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
     }
 
     fun setQualityText() {
-        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_QUALITY_TEXT, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(PlaybackService.GET_QUALITY_TEXT, Bundle.EMPTY),
+            Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val qualityText = result.get().extras.getString(PlaybackService.RESULT)
@@ -861,7 +936,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (mode == PlaybackService.PLAYER_MODE_NORMAL) {
             playerView.controllerHideOnTouch = true
             playerView.controllerShowTimeoutMs = controllerShowTimeoutMs
-            if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+            if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0"
+            ) {
                 requireActivity().setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
             }
         } else {
@@ -869,7 +947,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             playerView.controllerShowTimeoutMs = -1
             playerView.showController()
             requireView().keepScreenOn = true
-            if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            ) {
                 requireActivity().setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
             }
         }

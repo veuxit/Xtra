@@ -13,4 +13,5 @@ class TwitchEmote(
     var begin: Int = 0,
     var end: Int = 0,
     val setId: String? = null,
-    val ownerId: String? = null)
+    val ownerId: String? = null,
+)

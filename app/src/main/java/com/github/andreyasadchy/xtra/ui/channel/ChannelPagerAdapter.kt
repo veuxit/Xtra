@@ -8,7 +8,8 @@ import com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosFragment
 
 class ChannelPagerAdapter(
     private val fragment: Fragment,
-    private val args: ChannelPagerFragmentArgs) : FragmentStateAdapter(fragment) {
+    private val args: ChannelPagerFragmentArgs,
+) : FragmentStateAdapter(fragment) {
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {

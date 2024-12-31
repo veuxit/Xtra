@@ -5,4 +5,5 @@ class EmoteCard(
     val subTier: String?,
     val bitThreshold: Int?,
     val channelLogin: String?,
-    val channelName: String?)
+    val channelName: String?,
+)

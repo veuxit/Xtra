@@ -11,4 +11,5 @@ class Image(
     val isZeroWidth: Boolean = false,
     val isEmote: Boolean = false,
     var start: Int,
-    var end: Int)
+    var end: Int,
+)

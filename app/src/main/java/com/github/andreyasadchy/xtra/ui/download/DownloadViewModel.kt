@@ -21,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DownloadViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val playerRepository: PlayerRepository) : ViewModel() {
+    private val playerRepository: PlayerRepository,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 

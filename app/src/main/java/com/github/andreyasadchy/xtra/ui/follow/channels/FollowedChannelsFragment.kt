@@ -55,7 +55,8 @@ class FollowedChannelsFragment : PagedListFragment(), Scrollable, Sortable, Foll
                     sort = sortValues?.videoSort,
                     order = sortValues?.videoType,
                 )
-                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_and_period,
                     requireContext().getString(
                         when (viewModel.sort) {
                             FollowedChannelsSortDialog.SORT_FOLLOWED_AT -> R.string.time_followed

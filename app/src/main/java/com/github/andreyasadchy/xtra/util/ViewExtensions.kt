@@ -36,9 +36,9 @@ fun ImageView.loadImage(fragment: Fragment, url: String?, changes: Boolean = fal
     if (context.isActivityResumed) { //not enough on some devices?
         try {
             val request = Glide.with(fragment)
-                    .load(url)
-                    .diskCacheStrategy(diskCacheStrategy)
-                    .transition(DrawableTransitionOptions.withCrossFade())
+                .load(url)
+                .diskCacheStrategy(diskCacheStrategy)
+                .transition(DrawableTransitionOptions.withCrossFade())
             if (changes) {
                 //update every 5 minutes
                 val minutes = System.currentTimeMillis() / 60000L
@@ -91,8 +91,9 @@ fun ViewPager2.reduceDragSensitivity() {
         val touchSlopField = RecyclerView::class.java.getDeclaredField("mTouchSlop")
         touchSlopField.isAccessible = true
         val touchSlop = touchSlopField.get(recyclerView) as Int
-        touchSlopField.set(recyclerView, touchSlop*2)
-    } catch (e: Exception) {}
+        touchSlopField.set(recyclerView, touchSlop * 2)
+    } catch (e: Exception) {
+    }
 }
 
 fun MotionEvent.isClick(outDownLocation: FloatArray): Boolean {

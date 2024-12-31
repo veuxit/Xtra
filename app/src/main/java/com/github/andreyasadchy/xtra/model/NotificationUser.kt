@@ -6,4 +6,5 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "notifications")
 class NotificationUser(
     @PrimaryKey
-    val channelId: String)
+    val channelId: String,
+)

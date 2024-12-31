@@ -19,7 +19,8 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
 class ChannelSearchAdapter(
-    private val fragment: Fragment) : PagingDataAdapter<User, ChannelSearchAdapter.PagingViewHolder>(
+    private val fragment: Fragment,
+) : PagingDataAdapter<User, ChannelSearchAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<User>() {
         override fun areItemsTheSame(oldItem: User, newItem: User): Boolean =
             oldItem.channelId == newItem.channelId
@@ -38,22 +39,29 @@ class ChannelSearchAdapter(
 
     inner class PagingViewHolder(
         private val binding: FragmentSearchChannelsListItemBinding,
-        private val fragment: Fragment): RecyclerView.ViewHolder(binding.root) {
+        private val fragment: Fragment,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: User?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
                     root.setOnClickListener {
-                        fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                            channelId = item.channelId,
-                            channelLogin = item.channelLogin,
-                            channelName = item.channelName,
-                            channelLogo = item.channelLogo,
-                        ))
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                            )
+                        )
                     }
                     if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        )
                     } else {
                         userImage.gone()
                     }

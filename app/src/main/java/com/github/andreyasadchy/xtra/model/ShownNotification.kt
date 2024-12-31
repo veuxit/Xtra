@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 class ShownNotification(
     @PrimaryKey
     val channelId: String,
-    val startedAt: Long)
+    val startedAt: Long,
+)

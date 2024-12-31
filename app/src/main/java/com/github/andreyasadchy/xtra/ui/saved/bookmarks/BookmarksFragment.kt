@@ -45,7 +45,11 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -53,7 +57,12 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             }
         }
         pagingAdapter = BookmarksAdapter(this, {
-            viewModel.updateVideo(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.updateVideo(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                it
+            )
         }, {
             DownloadDialog.newInstance(it).show(childFragmentManager, null)
         }, {

@@ -80,12 +80,14 @@ object RecentMessageUtils {
                 systemMsg = systemMsg,
                 msgId = prefixes["msg-id"],
                 reward = prefixes["custom-reward-id"]?.let { ChannelPointReward(id = it) },
-                reply = prefixes["reply-thread-parent-msg-id"]?.let { Reply(
-                    threadParentId = it,
-                    userLogin = prefixes["reply-parent-user-login"],
-                    userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
-                    message = prefixes["reply-parent-msg-body"]?.replace("\\s", " ")
-                ) },
+                reply = prefixes["reply-thread-parent-msg-id"]?.let {
+                    Reply(
+                        threadParentId = it,
+                        userLogin = prefixes["reply-parent-user-login"],
+                        userName = prefixes["reply-parent-display-name"]?.replace("\\s", " "),
+                        message = prefixes["reply-parent-msg-body"]?.replace("\\s", " ")
+                    )
+                },
                 timestamp = prefixes["tmi-sent-ts"]?.toLong(),
                 fullMsg = message
             )
@@ -100,12 +102,14 @@ object RecentMessageUtils {
         val msgIndex = messageInfo.indexOf(":", messageInfo.indexOf(":") + 1)
         val index2 = messageInfo.indexOf(" ", messageInfo.indexOf("#") + 1)
         val msg = messageInfo.substring(if (msgIndex != -1) msgIndex + 1 else index2 + 1)
-        return Pair(ChatMessage(
-            userLogin = login,
-            message = msg,
-            timestamp = prefixes["tmi-sent-ts"]?.toLong(),
-            fullMsg = message
-        ), prefixes["target-msg-id"])
+        return Pair(
+            ChatMessage(
+                userLogin = login,
+                message = msg,
+                timestamp = prefixes["tmi-sent-ts"]?.toLong(),
+                fullMsg = message
+            ), prefixes["target-msg-id"]
+        )
     }
 
     fun parseClearChat(context: Context, message: String): ChatMessage {

@@ -15,19 +15,21 @@ object AppInjector {
         xtraApp.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 if (activity is FragmentActivity) {
-                    activity.supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
-                        override fun onFragmentCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
-                            if (f is LifecycleListener) {
-                                xtraApp.addLifecycleListener(f)
+                    activity.supportFragmentManager.registerFragmentLifecycleCallbacks(
+                        object : FragmentManager.FragmentLifecycleCallbacks() {
+                            override fun onFragmentCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
+                                if (f is LifecycleListener) {
+                                    xtraApp.addLifecycleListener(f)
+                                }
                             }
-                        }
 
-                        override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
-                            if (f is LifecycleListener) {
-                                xtraApp.removeLifecycleListener(f)
+                            override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
+                                if (f is LifecycleListener) {
+                                    xtraApp.removeLifecycleListener(f)
+                                }
                             }
-                        }
-                    }, true)
+                        }, true
+                    )
                 }
             }
 

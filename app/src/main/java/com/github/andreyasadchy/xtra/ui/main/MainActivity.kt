@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.main
 
-import android.app.Activity
 import android.app.ActivityOptions
 import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
@@ -229,7 +228,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        prefs.getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(supportFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -258,12 +261,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             windowInsets
         }
         settingsResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
+            if (result.resultCode == RESULT_OK) {
                 recreate()
             }
         }
         loginResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
+            if (result.resultCode == RESULT_OK) {
                 restartActivity()
             }
         }
@@ -291,7 +294,13 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                             }
                             if (online) {
                                 if (!TwitchApiHelper.checkedValidation && prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
-                                    viewModel.validate(TwitchApiHelper.getHelixHeaders(this@MainActivity), TwitchApiHelper.getGQLHeaders(this@MainActivity, true), this@MainActivity.tokenPrefs().getString(C.USER_ID, null), this@MainActivity.tokenPrefs().getString(C.USERNAME, null), this@MainActivity)
+                                    viewModel.validate(
+                                        TwitchApiHelper.getHelixHeaders(this@MainActivity),
+                                        TwitchApiHelper.getGQLHeaders(this@MainActivity, true),
+                                        this@MainActivity.tokenPrefs().getString(C.USER_ID, null),
+                                        this@MainActivity.tokenPrefs().getString(C.USERNAME, null),
+                                        this@MainActivity
+                                    )
                                 }
                             }
                         }
@@ -385,13 +394,22 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
     private fun restartActivity() {
         finish()
-        startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) }, ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle())
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            },
+            ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle()
+        )
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT < Build.VERSION_CODES.S && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0" && playerFragment?.enterPictureInPicture() == true) {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0" &&
+            playerFragment?.enterPictureInPicture() == true
+        ) {
             try {
                 enterPictureInPictureMode(PictureInPictureParams.Builder().build())
             } catch (e: IllegalStateException) {
@@ -409,7 +427,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                         val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
                         if (!id.isNullOrBlank()) {
-                            viewModel.loadVideo(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            viewModel.loadVideo(
+                                id,
+                                TwitchApiHelper.getHelixHeaders(this),
+                                TwitchApiHelper.getGQLHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.video.collectLatest { video ->
@@ -427,7 +450,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     url.contains("/clip/") -> {
                         val id = url.substringAfter("/clip/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                         if (!id.isNullOrBlank()) {
-                            viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            viewModel.loadClip(
+                                id,
+                                TwitchApiHelper.getHelixHeaders(this),
+                                TwitchApiHelper.getGQLHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.clip.collectLatest { clip ->
@@ -445,7 +473,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     url.contains("clips.twitch.tv/") -> {
                         val id = url.substringAfter("clips.twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                         if (!id.isNullOrBlank()) {
-                            viewModel.loadClip(id, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            viewModel.loadClip(
+                                id,
+                                TwitchApiHelper.getHelixHeaders(this),
+                                TwitchApiHelper.getGQLHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.clip.collectLatest { clip ->
@@ -497,19 +530,26 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     else -> {
                         val login = url.substringAfter("twitch.tv/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
                         if (!login.isNullOrBlank()) {
-                            viewModel.loadUser(login, TwitchApiHelper.getHelixHeaders(this), TwitchApiHelper.getGQLHeaders(this), prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true))
+                            viewModel.loadUser(
+                                login,
+                                TwitchApiHelper.getHelixHeaders(this),
+                                TwitchApiHelper.getGQLHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.user.collectLatest { user ->
                                         if (user != null) {
                                             if (!user.channelId.isNullOrBlank() || !user.channelLogin.isNullOrBlank()) {
                                                 playerFragment?.minimize()
-                                                navController.navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                                                    channelId = user.channelId,
-                                                    channelLogin = user.channelLogin,
-                                                    channelName = user.channelName,
-                                                    channelLogo = user.channelLogo,
-                                                ))
+                                                navController.navigate(
+                                                    ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                                        channelId = user.channelId,
+                                                        channelLogin = user.channelLogin,
+                                                        channelName = user.channelName,
+                                                        channelLogo = user.channelLogo,
+                                                    )
+                                                )
                                             }
                                             viewModel.user.value = null
                                         }
@@ -554,7 +594,6 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 //Navigation listeners
 
     fun startStream(stream: Stream) {
-//        playerFragment?.play(stream)
         startPlayer(StreamPlayerFragment.newInstance(stream))
     }
 
@@ -587,21 +626,23 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 //Player methods
 
     private fun startPlayer(fragment: BasePlayerFragment) {
-//        if (playerFragment == null) {
         playerFragment = fragment
         supportFragmentManager.beginTransaction()
-                .replace(R.id.playerContainer, fragment).commit()
+            .replace(R.id.playerContainer, fragment).commit()
         viewModel.onPlayerStarted()
-        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0"
+        ) {
             setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
         }
     }
 
     fun closePlayer() {
         supportFragmentManager.beginTransaction()
-                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                .remove(supportFragmentManager.findFragmentById(R.id.playerContainer)!!)
-                .commit()
+            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+            .remove(supportFragmentManager.findFragmentById(R.id.playerContainer)!!)
+            .commit()
         playerFragment = null
         viewModel.onPlayerClosed()
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -676,7 +717,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private fun initNavigation() {
         navController = (supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment).navController
         navController.setGraph(navController.navInflater.inflate(R.navigation.nav_graph).also {
-            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(this, true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(this)[C.HEADER_TOKEN].isNullOrBlank()
+            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(this, true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                    !TwitchApiHelper.getHelixHeaders(this)[C.HEADER_TOKEN].isNullOrBlank()
             val setting = prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toIntOrNull() ?: 1
             if ((isLoggedIn && setting < 2) || (!isLoggedIn && setting == 0)) {
                 if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {

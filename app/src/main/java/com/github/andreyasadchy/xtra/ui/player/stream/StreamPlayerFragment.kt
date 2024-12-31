@@ -107,15 +107,22 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 viewModel.stream.collectLatest {
                     if (it != null) {
                         chatFragment?.updateStreamId(it.id)
-                        if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) || requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()) {
+                        if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                            !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                            requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()
+                        ) {
                             updateViewerCount(it.viewerCount)
                         }
-                        if (prefs.getBoolean(C.CHAT_DISABLE, false) || !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                        if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                            !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
                             requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
-                            requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()) {
+                            requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()
+                        ) {
                             updateStreamInfo(it.title, it.gameId, it.gameSlug, it.gameName)
                         }
-                        if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) && requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false) {
+                        if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
+                            requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false
+                        ) {
                             it.startedAt?.let { date ->
                                 TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
                                     updateUptime(startedAtMs)
@@ -170,12 +177,14 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     item.channelName
                 }
                 setOnClickListener {
-                    findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo
-                    ))
+                    findNavController().navigate(
+                        ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                            channelId = item.channelId,
+                            channelLogin = item.channelLogin,
+                            channelName = item.channelName,
+                            channelLogo = item.channelLogo
+                        )
+                    )
                     slidingLayout.minimize()
                 }
             }
@@ -208,10 +217,28 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                 }
                             ))
                             .setNegativeButton(getString(R.string.no), null)
-                            .setPositiveButton(getString(R.string.yes)) { _, _ -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId) }
+                            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                viewModel.deleteFollowChannel(
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    setting,
+                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                    item.channelId
+                                )
+                            }
                             .show()
                     } else {
-                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), item.startedAt)
+                        viewModel.saveFollowChannel(
+                            requireContext().filesDir.path,
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            setting,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId,
+                            item.channelLogin,
+                            item.channelName,
+                            item.channelLogo,
+                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                            item.startedAt
+                        )
                     }
                 }
             }
@@ -284,7 +311,15 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     override fun initialize() {
         super.initialize()
-        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().tokenPrefs().getString(C.USER_ID, null), requireContext().tokenPrefs().getString(C.USERNAME, null), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
+        viewModel.isFollowingChannel(
+            TwitchApiHelper.getHelixHeaders(requireContext()),
+            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+            requireContext().tokenPrefs().getString(C.USER_ID, null),
+            requireContext().tokenPrefs().getString(C.USERNAME, null),
+            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+            item.channelId,
+            item.channelLogin
+        )
     }
 
     override fun startPlayer() {
@@ -297,10 +332,13 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 stream = item,
                 loop = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
                         !requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
-                        (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) && !requireContext().tokenPrefs().getString(C.USER_ID, null).isNullOrBlank() && !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
+                        (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) &&
+                                !requireContext().tokenPrefs().getString(C.USER_ID, null).isNullOrBlank() &&
+                                !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
                 helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
             )
         }
     }
@@ -323,12 +361,16 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     }
                 }
                 if (viewModel.useProxy && !proxyUrl.isNullOrBlank()) {
-                    player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
-                        PlaybackService.ITEM to stream,
-                        PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
-                        PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
-                        PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray()
-                    )), Bundle.EMPTY)
+                    player?.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.START_STREAM, bundleOf(
+                                PlaybackService.ITEM to stream,
+                                PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
+                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
+                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray()
+                            )
+                        ), Bundle.EMPTY
+                    )
                     player?.prepare()
                 } else {
                     if (viewModel.useProxy) {
@@ -356,13 +398,17 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.result.collectLatest {
                                 if (it != null) {
-                                    player?.sendCustomCommand(SessionCommand(PlaybackService.START_STREAM, bundleOf(
-                                        PlaybackService.ITEM to stream,
-                                        PlaybackService.URI to it,
-                                        PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
-                                        PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
-                                        PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
-                                    )), Bundle.EMPTY)
+                                    player?.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.START_STREAM, bundleOf(
+                                                PlaybackService.ITEM to stream,
+                                                PlaybackService.URI to it,
+                                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
+                                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
+                                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
+                                            )
+                                        ), Bundle.EMPTY
+                                    )
                                     player?.prepare()
                                     viewModel.result.value = null
                                 }
@@ -377,7 +423,10 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
     }
 
     fun checkAds() {
-        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY),
+            Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val tag = result.get().extras.getString(PlaybackService.RESULT)
@@ -388,14 +437,29 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     viewModel.playingAds = tag == "ads=true"
                     if (viewModel.playingAds) {
                         if (usingProxy) {
-                            player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(
-                                PlaybackService.USING_PROXY to false,
-                                PlaybackService.STOP_PROXY to true
-                            )), Bundle.EMPTY)
+                            player?.sendCustomCommand(
+                                SessionCommand(
+                                    PlaybackService.TOGGLE_PROXY, bundleOf(
+                                        PlaybackService.USING_PROXY to false,
+                                        PlaybackService.STOP_PROXY to true
+                                    )
+                                ), Bundle.EMPTY
+                            )
                         } else {
                             if (!oldValue) {
-                                if (!stopProxy && !playlist.isNullOrBlank() && prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true) && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() && prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null) {
-                                    player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(PlaybackService.USING_PROXY to true)), Bundle.EMPTY)
+                                if (!stopProxy &&
+                                    !playlist.isNullOrBlank() &&
+                                    prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true) &&
+                                    !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() &&
+                                    prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null
+                                ) {
+                                    player?.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.TOGGLE_PROXY, bundleOf(
+                                                PlaybackService.USING_PROXY to true
+                                            )
+                                        ), Bundle.EMPTY
+                                    )
                                     viewLifecycleOwner.lifecycleScope.launch {
                                         for (i in 0 until 10) {
                                             delay(10000)
@@ -403,7 +467,13 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                                 break
                                             }
                                         }
-                                        player?.sendCustomCommand(SessionCommand(PlaybackService.TOGGLE_PROXY, bundleOf(PlaybackService.USING_PROXY to false)), Bundle.EMPTY)
+                                        player?.sendCustomCommand(
+                                            SessionCommand(
+                                                PlaybackService.TOGGLE_PROXY, bundleOf(
+                                                    PlaybackService.USING_PROXY to false
+                                                )
+                                            ), Bundle.EMPTY
+                                        )
                                     }
                                 } else {
                                     if (prefs.getBoolean(C.PLAYER_HIDE_ADS, false)) {
@@ -420,7 +490,10 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     override fun onError(error: PlaybackException) {
         Log.e(tag, "Player error", error)
-        player?.sendCustomCommand(SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
+            Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
@@ -436,7 +509,8 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                     delay(1500L)
                                     try {
                                         restartPlayer()
-                                    } catch (e: Exception) {}
+                                    } catch (e: Exception) {
+                                    }
                                 }
                             }
                             else -> {
@@ -445,7 +519,8 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                     delay(1500L)
                                     try {
                                         restartPlayer()
-                                    } catch (e: Exception) {}
+                                    } catch (e: Exception) {
+                                    }
                                 }
                             }
                         }
@@ -546,11 +621,22 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
     }
 
     fun openViewerList() {
-        item.channelLogin?.let { login -> PlayerViewerListDialog.newInstance(login).show(childFragmentManager, "closeOnPip") }
+        item.channelLogin?.let { login ->
+            PlayerViewerListDialog.newInstance(login).show(childFragmentManager, "closeOnPip")
+        }
     }
 
     fun showPlaylistTags(mediaPlaylist: Boolean) {
-        player?.sendCustomCommand(SessionCommand(if (mediaPlaylist) PlaybackService.GET_MEDIA_PLAYLIST else PlaybackService.GET_MULTIVARIANT_PLAYLIST, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+        player?.sendCustomCommand(
+            SessionCommand(
+                if (mediaPlaylist) {
+                    PlaybackService.GET_MEDIA_PLAYLIST
+                } else {
+                    PlaybackService.GET_MULTIVARIANT_PLAYLIST
+                },
+                Bundle.EMPTY
+            ), Bundle.EMPTY
+        )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                     val tags = result.get().extras.getString(PlaybackService.RESULT)
@@ -591,7 +677,10 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     override fun showDownloadDialog() {
         if (viewModel.loaded.value) {
-            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            player?.sendCustomCommand(
+                SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY),
+                Bundle.EMPTY
+            )?.let { result ->
                 result.addListener({
                     if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                         result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
@@ -637,10 +726,34 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                     enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
                                 )
                             }
-                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().tokenPrefs().getString(C.USER_ID, null), requireContext().tokenPrefs().getString(C.USERNAME, null), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
+                            viewModel.isFollowingChannel(
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                requireContext().tokenPrefs().getString(C.USERNAME, null),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                item.channelId,
+                                item.channelLogin
+                            )
                         }
-                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false), item.startedAt)
-                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId)
+                        "follow" -> viewModel.saveFollowChannel(
+                            requireContext().filesDir.path,
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId,
+                            item.channelLogin,
+                            item.channelName,
+                            item.channelLogo,
+                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                            item.startedAt
+                        )
+                        "unfollow" -> viewModel.deleteFollowChannel(
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId
+                        )
                     }
                 }
             }
@@ -656,7 +769,11 @@ class StreamPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         private const val KEY_STREAM = "stream"
 
         fun newInstance(stream: Stream): StreamPlayerFragment {
-            return StreamPlayerFragment().apply { arguments = bundleOf(KEY_STREAM to stream) }
+            return StreamPlayerFragment().apply {
+                arguments = bundleOf(
+                    KEY_STREAM to stream
+                )
+            }
         }
     }
 }

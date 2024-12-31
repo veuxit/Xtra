@@ -22,16 +22,17 @@ import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
-val Context.isNetworkAvailable get() = getConnectivityManager(this).let { connectivityManager ->
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
-                networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    } else @Suppress("DEPRECATION") {
-        val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
-        activeNetwork?.isConnectedOrConnecting == true
+val Context.isNetworkAvailable
+    get() = getConnectivityManager(this).let { connectivityManager ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+                    networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } else @Suppress("DEPRECATION") {
+            val activeNetwork = connectivityManager.activeNetworkInfo ?: connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_VPN)
+            activeNetwork?.isConnectedOrConnecting == true
+        }
     }
-}
 
 private fun getConnectivityManager(context: Context) = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -57,47 +58,56 @@ fun Activity.applyTheme() {
     }
     if (prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
         if (prefs().getBoolean(C.UI_THEME_ROUNDED_CORNERS, true)) {
-            setTheme(when(theme) {
-                "4" -> R.style.DarkTheme
-                "6" -> R.style.AmoledTheme
-                "5" -> R.style.LightTheme
-                "1" -> R.style.AmoledTheme
-                "2" -> R.style.LightTheme
-                "3" -> R.style.BlueTheme
-                else -> R.style.DarkTheme
-            })
+            setTheme(
+                when (theme) {
+                    "4" -> R.style.DarkTheme
+                    "6" -> R.style.AmoledTheme
+                    "5" -> R.style.LightTheme
+                    "1" -> R.style.AmoledTheme
+                    "2" -> R.style.LightTheme
+                    "3" -> R.style.BlueTheme
+                    else -> R.style.DarkTheme
+                }
+            )
         } else {
-            setTheme(when(theme) {
-                "4" -> R.style.DarkThemeNoCorners
-                "6" -> R.style.AmoledThemeNoCorners
-                "5" -> R.style.LightThemeNoCorners
-                "1" -> R.style.AmoledThemeNoCorners
-                "2" -> R.style.LightThemeNoCorners
-                "3" -> R.style.BlueThemeNoCorners
-                else -> R.style.DarkThemeNoCorners
-            })
+            setTheme(
+                when (theme) {
+                    "4" -> R.style.DarkThemeNoCorners
+                    "6" -> R.style.AmoledThemeNoCorners
+                    "5" -> R.style.LightThemeNoCorners
+                    "1" -> R.style.AmoledThemeNoCorners
+                    "2" -> R.style.LightThemeNoCorners
+                    "3" -> R.style.BlueThemeNoCorners
+                    else -> R.style.DarkThemeNoCorners
+                }
+            )
         }
         if (listOf("4", "6", "5").contains(theme)) {
-            DynamicColors.applyToActivityIfAvailable(this,
+            DynamicColors.applyToActivityIfAvailable(
+                this,
                 DynamicColorsOptions.Builder().apply {
-                    setThemeOverlay(when(theme) {
-                        "6" -> R.style.AmoledDynamicOverlay
-                        "5" -> R.style.LightDynamicOverlay
-                        else -> R.style.DarkDynamicOverlay
-                    })
+                    setThemeOverlay(
+                        when (theme) {
+                            "6" -> R.style.AmoledDynamicOverlay
+                            "5" -> R.style.LightDynamicOverlay
+                            else -> R.style.DarkDynamicOverlay
+                        }
+                    )
                 }.build()
             )
         }
     } else {
-        setTheme(when(theme) {
-            "4" -> R.style.AppCompatDarkTheme
-            "6" -> R.style.AppCompatAmoledTheme
-            "5" -> R.style.AppCompatLightTheme
-            "1" -> R.style.AppCompatAmoledTheme
-            "2" -> R.style.AppCompatLightTheme
-            "3" -> R.style.AppCompatBlueTheme
-            else -> R.style.AppCompatDarkTheme
-        })
+        setTheme(
+            when (theme) {
+                "4" -> R.style.AppCompatDarkTheme
+                "6" -> R.style.AppCompatAmoledTheme
+                "5" -> R.style.AppCompatLightTheme
+                "1" -> R.style.AppCompatAmoledTheme
+                "2" -> R.style.AppCompatLightTheme
+                "3" -> R.style.AppCompatBlueTheme
+                else -> R.style.AppCompatDarkTheme
+            }
+        )
     }
     val isLightTheme = this.isLightTheme
     WindowInsetsControllerCompat(window, window.decorView).run {

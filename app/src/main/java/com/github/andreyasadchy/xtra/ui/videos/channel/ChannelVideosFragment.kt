@@ -57,7 +57,12 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
             showDownloadDialog()
         }, {
             lastSelectedItem = it
-            viewModel.saveBookmark(requireContext().filesDir.path, TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()), it)
+            viewModel.saveBookmark(
+                requireContext().filesDir.path,
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                it
+            )
         })
         setAdapter(binding.recyclerView, pagingAdapter)
     }
@@ -65,13 +70,16 @@ class ChannelVideosFragment : BaseVideosFragment(), Scrollable, Sortable, Videos
     override fun initialize() {
         viewLifecycleOwner.lifecycleScope.launch {
             if (viewModel.filter.value == null) {
-                val sortValues = args.channelId?.let { viewModel.getSortChannel(it)?.takeIf { it.saveSort == true } } ?: viewModel.getSortChannel("default")
+                val sortValues = args.channelId?.let {
+                    viewModel.getSortChannel(it)?.takeIf { it.saveSort == true }
+                } ?: viewModel.getSortChannel("default")
                 viewModel.setFilter(
                     sort = sortValues?.videoSort,
                     type = sortValues?.videoType,
                     saveSort = sortValues?.saveSort,
                 )
-                viewModel.sortText.value = requireContext().getString(R.string.sort_and_period,
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_and_period,
                     requireContext().getString(
                         when (viewModel.sort) {
                             VideosSortDialog.SORT_TIME -> R.string.upload_date

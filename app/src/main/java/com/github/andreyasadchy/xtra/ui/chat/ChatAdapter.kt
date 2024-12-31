@@ -61,7 +61,8 @@ class ChatAdapter(
     private val emoteQuality: String,
     private val animateGifs: Boolean,
     private val enableZeroWidth: Boolean,
-    private val channelId: String?) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
+    private val channelId: String?,
+) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     var messages: MutableList<ChatMessage>? = null
         set(value) {

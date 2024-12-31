@@ -9,7 +9,8 @@ class TagsDataSource(
     private val gqlHeaders: Map<String, String>,
     private val getGameTags: Boolean,
     private val query: String,
-    private val api: GraphQLRepository) : PagingSource<Int, Tag>() {
+    private val api: GraphQLRepository,
+) : PagingSource<Int, Tag>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Tag> {
         return try {

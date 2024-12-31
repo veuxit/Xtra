@@ -60,7 +60,8 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
             val activity = requireActivity() as MainActivity
             val navController = findNavController()
             val appBarConfiguration = AppBarConfiguration(setOf(R.id.rootGamesFragment, R.id.rootTopFragment, R.id.followPagerFragment, R.id.followMediaFragment, R.id.savedPagerFragment, R.id.savedMediaFragment))
-            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() || !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()
+            val isLoggedIn = !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                    !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank()
             toolbar.setupWithNavController(navController, appBarConfiguration)
             toolbar.menu.findItem(R.id.login).title = if (isLoggedIn) getString(R.string.log_out) else getString(R.string.log_in)
             toolbar.setOnMenuItemClickListener { menuItem ->
@@ -120,20 +121,22 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
             })
             if (firstLaunch) {
                 val defaultItem = requireContext().prefs().getString(C.UI_FOLLOW_DEFAULT_PAGE, "0")?.toInt()
-                viewPager.setCurrentItem(if (loggedIn) {
-                    when (defaultItem) {
-                        1 -> 2
-                        2 -> 3
-                        3 -> 0
-                        else -> 1
-                    }
-                } else {
-                    when (defaultItem) {
-                        2 -> 2
-                        3 -> 0
-                        else -> 1
-                    }
-                }, false)
+                viewPager.setCurrentItem(
+                    if (loggedIn) {
+                        when (defaultItem) {
+                            1 -> 2
+                            2 -> 3
+                            3 -> 0
+                            else -> 1
+                        }
+                    } else {
+                        when (defaultItem) {
+                            2 -> 2
+                            3 -> 0
+                            else -> 1
+                        }
+                    }, false
+                )
                 firstLaunch = false
             }
             viewPager.offscreenPageLimit = adapter.itemCount

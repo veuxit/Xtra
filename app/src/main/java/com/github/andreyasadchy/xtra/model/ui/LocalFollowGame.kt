@@ -8,7 +8,8 @@ class LocalFollowGame(
     val gameId: String? = null,
     val gameSlug: String? = null,
     var gameName: String? = null,
-    var boxArt: String? = null) {
+    var boxArt: String? = null,
+) {
 
     @PrimaryKey(autoGenerate = true)
     var id = 0

@@ -33,7 +33,8 @@ class VideoPlayerViewModel @Inject constructor(
     notificationUsersRepository: NotificationUsersRepository,
     private val okHttpClient: OkHttpClient,
     private val playerRepository: PlayerRepository,
-    private val bookmarksRepository: BookmarksRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
+    private val bookmarksRepository: BookmarksRepository,
+) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val result = MutableStateFlow<Uri?>(null)
 
@@ -141,24 +142,26 @@ class VideoPlayerViewModel @Inject constructor(
                 } catch (e: Exception) {
                     null
                 }
-                bookmarksRepository.saveBookmark(Bookmark(
-                    videoId = video.id,
-                    userId = video.channelId,
-                    userLogin = video.channelLogin,
-                    userName = video.channelName,
-                    userType = userTypes?.type,
-                    userBroadcasterType = userTypes?.broadcasterType,
-                    userLogo = downloadedLogo,
-                    gameId = video.gameId,
-                    gameSlug = video.gameSlug,
-                    gameName = video.gameName,
-                    title = video.title,
-                    createdAt = video.uploadDate,
-                    thumbnail = downloadedThumbnail,
-                    type = video.type,
-                    duration = video.duration,
-                    animatedPreviewURL = video.animatedPreviewURL
-                ))
+                bookmarksRepository.saveBookmark(
+                    Bookmark(
+                        videoId = video.id,
+                        userId = video.channelId,
+                        userLogin = video.channelLogin,
+                        userName = video.channelName,
+                        userType = userTypes?.type,
+                        userBroadcasterType = userTypes?.broadcasterType,
+                        userLogo = downloadedLogo,
+                        gameId = video.gameId,
+                        gameSlug = video.gameSlug,
+                        gameName = video.gameName,
+                        title = video.title,
+                        createdAt = video.uploadDate,
+                        thumbnail = downloadedThumbnail,
+                        type = video.type,
+                        duration = video.duration,
+                        animatedPreviewURL = video.animatedPreviewURL
+                    )
+                )
             }
         }
     }

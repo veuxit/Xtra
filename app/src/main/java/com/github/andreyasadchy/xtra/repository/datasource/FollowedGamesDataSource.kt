@@ -17,7 +17,8 @@ class FollowedGamesDataSource(
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
     private val checkIntegrity: Boolean,
-    private val apiPref: List<String>) : PagingSource<Int, Game>() {
+    private val apiPref: List<String>,
+) : PagingSource<Int, Game>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
         return try {

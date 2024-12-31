@@ -275,7 +275,20 @@ object ChatAdapterUtils {
                         when (paint.type) {
                             "LINEAR_GRADIENT", "RADIAL_GRADIENT" -> {
                                 if (paint.colors != null && paint.colorPositions != null) {
-                                    builder.setSpan(NamePaintSpan(userName, paint.type, paint.colors, paint.colorPositions, paint.angle, paint.repeat, paint.shadows), builderIndex, builderIndex + userName.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                    builder.setSpan(
+                                        NamePaintSpan(
+                                            userName,
+                                            paint.type,
+                                            paint.colors,
+                                            paint.colorPositions,
+                                            paint.angle,
+                                            paint.repeat,
+                                            paint.shadows
+                                        ),
+                                        builderIndex,
+                                        builderIndex + userName.length,
+                                        SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
                                 }
                             }
                             "URL" -> {
@@ -519,7 +532,12 @@ object ChatAdapterUtils {
                             if (value.startsWith('@') && useBoldNames) {
                                 builder.setSpan(StyleSpan(Typeface.BOLD), builderIndex, builderIndex + value.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                             }
-                            if (!wasMentioned && !loggedInUser.isNullOrBlank() && value.contains(loggedInUser, true) && chatMessage.userId != null && chatMessage.userLogin != loggedInUser) {
+                            if (!wasMentioned &&
+                                !loggedInUser.isNullOrBlank() &&
+                                value.contains(loggedInUser, true) &&
+                                chatMessage.userId != null &&
+                                chatMessage.userLogin != loggedInUser
+                            ) {
                                 wasMentioned = true
                             }
                         }
@@ -589,37 +607,49 @@ object ChatAdapterUtils {
         if (imagePaint != null) {
             val paint = imagePaint.first
             if (imageLibrary == "0") {
-                val request = ImageRequest.Builder(fragment.requireContext())
-                    .data(paint.imageUrl)
-                    .target(
-                        onSuccess = {
-                            (it.asDrawable(fragment.resources)).let { result ->
-                                if (result is Animatable && animateGifs) {
-                                    result.callback = object : Drawable.Callback {
-                                        override fun unscheduleDrawable(who: Drawable, what: Runnable) {
-                                            itemView.removeCallbacks(what)
-                                        }
+                fragment.requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(fragment.requireContext()).apply {
+                        data(paint.imageUrl)
+                        target(
+                            onSuccess = {
+                                (it.asDrawable(fragment.resources)).let { result ->
+                                    if (result is Animatable && animateGifs) {
+                                        result.callback = object : Drawable.Callback {
+                                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                                itemView.removeCallbacks(what)
+                                            }
 
-                                        override fun invalidateDrawable(who: Drawable) {
-                                            itemView.invalidate()
-                                        }
+                                            override fun invalidateDrawable(who: Drawable) {
+                                                itemView.invalidate()
+                                            }
 
-                                        override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
-                                            itemView.postDelayed(what, `when`)
+                                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                                itemView.postDelayed(what, `when`)
+                                            }
                                         }
+                                        (result as Animatable).start()
                                     }
-                                    (result as Animatable).start()
+                                    try {
+                                        builder.setSpan(
+                                            NamePaintImageSpan(
+                                                imagePaint.second,
+                                                paint.shadows,
+                                                (itemView.background as? ColorDrawable)?.color,
+                                                backgroundColor,
+                                                result
+                                            ),
+                                            imagePaint.third,
+                                            imagePaint.third + imagePaint.second.length,
+                                            SPAN_EXCLUSIVE_EXCLUSIVE
+                                        )
+                                    } catch (e: IndexOutOfBoundsException) {
+                                    }
+                                    bind(builder)
                                 }
-                                try {
-                                    builder.setSpan(NamePaintImageSpan(imagePaint.second, paint.shadows, (itemView.background as? ColorDrawable)?.color, backgroundColor, result), imagePaint.third, imagePaint.third + imagePaint.second.length, SPAN_EXCLUSIVE_EXCLUSIVE)
-                                } catch (e: IndexOutOfBoundsException) {
-                                }
-                                bind(builder)
-                            }
-                        },
-                    )
-                    .build()
-                fragment.requireContext().imageLoader.enqueue(request)
+                            },
+                        )
+                    }.build()
+                )
             } else {
                 Glide.with(fragment)
                     .load(paint.imageUrl)
@@ -643,7 +673,18 @@ object ChatAdapterUtils {
                                 (resource as Animatable).start()
                             }
                             try {
-                                builder.setSpan(NamePaintImageSpan(imagePaint.second, paint.shadows, (itemView.background as? ColorDrawable)?.color, backgroundColor, resource), imagePaint.third, imagePaint.third + imagePaint.second.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+                                builder.setSpan(
+                                    NamePaintImageSpan(
+                                        imagePaint.second,
+                                        paint.shadows,
+                                        (itemView.background as? ColorDrawable)?.color,
+                                        backgroundColor,
+                                        resource
+                                    ),
+                                    imagePaint.third,
+                                    imagePaint.third + imagePaint.second.length,
+                                    SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
                             } catch (e: IndexOutOfBoundsException) {
                             }
                             bind(builder)
@@ -664,52 +705,53 @@ object ChatAdapterUtils {
     }
 
     private fun loadCoil(fragment: Fragment, image: Image, itemView: View, bind: (SpannableStringBuilder) -> Unit, builder: SpannableStringBuilder, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableZeroWidth: Boolean) {
-        val request = ImageRequest.Builder(fragment.requireContext())
-            .data(image.localData ?: when (emoteQuality) {
-                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
-                "3" -> image.url3x ?: image.url2x ?: image.url1x
-                "2" -> image.url2x ?: image.url1x
-                else -> image.url1x
-            })
-            .target(
-                onSuccess = {
-                    (it.asDrawable(fragment.resources)).let { result ->
-                        val size = if (image.isEmote) {
-                            calculateEmoteSize(result, emoteSize)
-                        } else {
-                            Pair(badgeSize, badgeSize)
-                        }
-                        if (image.isZeroWidth && enableZeroWidth) {
-                            result.setBounds(-90, 0, size.first - 90, size.second)
-                        } else {
-                            result.setBounds(0, 0, size.first, size.second)
-                        }
-                        if (result is Animatable && image.isAnimated && animateGifs) {
-                            result.callback = object : Drawable.Callback {
-                                override fun unscheduleDrawable(who: Drawable, what: Runnable) {
-                                    itemView.removeCallbacks(what)
-                                }
-
-                                override fun invalidateDrawable(who: Drawable) {
-                                    itemView.invalidate()
-                                }
-
-                                override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
-                                    itemView.postDelayed(what, `when`)
-                                }
+        fragment.requireContext().imageLoader.enqueue(
+            ImageRequest.Builder(fragment.requireContext()).apply {
+                data(image.localData ?: when (emoteQuality) {
+                    "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
+                    "3" -> image.url3x ?: image.url2x ?: image.url1x
+                    "2" -> image.url2x ?: image.url1x
+                    else -> image.url1x
+                })
+                target(
+                    onSuccess = {
+                        (it.asDrawable(fragment.resources)).let { result ->
+                            val size = if (image.isEmote) {
+                                calculateEmoteSize(result, emoteSize)
+                            } else {
+                                Pair(badgeSize, badgeSize)
                             }
-                            (result as Animatable).start()
+                            if (image.isZeroWidth && enableZeroWidth) {
+                                result.setBounds(-90, 0, size.first - 90, size.second)
+                            } else {
+                                result.setBounds(0, 0, size.first, size.second)
+                            }
+                            if (result is Animatable && image.isAnimated && animateGifs) {
+                                result.callback = object : Drawable.Callback {
+                                    override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                        itemView.removeCallbacks(what)
+                                    }
+
+                                    override fun invalidateDrawable(who: Drawable) {
+                                        itemView.invalidate()
+                                    }
+
+                                    override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                        itemView.postDelayed(what, `when`)
+                                    }
+                                }
+                                (result as Animatable).start()
+                            }
+                            try {
+                                builder.setSpan(CenteredImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
+                            } catch (e: IndexOutOfBoundsException) {
+                            }
+                            bind(builder)
                         }
-                        try {
-                            builder.setSpan(CenteredImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
-                        } catch (e: IndexOutOfBoundsException) {
-                        }
-                        bind(builder)
-                    }
-                },
-            )
-            .build()
-        fragment.requireContext().imageLoader.enqueue(request)
+                    },
+                )
+            }.build()
+        )
     }
 
     private fun loadGlide(fragment: Fragment, image: Image, itemView: View, bind: (SpannableStringBuilder) -> Unit, builder: SpannableStringBuilder, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableZeroWidth: Boolean) {

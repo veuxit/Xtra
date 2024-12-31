@@ -72,7 +72,8 @@ import kotlin.math.max
 @HiltWorker
 class StreamDownloadWorker @AssistedInject constructor(
     @Assisted private val context: Context,
-    @Assisted parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
+    @Assisted parameters: WorkerParameters,
+) : CoroutineWorker(context, parameters) {
 
     @Inject
     lateinit var repository: ApiRepository
@@ -894,11 +895,17 @@ class StreamDownloadWorker @AssistedInject constructor(
             setContentText(offlineVideo.channelName)
             setSmallIcon(android.R.drawable.stat_sys_download)
             setOngoing(true)
-            setContentIntent(PendingIntent.getActivity(context, offlineVideo.id,
-                Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    action = MainActivity.INTENT_OPEN_DOWNLOADS_TAB
-                }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+            setContentIntent(
+                PendingIntent.getActivity(
+                    context,
+                    offlineVideo.id,
+                    Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        action = MainActivity.INTENT_OPEN_DOWNLOADS_TAB
+                    },
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
             addAction(android.R.drawable.ic_delete, ContextCompat.getString(context, R.string.stop), WorkManager.getInstance(context).createCancelPendingIntent(id))
         }.build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

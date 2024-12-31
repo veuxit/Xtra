@@ -28,7 +28,8 @@ class BookmarksViewModel @Inject internal constructor(
     private val bookmarksRepository: BookmarksRepository,
     playerRepository: PlayerRepository,
     private val vodBookmarkIgnoredUsersRepository: VodBookmarkIgnoredUsersRepository,
-    private val okHttpClient: OkHttpClient) : ViewModel() {
+    private val okHttpClient: OkHttpClient,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
@@ -63,13 +64,19 @@ class BookmarksViewModel @Inject internal constructor(
         if (!updatedUsers) {
             viewModelScope.launch {
                 try {
-                    val allIds = bookmarksRepository.loadBookmarks().mapNotNull { bookmark -> bookmark.userId.takeUnless { it == null || vodBookmarkIgnoredUsersRepository.loadUsers().contains(VodBookmarkIgnoredUser(it)) } }
+                    val allIds = bookmarksRepository.loadBookmarks().mapNotNull { bookmark ->
+                        bookmark.userId.takeUnless {
+                            it == null || vodBookmarkIgnoredUsersRepository.loadUsers().contains(VodBookmarkIgnoredUser(it))
+                        }
+                    }
                     if (allIds.isNotEmpty()) {
                         for (ids in allIds.chunked(100)) {
                             val users = repository.loadUserTypes(ids, helixHeaders, gqlHeaders)
                             if (users != null) {
                                 for (user in users) {
-                                    val bookmarks = user.channelId?.let { bookmarksRepository.getBookmarksByUserId(it) }
+                                    val bookmarks = user.channelId?.let {
+                                        bookmarksRepository.getBookmarksByUserId(it)
+                                    }
                                     if (bookmarks != null) {
                                         for (bookmark in bookmarks) {
                                             if (user.type != bookmark.userType || user.broadcasterType != bookmark.userBroadcasterType) {
@@ -82,7 +89,8 @@ class BookmarksViewModel @Inject internal constructor(
                                     }
                                 }
                             }
-                        }}
+                        }
+                    }
                     updatedUsers = true
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
@@ -121,24 +129,26 @@ class BookmarksViewModel @Inject internal constructor(
                             path
                         }
                     }
-                    bookmarksRepository.updateBookmark(Bookmark(
-                        videoId = bookmark.videoId,
-                        userId = video.channelId ?: bookmark.userId,
-                        userLogin = video.channelLogin ?: bookmark.userLogin,
-                        userName = video.channelName ?: bookmark.userName,
-                        userType = bookmark.userType,
-                        userBroadcasterType = bookmark.userBroadcasterType,
-                        userLogo = bookmark.userLogo,
-                        gameId = video.gameId ?: bookmark.gameId,
-                        gameSlug = video.gameSlug ?: bookmark.gameSlug,
-                        gameName = video.gameName ?: bookmark.gameName,
-                        title = video.title ?: bookmark.title,
-                        createdAt = video.uploadDate ?: bookmark.createdAt,
-                        thumbnail = downloadedThumbnail,
-                        type = video.type ?: bookmark.type,
-                        duration = video.duration ?: bookmark.duration,
-                        animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
-                    ))
+                    bookmarksRepository.updateBookmark(
+                        Bookmark(
+                            videoId = bookmark.videoId,
+                            userId = video.channelId ?: bookmark.userId,
+                            userLogin = video.channelLogin ?: bookmark.userLogin,
+                            userName = video.channelName ?: bookmark.userName,
+                            userType = bookmark.userType,
+                            userBroadcasterType = bookmark.userBroadcasterType,
+                            userLogo = bookmark.userLogo,
+                            gameId = video.gameId ?: bookmark.gameId,
+                            gameSlug = video.gameSlug ?: bookmark.gameSlug,
+                            gameName = video.gameName ?: bookmark.gameName,
+                            title = video.title ?: bookmark.title,
+                            createdAt = video.uploadDate ?: bookmark.createdAt,
+                            thumbnail = downloadedThumbnail,
+                            type = video.type ?: bookmark.type,
+                            duration = video.duration ?: bookmark.duration,
+                            animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
+                        )
+                    )
                 }
             } catch (e: Exception) {
                 if (e.message == "failed integrity check" && integrity.value == null) {
@@ -164,7 +174,8 @@ class BookmarksViewModel @Inject internal constructor(
                                             bookmark.title != video.title ||
                                             bookmark.createdAt != video.uploadDate ||
                                             bookmark.type != video.type ||
-                                            bookmark.duration != video.duration)) {
+                                            bookmark.duration != video.duration)
+                                    ) {
                                     val downloadedThumbnail = video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
                                         File(filesDir, "thumbnails").mkdir()
                                         val path = filesDir + File.separator + "thumbnails" + File.separator + video.id
@@ -183,24 +194,26 @@ class BookmarksViewModel @Inject internal constructor(
                                         }
                                         path
                                     }
-                                    bookmarksRepository.updateBookmark(Bookmark(
-                                        videoId = bookmark.videoId,
-                                        userId = video.channelId ?: bookmark.userId,
-                                        userLogin = video.channelLogin ?: bookmark.userLogin,
-                                        userName = video.channelName ?: bookmark.userName,
-                                        userType = bookmark.userType,
-                                        userBroadcasterType = bookmark.userBroadcasterType,
-                                        userLogo = bookmark.userLogo,
-                                        gameId = bookmark.gameId,
-                                        gameSlug = bookmark.gameSlug,
-                                        gameName = bookmark.gameName,
-                                        title = video.title ?: bookmark.title,
-                                        createdAt = video.uploadDate ?: bookmark.createdAt,
-                                        thumbnail = downloadedThumbnail,
-                                        type = video.type ?: bookmark.type,
-                                        duration = video.duration ?: bookmark.duration,
-                                        animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
-                                    ))
+                                    bookmarksRepository.updateBookmark(
+                                        Bookmark(
+                                            videoId = bookmark.videoId,
+                                            userId = video.channelId ?: bookmark.userId,
+                                            userLogin = video.channelLogin ?: bookmark.userLogin,
+                                            userName = video.channelName ?: bookmark.userName,
+                                            userType = bookmark.userType,
+                                            userBroadcasterType = bookmark.userBroadcasterType,
+                                            userLogo = bookmark.userLogo,
+                                            gameId = bookmark.gameId,
+                                            gameSlug = bookmark.gameSlug,
+                                            gameName = bookmark.gameName,
+                                            title = video.title ?: bookmark.title,
+                                            createdAt = video.uploadDate ?: bookmark.createdAt,
+                                            thumbnail = downloadedThumbnail,
+                                            type = video.type ?: bookmark.type,
+                                            duration = video.duration ?: bookmark.duration,
+                                            animatedPreviewURL = video.animatedPreviewURL ?: bookmark.animatedPreviewURL
+                                        )
+                                    )
                                 }
                             }
                         }

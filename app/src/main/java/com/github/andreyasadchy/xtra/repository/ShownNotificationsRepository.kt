@@ -17,7 +17,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ShownNotificationsRepository @Inject constructor(
-    private val shownNotificationsDao: ShownNotificationsDao) {
+    private val shownNotificationsDao: ShownNotificationsDao,
+) {
 
     suspend fun getNewStreams(notificationUsersRepository: NotificationUsersRepository, gqlHeaders: Map<String, String>, apolloClient: ApolloClient, helixHeaders: Map<String, String>, helixApi: HelixApi): List<Stream> = withContext(Dispatchers.IO) {
         val list = mutableListOf<Stream>()

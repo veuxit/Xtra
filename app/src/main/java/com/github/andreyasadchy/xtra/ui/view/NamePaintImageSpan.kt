@@ -16,7 +16,8 @@ class NamePaintImageSpan(
     private val shadows: List<NamePaint.Shadow>?,
     var backgroundColor: Int?,
     private val bottomBackgroundColor: Int,
-    val drawable: Drawable) : ReplacementSpan() {
+    val drawable: Drawable,
+) : ReplacementSpan() {
 
     override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         if (fm != null) {

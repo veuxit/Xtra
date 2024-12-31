@@ -8,8 +8,9 @@ import com.github.andreyasadchy.xtra.ui.streams.followed.FollowedStreamsFragment
 import com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment
 
 class FollowPagerAdapter(
-        fragment: Fragment,
-        private val loggedIn: Boolean) : FragmentStateAdapter(fragment) {
+    fragment: Fragment,
+    private val loggedIn: Boolean,
+) : FragmentStateAdapter(fragment) {
 
     override fun createFragment(position: Int): Fragment {
         return if (loggedIn) {

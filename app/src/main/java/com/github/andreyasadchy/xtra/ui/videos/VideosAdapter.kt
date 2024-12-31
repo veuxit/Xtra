@@ -35,7 +35,8 @@ class VideosAdapter(
     private val fragment: Fragment,
     private val showDownloadDialog: (Video) -> Unit,
     private val saveBookmark: (Video) -> Unit,
-    private val hideGame: Boolean = false) : BaseVideosAdapter<Video, VideosAdapter.PagingViewHolder>(
+    private val hideGame: Boolean = false,
+) : BaseVideosAdapter<Video, VideosAdapter.PagingViewHolder>(
     object : DiffUtil.ItemCallback<Video>() {
         override fun areItemsTheSame(oldItem: Video, newItem: Video): Boolean =
             oldItem.id == newItem.id
@@ -59,17 +60,22 @@ class VideosAdapter(
     inner class PagingViewHolder(
         private val binding: FragmentVideosListItemBinding,
         private val fragment: Fragment,
-        private val hideGame: Boolean): RecyclerView.ViewHolder(binding.root) {
+        private val hideGame: Boolean,
+    ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Video?) {
             with(binding) {
                 if (item != null) {
                     val context = fragment.requireContext()
-                    val channelListener: (View) -> Unit = { fragment.findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo,
-                    )) }
+                    val channelListener: (View) -> Unit = {
+                        fragment.findNavController().navigate(
+                            ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                                channelId = item.channelId,
+                                channelLogin = item.channelLogin,
+                                channelName = item.channelName,
+                                channelLogo = item.channelLogo,
+                            )
+                        )
+                    }
                     val gameListener: (View) -> Unit = {
                         fragment.findNavController().navigate(
                             if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
@@ -93,7 +99,11 @@ class VideosAdapter(
                         (fragment.activity as MainActivity).startVideo(item, position?.toDouble())
                     }
                     root.setOnLongClickListener { showDownloadDialog(item); true }
-                    thumbnail.loadImage(fragment, item.thumbnail, diskCacheStrategy = DiskCacheStrategy.NONE)
+                    thumbnail.loadImage(
+                        fragment,
+                        item.thumbnail,
+                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    )
                     if (item.uploadDate != null) {
                         val text = TwitchApiHelper.formatTimeString(context, item.uploadDate)
                         if (text != null) {
@@ -134,14 +144,18 @@ class VideosAdapter(
                     } else {
                         progressBar.gone()
                     }
-                    if (item.channelLogo != null)  {
+                    if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(fragment, item.channelLogo, circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true))
+                        userImage.loadImage(
+                            fragment,
+                            item.channelLogo,
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        )
                         userImage.setOnClickListener(channelListener)
                     } else {
                         userImage.gone()
                     }
-                    if (item.channelName != null)  {
+                    if (item.channelName != null) {
                         username.visible()
                         username.text = if (item.channelLogin != null && !item.channelLogin.equals(item.channelName, true)) {
                             when (context.prefs().getString(C.UI_NAME_DISPLAY, "0")) {
@@ -156,13 +170,13 @@ class VideosAdapter(
                     } else {
                         username.gone()
                     }
-                    if (item.title != null && item.title != "")  {
+                    if (item.title != null && item.title != "") {
                         title.visible()
                         title.text = item.title.trim()
                     } else {
                         title.gone()
                     }
-                    if (!hideGame && item.gameName != null)  {
+                    if (!hideGame && item.gameName != null) {
                         gameName.visible()
                         gameName.text = item.gameName
                         gameName.setOnClickListener(gameListener)
@@ -173,7 +187,10 @@ class VideosAdapter(
                         tagsLayout.removeAllViews()
                         tagsLayout.visible()
                         val tagsFlowLayout = Flow(context).apply {
-                            layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            layoutParams = ConstraintLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply {
                                 topToTop = tagsLayout.id
                                 bottomToBottom = tagsLayout.id
                                 startToStart = tagsLayout.id
@@ -194,9 +211,11 @@ class VideosAdapter(
                             }
                             if (tag.name != null) {
                                 text.setOnClickListener {
-                                    fragment.findNavController().navigate(GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                        tags = arrayOf(tag.name),
-                                    ))
+                                    fragment.findNavController().navigate(
+                                        GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                            tags = arrayOf(tag.name),
+                                        )
+                                    )
                                 }
                             }
                             val padding = context.convertDpToPixels(5f)
@@ -219,7 +238,7 @@ class VideosAdapter(
                                 }
                             }
                             setOnMenuItemClickListener {
-                                when(it.itemId) {
+                                when (it.itemId) {
                                     R.id.download -> showDownloadDialog(item)
                                     R.id.bookmark -> saveBookmark(item)
                                     R.id.share -> {

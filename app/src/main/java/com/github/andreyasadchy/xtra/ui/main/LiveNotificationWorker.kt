@@ -26,7 +26,8 @@ import javax.inject.Inject
 @HiltWorker
 class LiveNotificationWorker @AssistedInject constructor(
     @Assisted private val context: Context,
-    @Assisted parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
+    @Assisted parameters: WorkerParameters,
+) : CoroutineWorker(context, parameters) {
 
     @Inject
     lateinit var shownNotifications: ShownNotificationsRepository
@@ -80,12 +81,18 @@ class LiveNotificationWorker @AssistedInject constructor(
                     setContentText(it.title)
                     setSmallIcon(R.drawable.notification_icon)
                     setAutoCancel(true)
-                    setContentIntent(PendingIntent.getActivity(context, it.channelId.hashCode(),
-                        Intent(context, MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            action = MainActivity.INTENT_LIVE_NOTIFICATION
-                            putExtra(MainActivity.KEY_VIDEO, it)
-                        }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+                    setContentIntent(
+                        PendingIntent.getActivity(
+                            context,
+                            it.channelId.hashCode(),
+                            Intent(context, MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                action = MainActivity.INTENT_LIVE_NOTIFICATION
+                                putExtra(MainActivity.KEY_VIDEO, it)
+                            },
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                        )
+                    )
                 }.build()
                 notificationManager.notify(it.channelId.hashCode(), notification)
             }

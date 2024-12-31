@@ -29,13 +29,17 @@ class PubSubWebSocket(
     private val onPointsEarned: (JSONObject) -> Unit,
     private val onClaimAvailable: () -> Unit,
     private val onMinuteWatched: () -> Unit,
-    private val onRaidUpdate: (JSONObject, Boolean) -> Unit) {
+    private val onRaidUpdate: (JSONObject, Boolean) -> Unit,
+) {
     private var socket: WebSocket? = null
     private var isActive = false
     private var pongReceived = false
 
     fun connect() {
-        socket = client.newWebSocket(Request.Builder().url("wss://pubsub-edge.twitch.tv").build(), PubSubWebSocketListener())
+        socket = client.newWebSocket(
+            Request.Builder().url("wss://pubsub-edge.twitch.tv").build(),
+            PubSubWebSocketListener()
+        )
     }
 
     fun disconnect() {

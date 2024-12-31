@@ -26,7 +26,7 @@
         android:key="proxy_host"
         android:title="@string/proxy_host"
         app:iconSpaceReserved="false"
-        app:singleLineTitle="false" 
+        app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference

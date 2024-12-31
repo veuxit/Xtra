@@ -8,4 +8,5 @@ class TwitchBadge(
     val url2x: String? = null,
     val url3x: String? = null,
     val url4x: String? = null,
-    val title: String? = null)
+    val title: String? = null,
+)

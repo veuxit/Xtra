@@ -1,7 +1,11 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="@string/streams" android:summary="@string/settings_token_summary" app:iconSpaceReserved="false"/>
+    <PreferenceCategory
+        android:title="@string/streams"
+        android:summary="@string/settings_token_summary"
+        app:iconSpaceReserved="false" />
+
     <EditTextPreference
         android:defaultValue="twitch-web-wall-mason"
         android:dependency="token_random_deviceid"
@@ -24,7 +28,7 @@
         android:key="token_playertype"
         android:title="playerType"
         app:iconSpaceReserved="false"
-        app:singleLineTitle="false" 
+        app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
@@ -35,13 +39,16 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <PreferenceCategory android:title="@string/videos" app:iconSpaceReserved="false"/>
+    <PreferenceCategory
+        android:title="@string/videos"
+        app:iconSpaceReserved="false" />
+
     <EditTextPreference
         android:defaultValue="channel_home_live"
         android:key="token_playertype_video"
         android:title="playerType"
         app:iconSpaceReserved="false"
-        app:singleLineTitle="false" 
+        app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat

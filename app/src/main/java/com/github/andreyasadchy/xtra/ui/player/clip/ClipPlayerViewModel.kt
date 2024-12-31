@@ -20,7 +20,8 @@ class ClipPlayerViewModel @Inject constructor(
     shownNotificationsRepository: ShownNotificationsRepository,
     notificationUsersRepository: NotificationUsersRepository,
     okHttpClient: OkHttpClient,
-    private val playerRepository: PlayerRepository) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
+    private val playerRepository: PlayerRepository,
+) : PlayerViewModel(repository, localFollowsChannel, shownNotificationsRepository, notificationUsersRepository, okHttpClient) {
 
     val result = MutableStateFlow<Map<String, String>?>(null)
 

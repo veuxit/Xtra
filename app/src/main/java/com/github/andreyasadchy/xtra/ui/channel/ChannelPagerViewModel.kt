@@ -42,7 +42,8 @@ class ChannelPagerViewModel @Inject constructor(
     private val apolloClient: ApolloClient,
     private val helixApi: HelixApi,
     private val okHttpClient: OkHttpClient,
-    savedStateHandle: SavedStateHandle) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
@@ -78,7 +79,8 @@ class ChannelPagerViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         _user.value = repository.loadUser(args.channelId, args.channelLogin, helixHeaders)
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                    }
                 }
             }
         }
@@ -277,7 +279,7 @@ class ChannelPagerViewModel @Inject constructor(
     fun updateLocalUser(filesDir: String, user: User) {
         if (!updatedLocalUser) {
             updatedLocalUser = true
-            user.channelId.takeIf { !it.isNullOrBlank()}?.let { userId ->
+            user.channelId.takeIf { !it.isNullOrBlank() }?.let { userId ->
                 viewModelScope.launch {
                     val downloadedLogo = user.channelLogo.takeIf { !it.isNullOrBlank() }?.let {
                         File(filesDir, "profile_pics").mkdir()

@@ -108,18 +108,20 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         if (!item.videoId.isNullOrBlank()) {
             binding.watchVideo.visible()
             binding.watchVideo.setOnClickListener {
-                (requireActivity() as MainActivity).startVideo(Video(
-                    id = item.videoId,
-                    channelId = item.channelId,
-                    channelLogin = item.channelLogin,
-                    channelName = item.channelName,
-                    profileImageUrl = item.profileImageUrl,
-                    animatedPreviewURL = item.videoAnimatedPreviewURL
-                ), (if (item.vodOffset != null) {
-                    ((item.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
-                } else {
-                    0.0
-                }), true)
+                (requireActivity() as MainActivity).startVideo(
+                    Video(
+                        id = item.videoId,
+                        channelId = item.channelId,
+                        channelLogin = item.channelLogin,
+                        channelName = item.channelName,
+                        profileImageUrl = item.profileImageUrl,
+                        animatedPreviewURL = item.videoAnimatedPreviewURL
+                    ), (if (item.vodOffset != null) {
+                        ((item.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (player?.currentPosition ?: 0)
+                    } else {
+                        0.0
+                    }), true
+                )
             }
         }
         if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
@@ -135,12 +137,14 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     item.channelName
                 }
                 setOnClickListener {
-                    findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                        channelId = item.channelId,
-                        channelLogin = item.channelLogin,
-                        channelName = item.channelName,
-                        channelLogo = item.channelLogo
-                    ))
+                    findNavController().navigate(
+                        ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                            channelId = item.channelId,
+                            channelLogin = item.channelLogin,
+                            channelName = item.channelName,
+                            channelLogo = item.channelLogo
+                        )
+                    )
                     slidingLayout.minimize()
                 }
             }
@@ -195,10 +199,27 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                 }
                             ))
                             .setNegativeButton(getString(R.string.no), null)
-                            .setPositiveButton(getString(R.string.yes)) { _, _ -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId) }
+                            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                viewModel.deleteFollowChannel(
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    setting,
+                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                    item.channelId
+                                )
+                            }
                             .show()
                     } else {
-                        viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
+                        viewModel.saveFollowChannel(
+                            requireContext().filesDir.path,
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            setting,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId,
+                            item.channelLogin,
+                            item.channelName,
+                            item.channelLogo,
+                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
+                        )
                     }
                 }
             }
@@ -271,7 +292,15 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     override fun initialize() {
         super.initialize()
-        viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().tokenPrefs().getString(C.USER_ID, null), requireContext().tokenPrefs().getString(C.USERNAME, null), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
+        viewModel.isFollowingChannel(
+            TwitchApiHelper.getHelixHeaders(requireContext()),
+            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+            requireContext().tokenPrefs().getString(C.USER_ID, null),
+            requireContext().tokenPrefs().getString(C.USERNAME, null),
+            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+            item.channelId,
+            item.channelLogin
+        )
     }
 
     override fun startPlayer() {
@@ -291,11 +320,15 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                                         emptyMap()
                                     }
                                 }
-                                player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
-                                    PlaybackService.ITEM to clip,
-                                    PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
-                                    PlaybackService.URLS_VALUES to urls.values.toTypedArray()
-                                )), Bundle.EMPTY)
+                                player?.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.START_CLIP, bundleOf(
+                                            PlaybackService.ITEM to clip,
+                                            PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
+                                            PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                                        )
+                                    ), Bundle.EMPTY
+                                )
                                 viewModel.result.value = null
                             }
                         }
@@ -303,11 +336,15 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                 }
             } else {
                 val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
-                player?.sendCustomCommand(SessionCommand(PlaybackService.START_CLIP, bundleOf(
-                    PlaybackService.ITEM to clip,
-                    PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
-                    PlaybackService.URLS_VALUES to urls.values.toTypedArray()
-                )), Bundle.EMPTY)
+                player?.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.START_CLIP, bundleOf(
+                            PlaybackService.ITEM to clip,
+                            PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
+                            PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                        )
+                    ), Bundle.EMPTY
+                )
             }
         }
     }
@@ -318,7 +355,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
 
     override fun showDownloadDialog() {
         if (viewModel.loaded.value) {
-            player?.sendCustomCommand(SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY), Bundle.EMPTY)?.let { result ->
+            player?.sendCustomCommand(
+                SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY),
+                Bundle.EMPTY
+            )?.let { result ->
                 result.addListener({
                     if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                         result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
@@ -351,10 +391,33 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
                     when (callback) {
                         "refresh" -> {
                             viewModel.load(TwitchApiHelper.getGQLHeaders(requireContext()), item.id)
-                            viewModel.isFollowingChannel(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().tokenPrefs().getString(C.USER_ID, null), requireContext().tokenPrefs().getString(C.USERNAME, null), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, item.channelId, item.channelLogin)
+                            viewModel.isFollowingChannel(
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                requireContext().tokenPrefs().getString(C.USERNAME, null),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                item.channelId,
+                                item.channelLogin
+                            )
                         }
-                        "follow" -> viewModel.saveFollowChannel(requireContext().filesDir.path, TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId, item.channelLogin, item.channelName, item.channelLogo, requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false))
-                        "unfollow" -> viewModel.deleteFollowChannel(TwitchApiHelper.getGQLHeaders(requireContext(), true), prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0, requireContext().tokenPrefs().getString(C.USER_ID, null), item.channelId)
+                        "follow" -> viewModel.saveFollowChannel(
+                            requireContext().filesDir.path,
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId,
+                            item.channelLogin,
+                            item.channelName,
+                            item.channelLogo,
+                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
+                        )
+                        "unfollow" -> viewModel.deleteFollowChannel(
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                            item.channelId
+                        )
                     }
                 }
             }
@@ -370,7 +433,11 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog {
         private const val KEY_CLIP = "clip"
 
         fun newInstance(clip: Clip): ClipPlayerFragment {
-            return ClipPlayerFragment().apply { arguments = bundleOf(KEY_CLIP to clip) }
+            return ClipPlayerFragment().apply {
+                arguments = bundleOf(
+                    KEY_CLIP to clip
+                )
+            }
         }
     }
 }

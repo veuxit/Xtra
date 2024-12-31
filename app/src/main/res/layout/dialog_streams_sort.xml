@@ -26,13 +26,13 @@
                 android:id="@+id/viewers_high"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/viewers_high"/>
+                android:text="@string/viewers_high" />
 
             <RadioButton
                 android:id="@+id/viewers_low"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/viewers_low"/>
+                android:text="@string/viewers_low" />
 
         </RadioGroup>
 
@@ -41,14 +41,14 @@
             style="?attr/bottomSheetButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/apply"/>
+            android:text="@string/apply" />
 
         <Button
             android:id="@+id/selectTags"
             style="?attr/bottomSheetButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/tags"/>
+            android:text="@string/tags" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

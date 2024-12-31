@@ -22,7 +22,8 @@ class User(
     val stream: Stream? = null,
 
     var followAccount: Boolean = false,
-    val followLocal: Boolean = false) : Parcelable {
+    val followLocal: Boolean = false,
+) : Parcelable {
 
     val channelLogo: String?
         get() = TwitchApiHelper.getTemplateUrl(profileImageUrl, "profileimage")

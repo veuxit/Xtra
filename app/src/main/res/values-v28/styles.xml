@@ -1,44 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <style name="DarkTheme" parent="BaseDarkTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="LightTheme" parent="BaseLightTheme">
         <item name="android:navigationBarColor">@color/lightScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AmoledTheme" parent="BaseAmoledTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="BlueTheme" parent="BaseBlueTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="DarkThemeNoCorners" parent="BaseDarkThemeNoCorners">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="LightThemeNoCorners" parent="BaseLightThemeNoCorners">
         <item name="android:navigationBarColor">@color/lightScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AmoledThemeNoCorners" parent="BaseAmoledThemeNoCorners">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="BlueThemeNoCorners" parent="BaseBlueThemeNoCorners">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AppCompatDarkTheme" parent="BaseAppCompatDarkTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AppCompatLightTheme" parent="BaseAppCompatLightTheme">
         <item name="android:navigationBarColor">@color/lightScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AppCompatAmoledTheme" parent="BaseAppCompatAmoledTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
     <style name="AppCompatBlueTheme" parent="BaseAppCompatBlueTheme">
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>

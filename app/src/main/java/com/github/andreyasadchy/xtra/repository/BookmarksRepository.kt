@@ -14,7 +14,8 @@ import javax.inject.Singleton
 class BookmarksRepository @Inject constructor(
     private val bookmarksDao: BookmarksDao,
     private val localFollowsChannelDao: LocalFollowsChannelDao,
-    private val videosDao: VideosDao) {
+    private val videosDao: VideosDao,
+) {
 
     fun loadBookmarksPagingSource() = bookmarksDao.getAllPagingSource()
 

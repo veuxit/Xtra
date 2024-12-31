@@ -30,7 +30,7 @@
 
         <include
             android:id="@+id/sortBar"
-            layout="@layout/sort_bar"/>
+            layout="@layout/sort_bar" />
 
     </com.google.android.material.appbar.AppBarLayout>
 

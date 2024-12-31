@@ -32,7 +32,8 @@ class VideoSearchViewModel @Inject constructor(
     bookmarksRepository: BookmarksRepository,
     okHttpClient: OkHttpClient,
     private val graphQLRepository: GraphQLRepository,
-    private val apolloClient: ApolloClient) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
+    private val apolloClient: ApolloClient,
+) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query

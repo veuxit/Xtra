@@ -51,8 +51,17 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         const val GLOBAL_BTTV = "global_bttv"
         const val GLOBAL_FFZ = "global_ffz"
 
-        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, emoteId: String?) = ImageClickedDialog().apply {
-            arguments = bundleOf(IMAGE_URL to url, IMAGE_NAME to name, IMAGE_SOURCE to source, IMAGE_FORMAT to format, IMAGE_ANIMATED to isAnimated, EMOTE_ID to emoteId)
+        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, emoteId: String?): ImageClickedDialog {
+            return ImageClickedDialog().apply {
+                arguments = bundleOf(
+                    IMAGE_URL to url,
+                    IMAGE_NAME to name,
+                    IMAGE_SOURCE to source,
+                    IMAGE_FORMAT to format,
+                    IMAGE_ANIMATED to isAnimated,
+                    EMOTE_ID to emoteId
+                )
+            }
         }
     }
 
@@ -73,7 +82,11 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {
-                    if (it != null && it != "done" && requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)) {
+                    if (it != null &&
+                        it != "done" &&
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    ) {
                         IntegrityDialog.show(childFragmentManager, it)
                         viewModel.integrity.value = "done"
                     }
@@ -85,16 +98,18 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
             val imageLibrary = requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
             if (imageLibrary == "0" || (imageLibrary == "1" && !args.getString(IMAGE_FORMAT).equals("webp", true))) {
                 requireContext().imageLoader.enqueue(
-                    ImageRequest.Builder(requireContext())
-                        .data(args.getString(IMAGE_URL))
-                        .target(onSuccess = {
-                            val result = it.asDrawable(resources)
-                            if (result is Animatable && args.getBoolean(IMAGE_ANIMATED) && requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)) {
-                                (result as Animatable).start()
+                    ImageRequest.Builder(requireContext()).apply {
+                        data(args.getString(IMAGE_URL))
+                        target(
+                            onSuccess = {
+                                val result = it.asDrawable(resources)
+                                if (result is Animatable && args.getBoolean(IMAGE_ANIMATED) && requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true)) {
+                                    (result as Animatable).start()
+                                }
+                                image.setImageDrawable(result)
                             }
-                            image.setImageDrawable(result)
-                        })
-                        .build()
+                        )
+                    }.build()
                 )
             } else {
                 Glide.with(this@ImageClickedDialog)
