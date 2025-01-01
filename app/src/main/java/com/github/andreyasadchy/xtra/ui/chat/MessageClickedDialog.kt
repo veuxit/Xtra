@@ -207,6 +207,10 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                                 }
                             }
                         }
+                        viewProfile.setOnClickListener {
+                            listener.onViewProfileClicked(selectedMessage.userId, selectedMessage.userLogin, selectedMessage.userName, null)
+                            dismiss()
+                        }
                     }
                 }
             }
