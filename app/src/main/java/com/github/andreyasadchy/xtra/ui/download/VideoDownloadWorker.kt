@@ -896,6 +896,9 @@ class VideoDownloadWorker @AssistedInject constructor(
                                     })
                                 }
                             } while (lastOffsetSeconds?.let { it < endTimeSeconds } != false && !data.edges.lastOrNull()?.cursor.isNullOrBlank() && data.pageInfo?.hasNextPage != false)
+                            offlineRepository.updateVideo(offlineVideo.apply {
+                                chatProgress = offlineVideo.maxChatProgress
+                            })
                             writer.endObject().also { position += 1 }
                         }
                     }
