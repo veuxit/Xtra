@@ -63,6 +63,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
                 val args = requireArguments()
                 val channelId = args.getString(KEY_CHANNEL_ID)
+                val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
                 val isLive = args.getBoolean(KEY_IS_LIVE)
                 val accountLogin = requireContext().tokenPrefs().getString(C.USERNAME, null)
                 val isLoggedIn = !accountLogin.isNullOrBlank() &&
@@ -81,7 +82,6 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         personalEmoteSets = viewModel.personalEmoteSets,
                         personalEmoteSetUsers = viewModel.personalEmoteSetUsers
                     )
-                    val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
                     val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                     val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
                     val accountId = requireContext().tokenPrefs().getString(C.USER_ID, null)
@@ -302,7 +302,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             viewModel.playbackMessage.collectLatest {
                                 if (it != null) {
                                     if (it.live != null) {
-                                        (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it.live, it.serverTime, args.getString(KEY_CHANNEL_LOGIN))
+                                        (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it.live, it.serverTime, channelLogin)
                                     }
                                     (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it.viewers)
                                 }
@@ -379,7 +379,13 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         }
                     }
                     if (chatUrl != null) {
-                        initialize()
+                        viewModel.startReplay(
+                            channelId = channelId,
+                            channelLogin = channelLogin,
+                            chatUrl = chatUrl,
+                            getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
+                            getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                        )
                     }
                 }
             }
@@ -394,13 +400,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
             if (args.getBoolean(KEY_IS_LIVE)) {
                 viewModel.startLive(channelId, channelLogin, args.getString(KEY_CHANNEL_NAME), args.getString(KEY_STREAM_ID))
             } else {
-                val chatUrl = args.getString(KEY_CHAT_URL)
                 val videoId = args.getString(KEY_VIDEO_ID)
-                if (chatUrl != null || (videoId != null && !args.getBoolean(KEY_START_TIME_EMPTY))) {
+                if (videoId != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
                     viewModel.startReplay(
                         channelId = channelId,
                         channelLogin = channelLogin,
-                        chatUrl = chatUrl,
                         videoId = videoId,
                         startTime = args.getInt(KEY_START_TIME),
                         getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,

@@ -12,8 +12,6 @@ import javax.inject.Inject
 import kotlin.math.max
 
 class ChatReplayManagerLocal @Inject constructor(
-    private val messages: List<ChatMessage>,
-    private val startTime: Long,
     private val getCurrentPosition: () -> Long?,
     private val getCurrentSpeed: () -> Float?,
     private val onMessage: (ChatMessage) -> Unit,
@@ -21,6 +19,8 @@ class ChatReplayManagerLocal @Inject constructor(
     private val coroutineScope: CoroutineScope,
 ) {
 
+    private var messages: List<ChatMessage> = emptyList()
+    private var startTime = 0L
     private val list = mutableListOf<ChatMessage>()
     private var isLoading = false
     private var loadJob: Job? = null
@@ -28,7 +28,9 @@ class ChatReplayManagerLocal @Inject constructor(
     private var lastCheckedPosition = 0L
     private var playbackSpeed: Float? = null
 
-    fun start() {
+    fun start(newMessages: List<ChatMessage>, newStartTime: Long) {
+        messages = newMessages
+        startTime = newStartTime
         val currentPosition = getCurrentPosition() ?: 0
         lastCheckedPosition = currentPosition
         playbackSpeed = getCurrentSpeed()

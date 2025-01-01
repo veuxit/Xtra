@@ -166,7 +166,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(channelId: String?, channelLogin: String?, chatUrl: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?) {
+    fun startReplay(channelId: String?, channelLogin: String?, chatUrl: String? = null, videoId: String? = null, startTime: Int = 0, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?) {
         if (chatReplayManager == null && chatReplayManagerLocal == null) {
             messageLimit = applicationContext.prefs().getInt(C.CHAT_LIMIT, 600)
             startReplayChat(videoId, startTime, chatUrl, getCurrentPosition, getCurrentSpeed, channelId, channelLogin)
@@ -1518,7 +1518,14 @@ class ChatViewModel @Inject constructor(
     fun startReplayChat(videoId: String?, startTime: Int, chatUrl: String?, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, channelId: String?, channelLogin: String?) {
         stopReplayChat()
         if (!chatUrl.isNullOrBlank()) {
-            readChatFile(chatUrl, getCurrentPosition, getCurrentSpeed, channelId, channelLogin)
+            chatReplayManagerLocal = ChatReplayManagerLocal(
+                getCurrentPosition = getCurrentPosition,
+                getCurrentSpeed = getCurrentSpeed,
+                onMessage = { onMessage(it) },
+                clearMessages = { _chatMessages.value = ArrayList() },
+                coroutineScope = viewModelScope
+            )
+            readChatFile(chatUrl, channelId, channelLogin)
         } else {
             if (!videoId.isNullOrBlank()) {
                 chatReplayManager = ChatReplayManager(
@@ -1549,7 +1556,7 @@ class ChatViewModel @Inject constructor(
         chatReplayManager?.updateSpeed(speed) ?: chatReplayManagerLocal?.updateSpeed(speed)
     }
 
-    private fun readChatFile(url: String, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?, channelId: String?, channelLogin: String?) {
+    private fun readChatFile(url: String, channelId: String?, channelLogin: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val nameDisplay = applicationContext.prefs().getString(C.UI_NAME_DISPLAY, "0")
@@ -1930,15 +1937,7 @@ class ChatViewModel @Inject constructor(
                 }
                 if (messages.isNotEmpty()) {
                     viewModelScope.launch {
-                        chatReplayManagerLocal = ChatReplayManagerLocal(
-                            messages = messages,
-                            startTime = startTimeMs,
-                            getCurrentPosition = getCurrentPosition,
-                            getCurrentSpeed = getCurrentSpeed,
-                            onMessage = { onMessage(it) },
-                            clearMessages = { _chatMessages.value = ArrayList() },
-                            coroutineScope = viewModelScope
-                        ).apply { start() }
+                        chatReplayManagerLocal?.start(messages, startTimeMs)
                     }
                 }
             } catch (e: Exception) {
