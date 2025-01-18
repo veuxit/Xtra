@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
 import android.content.Context
+import android.text.format.DateUtils
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -32,6 +33,8 @@ import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
+import com.github.andreyasadchy.xtra.model.chat.Poll
+import com.github.andreyasadchy.xtra.model.chat.Prediction
 import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.chat.RoomState
 import com.github.andreyasadchy.xtra.model.chat.StvBadge
@@ -54,6 +57,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.extensions.LayoutContainer
 import java.util.regex.Pattern
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 class ChatView : ConstraintLayout {
 
@@ -61,6 +65,8 @@ class ChatView : ConstraintLayout {
         fun send(message: CharSequence, replyId: String?)
         fun onRaidClicked(raid: Raid)
         fun onRaidClose()
+        fun onPollClose(timeout: Boolean = false)
+        fun onPredictionClose(timeout: Boolean = false)
     }
 
     private var _binding: ViewChatBinding? = null
@@ -343,6 +349,149 @@ class ChatView : ConstraintLayout {
             raidClose.gone()
         }
         callback?.onRaidClose()
+    }
+
+    fun notifyPoll(poll: Poll) {
+        with(binding) {
+            when (poll.status) {
+                "ACTIVE" -> {
+                    pollLayout.visible()
+                    pollTitle.text = context.getString(R.string.poll_title, poll.title)
+                    pollChoices.text = poll.choices?.map {
+                        context.getString(
+                            R.string.poll_choice,
+                            (((it.totalVotes ?: 0).toLong() * 100.0) / max((poll.totalVotes ?: 0), 1)).roundToInt(),
+                            it.totalVotes,
+                            it.title
+                        )
+                    }?.joinToString("\n")
+                    pollStatus.visible()
+                    pollClose.setOnClickListener {
+                        hidePoll()
+                    }
+                }
+                "COMPLETED", "TERMINATED" -> {
+                    pollLayout.visible()
+                    pollTitle.text = context.getString(R.string.poll_title, poll.title)
+                    val winningTotal = poll.choices?.maxOfOrNull { it.totalVotes ?: 0 } ?: 0
+                    pollChoices.text = poll.choices?.map {
+                        context.getString(
+                            if (winningTotal == it.totalVotes) {
+                                R.string.poll_choice_winner
+                            } else {
+                                R.string.poll_choice
+                            },
+                            (((it.totalVotes ?: 0).toLong() * 100.0) / max((poll.totalVotes ?: 0), 1)).roundToInt(),
+                            it.totalVotes,
+                            it.title
+                        )
+                    }?.joinToString("\n")
+                    pollStatus.gone()
+                    pollClose.setOnClickListener {
+                        hidePoll()
+                    }
+                    callback?.onPollClose(true)
+                }
+                else -> hidePoll()
+            }
+        }
+    }
+
+    fun updatePollStatus(secondsLeft: Int) {
+        binding.pollStatus.text = context.getString(R.string.remaining_time, DateUtils.formatElapsedTime(secondsLeft.toLong()))
+    }
+
+    fun hidePoll(timeout: Boolean = false) {
+        binding.pollLayout.gone()
+        if (!timeout) {
+            callback?.onPollClose()
+        }
+    }
+
+    fun notifyPrediction(prediction: Prediction) {
+        with(binding) {
+            when (prediction.status) {
+                "ACTIVE" -> {
+                    predictionLayout.visible()
+                    predictionTitle.text = context.getString(R.string.prediction_title, prediction.title)
+                    val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                    predictionOutcomes.text = prediction.outcomes?.map {
+                        context.getString(
+                            R.string.prediction_outcome,
+                            (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                            it.totalPoints,
+                            it.totalUsers,
+                            it.title
+                        )
+                    }?.joinToString("\n")
+                    predictionStatus.visible()
+                    predictionClose.setOnClickListener {
+                        hidePrediction()
+                    }
+                }
+                "LOCKED" -> {
+                    predictionLayout.visible()
+                    predictionTitle.text = context.getString(R.string.prediction_title, prediction.title)
+                    val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                    predictionOutcomes.text = prediction.outcomes?.map {
+                        context.getString(
+                            R.string.prediction_outcome,
+                            (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                            it.totalPoints,
+                            it.totalUsers,
+                            it.title
+                        )
+                    }?.joinToString("\n")
+                    predictionClose.setOnClickListener {
+                        hidePrediction()
+                    }
+                    callback?.onPredictionClose(true)
+                    predictionStatus.visible()
+                    predictionStatus.text = context.getString(R.string.prediction_locked)
+                }
+                "CANCELED", "CANCEL_PENDING", "RESOLVED", "RESOLVE_PENDING" -> {
+                    predictionLayout.visible()
+                    predictionTitle.text = context.getString(R.string.prediction_title, prediction.title)
+                    val resolved = prediction.status == "RESOLVED" || prediction.status == "RESOLVE_PENDING"
+                    val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                    predictionOutcomes.text = prediction.outcomes?.map {
+                        context.getString(
+                            if (resolved && prediction.winningOutcomeId != null && prediction.winningOutcomeId == it.id) {
+                                R.string.prediction_outcome_winner
+                            } else {
+                                R.string.prediction_outcome
+                            },
+                            (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                            it.totalPoints,
+                            it.totalUsers,
+                            it.title
+                        )
+                    }?.joinToString("\n")
+                    predictionClose.setOnClickListener {
+                        hidePrediction()
+                    }
+                    callback?.onPredictionClose(true)
+                    if (resolved) {
+                        predictionStatus.gone()
+                    } else {
+                        predictionStatus.visible()
+                        predictionStatus.text = context.getString(R.string.prediction_refunded)
+                    }
+                }
+                else -> hidePrediction()
+            }
+        }
+    }
+
+    fun updatePredictionStatus(secondsLeft: Int) {
+        binding.predictionStatus.text = context.getString(R.string.remaining_time, DateUtils.formatElapsedTime(secondsLeft.toLong()))
+    }
+
+    fun hidePrediction(timeout: Boolean = false) {
+        binding.predictionLayout.gone()
+        if (!timeout) {
+            callback?.onPredictionClose()
+        }
     }
 
     fun scrollToLastPosition() {
