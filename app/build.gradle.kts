@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.40.5"
+        versionName = "2.41.0"
     }
 
     buildTypes {
@@ -74,6 +74,7 @@ android {
             "androidx.navigation:navigation-fragment:2.7.7",
             "androidx.navigation:navigation-ui:2.7.7",
             "androidx.paging:paging-runtime:3.3.0-alpha02",
+            "androidx.recyclerview:recyclerview:1.4.0-alpha01",
             "androidx.viewpager2:viewpager2:1.1.0-beta02",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "androidx.work:work-runtime:2.9.1",
