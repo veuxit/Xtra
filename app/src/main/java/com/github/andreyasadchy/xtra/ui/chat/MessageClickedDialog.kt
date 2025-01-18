@@ -332,7 +332,7 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
     fun updateUserMessages(userId: String) {
         adapter?.let { adapter ->
             adapter.messages?.toList()?.let { messages ->
-                messages.filter { it.userId == userId }.forEach { message ->
+                messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
                     messages.indexOf(message).takeIf { it != -1 }?.let {
                         adapter.notifyItemChanged(it)
                     }
