@@ -164,22 +164,21 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, accountId: String?, accountLogin: String?, setting: Int, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
-                    if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && (!accountLogin.isNullOrBlank() && !channelLogin.isNullOrBlank() && accountLogin != channelLogin) ||
-                        (!helixHeaders[C.HEADER_CLIENT_ID].isNullOrBlank() && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !accountId.isNullOrBlank() && !channelId.isNullOrBlank() && accountId != channelId)) {
-                        val response = repository.loadUserFollowing(helixHeaders, channelId, accountId, gqlHeaders, channelLogin)
-                        _isFollowing.value = response.first
-                        _notificationsEnabled.value = if (response.first && response.second != null) {
-                            response.second
+                    if (!channelId.isNullOrBlank()) {
+                        if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
+                            val response = repository.loadUserFollowing(helixHeaders, channelId, userId, gqlHeaders, channelLogin)
+                            _isFollowing.value = response.first
+                            _notificationsEnabled.value = if (response.first && response.second != null) {
+                                response.second
+                            } else {
+                                notificationUsersRepository.getByUserId(channelId) != null
+                            }
                         } else {
-                            channelId?.let { notificationUsersRepository.getByUserId(it) != null }
-                        }
-                    } else {
-                        channelId?.let {
-                            _isFollowing.value = localFollowsChannel.getFollowByUserId(it) != null
+                            _isFollowing.value = localFollowsChannel.getFollowByUserId(channelId) != null
                             _notificationsEnabled.value = notificationUsersRepository.getByUserId(channelId) != null
                         }
                     }

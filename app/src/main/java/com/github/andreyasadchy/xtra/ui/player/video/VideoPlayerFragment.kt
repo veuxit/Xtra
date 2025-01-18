@@ -308,9 +308,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
         viewModel.isFollowingChannel(
             TwitchApiHelper.getHelixHeaders(requireContext()),
             TwitchApiHelper.getGQLHeaders(requireContext(), true),
-            requireContext().tokenPrefs().getString(C.USER_ID, null),
-            requireContext().tokenPrefs().getString(C.USERNAME, null),
             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+            requireContext().tokenPrefs().getString(C.USER_ID, null),
             item.channelId,
             item.channelLogin
         )
@@ -488,9 +487,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, PlayerGames
                             viewModel.isFollowingChannel(
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                requireContext().tokenPrefs().getString(C.USERNAME, null),
                                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 item.channelId,
                                 item.channelLogin
                             )
