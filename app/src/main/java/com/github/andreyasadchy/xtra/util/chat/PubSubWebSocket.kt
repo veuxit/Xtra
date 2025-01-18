@@ -21,6 +21,8 @@ class PubSubWebSocket(
     private val collectPoints: Boolean,
     private val notifyPoints: Boolean,
     private val showRaids: Boolean,
+    private val showPolls: Boolean,
+    private val showPredictions: Boolean,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
     private val onPlaybackMessage: (JSONObject) -> Unit,
@@ -30,6 +32,8 @@ class PubSubWebSocket(
     private val onClaimAvailable: () -> Unit,
     private val onMinuteWatched: () -> Unit,
     private val onRaidUpdate: (JSONObject, Boolean) -> Unit,
+    private val onPollUpdate: (JSONObject) -> Unit,
+    private val onPredictionUpdate: (JSONObject) -> Unit,
 ) {
     private var socket: WebSocket? = null
     private var isActive = false
@@ -67,6 +71,12 @@ class PubSubWebSocket(
                     put("community-points-channel-v1.$channelId")
                     if (showRaids) {
                         put("raid.$channelId")
+                    }
+                    if (showPolls) {
+                        put("polls.$channelId")
+                    }
+                    if (showPredictions) {
+                        put("predictions-channel-v1.$channelId")
                     }
                     if (!userId.isNullOrBlank() && !gqlToken.isNullOrBlank()) {
                         if (collectPoints) {
@@ -184,6 +194,8 @@ class PubSubWebSocket(
                                         messageType.startsWith("raid_go") -> onRaidUpdate(message, true)
                                     }
                                 }
+                                topic.startsWith("polls") && showPolls -> onPollUpdate(message)
+                                topic.startsWith("predictions-channel") && showPredictions -> onPredictionUpdate(message)
                             }
                         }
                     }

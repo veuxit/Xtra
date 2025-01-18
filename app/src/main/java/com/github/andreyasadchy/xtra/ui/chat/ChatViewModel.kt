@@ -18,6 +18,8 @@ import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
+import com.github.andreyasadchy.xtra.model.chat.Poll
+import com.github.andreyasadchy.xtra.model.chat.Prediction
 import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
 import com.github.andreyasadchy.xtra.model.chat.RoomState
@@ -45,6 +47,8 @@ import com.github.andreyasadchy.xtra.util.tokenPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -52,9 +56,11 @@ import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileInputStream
 import java.util.Collections
+import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.collections.set
+import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.text.equals
 
 
@@ -80,6 +86,10 @@ class ChatViewModel @Inject constructor(
     private var stvLastPresenceUpdate: Long? = null
     private val allEmotes = mutableListOf<Emote>()
     private var usedRaidId: String? = null
+    private var usedPollId: String? = null
+    private var pollTimeoutJob: Job? = null
+    private var usedPredictionId: String? = null
+    private var predictionTimeoutJob: Job? = null
 
     private var chatReplayManager: ChatReplayManager? = null
     private var chatReplayManagerLocal: ChatReplayManagerLocal? = null
@@ -116,6 +126,14 @@ class ChatViewModel @Inject constructor(
     val raid = MutableStateFlow<Raid?>(null)
     val raidClicked = MutableStateFlow<Raid?>(null)
     var raidClosed = false
+    val poll = MutableStateFlow<Poll?>(null)
+    var pollClosed = false
+    val pollSecondsLeft = MutableStateFlow<Int?>(null)
+    var pollTimer: Timer? = null
+    val prediction = MutableStateFlow<Prediction?>(null)
+    var predictionClosed = false
+    val predictionSecondsLeft = MutableStateFlow<Int?>(null)
+    var predictionTimer: Timer? = null
     private val _streamInfo = MutableStateFlow<PubSubUtils.StreamInfo?>(null)
     val streamInfo: StateFlow<PubSubUtils.StreamInfo?> = _streamInfo
     private val _playbackMessage = MutableStateFlow<PubSubUtils.PlaybackMessage?>(null)
@@ -139,6 +157,8 @@ class ChatViewModel @Inject constructor(
     val reloadMessages = MutableStateFlow(false)
     val scrollDown = MutableStateFlow(false)
     val hideRaid = MutableStateFlow(false)
+    val hidePoll = MutableStateFlow(false)
+    val hidePrediction = MutableStateFlow(false)
 
     private var messageLimit = 600
     private val _chatMessages = MutableStateFlow<MutableList<ChatMessage>>(Collections.synchronizedList(ArrayList(messageLimit + 1)))
@@ -191,6 +211,10 @@ class ChatViewModel @Inject constructor(
     override fun onCleared() {
         stopLiveChat()
         stopReplayChat()
+        pollSecondsLeft.value = null
+        pollTimer?.cancel()
+        predictionSecondsLeft.value = null
+        predictionTimer?.cancel()
         super.onCleared()
     }
 
@@ -704,6 +728,8 @@ class ChatViewModel @Inject constructor(
                 collectPoints = collectPoints,
                 notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
                 showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
+                showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
+                showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
                 client = okHttpClient,
                 coroutineScope = viewModelScope,
                 onPlaybackMessage = { message ->
@@ -780,6 +806,70 @@ class ChatViewModel @Inject constructor(
                             }
                         }
                         raid.value = it
+                    }
+                },
+                onPollUpdate = { message ->
+                    PubSubUtils.onPollUpdate(message)?.let {
+                        if (it.id != usedPollId) {
+                            usedPollId = it.id
+                            pollClosed = false
+                            pollTimeoutJob?.cancel()
+                            if (it.remainingMilliseconds != null) {
+                                val secondsLeft = it.remainingMilliseconds / 1000
+                                if (secondsLeft > 0) {
+                                    pollSecondsLeft.value = secondsLeft
+                                    pollTimer?.cancel()
+                                    pollTimer = Timer().apply {
+                                        scheduleAtFixedRate(1000, 1000) {
+                                            val seconds = pollSecondsLeft.value
+                                            if (seconds != null) {
+                                                pollSecondsLeft.value = seconds - 1
+                                                if (seconds <= 1) {
+                                                    this@apply.cancel()
+                                                }
+                                            } else {
+                                                this@apply.cancel()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (it.status == "COMPLETED" || it.status == "TERMINATED") {
+                            pollClosed = false
+                        }
+                        poll.value = it
+                    }
+                },
+                onPredictionUpdate = { message ->
+                    PubSubUtils.onPredictionUpdate(message)?.let {
+                        if (it.id != usedPredictionId) {
+                            usedPredictionId = it.id
+                            predictionClosed = false
+                            predictionTimeoutJob?.cancel()
+                            if (it.createdAt != null && it.predictionWindowSeconds != null) {
+                                val secondsLeft = ((((it.createdAt + (it.predictionWindowSeconds * 1000)) - System.currentTimeMillis())) / 1000).toInt()
+                                if (secondsLeft > 0) {
+                                    predictionSecondsLeft.value = secondsLeft
+                                    predictionTimer?.cancel()
+                                    predictionTimer = Timer().apply {
+                                        scheduleAtFixedRate(1000, 1000) {
+                                            val seconds = predictionSecondsLeft.value
+                                            if (seconds != null) {
+                                                predictionSecondsLeft.value = seconds - 1
+                                                if (seconds <= 1) {
+                                                    this@apply.cancel()
+                                                }
+                                            } else {
+                                                this@apply.cancel()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (it.status == "LOCKED" || it.status == "CANCEL_PENDING" || it.status == "RESOLVE_PENDING") {
+                            predictionClosed = false
+                        }
+                        prediction.value = it
                     }
                 },
             ).apply { connect() }
@@ -899,11 +989,25 @@ class ChatViewModel @Inject constructor(
             stopLiveChat()
             usedRaidId = null
             raidClosed = true
+            usedPollId = null
+            pollClosed = true
+            pollSecondsLeft.value = null
+            pollTimer?.cancel()
+            usedPredictionId = null
+            predictionClosed = true
+            predictionSecondsLeft.value = null
+            predictionTimer?.cancel()
             _chatMessages.value = arrayListOf(
                 ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.disconnected))
             )
             if (!hideRaid.value) {
                 hideRaid.value = true
+            }
+            if (!hidePoll.value) {
+                hidePoll.value = true
+            }
+            if (!hidePrediction.value) {
+                hidePrediction.value = true
             }
             roomState.value = RoomState("0", "-1", "0", "0", "0")
         }
@@ -1082,6 +1186,22 @@ class ChatViewModel @Inject constructor(
                     Log.e(TAG, "Failed to load emote sets", e)
                 }
             }
+        }
+    }
+
+    fun startPollTimeout(hide: () -> Unit) {
+        pollTimeoutJob?.cancel()
+        pollTimeoutJob = viewModelScope.launch {
+            delay(20000)
+            hide()
+        }
+    }
+
+    fun startPredictionTimeout(hide: () -> Unit) {
+        predictionTimeoutJob?.cancel()
+        predictionTimeoutJob = viewModelScope.launch {
+            delay(20000)
+            hide()
         }
     }
 

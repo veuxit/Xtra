@@ -101,6 +101,26 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         override fun onRaidClose() {
                             viewModel.raidClosed = true
                         }
+
+                        override fun onPollClose(timeout: Boolean) {
+                            viewModel.pollSecondsLeft.value = null
+                            viewModel.pollTimer?.cancel()
+                            if (timeout) {
+                                viewModel.startPollTimeout { chatView.hidePoll(true) }
+                            } else {
+                                viewModel.pollClosed = true
+                            }
+                        }
+
+                        override fun onPredictionClose(timeout: Boolean) {
+                            viewModel.predictionSecondsLeft.value = null
+                            viewModel.predictionTimer?.cancel()
+                            if (timeout) {
+                                viewModel.startPredictionTimeout { chatView.hidePrediction(true) }
+                            } else {
+                                viewModel.predictionClosed = true
+                            }
+                        }
                     })
                     if (isLoggedIn) {
                         chatView.setUsername(accountLogin)
@@ -293,6 +313,74 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                                 if (it != null) {
                                     onRaidClicked(it)
                                     viewModel.raidClicked.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.hidePoll.collectLatest {
+                                if (it) {
+                                    chatView.hidePoll()
+                                    viewModel.hidePoll.value = false
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.poll.collectLatest {
+                                if (it != null) {
+                                    if (!viewModel.pollClosed) {
+                                        chatView.notifyPoll(it)
+                                    }
+                                    viewModel.poll.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.pollSecondsLeft.collectLatest {
+                                if (it != null) {
+                                    chatView.updatePollStatus(it)
+                                    if (it <= 0) {
+                                        viewModel.pollSecondsLeft.value = null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.hidePrediction.collectLatest {
+                                if (it) {
+                                    chatView.hidePrediction()
+                                    viewModel.hidePrediction.value = false
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.prediction.collectLatest {
+                                if (it != null) {
+                                    if (!viewModel.predictionClosed) {
+                                        chatView.notifyPrediction(it)
+                                    }
+                                    viewModel.prediction.value = null
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.predictionSecondsLeft.collectLatest {
+                                if (it != null) {
+                                    chatView.updatePredictionStatus(it)
+                                    if (it <= 0) {
+                                        viewModel.predictionSecondsLeft.value = null
+                                    }
                                 }
                             }
                         }
