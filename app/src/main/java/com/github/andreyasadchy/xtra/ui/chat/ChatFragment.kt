@@ -1,19 +1,40 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
+import android.content.Context
 import android.os.Bundle
+import android.text.format.DateUtils
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Filter
+import android.widget.Filter.FilterResults
+import android.widget.ImageView
+import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
+import androidx.core.content.res.use
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
+import androidx.core.widget.addTextChangedListener
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
+import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.chat.Raid
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
@@ -21,15 +42,29 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
+import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.hideKeyboard
+import com.github.andreyasadchy.xtra.util.isLightTheme
+import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.android.extensions.LayoutContainer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.regex.Pattern
+import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.toString
 
 @AndroidEntryPoint
 class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
@@ -37,6 +72,27 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ChatViewModel by viewModels()
+    private lateinit var adapter: ChatAdapter
+
+    private var isChatTouched = false
+    private var showChatStatus = false
+    private var hasRecentEmotes = false
+    private var messagingEnabled = false
+
+    private var autoCompleteList = mutableListOf<Any>()
+    private var autoCompleteAdapter: AutoCompleteAdapter? = null
+
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            toggleEmoteMenu(false)
+        }
+    }
+
+    private val messageDialog: MessageClickedDialog?
+        get() = childFragmentManager.findFragmentByTag("messageDialog") as? MessageClickedDialog
+
+    private val replyDialog: ReplyClickedDialog?
+        get() = childFragmentManager.findFragmentByTag("replyDialog") as? ReplyClickedDialog
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentChatBinding.inflate(inflater, container, false)
@@ -70,67 +126,108 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
                                 !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                 val chatUrl = args.getString(KEY_CHAT_URL)
-                val enableChat: Boolean
-                if (isLive) {
-                    chatView.init(
+                if (isLive || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) || chatUrl != null) {
+                    adapter = ChatAdapter(
+                        enableTimestamps = requireContext().prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
+                        timestampFormat = requireContext().prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
+                        firstMsgVisibility = requireContext().prefs().getString(C.CHAT_FIRSTMSG_VISIBILITY, "0")?.toIntOrNull() ?: 0,
+                        firstChatMsg = requireContext().getString(R.string.chat_first),
+                        redeemedChatMsg = requireContext().getString(R.string.redeemed),
+                        redeemedNoMsg = requireContext().getString(R.string.user_redeemed),
+                        rewardChatMsg = requireContext().getString(R.string.chat_reward),
+                        replyMessage = requireContext().getString(R.string.replying_to_message),
+                        useRandomColors = requireContext().prefs().getBoolean(C.CHAT_RANDOMCOLOR, true),
+                        useReadableColors = requireContext().prefs().getBoolean(C.CHAT_THEME_ADAPTED_USERNAME_COLOR, true),
+                        isLightTheme = requireContext().isLightTheme,
+                        nameDisplay = requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0"),
+                        useBoldNames = requireContext().prefs().getBoolean(C.CHAT_BOLDNAMES, false),
+                        showNamePaints = requireContext().prefs().getBoolean(C.CHAT_SHOW_PAINTS, true),
+                        namePaintsList = viewModel.namePaints,
+                        paintUsersMap = viewModel.paintUsers,
+                        showStvBadges = requireContext().prefs().getBoolean(C.CHAT_SHOW_STV_BADGES, true),
+                        stvBadgesList = viewModel.stvBadges,
+                        stvBadgeUsersMap = viewModel.stvBadgeUsers,
+                        showPersonalEmotes = requireContext().prefs().getBoolean(C.CHAT_SHOW_PERSONAL_EMOTES, true),
+                        personalEmoteSetsMap = viewModel.personalEmoteSets,
+                        personalEmoteSetUsersMap = viewModel.personalEmoteSetUsers,
+                        showSystemMessageEmotes = requireContext().prefs().getBoolean(C.CHAT_SYSTEM_MESSAGE_EMOTES, true),
+                        chatUrl = chatUrl,
+                        getEmoteBytes = viewModel::getEmoteBytes,
                         fragment = this@ChatFragment,
+                        backgroundColor = MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface),
+                        dialogBackgroundColor = MaterialColors.getColor(
+                            requireView(),
+                            if (requireContext().prefs().getBoolean(C.UI_THEME_MATERIAL3, true)) {
+                                com.google.android.material.R.attr.colorSurfaceContainerLow
+                            } else {
+                                com.google.android.material.R.attr.colorSurface
+                            }
+                        ),
+                        imageLibrary = requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
+                        emoteSize = requireContext().convertDpToPixels(29.5f),
+                        badgeSize = requireContext().convertDpToPixels(18.5f),
+                        emoteQuality = requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+                        animateGifs = requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true),
+                        enableZeroWidth = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
                         channelId = channelId,
-                        namePaints = viewModel.namePaints,
-                        paintUsers = viewModel.paintUsers,
-                        stvBadges = viewModel.stvBadges,
-                        stvBadgeUsers = viewModel.stvBadgeUsers,
-                        personalEmoteSets = viewModel.personalEmoteSets,
-                        personalEmoteSetUsers = viewModel.personalEmoteSetUsers
                     )
-                    val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
-                    val gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true)
-                    val accountId = requireContext().tokenPrefs().getString(C.USER_ID, null)
-                    val useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true)
-                    val useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
-                    val checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
-                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
-                    chatView.setCallback(object : ChatView.ChatViewCallback {
-                        override fun send(message: CharSequence, replyId: String?) {
-                            viewModel.send(message, replyId, helixHeaders, gqlHeaders, accountId, channelId, channelLogin, useApiCommands, useApiChatMessages, checkIntegrity)
-                        }
-
-                        override fun onRaidClicked(raid: Raid) {
-                            viewModel.raidClicked.value = raid
-                        }
-
-                        override fun onRaidClose() {
-                            viewModel.raidClosed = true
-                        }
-
-                        override fun onPollClose(timeout: Boolean) {
-                            viewModel.pollSecondsLeft.value = null
-                            viewModel.pollTimer?.cancel()
-                            if (timeout) {
-                                viewModel.startPollTimeout { chatView.hidePoll(true) }
-                            } else {
-                                viewModel.pollClosed = true
+                    recyclerView.let {
+                        it.adapter = adapter
+                        it.itemAnimator = null
+                        it.layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
+                        it.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                                super.onScrollStateChanged(recyclerView, newState)
+                                isChatTouched = newState == RecyclerView.SCROLL_STATE_DRAGGING
+                                val offset = recyclerView.computeVerticalScrollOffset()
+                                if (offset < 0) {
+                                    btnDown.isVisible = false
+                                } else {
+                                    val extent = recyclerView.computeVerticalScrollExtent()
+                                    val range = recyclerView.computeVerticalScrollRange()
+                                    val percentage = (100f * offset / (range - extent).toFloat())
+                                    btnDown.isVisible = percentage < 100f
+                                }
+                                if (showChatStatus && chatStatus.isGone) {
+                                    chatStatus.visible()
+                                    chatStatus.postDelayed({ chatStatus.gone() }, 5000)
+                                }
                             }
+                        })
+                    }
+                    btnDown.setOnClickListener {
+                        view.post {
+                            adapter.messages?.let { recyclerView.scrollToPosition(it.lastIndex) }
+                            it.gone()
                         }
-
-                        override fun onPredictionClose(timeout: Boolean) {
-                            viewModel.predictionSecondsLeft.value = null
-                            viewModel.predictionTimer?.cancel()
-                            if (timeout) {
-                                viewModel.startPredictionTimeout { chatView.hidePrediction(true) }
-                            } else {
-                                viewModel.predictionClosed = true
-                            }
-                        }
-                    })
-                    if (isLoggedIn) {
-                        chatView.setUsername(accountLogin)
-                        chatView.addToAutoCompleteList(viewModel.chatters.values)
+                    }
+                    val enableMessaging = isLive && isLoggedIn
+                    adapter.messageClickListener = { channelId ->
+                        editText.hideKeyboard()
+                        editText.clearFocus()
+                        MessageClickedDialog.newInstance(enableMessaging, channelId).show(this@ChatFragment.childFragmentManager, "messageDialog")
+                    }
+                    adapter.replyClickListener = {
+                        editText.hideKeyboard()
+                        editText.clearFocus()
+                        ReplyClickedDialog.newInstance(enableMessaging).show(this@ChatFragment.childFragmentManager, "replyDialog")
+                    }
+                    adapter.imageClickListener = { url, name, source, format, isAnimated, emoteId ->
+                        editText.hideKeyboard()
+                        editText.clearFocus()
+                        ImageClickedDialog.newInstance(url, name, source, format, isAnimated, emoteId).show(this@ChatFragment.childFragmentManager, "imageDialog")
+                    }
+                    if (enableMessaging) {
+                        adapter.loggedInUser = accountLogin
+                        messageDialog?.adapter?.loggedInUser = accountLogin
+                        replyDialog?.adapter?.loggedInUser = accountLogin
+                        addToAutoCompleteList(viewModel.chatters.values)
                         viewModel.loadRecentEmotes()
                         viewLifecycleOwner.lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.hasRecentEmotes.collectLatest {
                                     if (it) {
-                                        chatView.setRecentEmotes()
+                                        hasRecentEmotes = true
                                     }
                                 }
                             }
@@ -138,7 +235,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         viewLifecycleOwner.lifecycleScope.launch {
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.userEmotes.collectLatest {
-                                    chatView.addToAutoCompleteList(it)
+                                    addToAutoCompleteList(it)
                                 }
                             }
                         }
@@ -146,42 +243,160 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 viewModel.newChatter.collectLatest {
                                     if (it != null) {
-                                        chatView.addToAutoCompleteList(listOf(it))
+                                        addToAutoCompleteList(listOf(it))
                                         viewModel.newChatter.value = null
                                     }
                                 }
                             }
                         }
+                        autoCompleteAdapter = AutoCompleteAdapter(requireContext(), this@ChatFragment, autoCompleteList, requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
+                            setNotifyOnChange(false)
+                            editText.setAdapter(this)
+
+                            var previousSize = 0
+                            editText.setOnFocusChangeListener { _, hasFocus ->
+                                if (hasFocus && count != previousSize) {
+                                    previousSize = count
+                                    notifyDataSetChanged()
+                                }
+                                setNotifyOnChange(hasFocus)
+                            }
+                        }
+                        editText.addTextChangedListener(onTextChanged = { text, _, _, _ ->
+                            if (text?.isNotBlank() == true) {
+                                send.visible()
+                                clear.visible()
+                            } else {
+                                send.gone()
+                                clear.gone()
+                            }
+                        })
+                        editText.setTokenizer(SpaceTokenizer())
+                        editText.setOnKeyListener { _, keyCode, event ->
+                            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                                sendMessage()
+                            } else {
+                                false
+                            }
+                        }
+                        clear.setOnClickListener {
+                            val text = editText.text.toString().trimEnd()
+                            editText.setText(text.substring(0, max(text.lastIndexOf(' '), 0)))
+                            editText.setSelection(editText.length())
+                        }
+                        clear.setOnLongClickListener {
+                            editText.text.clear()
+                            true
+                        }
+                        replyView.gone()
+                        send.setOnClickListener { sendMessage() }
+                        if (view.parent != null && view.parent.parent is SlidingLayout && !requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
+                            messageView.gone()
+                        } else {
+                            messageView.visible()
+                        }
+                        viewPager.adapter = object : FragmentStateAdapter(this@ChatFragment) {
+                            override fun getItemCount(): Int = 3
+
+                            override fun createFragment(position: Int): Fragment {
+                                return EmotesFragment.newInstance(position)
+                            }
+                        }
+                        viewPager.offscreenPageLimit = 2
+                        viewPager.reduceDragSensitivity()
+                        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+                            tab.text = when (position) {
+                                0 -> requireContext().getString(R.string.recent_emotes)
+                                1 -> "Twitch"
+                                else -> "7TV/BTTV/FFZ"
+                            }
+                        }.attach()
+                        emotes.setOnClickListener {
+                            //TODO add animation
+                            if (emoteMenu.isGone) {
+                                if (!hasRecentEmotes && viewPager.currentItem == 0) {
+                                    viewPager.setCurrentItem(1, false)
+                                }
+                                toggleEmoteMenu(true)
+                            } else {
+                                toggleEmoteMenu(false)
+                            }
+                        }
+                        messagingEnabled = true
                     }
-                    enableChat = true
-                } else {
-                    if (chatUrl != null || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY))) {
-                        chatView.init(
-                            fragment = this@ChatFragment,
-                            channelId = channelId,
-                            getEmoteBytes = viewModel::getEmoteBytes,
-                            chatUrl = chatUrl
-                        )
-                        enableChat = true
-                    } else {
-                        requireView().findViewById<TextView>(R.id.chatReplayUnavailable)?.visible()
-                        enableChat = false
-                    }
-                }
-                if (enableChat) {
-                    chatView.enableChatInteraction(isLive && isLoggedIn)
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.chatMessages.collect {
-                                chatView.submitList(it)
+                            viewModel.chatMessages.collect { list ->
+                                adapter.messages = list
+                                messageDialog?.adapter?.let { adapter ->
+                                    if (!adapter.userId.isNullOrBlank() || !adapter.userLogin.isNullOrBlank()) {
+                                        adapter.messages = list.filter {
+                                            (!adapter.userId.isNullOrBlank() && it.userId == adapter.userId) || (!adapter.userLogin.isNullOrBlank() && it.userLogin == adapter.userLogin)
+                                        }.toMutableList()
+                                    }
+                                }
+                                replyDialog?.adapter?.let { adapter ->
+                                    if (!adapter.threadParentId.isNullOrBlank()) {
+                                        adapter.messages = list.filter {
+                                            it.reply?.threadParentId == adapter.threadParentId || it.id == adapter.threadParentId
+                                        }.toMutableList()
+                                    }
+                                }
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newMessage.collect {
-                                if (it != null) {
-                                    chatView.notifyMessageAdded(it)
+                            viewModel.newMessage.collect { newMessage ->
+                                if (newMessage != null) {
+                                    adapter.messages?.apply {
+                                        adapter.notifyItemInserted(lastIndex)
+                                        val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
+                                        if (size >= (messageLimit + 1)) {
+                                            val removeCount = size - messageLimit
+                                            repeat(removeCount) {
+                                                removeAt(0)
+                                            }
+                                            adapter.notifyItemRangeRemoved(0, removeCount)
+                                        }
+                                        if (!isChatTouched && btnDown.isGone) {
+                                            recyclerView.scrollToPosition(lastIndex)
+                                        }
+                                    }
+                                    messageDialog?.adapter?.let { adapter ->
+                                        if ((!adapter.userId.isNullOrBlank() && newMessage.userId == adapter.userId) || (!adapter.userLogin.isNullOrBlank() && newMessage.userLogin == adapter.userLogin)) {
+                                            adapter.messages?.apply {
+                                                add(newMessage)
+                                                adapter.notifyItemInserted(lastIndex)
+                                                val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
+                                                if (size >= (messageLimit + 1)) {
+                                                    val removeCount = size - messageLimit
+                                                    repeat(removeCount) {
+                                                        removeAt(0)
+                                                    }
+                                                    adapter.notifyItemRangeRemoved(0, removeCount)
+                                                }
+                                                messageDialog?.scrollToLastPosition()
+                                            }
+                                        }
+                                    }
+                                    replyDialog?.adapter?.let { adapter ->
+                                        if (!adapter.threadParentId.isNullOrBlank() && newMessage.reply?.threadParentId == adapter.threadParentId) {
+                                            adapter.messages?.apply {
+                                                add(newMessage)
+                                                adapter.notifyItemInserted(lastIndex)
+                                                val messageLimit = requireContext().prefs().getInt(C.CHAT_LIMIT, 600)
+                                                if (size >= (messageLimit + 1)) {
+                                                    val removeCount = size - messageLimit
+                                                    repeat(removeCount) {
+                                                        removeAt(0)
+                                                    }
+                                                    adapter.notifyItemRangeRemoved(0, removeCount)
+                                                }
+                                                replyDialog?.scrollToLastPosition()
+                                            }
+                                        }
+                                    }
                                     viewModel.newMessage.value = null
                                 }
                             }
@@ -190,78 +405,151 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.localTwitchEmotes.collectLatest {
-                                chatView.addLocalTwitchEmotes(it)
+                                adapter.localTwitchEmotes = it
+                                messageDialog?.adapter?.localTwitchEmotes = it
+                                replyDialog?.adapter?.localTwitchEmotes = it
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.globalStvEmotes.collectLatest {
-                                chatView.addGlobalStvEmotes(it)
+                                adapter.globalStvEmotes = it
+                                messageDialog?.adapter?.globalStvEmotes = it
+                                replyDialog?.adapter?.globalStvEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.channelStvEmotes.collectLatest {
-                                chatView.addChannelStvEmotes(it)
+                                adapter.channelStvEmotes = it
+                                messageDialog?.adapter?.channelStvEmotes = it
+                                replyDialog?.adapter?.channelStvEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.globalBttvEmotes.collectLatest {
-                                chatView.addGlobalBttvEmotes(it)
+                                adapter.globalBttvEmotes = it
+                                messageDialog?.adapter?.globalBttvEmotes = it
+                                replyDialog?.adapter?.globalBttvEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.channelBttvEmotes.collectLatest {
-                                chatView.addChannelBttvEmotes(it)
+                                adapter.channelBttvEmotes = it
+                                messageDialog?.adapter?.channelBttvEmotes = it
+                                replyDialog?.adapter?.channelBttvEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.globalFfzEmotes.collectLatest {
-                                chatView.addGlobalFfzEmotes(it)
+                                adapter.globalFfzEmotes = it
+                                messageDialog?.adapter?.globalFfzEmotes = it
+                                replyDialog?.adapter?.globalFfzEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.channelFfzEmotes.collectLatest {
-                                chatView.addChannelFfzEmotes(it)
+                                adapter.channelFfzEmotes = it
+                                messageDialog?.adapter?.channelFfzEmotes = it
+                                replyDialog?.adapter?.channelFfzEmotes = it
+                                addToAutoCompleteList(it)
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.globalBadges.collectLatest {
-                                chatView.addGlobalBadges(it)
+                                adapter.globalBadges = it
+                                messageDialog?.adapter?.globalBadges = it
+                                replyDialog?.adapter?.globalBadges = it
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.channelBadges.collectLatest {
-                                chatView.addChannelBadges(it)
+                                adapter.channelBadges = it
+                                messageDialog?.adapter?.channelBadges = it
+                                replyDialog?.adapter?.channelBadges = it
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.cheerEmotes.collectLatest {
-                                chatView.addCheerEmotes(it)
+                                adapter.cheerEmotes = it
+                                messageDialog?.adapter?.cheerEmotes = it
+                                replyDialog?.adapter?.cheerEmotes = it
                             }
                         }
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.roomState.collectLatest {
-                                if (it != null) {
-                                    chatView.notifyRoomState(it)
+                            viewModel.roomState.collectLatest { roomState ->
+                                if (roomState != null) {
+                                    when (roomState.emote) {
+                                        "0" -> textEmote.gone()
+                                        "1" -> textEmote.visible()
+                                    }
+                                    if (roomState.followers != null) {
+                                        when (roomState.followers) {
+                                            "-1" -> textFollowers.gone()
+                                            "0" -> {
+                                                textFollowers.text = requireContext().getString(R.string.room_followers)
+                                                textFollowers.visible()
+                                            }
+                                            else -> {
+                                                textFollowers.text = requireContext().getString(
+                                                    R.string.room_followers_min,
+                                                    TwitchApiHelper.getDurationFromSeconds(requireContext(), (roomState.followers.toInt() * 60).toString())
+                                                )
+                                                textFollowers.visible()
+                                            }
+                                        }
+                                    }
+                                    when (roomState.unique) {
+                                        "0" -> textUnique.gone()
+                                        "1" -> textUnique.visible()
+                                    }
+                                    if (roomState.slow != null) {
+                                        when (roomState.slow) {
+                                            "0" -> textSlow.gone()
+                                            else -> {
+                                                textSlow.text = requireContext().getString(
+                                                    R.string.room_slow,
+                                                    TwitchApiHelper.getDurationFromSeconds(requireContext(), roomState.slow)
+                                                )
+                                                textSlow.visible()
+                                            }
+                                        }
+                                    }
+                                    when (roomState.subs) {
+                                        "0" -> textSubs.gone()
+                                        "1" -> textSubs.visible()
+                                    }
+                                    if (textEmote.isGone && textFollowers.isGone && textUnique.isGone && textSlow.isGone && textSubs.isGone) {
+                                        showChatStatus = false
+                                        chatStatus.gone()
+                                    } else {
+                                        showChatStatus = true
+                                        chatStatus.visible()
+                                        chatStatus.postDelayed({ chatStatus.gone() }, 5000)
+                                    }
                                     viewModel.roomState.value = null
                                 }
                             }
@@ -271,7 +559,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.reloadMessages.collectLatest {
                                 if (it) {
-                                    chatView.notifyEmotesLoaded()
+                                    adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) }
+                                    messageDialog?.adapter?.let { adapter -> adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) } }
+                                    replyDialog?.adapter?.let { adapter -> adapter.messages?.let { adapter.notifyItemRangeChanged(0, it.size) } }
                                     viewModel.reloadMessages.value = false
                                 }
                             }
@@ -281,7 +571,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.scrollDown.collectLatest {
                                 if (it) {
-                                    chatView.scrollToLastPosition()
+                                    adapter.messages?.let { recyclerView.scrollToPosition(it.lastIndex) }
                                     viewModel.scrollDown.value = false
                                 }
                             }
@@ -291,7 +581,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.hideRaid.collectLatest {
                                 if (it) {
-                                    chatView.hideRaid()
+                                    raidLayout.gone()
+                                    viewModel.raidClosed = true
                                     viewModel.hideRaid.value = false
                                 }
                             }
@@ -299,9 +590,49 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.raid.collectLatest {
-                                if (it != null) {
-                                    onRaidUpdate(it)
+                            viewModel.raid.collectLatest { raid ->
+                                if (raid != null) {
+                                    if (!viewModel.raidClosed) {
+                                        if (raid.openStream) {
+                                            if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment) {
+                                                (requireActivity() as? MainActivity)?.startStream(
+                                                    Stream(
+                                                        channelId = raid.targetId,
+                                                        channelLogin = raid.targetLogin,
+                                                        channelName = raid.targetName,
+                                                        profileImageUrl = raid.targetProfileImage,
+                                                    )
+                                                )
+                                            }
+                                            raidLayout.gone()
+                                            viewModel.raidClosed = true
+                                        } else {
+                                            raidLayout.visible()
+                                            raidLayout.setOnClickListener { viewModel.raidClicked.value = raid }
+                                            raidImage.loadImage(
+                                                this@ChatFragment,
+                                                raid.targetLogo,
+                                                circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                                            )
+                                            raidClose.setOnClickListener {
+                                                raidLayout.gone()
+                                                viewModel.raidClosed = true
+                                            }
+                                            raidText.text = requireContext().getString(
+                                                R.string.raid_text,
+                                                if (raid.targetLogin != null && !raid.targetLogin.equals(raid.targetName, true)) {
+                                                    when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                                                        "0" -> "${raid.targetName}(${raid.targetLogin})"
+                                                        "1" -> raid.targetName
+                                                        else -> raid.targetLogin
+                                                    }
+                                                } else {
+                                                    raid.targetName
+                                                },
+                                                raid.viewerCount
+                                            )
+                                        }
+                                    }
                                     viewModel.raid.value = null
                                 }
                             }
@@ -311,7 +642,14 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.raidClicked.collectLatest {
                                 if (it != null) {
-                                    onRaidClicked(it)
+                                    (requireActivity() as? MainActivity)?.startStream(
+                                        Stream(
+                                            channelId = it.targetId,
+                                            channelLogin = it.targetLogin,
+                                            channelName = it.targetName,
+                                            profileImageUrl = it.targetProfileImage,
+                                        )
+                                    )
                                     viewModel.raidClicked.value = null
                                 }
                             }
@@ -321,18 +659,68 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.hidePoll.collectLatest {
                                 if (it) {
-                                    chatView.hidePoll()
+                                    pollLayout.gone()
+                                    viewModel.pollSecondsLeft.value = null
+                                    viewModel.pollTimer?.cancel()
+                                    viewModel.pollClosed = true
                                     viewModel.hidePoll.value = false
                                 }
                             }
                         }
                     }
+                    pollClose.setOnClickListener {
+                        pollLayout.gone()
+                        viewModel.pollSecondsLeft.value = null
+                        viewModel.pollTimer?.cancel()
+                        viewModel.pollClosed = true
+                    }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.poll.collectLatest {
-                                if (it != null) {
+                            viewModel.poll.collectLatest { poll ->
+                                if (poll != null) {
                                     if (!viewModel.pollClosed) {
-                                        chatView.notifyPoll(it)
+                                        when (poll.status) {
+                                            "ACTIVE" -> {
+                                                pollLayout.visible()
+                                                pollTitle.text = requireContext().getString(R.string.poll_title, poll.title)
+                                                pollChoices.text = poll.choices?.map {
+                                                    requireContext().getString(
+                                                        R.string.poll_choice,
+                                                        (((it.totalVotes ?: 0).toLong() * 100.0) / max((poll.totalVotes ?: 0), 1)).roundToInt(),
+                                                        it.totalVotes,
+                                                        it.title
+                                                    )
+                                                }?.joinToString("\n")
+                                                pollStatus.visible()
+                                            }
+                                            "COMPLETED", "TERMINATED" -> {
+                                                pollLayout.visible()
+                                                pollTitle.text = requireContext().getString(R.string.poll_title, poll.title)
+                                                val winningTotal = poll.choices?.maxOfOrNull { it.totalVotes ?: 0 } ?: 0
+                                                pollChoices.text = poll.choices?.map {
+                                                    requireContext().getString(
+                                                        if (winningTotal == it.totalVotes) {
+                                                            R.string.poll_choice_winner
+                                                        } else {
+                                                            R.string.poll_choice
+                                                        },
+                                                        (((it.totalVotes ?: 0).toLong() * 100.0) / max((poll.totalVotes ?: 0), 1)).roundToInt(),
+                                                        it.totalVotes,
+                                                        it.title
+                                                    )
+                                                }?.joinToString("\n")
+                                                pollStatus.gone()
+                                                viewModel.pollSecondsLeft.value = null
+                                                viewModel.pollTimer?.cancel()
+                                                viewModel.startPollTimeout { pollLayout.gone() }
+                                            }
+                                            else -> {
+                                                pollLayout.gone()
+                                                viewModel.pollSecondsLeft.value = null
+                                                viewModel.pollTimer?.cancel()
+                                                viewModel.pollClosed = true
+                                            }
+                                        }
                                     }
                                     viewModel.poll.value = null
                                 }
@@ -343,7 +731,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.pollSecondsLeft.collectLatest {
                                 if (it != null) {
-                                    chatView.updatePollStatus(it)
+                                    pollStatus.text = requireContext().getString(R.string.remaining_time, DateUtils.formatElapsedTime(it.toLong()))
                                     if (it <= 0) {
                                         viewModel.pollSecondsLeft.value = null
                                     }
@@ -355,18 +743,96 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.hidePrediction.collectLatest {
                                 if (it) {
-                                    chatView.hidePrediction()
+                                    predictionLayout.gone()
+                                    viewModel.predictionSecondsLeft.value = null
+                                    viewModel.predictionTimer?.cancel()
+                                    viewModel.predictionClosed = true
                                     viewModel.hidePrediction.value = false
                                 }
                             }
                         }
                     }
+                    predictionClose.setOnClickListener {
+                        predictionLayout.gone()
+                        viewModel.predictionSecondsLeft.value = null
+                        viewModel.predictionTimer?.cancel()
+                        viewModel.predictionClosed = true
+                    }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.prediction.collectLatest {
-                                if (it != null) {
+                            viewModel.prediction.collectLatest { prediction ->
+                                if (prediction != null) {
                                     if (!viewModel.predictionClosed) {
-                                        chatView.notifyPrediction(it)
+                                        when (prediction.status) {
+                                            "ACTIVE" -> {
+                                                predictionLayout.visible()
+                                                predictionTitle.text = requireContext().getString(R.string.prediction_title, prediction.title)
+                                                val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                                                predictionOutcomes.text = prediction.outcomes?.map {
+                                                    requireContext().getString(
+                                                        R.string.prediction_outcome,
+                                                        (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                                                        it.totalPoints,
+                                                        it.totalUsers,
+                                                        it.title
+                                                    )
+                                                }?.joinToString("\n")
+                                                predictionStatus.visible()
+                                            }
+                                            "LOCKED" -> {
+                                                predictionLayout.visible()
+                                                predictionTitle.text = requireContext().getString(R.string.prediction_title, prediction.title)
+                                                val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                                                predictionOutcomes.text = prediction.outcomes?.map {
+                                                    requireContext().getString(
+                                                        R.string.prediction_outcome,
+                                                        (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                                                        it.totalPoints,
+                                                        it.totalUsers,
+                                                        it.title
+                                                    )
+                                                }?.joinToString("\n")
+                                                viewModel.predictionSecondsLeft.value = null
+                                                viewModel.predictionTimer?.cancel()
+                                                viewModel.startPredictionTimeout { predictionLayout.gone() }
+                                                predictionStatus.visible()
+                                                predictionStatus.text = requireContext().getString(R.string.prediction_locked)
+                                            }
+                                            "CANCELED", "CANCEL_PENDING", "RESOLVED", "RESOLVE_PENDING" -> {
+                                                predictionLayout.visible()
+                                                predictionTitle.text = requireContext().getString(R.string.prediction_title, prediction.title)
+                                                val resolved = prediction.status == "RESOLVED" || prediction.status == "RESOLVE_PENDING"
+                                                val totalPoints = prediction.outcomes?.sumOf { it.totalPoints?.toLong() ?: 0 } ?: 0
+                                                predictionOutcomes.text = prediction.outcomes?.map {
+                                                    requireContext().getString(
+                                                        if (resolved && prediction.winningOutcomeId != null && prediction.winningOutcomeId == it.id) {
+                                                            R.string.prediction_outcome_winner
+                                                        } else {
+                                                            R.string.prediction_outcome
+                                                        },
+                                                        (((it.totalPoints ?: 0).toLong() * 100.0) / max(totalPoints, 1)).roundToInt(),
+                                                        it.totalPoints,
+                                                        it.totalUsers,
+                                                        it.title
+                                                    )
+                                                }?.joinToString("\n")
+                                                viewModel.predictionSecondsLeft.value = null
+                                                viewModel.predictionTimer?.cancel()
+                                                viewModel.startPredictionTimeout { predictionLayout.gone() }
+                                                if (resolved) {
+                                                    predictionStatus.gone()
+                                                } else {
+                                                    predictionStatus.visible()
+                                                    predictionStatus.text = requireContext().getString(R.string.prediction_refunded)
+                                                }
+                                            }
+                                            else -> {
+                                                predictionLayout.gone()
+                                                viewModel.predictionSecondsLeft.value = null
+                                                viewModel.predictionTimer?.cancel()
+                                                viewModel.predictionClosed = true
+                                            }
+                                        }
                                     }
                                     viewModel.prediction.value = null
                                 }
@@ -377,7 +843,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.predictionSecondsLeft.collectLatest {
                                 if (it != null) {
-                                    chatView.updatePredictionStatus(it)
+                                    predictionStatus.text = requireContext().getString(R.string.remaining_time, DateUtils.formatElapsedTime(it.toLong()))
                                     if (it <= 0) {
                                         viewModel.predictionSecondsLeft.value = null
                                     }
@@ -408,9 +874,20 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newPaint.collectLatest {
-                                if (it != null) {
-                                    chatView.addPaint(it)
+                            viewModel.newPaint.collectLatest { paint ->
+                                if (paint != null) {
+                                    adapter.namePaints?.let { namePaints ->
+                                        namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+                                        namePaints.add(paint)
+                                    }
+                                    messageDialog?.adapter?.namePaints?.let { namePaints ->
+                                        namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+                                        namePaints.add(paint)
+                                    }
+                                    replyDialog?.adapter?.namePaints?.let { namePaints ->
+                                        namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+                                        namePaints.add(paint)
+                                    }
                                     viewModel.newPaint.value = null
                                 }
                             }
@@ -418,9 +895,21 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newPaintUser.collectLatest {
-                                if (it != null) {
-                                    chatView.addPaintUser(it)
+                            viewModel.newPaintUser.collectLatest { pair ->
+                                if (pair != null) {
+                                    adapter.paintUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    messageDialog?.adapter?.paintUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    replyDialog?.adapter?.paintUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    updateUserMessages(pair.first)
                                     viewModel.newPaintUser.value = null
                                 }
                             }
@@ -428,9 +917,20 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newStvBadge.collectLatest {
-                                if (it != null) {
-                                    chatView.addStvBadge(it)
+                            viewModel.newStvBadge.collectLatest { badge ->
+                                if (badge != null) {
+                                    adapter.stvBadges?.let { stvBadges ->
+                                        stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+                                        stvBadges.add(badge)
+                                    }
+                                    messageDialog?.adapter?.stvBadges?.let { stvBadges ->
+                                        stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+                                        stvBadges.add(badge)
+                                    }
+                                    replyDialog?.adapter?.stvBadges?.let { stvBadges ->
+                                        stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+                                        stvBadges.add(badge)
+                                    }
                                     viewModel.newStvBadge.value = null
                                 }
                             }
@@ -438,9 +938,21 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newStvBadgeUser.collectLatest {
-                                if (it != null) {
-                                    chatView.addStvBadgeUser(it)
+                            viewModel.newStvBadgeUser.collectLatest { pair ->
+                                if (pair != null) {
+                                    adapter.stvBadgeUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    messageDialog?.adapter?.stvBadgeUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    replyDialog?.adapter?.stvBadgeUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    updateUserMessages(pair.first)
                                     viewModel.newStvBadgeUser.value = null
                                 }
                             }
@@ -448,9 +960,20 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newPersonalEmoteSet.collectLatest {
-                                if (it != null) {
-                                    chatView.addPersonalEmoteSet(it)
+                            viewModel.newPersonalEmoteSet.collectLatest { pair ->
+                                if (pair != null) {
+                                    adapter.personalEmoteSets?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    messageDialog?.adapter?.personalEmoteSets?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    replyDialog?.adapter?.personalEmoteSets?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
                                     viewModel.newPersonalEmoteSet.value = null
                                 }
                             }
@@ -458,9 +981,21 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.newPersonalEmoteSetUser.collectLatest {
-                                if (it != null) {
-                                    chatView.addPersonalEmoteSetUser(it)
+                            viewModel.newPersonalEmoteSetUser.collectLatest { pair ->
+                                if (pair != null) {
+                                    adapter.personalEmoteSetUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    messageDialog?.adapter?.personalEmoteSetUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    replyDialog?.adapter?.personalEmoteSetUsers?.let {
+                                        it.remove(pair.first)
+                                        it.put(pair.first, pair.second)
+                                    }
+                                    updateUserMessages(pair.first)
                                     viewModel.newPersonalEmoteSetUser.value = null
                                 }
                             }
@@ -475,6 +1010,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
                         )
                     }
+                } else {
+                    chatReplayUnavailable.visible()
                 }
             }
         }
@@ -540,66 +1077,142 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         viewModel.streamId = id
     }
 
-    private fun onRaidUpdate(raid: Raid) {
-        if (!viewModel.raidClosed) {
-            if (raid.openStream) {
-                if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment) {
-                    onRaidClicked(raid)
+    fun emoteMenuIsVisible() = binding.emoteMenu.isVisible
+
+    fun toggleEmoteMenu(enable: Boolean) {
+        if (enable) {
+            binding.emoteMenu.visible()
+        } else {
+            binding.emoteMenu.gone()
+        }
+        toggleBackPressedCallback(enable)
+    }
+
+    fun toggleBackPressedCallback(enable: Boolean) {
+        if (enable) {
+            requireActivity().onBackPressedDispatcher.addCallback(this, backPressedCallback)
+        } else {
+            backPressedCallback.remove()
+        }
+    }
+
+    fun appendEmote(emote: Emote) {
+        binding.editText.text.append(emote.name).append(' ')
+    }
+
+    private fun sendMessage(replyId: String? = null): Boolean {
+        with(binding) {
+            editText.hideKeyboard()
+            editText.clearFocus()
+            toggleEmoteMenu(false)
+            replyView.gone()
+            send.setOnClickListener { sendMessage() }
+            editText.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                    sendMessage()
+                } else {
+                    false
                 }
-                binding.chatView.hideRaid()
+            }
+            val text = editText.text.trim()
+            editText.text.clear()
+            return if (text.isNotEmpty()) {
+                viewModel.send(
+                    message = text,
+                    replyId = replyId,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                    accountId = requireContext().tokenPrefs().getString(C.USER_ID, null),
+                    channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                    channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                    useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true),
+                    useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false),
+                    checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
+                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                )
+                adapter.messages?.let { recyclerView.scrollToPosition(it.lastIndex) }
+                true
             } else {
-                binding.chatView.notifyRaid(raid)
+                false
             }
         }
     }
 
-    private fun onRaidClicked(raid: Raid) {
-        (requireActivity() as MainActivity).startStream(
-            Stream(
-                channelId = raid.targetId,
-                channelLogin = raid.targetLogin,
-                channelName = raid.targetName,
-                profileImageUrl = raid.targetProfileImage,
-            )
-        )
+    private fun addToAutoCompleteList(list: Collection<Any>?) {
+        if (!list.isNullOrEmpty()) {
+            if (messagingEnabled) {
+                val newItems = list.filter { it !in autoCompleteList }
+                autoCompleteAdapter?.addAll(newItems) ?: autoCompleteList.addAll(newItems)
+            }
+        }
+    }
+
+    private fun updateUserMessages(userId: String) {
+        adapter.messages?.toList()?.let { messages ->
+            messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
+                messages.indexOf(message).takeIf { it != -1 }?.let {
+                    adapter.notifyItemChanged(it)
+                }
+            }
+        }
+        messageDialog?.updateUserMessages(userId)
+        replyDialog?.updateUserMessages(userId)
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
-        return binding.chatView.createMessageClickedChatAdapter(viewModel.chatMessages.value.toList())
+        return adapter.createMessageClickedChatAdapter(viewModel.chatMessages.value.toList())
     }
 
     override fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter {
-        return binding.chatView.createReplyClickedChatAdapter(viewModel.chatMessages.value.toList())
-    }
-
-    fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()
-
-    fun toggleEmoteMenu(enable: Boolean) = binding.chatView.toggleEmoteMenu(enable)
-
-    fun toggleBackPressedCallback(enable: Boolean) = binding.chatView.toggleBackPressedCallback(enable)
-
-    fun appendEmote(emote: Emote) {
-        binding.chatView.appendEmote(emote)
+        return adapter.createReplyClickedChatAdapter(viewModel.chatMessages.value.toList())
     }
 
     override fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?) {
-        val replyMessage = message?.let {
-            val name = if (userName != null && userLogin != null && !userLogin.equals(userName, true)) {
-                when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
-                    "0" -> "${userName}(${userLogin})"
-                    "1" -> userName
-                    else -> userLogin
+        with(binding) {
+            if (!replyId.isNullOrBlank()) {
+                messageDialog?.dismiss()
+                replyView.visible()
+                replyText.text = message?.let {
+                    val name = if (userName != null && userLogin != null && !userLogin.equals(userName, true)) {
+                        when (requireContext().prefs().getString(C.UI_NAME_DISPLAY, "0")) {
+                            "0" -> "${userName}(${userLogin})"
+                            "1" -> userName
+                            else -> userLogin
+                        }
+                    } else {
+                        userName ?: userLogin
+                    }
+                    requireContext().getString(R.string.replying_to_message, name, message)
                 }
-            } else {
-                userName ?: userLogin
+                replyClose.setOnClickListener {
+                    replyView.gone()
+                    send.setOnClickListener { sendMessage() }
+                    editText.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                            sendMessage()
+                        } else {
+                            false
+                        }
+                    }
+                }
+                send.setOnClickListener { sendMessage(replyId) }
+                editText.setOnKeyListener { _, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                        sendMessage(replyId)
+                    } else {
+                        false
+                    }
+                }
             }
-            requireContext().getString(R.string.replying_to_message, name, message)
+            editText.apply {
+                requestFocus()
+                WindowCompat.getInsetsController(this@ChatFragment.requireActivity().window, this).show(WindowInsetsCompat.Type.ime())
+            }
         }
-        binding.chatView.reply(replyId, replyMessage)
     }
 
     override fun onCopyMessageClicked(message: String) {
-        binding.chatView.setMessage(message)
+        binding.editText.setText(message)
     }
 
     override fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?) {
@@ -669,7 +1282,148 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         _binding = null
     }
 
+    class SpaceTokenizer : MultiAutoCompleteTextView.Tokenizer {
+
+        override fun findTokenStart(text: CharSequence, cursor: Int): Int {
+            var i = cursor
+
+            while (i > 0 && text[i - 1] != ' ') {
+                i--
+            }
+            while (i < cursor && text[i] == ' ') {
+                i++
+            }
+
+            return i
+        }
+
+        override fun findTokenEnd(text: CharSequence, cursor: Int): Int {
+            var i = cursor
+            val len = text.length
+
+            while (i < len) {
+                if (text[i] == ' ') {
+                    return i
+                } else {
+                    i++
+                }
+            }
+
+            return len
+        }
+
+        override fun terminateToken(text: CharSequence): CharSequence {
+            return "${if (text.startsWith(':')) text.substring(1) else text} "
+        }
+    }
+
+    inner class AutoCompleteAdapter(
+        context: Context,
+        private val fragment: Fragment,
+        list: List<Any>,
+        private val emoteQuality: String,
+    ) : ArrayAdapter<Any>(context, 0, list) {
+
+        private var mFilter: ArrayFilter? = null
+
+        override fun getFilter(): Filter = mFilter ?: ArrayFilter().also { mFilter = it }
+
+        private inner class ArrayFilter : Filter() {
+            override fun performFiltering(prefix: CharSequence?): FilterResults {
+                val results = FilterResults()
+                val originalValuesField = ArrayAdapter::class.java.getDeclaredField("mOriginalValues")
+                originalValuesField.isAccessible = true
+                val originalValues = originalValuesField.get(this@AutoCompleteAdapter) as List<*>?
+                if (originalValues == null) {
+                    originalValuesField.set(this@AutoCompleteAdapter, autoCompleteList.toList())
+                }
+                val list = originalValues ?: autoCompleteList.toList()
+                if (prefix.isNullOrEmpty()) {
+                    results.values = list
+                    results.count = list.size
+                } else {
+                    var regexString = ""
+                    prefix.toString().lowercase().forEach {
+                        regexString += "${Pattern.quote(it.toString())}\\S*?"
+                    }
+                    val regex = Regex(regexString)
+                    val newList = list.filter {
+                        regex.matches(it.toString().lowercase())
+                    }
+                    results.values = newList
+                    results.count = newList.size
+                }
+                return results
+            }
+
+            override fun publishResults(constraint: CharSequence?, results: FilterResults) {
+                val objectsField = ArrayAdapter::class.java.getDeclaredField("mObjects")
+                objectsField.isAccessible = true
+                objectsField.set(this@AutoCompleteAdapter, results.values as? List<*> ?: mutableListOf<Any>())
+                if (results.count > 0) {
+                    notifyDataSetChanged()
+                } else {
+                    notifyDataSetInvalidated()
+                }
+            }
+        }
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val viewHolder: ViewHolder
+
+            val item = getItem(position)!!
+            return when (getItemViewType(position)) {
+                TYPE_EMOTE -> {
+                    if (convertView == null) {
+                        val view = LayoutInflater.from(context).inflate(R.layout.auto_complete_emotes_list_item, parent, false)
+                        viewHolder = ViewHolder(view).also { view.tag = it }
+                    } else {
+                        viewHolder = convertView.tag as ViewHolder
+                    }
+                    viewHolder.containerView.apply {
+                        item as Emote
+                        findViewById<ImageView>(R.id.image)?.loadImage(
+                            fragment,
+                            when (emoteQuality) {
+                                "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
+                                "3" -> item.url3x ?: item.url2x ?: item.url1x
+                                "2" -> item.url2x ?: item.url1x
+                                else -> item.url1x
+                            },
+                            diskCacheStrategy = DiskCacheStrategy.DATA
+                        )
+                        findViewById<TextView>(R.id.name)?.text = item.name
+                    }
+                }
+                else -> {
+                    if (convertView == null) {
+                        val view = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_1, parent, false)
+                        viewHolder = ViewHolder(view).also { view.tag = it }
+                    } else {
+                        viewHolder = convertView.tag as ViewHolder
+                    }
+                    (viewHolder.containerView as TextView).apply {
+                        text = (item as Chatter).name
+                        context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceBodyMedium)).use {
+                            TextViewCompat.setTextAppearance(this, it.getResourceId(0, 0))
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun getItemViewType(position: Int): Int {
+            return if (getItem(position) is Emote) TYPE_EMOTE else TYPE_USERNAME
+        }
+
+        override fun getViewTypeCount(): Int = 2
+
+        inner class ViewHolder(override val containerView: View) : LayoutContainer
+    }
+
     companion object {
+        private const val TYPE_EMOTE = 0
+        private const val TYPE_USERNAME = 1
         private const val KEY_IS_LIVE = "isLive"
         private const val KEY_CHANNEL_ID = "channel_id"
         private const val KEY_CHANNEL_LOGIN = "channel_login"
