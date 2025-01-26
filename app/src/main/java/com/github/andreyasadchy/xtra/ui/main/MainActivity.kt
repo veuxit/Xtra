@@ -60,11 +60,7 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.PlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DisplayUtils
@@ -102,7 +98,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavController
-    var playerFragment: BasePlayerFragment? = null
+    var playerFragment: PlayerFragment? = null
         private set
     private val networkReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -668,19 +664,19 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 //Navigation listeners
 
     fun startStream(stream: Stream) {
-        startPlayer(StreamPlayerFragment.newInstance(stream))
+        startPlayer(PlayerFragment.newInstance(stream))
     }
 
     fun startVideo(video: Video, offset: Double?, ignoreSavedPosition: Boolean = false) {
-        startPlayer(VideoPlayerFragment.newInstance(video, offset, ignoreSavedPosition))
+        startPlayer(PlayerFragment.newInstance(video, offset, ignoreSavedPosition))
     }
 
     fun startClip(clip: Clip) {
-        startPlayer(ClipPlayerFragment.newInstance(clip))
+        startPlayer(PlayerFragment.newInstance(clip))
     }
 
     fun startOfflineVideo(video: OfflineVideo) {
-        startPlayer(OfflinePlayerFragment.newInstance(video))
+        startPlayer(PlayerFragment.newInstance(video))
     }
 
 //SlidingLayout.Listener
@@ -699,7 +695,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 
 //Player methods
 
-    private fun startPlayer(fragment: BasePlayerFragment) {
+    private fun startPlayer(fragment: PlayerFragment) {
         playerFragment = fragment
         supportFragmentManager.beginTransaction()
             .replace(R.id.playerContainer, fragment).commit()
@@ -729,7 +725,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private fun restorePlayerFragment() {
         if (viewModel.isPlayerOpened) {
             if (playerFragment == null) {
-                playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as BasePlayerFragment?
+                playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as PlayerFragment?
             } else {
                 if (playerFragment?.secondViewIsHidden() == true && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
                     playerFragment?.maximize()

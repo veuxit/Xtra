@@ -18,13 +18,19 @@
 
             <com.github.andreyasadchy.xtra.ui.view.CustomPlayerView
                 android:id="@+id/playerView"
-                style="@style/Player"
-                app:controller_layout_id="@layout/player_video" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:animateLayoutChanges="true"
+                android:background="@android:color/black"
+                app:animation_enabled="false"
+                app:controller_layout_id="@layout/player_layout"
+                app:show_buffering="always"
+                app:surface_type="surface_view" />
 
         </androidx.media3.ui.AspectRatioFrameLayout>
 
         <LinearLayout
-            android:id="@+id/clipChatContainer"
+            android:id="@+id/chatLayout"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:orientation="vertical"

@@ -40,8 +40,7 @@ import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
-import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
+import com.github.andreyasadchy.xtra.ui.player.PlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.LifecycleListener
@@ -594,7 +593,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                                 if (raid != null) {
                                     if (!viewModel.raidClosed) {
                                         if (raid.openStream) {
-                                            if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is BasePlayerFragment) {
+                                            if (requireContext().prefs().getBoolean(C.CHAT_RAIDS_AUTO_SWITCH, true) && parentFragment is PlayerFragment) {
                                                 (requireActivity() as? MainActivity)?.startStream(
                                                     Stream(
                                                         channelId = raid.targetId,
@@ -856,9 +855,9 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             viewModel.playbackMessage.collectLatest {
                                 if (it != null) {
                                     if (it.live != null) {
-                                        (parentFragment as? StreamPlayerFragment)?.updateLiveStatus(it.live, it.serverTime, channelLogin)
+                                        (parentFragment as? PlayerFragment)?.updateLiveStatus(it.live, it.serverTime, channelLogin)
                                     }
-                                    (parentFragment as? StreamPlayerFragment)?.updateViewerCount(it.viewers)
+                                    (parentFragment as? PlayerFragment)?.updateViewerCount(it.viewers)
                                 }
                             }
                         }
@@ -867,7 +866,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.streamInfo.collectLatest {
                                 if (it != null) {
-                                    (parentFragment as? StreamPlayerFragment)?.updateStreamInfo(it.title, it.gameId, null, it.gameName)
+                                    (parentFragment as? PlayerFragment)?.updateStreamInfo(it.title, it.gameId, null, it.gameName)
                                 }
                             }
                         }
@@ -1006,8 +1005,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                             channelId = channelId,
                             channelLogin = channelLogin,
                             chatUrl = chatUrl,
-                            getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
-                            getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                            getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
+                            getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
                         )
                     }
                 } else {
@@ -1032,8 +1031,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         channelLogin = channelLogin,
                         videoId = videoId,
                         startTime = args.getInt(KEY_START_TIME),
-                        getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
-                        getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                        getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
+                        getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
                     )
                 }
             }
@@ -1224,7 +1223,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 channelLogo = channelLogo
             )
         )
-        (parentFragment as? BasePlayerFragment)?.minimize()
+        (parentFragment as? PlayerFragment)?.minimize()
     }
 
     override fun onNetworkRestored() {
@@ -1241,8 +1240,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     chatUrl = args.getString(KEY_CHAT_URL),
                     videoId = args.getString(KEY_VIDEO_ID),
                     startTime = args.getInt(KEY_START_TIME),
-                    getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
-                    getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                    getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
+                    getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
                 )
             }
         }
@@ -1270,8 +1269,8 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     chatUrl = args.getString(KEY_CHAT_URL),
                     videoId = args.getString(KEY_VIDEO_ID),
                     startTime = args.getInt(KEY_START_TIME),
-                    getCurrentPosition = (parentFragment as BasePlayerFragment)::getCurrentPosition,
-                    getCurrentSpeed = (parentFragment as BasePlayerFragment)::getCurrentSpeed
+                    getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
+                    getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
                 )
             }
         }
