@@ -41,8 +41,7 @@
                 style="@style/ChatView"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginBottom="3dp" />
+                android:layout_weight="1" />
 
             <Button
                 android:id="@+id/watchVideo"
@@ -50,6 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
+                android:layout_marginTop="3dp"
                 android:text="@string/watch_video"
                 android:textAllCaps="true"
                 android:visibility="gone" />
