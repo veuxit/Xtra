@@ -561,9 +561,9 @@ class ChatViewModel @Inject constructor(
                     }?.let { list.add(it) }
                 }
                 if (list.isNotEmpty()) {
-                    _chatMessages.value = mutableListOf<ChatMessage>().apply {
+                    _chatMessages.value = arrayListOf<ChatMessage>().apply {
                         addAll(list)
-                        addAll(_chatMessages.value)
+                        addAll(_chatMessages.value.toList())
                     }
                     if (!scrollDown.value) {
                         scrollDown.value = true
@@ -1044,7 +1044,7 @@ class ChatViewModel @Inject constructor(
 
     private fun onClearMessage(message: String, nameDisplay: String?) {
         val pair = ChatUtils.parseClearMessage(message)
-        val deletedMessage = pair.second?.let { targetId -> _chatMessages.value.find { it.id == targetId } }
+        val deletedMessage = pair.second?.let { targetId -> _chatMessages.value.toList().find { it.id == targetId } }
         onMessage(getClearMessage(pair.first, deletedMessage, nameDisplay))
     }
 
