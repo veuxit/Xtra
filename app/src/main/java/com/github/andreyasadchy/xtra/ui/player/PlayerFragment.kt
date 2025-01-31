@@ -449,391 +449,399 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                     }
                 }
             }
-            stream?.let { stream ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.streamResult.collectLatest {
-                            if (it != null) {
-                                val headers = prefs.getString(C.PLAYER_STREAM_HEADERS, null)?.let {
-                                    try {
-                                        val json = JSONObject(it)
-                                        hashMapOf<String, String>().apply {
-                                            json.keys().forEach { key ->
-                                                put(key, json.optString(key))
+            stream.let { stream ->
+                if (stream != null) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.streamResult.collectLatest {
+                                if (it != null) {
+                                    val headers = prefs.getString(C.PLAYER_STREAM_HEADERS, null)?.let {
+                                        try {
+                                            val json = JSONObject(it)
+                                            hashMapOf<String, String>().apply {
+                                                json.keys().forEach { key ->
+                                                    put(key, json.optString(key))
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                    }
+                                    val proxyHost = prefs.getString(C.PROXY_HOST, null)
+                                    val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
+                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
+                                    player?.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.START_STREAM, bundleOf(
+                                                PlaybackService.ITEM to stream,
+                                                PlaybackService.URI to it,
+                                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
+                                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
+                                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
+                                            )
+                                        ), Bundle.EMPTY
+                                    )
+                                    player?.prepare()
+                                    viewModel.streamResult.value = null
+                                }
+                            }
+                        }
+                    }
+                    if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
+                        (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                                !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
+                    ) {
+                        if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
+                            view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
+                                visible()
+                                setOnClickListener { toggleChatBar() }
+                            }
+                        }
+                        slidingLayout.viewTreeObserver.addOnGlobalLayoutListener {
+                            if (slidingLayout.isKeyboardShown) {
+                                if (!isKeyboardShown) {
+                                    isKeyboardShown = true
+                                    if (!isPortrait) {
+                                        chatLayout.updateLayoutParams { width = (slidingLayout.width / 1.8f).toInt() }
+                                        showStatusBar()
+                                    }
+                                }
+                            } else {
+                                if (isKeyboardShown) {
+                                    isKeyboardShown = false
+                                    chatLayout.clearFocus()
+                                    if (!isPortrait) {
+                                        chatLayout.updateLayoutParams { width = chatWidthLandscape }
+                                        if (slidingLayout.isMaximized) {
+                                            hideStatusBar()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.stream.collectLatest {
+                                if (it != null) {
+                                    chatFragment?.updateStreamId(it.id)
+                                    if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                                        !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                                        requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()
+                                    ) {
+                                        updateViewerCount(it.viewerCount)
+                                    }
+                                    if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                                        !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                                        requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
+                                        requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()
+                                    ) {
+                                        updateStreamInfo(it.title, it.gameId, it.gameSlug, it.gameName)
+                                    }
+                                    if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
+                                        requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false
+                                    ) {
+                                        it.startedAt?.let { date ->
+                                            TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
+                                                updateUptime(startedAtMs)
                                             }
                                         }
-                                    } catch (e: Exception) {
-                                        null
                                     }
                                 }
-                                val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
-                                player?.sendCustomCommand(
-                                    SessionCommand(
-                                        PlaybackService.START_STREAM, bundleOf(
-                                            PlaybackService.ITEM to stream,
-                                            PlaybackService.URI to it,
-                                            PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
-                                            PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
-                                            PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
-                                        )
-                                    ), Bundle.EMPTY
-                                )
-                                player?.prepare()
-                                viewModel.streamResult.value = null
                             }
                         }
                     }
-                }
-                if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
-                    (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
-                            !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
-                ) {
-                    if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
-                        view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
+                    if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
+                        requireView().findViewById<ImageButton>(R.id.playerRestart)?.apply {
                             visible()
-                            setOnClickListener { toggleChatBar() }
+                            setOnClickListener { restartPlayer() }
                         }
                     }
-                    slidingLayout.viewTreeObserver.addOnGlobalLayoutListener {
-                        if (slidingLayout.isKeyboardShown) {
-                            if (!isKeyboardShown) {
-                                isKeyboardShown = true
-                                if (!isPortrait) {
-                                    chatLayout.updateLayoutParams { width = (slidingLayout.width / 1.8f).toInt() }
-                                    showStatusBar()
-                                }
-                            }
-                        } else {
-                            if (isKeyboardShown) {
-                                isKeyboardShown = false
-                                chatLayout.clearFocus()
-                                if (!isPortrait) {
-                                    chatLayout.updateLayoutParams { width = chatWidthLandscape }
-                                    if (slidingLayout.isMaximized) {
-                                        hideStatusBar()
-                                    }
-                                }
+                    if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
+                        requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
+                            visible()
+                            setOnClickListener { player?.seekToDefaultPosition() }
+                        }
+                    }
+                    if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
+                        requireView().findViewById<LinearLayout>(R.id.playerViewers)?.apply {
+                            setOnClickListener { openViewerList() }
+                        }
+                    }
+                    if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
+                        stream.startedAt?.let {
+                            TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
+                                updateUptime(startedAtMs)
                             }
                         }
                     }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.stream.collectLatest {
-                            if (it != null) {
-                                chatFragment?.updateStreamId(it.id)
-                                if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
-                                    !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
-                                    requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()
-                                ) {
-                                    updateViewerCount(it.viewerCount)
-                                }
-                                if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
-                                    !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
-                                    requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
-                                    requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()
-                                ) {
-                                    updateStreamInfo(it.title, it.gameId, it.gameSlug, it.gameName)
-                                }
-                                if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
-                                    requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false
-                                ) {
-                                    it.startedAt?.let { date ->
-                                        TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
-                                            updateUptime(startedAtMs)
-                                        }
-                                    }
-                                }
-                            }
+                    requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_rew_with_amount)?.gone()
+                    requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_ffwd_with_amount)?.gone()
+                    requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_position)?.gone()
+                    requireView().findViewById<DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.gone()
+                    requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)?.gone()
+                    updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
+                } else {
+                    if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, false)) {
+                        view.findViewById<ImageButton>(R.id.playerSpeed)?.apply {
+                            visible()
+                            setOnClickListener { showSpeedDialog() }
                         }
-                    }
-                }
-                if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
-                    requireView().findViewById<ImageButton>(R.id.playerRestart)?.apply {
-                        visible()
-                        setOnClickListener { restartPlayer() }
-                    }
-                }
-                if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
-                    requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
-                        visible()
-                        setOnClickListener { player?.seekToDefaultPosition() }
-                    }
-                }
-                if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
-                    requireView().findViewById<LinearLayout>(R.id.playerViewers)?.apply {
-                        setOnClickListener { openViewerList() }
-                    }
-                }
-                if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
-                    stream.startedAt?.let {
-                        TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
-                            updateUptime(startedAtMs)
-                        }
-                    }
-                }
-                requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_rew_with_amount)?.gone()
-                requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_ffwd_with_amount)?.gone()
-                requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_position)?.gone()
-                requireView().findViewById<DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.gone()
-                requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)?.gone()
-                updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
-            } ?: {
-                if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, false)) {
-                    view.findViewById<ImageButton>(R.id.playerSpeed)?.apply {
-                        visible()
-                        setOnClickListener { showSpeedDialog() }
                     }
                 }
             }
-            video?.let { video ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.videoResult.collectLatest {
-                            if (it != null) {
-                                player?.sendCustomCommand(
-                                    SessionCommand(
-                                        PlaybackService.START_VIDEO, bundleOf(
-                                            PlaybackService.ITEM to video,
-                                            PlaybackService.URI to it.toString(),
-                                            PlaybackService.USING_PLAYLIST to true,
-                                            PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
-                                        )
-                                    ), Bundle.EMPTY
-                                )
-                                viewModel.videoResult.value = null
-                            }
-                        }
-                    }
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.savedPosition.collectLatest {
-                            playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, it?.position ?: 0)
-                        }
-                    }
-                }
-                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
+            video.let { video ->
+                if (video != null) {
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.isBookmarked.collectLatest {
+                            viewModel.videoResult.collectLatest {
                                 if (it != null) {
-                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it)
-                                    viewModel.isBookmarked.value = null
+                                    player?.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.START_VIDEO, bundleOf(
+                                                PlaybackService.ITEM to video,
+                                                PlaybackService.URI to it.toString(),
+                                                PlaybackService.USING_PLAYLIST to true,
+                                                PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
+                                            )
+                                        ), Bundle.EMPTY
+                                    )
+                                    viewModel.videoResult.value = null
                                 }
                             }
                         }
                     }
-                }
-                if (!video.id.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.gamesList.collectLatest { list ->
-                                if (!list.isNullOrEmpty()) {
-                                    if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
-                                        requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
-                                            visible()
-                                            setOnClickListener { showVodGames() }
+                            viewModel.savedPosition.collectLatest {
+                                playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, it?.position ?: 0)
+                            }
+                        }
+                    }
+                    if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.isBookmarked.collectLatest {
+                                    if (it != null) {
+                                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it)
+                                        viewModel.isBookmarked.value = null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!video.id.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.gamesList.collectLatest { list ->
+                                    if (!list.isNullOrEmpty()) {
+                                        if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
+                                            requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
+                                                visible()
+                                                setOnClickListener { showVodGames() }
+                                            }
+                                        }
+                                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            clip.let { clip ->
+                if (clip != null) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.clipUrls.collectLatest { map ->
+                                if (map != null) {
+                                    val urls = map.ifEmpty {
+                                        if ((prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) == 2
+                                            && !clip.thumbnailUrl.isNullOrBlank()
+                                        ) {
+                                            TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
+                                        } else {
+                                            emptyMap()
                                         }
                                     }
-                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            clip?.let { clip ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.clipUrls.collectLatest { map ->
-                            if (map != null) {
-                                val urls = map.ifEmpty {
-                                    if ((prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) == 2
-                                        && !clip.thumbnailUrl.isNullOrBlank()
-                                    ) {
-                                        TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
-                                    } else {
-                                        emptyMap()
-                                    }
-                                }
-                                player?.sendCustomCommand(
-                                    SessionCommand(
-                                        PlaybackService.START_CLIP, bundleOf(
-                                            PlaybackService.ITEM to clip,
-                                            PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
-                                            PlaybackService.URLS_VALUES to urls.values.toTypedArray()
-                                        )
-                                    ), Bundle.EMPTY
-                                )
-                                viewModel.clipUrls.value = null
-                            }
-                        }
-                    }
-                }
-                if (!clip.videoId.isNullOrBlank()) {
-                    watchVideo.visible()
-                    watchVideo.setOnClickListener {
-                        (requireActivity() as MainActivity).startVideo(
-                            Video(
-                                id = clip.videoId,
-                                channelId = clip.channelId,
-                                channelLogin = clip.channelLogin,
-                                channelName = clip.channelName,
-                                profileImageUrl = clip.profileImageUrl,
-                                animatedPreviewURL = clip.videoAnimatedPreviewURL
-                            ),
-                            clip.vodOffset?.let { (it.toDouble() * 1000.0) + (player?.currentPosition ?: 0) } ?: 0.0,
-                            true
-                        )
-                    }
-                }
-            } ?: {
-                if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {
-                    view.findViewById<ImageButton>(R.id.playerSleepTimer)?.apply {
-                        visible()
-                        setOnClickListener { showSleepTimerDialog() }
-                    }
-                }
-            }
-            offlineVideo?.let { offlineVideo ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.offlineVideo.collectLatest {
-                            player?.sendCustomCommand(
-                                SessionCommand(
-                                    PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                                        PlaybackService.ITEM to (it ?: offlineVideo),
-                                        PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
+                                    player?.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.START_CLIP, bundleOf(
+                                                PlaybackService.ITEM to clip,
+                                                PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
+                                                PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                                            )
+                                        ), Bundle.EMPTY
                                     )
-                                ), Bundle.EMPTY
+                                    viewModel.clipUrls.value = null
+                                }
+                            }
+                        }
+                    }
+                    if (!clip.videoId.isNullOrBlank()) {
+                        watchVideo.visible()
+                        watchVideo.setOnClickListener {
+                            (requireActivity() as MainActivity).startVideo(
+                                Video(
+                                    id = clip.videoId,
+                                    channelId = clip.channelId,
+                                    channelLogin = clip.channelLogin,
+                                    channelName = clip.channelName,
+                                    profileImageUrl = clip.profileImageUrl,
+                                    animatedPreviewURL = clip.videoAnimatedPreviewURL
+                                ),
+                                clip.vodOffset?.let { (it.toDouble() * 1000.0) + (player?.currentPosition ?: 0) } ?: 0.0,
+                                true
                             )
                         }
                     }
-                }
-            } ?: {
-                val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
-                val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
-                val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
-                settings?.disable()
-                download?.disable()
-                mode?.disable()
-                viewLifecycleOwner.lifecycleScope.launch {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.loaded.collectLatest {
-                            if (it) {
-                                settings?.enable()
-                                download?.enable()
-                                mode?.enable()
-                                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
-                            }
+                } else {
+                    if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {
+                        view.findViewById<ImageButton>(R.id.playerSleepTimer)?.apply {
+                            visible()
+                            setOnClickListener { showSleepTimerDialog() }
                         }
                     }
                 }
-                if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
-                    download?.apply {
-                        visible()
-                        setOnClickListener { showDownloadDialog() }
-                    }
-                }
-                val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
-                if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (setting == 0 || setting == 1)) {
-                    val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
-                    followButton?.visible()
-                    followButton?.setOnClickListener {
-                        viewModel.isFollowing.value?.let {
-                            if (it) {
-                                requireContext().getAlertDialogBuilder()
-                                    .setMessage(requireContext().getString(R.string.unfollow_channel,
-                                        if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                            when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                "0" -> "${channelName}(${channelLogin})"
-                                                "1" -> channelName
-                                                else -> channelLogin
-                                            }
-                                        } else {
-                                            channelName
-                                        }
-                                    ))
-                                    .setNegativeButton(getString(R.string.no), null)
-                                    .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                                        viewModel.deleteFollowChannel(
-                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                            setting,
-                                            requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                            channelId
+            }
+            offlineVideo.let { offlineVideo ->
+                if (offlineVideo != null) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.offlineVideo.collectLatest {
+                                player?.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                                            PlaybackService.ITEM to (it ?: offlineVideo),
+                                            PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
                                         )
-                                    }
-                                    .show()
-                            } else {
-                                viewModel.saveFollowChannel(
-                                    requireContext().filesDir.path,
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    setting,
-                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                    channelId,
-                                    channelLogin,
-                                    channelName,
-                                    channelLogo,
-                                    requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                                    stream?.startedAt
+                                    ), Bundle.EMPTY
                                 )
                             }
                         }
                     }
+                } else {
+                    val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
+                    val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
+                    val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
+                    settings?.disable()
+                    download?.disable()
+                    mode?.disable()
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.isFollowing.collectLatest {
-                                if (it != null) {
-                                    followButton?.apply {
-                                        if (it) {
-                                            setImageResource(R.drawable.baseline_favorite_black_24)
-                                        } else {
-                                            setImageResource(R.drawable.baseline_favorite_border_black_24)
+                            viewModel.loaded.collectLatest {
+                                if (it) {
+                                    settings?.enable()
+                                    download?.enable()
+                                    mode?.enable()
+                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
+                                }
+                            }
+                        }
+                    }
+                    if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
+                        download?.apply {
+                            visible()
+                            setOnClickListener { showDownloadDialog() }
+                        }
+                    }
+                    val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+                    if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (setting == 0 || setting == 1)) {
+                        val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
+                        followButton?.visible()
+                        followButton?.setOnClickListener {
+                            viewModel.isFollowing.value?.let {
+                                if (it) {
+                                    requireContext().getAlertDialogBuilder()
+                                        .setMessage(requireContext().getString(R.string.unfollow_channel,
+                                            if (channelLogin != null && !channelLogin.equals(channelName, true)) {
+                                                when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                    "0" -> "${channelName}(${channelLogin})"
+                                                    "1" -> channelName
+                                                    else -> channelLogin
+                                                }
+                                            } else {
+                                                channelName
+                                            }
+                                        ))
+                                        .setNegativeButton(getString(R.string.no), null)
+                                        .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                            viewModel.deleteFollowChannel(
+                                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                                setting,
+                                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                                channelId
+                                            )
+                                        }
+                                        .show()
+                                } else {
+                                    viewModel.saveFollowChannel(
+                                        requireContext().filesDir.path,
+                                        TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                        setting,
+                                        requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                        channelId,
+                                        channelLogin,
+                                        channelName,
+                                        channelLogo,
+                                        requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                                        stream?.startedAt
+                                    )
+                                }
+                            }
+                        }
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.isFollowing.collectLatest {
+                                    if (it != null) {
+                                        followButton?.apply {
+                                            if (it) {
+                                                setImageResource(R.drawable.baseline_favorite_black_24)
+                                            } else {
+                                                setImageResource(R.drawable.baseline_favorite_border_black_24)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.follow.collectLatest { pair ->
-                                if (pair != null) {
-                                    val following = pair.first
-                                    val errorMessage = pair.second
-                                    if (!errorMessage.isNullOrBlank()) {
-                                        requireContext().shortToast(errorMessage)
-                                    } else {
-                                        if (following) {
-                                            requireContext().shortToast(requireContext().getString(R.string.now_following,
-                                                if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                                    when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                        "0" -> "${channelName}(${channelLogin})"
-                                                        "1" -> channelName
-                                                        else -> channelLogin
-                                                    }
-                                                } else {
-                                                    channelName
-                                                }
-                                            ))
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.follow.collectLatest { pair ->
+                                    if (pair != null) {
+                                        val following = pair.first
+                                        val errorMessage = pair.second
+                                        if (!errorMessage.isNullOrBlank()) {
+                                            requireContext().shortToast(errorMessage)
                                         } else {
-                                            requireContext().shortToast(requireContext().getString(R.string.unfollowed,
-                                                if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                                    when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                        "0" -> "${channelName}(${channelLogin})"
-                                                        "1" -> channelName
-                                                        else -> channelLogin
+                                            if (following) {
+                                                requireContext().shortToast(requireContext().getString(R.string.now_following,
+                                                    if (channelLogin != null && !channelLogin.equals(channelName, true)) {
+                                                        when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                            "0" -> "${channelName}(${channelLogin})"
+                                                            "1" -> channelName
+                                                            else -> channelLogin
+                                                        }
+                                                    } else {
+                                                        channelName
                                                     }
-                                                } else {
-                                                    channelName
-                                                }
-                                            ))
+                                                ))
+                                            } else {
+                                                requireContext().shortToast(requireContext().getString(R.string.unfollowed,
+                                                    if (channelLogin != null && !channelLogin.equals(channelName, true)) {
+                                                        when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                                                            "0" -> "${channelName}(${channelLogin})"
+                                                            "1" -> channelName
+                                                            else -> channelLogin
+                                                        }
+                                                    } else {
+                                                        channelName
+                                                    }
+                                                ))
+                                            }
                                         }
+                                        viewModel.follow.value = null
                                     }
-                                    viewModel.follow.value = null
                                 }
                             }
                         }
