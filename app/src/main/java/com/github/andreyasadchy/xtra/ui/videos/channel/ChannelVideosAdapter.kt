@@ -106,7 +106,7 @@ class ChannelVideosAdapter(
                     }
                     if (item.viewCount != null) {
                         views.visible()
-                        views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                        views.text = TwitchApiHelper.formatViewsCount(context, item.viewCount, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, true))
                     } else {
                         views.gone()
                     }

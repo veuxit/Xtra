@@ -5,8 +5,8 @@
         android:defaultValue="15000"
         android:key="player_buffer_min"
         android:singleLine="true"
-        android:title="@string/player_buffer_min"
-        app:dialogMessage="@string/player_buffer_min_summary"
+        android:title="@string/min_buffer"
+        app:dialogMessage="@string/min_buffer_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
@@ -15,8 +15,8 @@
         android:defaultValue="50000"
         android:key="player_buffer_max"
         android:singleLine="true"
-        android:title="@string/player_buffer_max"
-        app:dialogMessage="@string/player_buffer_max_summary"
+        android:title="@string/max_buffer"
+        app:dialogMessage="@string/max_buffer_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
@@ -25,18 +25,18 @@
         android:defaultValue="2000"
         android:key="player_buffer_playback"
         android:singleLine="true"
-        android:title="@string/player_buffer_playback"
-        app:dialogMessage="@string/player_buffer_playback_summary"
+        android:title="@string/buffer_for_playback"
+        app:dialogMessage="@string/buffer_for_playback_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
-        android:defaultValue="5000"
+        android:defaultValue="2000"
         android:key="player_buffer_rebuffer"
         android:singleLine="true"
-        android:title="@string/player_buffer_rebuffer"
-        app:dialogMessage="@string/player_buffer_rebuffer_summary"
+        android:title="@string/rebuffer"
+        app:dialogMessage="@string/rebuffer_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
@@ -45,8 +45,8 @@
         android:defaultValue=""
         android:key="player_live_min_speed"
         android:singleLine="true"
-        android:title="@string/player_minspeedlive"
-        app:dialogMessage="@string/player_minspeedlive_summary"
+        android:title="@string/live_min_speed"
+        app:dialogMessage="@string/live_min_speed_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
@@ -55,18 +55,18 @@
         android:defaultValue=""
         android:key="player_live_max_speed"
         android:singleLine="true"
-        android:title="@string/player_maxspeedlive"
-        app:dialogMessage="@string/player_maxspeedlive_summary"
+        android:title="@string/live_max_speed"
+        app:dialogMessage="@string/live_max_speed_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
-        android:defaultValue="5000"
+        android:defaultValue="2000"
         android:key="player_live_target_offset"
         android:singleLine="true"
-        android:title="@string/player_targetoffset"
-        app:dialogMessage="@string/player_targetoffset_summary"
+        android:title="@string/live_target_offset"
+        app:dialogMessage="@string/live_target_offset_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false"
         app:useSimpleSummaryProvider="true" />

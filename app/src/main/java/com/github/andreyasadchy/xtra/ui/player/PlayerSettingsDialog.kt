@@ -46,7 +46,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         val arguments = requireArguments()
         with(binding) {
-            if ((parentFragment as? PlayerFragment)?.stream == null && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, true)) {
+            if ((parentFragment as? PlayerFragment)?.stream == null && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, false)) {
                 menuSpeed.visible()
                 menuSpeed.setOnClickListener {
                     (parentFragment as? PlayerFragment)?.showSpeedDialog()
