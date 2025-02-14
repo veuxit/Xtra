@@ -289,7 +289,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                         }
                         replyView.gone()
                         send.setOnClickListener { sendMessage() }
-                        if (view.parent != null && view.parent.parent is SlidingLayout && !requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
+                        if (view.parent?.parent?.parent is SlidingLayout && !requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
                             messageView.gone()
                         } else {
                             messageView.visible()
