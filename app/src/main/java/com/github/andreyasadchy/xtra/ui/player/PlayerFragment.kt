@@ -416,7 +416,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                     }
                 }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR_BUTTON, false)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR_BUTTON, true)) {
                 view.findViewById<ImageButton>(R.id.playerAudioCompressor)?.apply {
                     visible()
                     setImageResource(if (prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR, false)) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
@@ -469,7 +469,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                     }
                                     val proxyHost = prefs.getString(C.PROXY_HOST, null)
                                     val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
+                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                     player?.sendCustomCommand(
                                         SessionCommand(
                                             PlaybackService.START_STREAM, bundleOf(
@@ -582,7 +582,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                     requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)?.gone()
                     updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
                 } else {
-                    if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, false)) {
+                    if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, true)) {
                         view.findViewById<ImageButton>(R.id.playerSpeed)?.apply {
                             visible()
                             setOnClickListener { showSpeedDialog() }
@@ -746,7 +746,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                         }
                     }
                     val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
-                    if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (setting == 0 || setting == 1)) {
+                    if (prefs.getBoolean(C.PLAYER_FOLLOW, false) && (setting == 0 || setting == 1)) {
                         val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
                         followButton?.visible()
                         followButton?.setOnClickListener {
@@ -1131,7 +1131,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         val viewers = requireView().findViewById<TextView>(R.id.playerViewersText)
         val viewerIcon = requireView().findViewById<ImageView>(R.id.playerViewersIcon)
         if (viewerCount != null) {
-            viewers?.text = TwitchApiHelper.formatCount(viewerCount, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+            viewers?.text = TwitchApiHelper.formatCount(viewerCount, requireContext().prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, true))
             if (prefs.getBoolean(C.PLAYER_VIEWERICON, true)) {
                 viewerIcon?.visible()
             }
@@ -1713,7 +1713,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                     }
                     val proxyHost = prefs.getString(C.PROXY_HOST, null)
                     val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
+                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                     viewModel.loadStreamResult(
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                         channelLogin = channelLogin,
@@ -2030,7 +2030,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                 stream.channelLogin?.let { channelLogin ->
                                     val proxyHost = prefs.getString(C.PROXY_HOST, null)
                                     val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null
+                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                     viewModel.loadStreamResult(
                                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                                         channelLogin = channelLogin,

@@ -107,7 +107,7 @@ class StreamDownloadWorker @AssistedInject constructor(
             val endWait = (context.prefs().getString(C.DOWNLOAD_STREAM_END_WAIT, "15")?.toLongOrNull())?.times(60000L)
             val proxyHost = context.prefs().getString(C.PROXY_HOST, null)
             val proxyPort = context.prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
-            val proxyMultivariantPlaylist = context.prefs().getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, true)
+            val proxyMultivariantPlaylist = context.prefs().getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false)
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true))
             val randomDeviceId = context.prefs().getBoolean(C.TOKEN_RANDOM_DEVICEID, true)
             val xDeviceId = context.prefs().getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason")
