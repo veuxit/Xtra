@@ -23,6 +23,7 @@ import android.view.WindowManager
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -37,12 +38,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
-import androidx.preference.PreferenceManager
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -121,111 +122,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = prefs()
-        if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.root_preferences, false)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.player_button_preferences, true)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.player_menu_preferences, true)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.buffer_preferences, true)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.proxy_preferences, true)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.token_preferences, true)
-            PreferenceManager.setDefaultValues(this@MainActivity, R.xml.api_token_preferences, true)
-            prefs.edit {
-                putBoolean(C.FIRST_LAUNCH2, false)
-                putInt(C.LANDSCAPE_CHAT_WIDTH, DisplayUtils.calculateLandscapeWidthByPercent(this@MainActivity, 30))
-                if (resources.getBoolean(R.bool.isTablet)) {
-                    putString(C.PORTRAIT_COLUMN_COUNT, "2")
-                    putString(C.LANDSCAPE_COLUMN_COUNT, "3")
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    putString(C.THEME, "4")
-                }
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH, true)) {
-            prefs.edit {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                    putString(C.CHAT_IMAGE_LIBRARY, "2")
-                }
-                putBoolean(C.FIRST_LAUNCH, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH1, true)) {
-            prefs.edit {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "1")
-                } else {
-                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "0")
-                }
-                putBoolean(C.FIRST_LAUNCH1, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH3, true)) {
-            prefs.edit {
-                val langPref = prefs.getString(C.UI_LANGUAGE, "")
-                if (!langPref.isNullOrBlank() && langPref != "auto") {
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(langPref))
-                }
-                putBoolean(C.FIRST_LAUNCH3, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH5, true)) {
-            prefs.edit {
-                if (prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") == "kd1unb4b3q4t58fwlpcbzcbnm76a8fp" && prefs().getString(C.GQL_TOKEN2, null).isNullOrBlank()) {
-                    putString(C.GQL_CLIENT_ID2, "ue6666qo983tsx6so1t0vnawi233wa")
-                    putString(C.GQL_REDIRECT2, "https://www.twitch.tv/settings/connections")
-                }
-                putBoolean(C.FIRST_LAUNCH5, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH6, true)) {
-            prefs.edit {
-                if (prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() == 0) {
-                    putBoolean(C.PLAYER_STREAM_PROXY, true)
-                }
-                putBoolean(C.FIRST_LAUNCH6, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH7, true)) {
-            prefs.edit {
-                when {
-                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_H265, false, false).none { it.hardwareAccelerated } -> {
-                        putString(C.TOKEN_SUPPORTED_CODECS, "h264")
-                    }
-                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_AV1, false, false).none { it.hardwareAccelerated } -> {
-                        putString(C.TOKEN_SUPPORTED_CODECS, "h265,h264")
-                    }
-                }
-                putBoolean(C.FIRST_LAUNCH7, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH8, true)) {
-            prefs.edit {
-                if (prefs.getString(C.UI_CUTOUTMODE, "0") == "1") {
-                    putBoolean(C.UI_DRAW_BEHIND_CUTOUTS, true)
-                }
-                putBoolean(C.FIRST_LAUNCH8, false)
-            }
-        }
-        if (prefs.getBoolean(C.FIRST_LAUNCH9, true)) {
-            tokenPrefs().edit {
-                putString(C.USER_ID, prefs.getString(C.USER_ID, null))
-                putString(C.USERNAME, prefs.getString(C.USERNAME, null))
-                putString(C.TOKEN, prefs.getString(C.TOKEN, null))
-                putString(C.GQL_TOKEN2, prefs.getString(C.GQL_TOKEN2, null))
-                putString(C.GQL_HEADERS, prefs.getString(C.GQL_HEADERS, null))
-                putLong(C.INTEGRITY_EXPIRATION, prefs.getLong(C.INTEGRITY_EXPIRATION, 0))
-            }
-            prefs.edit {
-                remove(C.USER_ID)
-                remove(C.USERNAME)
-                remove(C.TOKEN)
-                remove(C.GQL_TOKEN)
-                remove(C.GQL_TOKEN2)
-                remove(C.GQL_HEADERS)
-                remove(C.INTEGRITY_EXPIRATION)
-                putBoolean(C.FIRST_LAUNCH9, false)
-            }
-        }
+        migrateSettings()
         if (tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0) <= 0L) {
             tokenPrefs().edit {
                 putLong(C.UPDATE_LAST_CHECKED, System.currentTimeMillis())
@@ -819,6 +716,108 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         currentFragment.scrollToTop()
                     }
                 }
+            }
+        }
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun migrateSettings() {
+        if (prefs.getBoolean(C.FIRST_LAUNCH2, true)) {
+            prefs.edit {
+                putBoolean(C.FIRST_LAUNCH2, false)
+                putInt(C.LANDSCAPE_CHAT_WIDTH, DisplayUtils.calculateLandscapeWidthByPercent(this@MainActivity, 30))
+                if (resources.getBoolean(R.bool.isTablet)) {
+                    putString(C.PORTRAIT_COLUMN_COUNT, "2")
+                    putString(C.LANDSCAPE_COLUMN_COUNT, "3")
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    putString(C.THEME, "4")
+                }
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH, true)) {
+            prefs.edit {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    putString(C.CHAT_IMAGE_LIBRARY, "2")
+                }
+                putBoolean(C.FIRST_LAUNCH, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH1, true)) {
+            prefs.edit {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "1")
+                } else {
+                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "0")
+                }
+                putBoolean(C.FIRST_LAUNCH1, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH3, true)) {
+            prefs.edit {
+                val langPref = prefs.getString(C.UI_LANGUAGE, "")
+                if (!langPref.isNullOrBlank() && langPref != "auto") {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(langPref))
+                }
+                putBoolean(C.FIRST_LAUNCH3, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH5, true)) {
+            prefs.edit {
+                if (prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") == "kd1unb4b3q4t58fwlpcbzcbnm76a8fp" && prefs().getString(C.GQL_TOKEN2, null).isNullOrBlank()) {
+                    putString(C.GQL_CLIENT_ID2, "ue6666qo983tsx6so1t0vnawi233wa")
+                    putString(C.GQL_REDIRECT2, "https://www.twitch.tv/settings/connections")
+                }
+                putBoolean(C.FIRST_LAUNCH5, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH6, true)) {
+            prefs.edit {
+                if (prefs.getString(C.PLAYER_PROXY, "1")?.toIntOrNull() == 0) {
+                    putBoolean(C.PLAYER_STREAM_PROXY, true)
+                }
+                putBoolean(C.FIRST_LAUNCH6, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH7, true)) {
+            prefs.edit {
+                when {
+                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_H265, false, false).none { it.hardwareAccelerated } -> {
+                        putString(C.TOKEN_SUPPORTED_CODECS, "h264")
+                    }
+                    MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_AV1, false, false).none { it.hardwareAccelerated } -> {
+                        putString(C.TOKEN_SUPPORTED_CODECS, "h265,h264")
+                    }
+                }
+                putBoolean(C.FIRST_LAUNCH7, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH8, true)) {
+            prefs.edit {
+                if (prefs.getString(C.UI_CUTOUTMODE, "0") == "1") {
+                    putBoolean(C.UI_DRAW_BEHIND_CUTOUTS, true)
+                }
+                putBoolean(C.FIRST_LAUNCH8, false)
+            }
+        }
+        if (prefs.getBoolean(C.FIRST_LAUNCH9, true)) {
+            tokenPrefs().edit {
+                putString(C.USER_ID, prefs.getString(C.USER_ID, null))
+                putString(C.USERNAME, prefs.getString(C.USERNAME, null))
+                putString(C.TOKEN, prefs.getString(C.TOKEN, null))
+                putString(C.GQL_TOKEN2, prefs.getString(C.GQL_TOKEN2, null))
+                putString(C.GQL_HEADERS, prefs.getString(C.GQL_HEADERS, null))
+                putLong(C.INTEGRITY_EXPIRATION, prefs.getLong(C.INTEGRITY_EXPIRATION, 0))
+            }
+            prefs.edit {
+                remove(C.USER_ID)
+                remove(C.USERNAME)
+                remove(C.TOKEN)
+                remove(C.GQL_TOKEN)
+                remove(C.GQL_TOKEN2)
+                remove(C.GQL_HEADERS)
+                remove(C.INTEGRITY_EXPIRATION)
+                putBoolean(C.FIRST_LAUNCH9, false)
             }
         }
     }

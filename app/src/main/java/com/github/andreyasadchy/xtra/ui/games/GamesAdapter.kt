@@ -83,7 +83,7 @@ class GamesAdapter(
                     }
                     if (item.viewersCount != null) {
                         viewers.visible()
-                        viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewersCount!!, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, false))
+                        viewers.text = TwitchApiHelper.formatViewersCount(context, item.viewersCount!!, context.prefs().getBoolean(C.UI_TRUNCATEVIEWCOUNT, true))
                     } else {
                         viewers.gone()
                     }

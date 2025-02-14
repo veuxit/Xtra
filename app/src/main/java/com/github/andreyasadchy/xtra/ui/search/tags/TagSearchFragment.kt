@@ -121,7 +121,7 @@ class TagSearchFragment : PagedListFragment() {
                             }
                         }
                     } else {
-                        search(newText) //might be null on rotation, so as?
+                        search(newText)
                     }
                     return false
                 }

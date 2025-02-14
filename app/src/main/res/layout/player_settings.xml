@@ -83,7 +83,7 @@
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
             android:padding="12dp"
-            android:text="@string/vod_games"
+            android:text="@string/chapters"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:visibility="gone"
             tools:visibility="visible" />
