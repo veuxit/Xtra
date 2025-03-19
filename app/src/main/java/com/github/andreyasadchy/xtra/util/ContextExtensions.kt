@@ -151,9 +151,6 @@ val Context.isInPortraitOrientation
 val Context.isInLandscapeOrientation
     get() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-val Context.isActivityResumed
-    get() = this !is Activity || !((isDestroyed) || isFinishing)
-
 fun Context.toast(@StringRes resId: Int) {
     Toast.makeText(this, resId, Toast.LENGTH_LONG).show()
 }

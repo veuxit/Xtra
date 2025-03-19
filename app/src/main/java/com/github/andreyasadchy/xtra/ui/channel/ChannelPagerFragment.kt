@@ -35,6 +35,12 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChannelBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -57,7 +63,6 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isInLandscapeOrientation
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.shortToast
@@ -71,7 +76,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
-import kotlin.text.isNullOrBlank
 
 @AndroidEntryPoint
 class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, IntegrityDialog.CallbackListener {
@@ -144,10 +148,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 if (it != null) {
                     userLayout.visible()
                     userImage.visible()
-                    userImage.loadImage(
-                        this@ChannelPagerFragment,
-                        it,
-                        circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                    this@ChannelPagerFragment.requireContext().imageLoader.enqueue(
+                        ImageRequest.Builder(this@ChannelPagerFragment.requireContext()).apply {
+                            data(it)
+                            if (requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                                transformations(CircleCropTransformation())
+                            }
+                            crossfade(true)
+                            target(userImage)
+                        }.build()
                     )
                 } else {
                     userImage.gone()
@@ -506,10 +515,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 if (it != null) {
                     userLayout.visible()
                     userImage.visible()
-                    userImage.loadImage(
-                        this@ChannelPagerFragment,
-                        it,
-                        circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                    this@ChannelPagerFragment.requireContext().imageLoader.enqueue(
+                        ImageRequest.Builder(this@ChannelPagerFragment.requireContext()).apply {
+                            data(it)
+                            if (requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                                transformations(CircleCropTransformation())
+                            }
+                            crossfade(true)
+                            target(userImage)
+                        }.build()
                     )
                     requireArguments().putString(C.CHANNEL_PROFILEIMAGE, it)
                 } else {
@@ -601,16 +615,27 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
             if (!userImage.isVisible && user.channelLogo != null) {
                 userLayout.visible()
                 userImage.visible()
-                userImage.loadImage(
-                    this@ChannelPagerFragment,
-                    user.channelLogo,
-                    circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                this@ChannelPagerFragment.requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(this@ChannelPagerFragment.requireContext()).apply {
+                        data(user.channelLogo)
+                        if (requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                            transformations(CircleCropTransformation())
+                        }
+                        crossfade(true)
+                        target(userImage)
+                    }.build()
                 )
                 requireArguments().putString(C.CHANNEL_PROFILEIMAGE, user.channelLogo)
             }
             if (user.bannerImageURL != null) {
                 bannerImage.visible()
-                bannerImage.loadImage(this@ChannelPagerFragment, user.bannerImageURL)
+                this@ChannelPagerFragment.requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(this@ChannelPagerFragment.requireContext()).apply {
+                        data(user.bannerImageURL)
+                        crossfade(true)
+                        target(bannerImage)
+                    }.build()
+                )
                 if (userName.isVisible) {
                     userName.setTextColor(Color.WHITE)
                     userName.setShadowLayer(4f, 0f, 0f, Color.BLACK)

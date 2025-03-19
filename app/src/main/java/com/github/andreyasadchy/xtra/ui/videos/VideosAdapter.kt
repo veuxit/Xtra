@@ -15,7 +15,13 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import coil3.imageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentVideosListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -27,7 +33,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
@@ -99,10 +104,13 @@ class VideosAdapter(
                         (fragment.activity as MainActivity).startVideo(item, position?.toDouble())
                     }
                     root.setOnLongClickListener { showDownloadDialog(item); true }
-                    thumbnail.loadImage(
-                        fragment,
-                        item.thumbnail,
-                        diskCacheStrategy = DiskCacheStrategy.NONE
+                    fragment.requireContext().imageLoader.enqueue(
+                        ImageRequest.Builder(fragment.requireContext()).apply {
+                            data(item.thumbnail)
+                            diskCachePolicy(CachePolicy.DISABLED)
+                            crossfade(true)
+                            target(thumbnail)
+                        }.build()
                     )
                     if (item.uploadDate != null) {
                         val text = TwitchApiHelper.formatTimeString(context, item.uploadDate)
@@ -146,10 +154,15 @@ class VideosAdapter(
                     }
                     if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(
-                            fragment,
-                            item.channelLogo,
-                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        fragment.requireContext().imageLoader.enqueue(
+                            ImageRequest.Builder(fragment.requireContext()).apply {
+                                data(item.channelLogo)
+                                if (context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                                    transformations(CircleCropTransformation())
+                                }
+                                crossfade(true)
+                                target(userImage)
+                            }.build()
                         )
                         userImage.setOnClickListener(channelListener)
                     } else {
