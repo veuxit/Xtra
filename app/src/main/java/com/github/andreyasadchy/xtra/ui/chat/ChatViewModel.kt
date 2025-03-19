@@ -59,9 +59,7 @@ import java.util.Collections
 import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
-import kotlin.collections.set
 import kotlin.concurrent.scheduleAtFixedRate
-import kotlin.text.equals
 
 
 @HiltViewModel
@@ -227,6 +225,7 @@ class ChatViewModel @Inject constructor(
         val gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true)
         val emoteQuality = applicationContext.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
         val animateGifs = applicationContext.prefs().getBoolean(C.ANIMATED_EMOTES, true)
+        val useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true)
         val checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
                 applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
         savedGlobalBadges.also { saved ->
@@ -267,7 +266,7 @@ class ChatViewModel @Inject constructor(
                 } else {
                     viewModelScope.launch {
                         try {
-                            playerRepository.loadGlobalStvEmotes().let { emotes ->
+                            playerRepository.loadGlobalStvEmotes(useWebp).let { emotes ->
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalStvEmotes = emotes
                                     addEmotes(emotes)
@@ -286,7 +285,7 @@ class ChatViewModel @Inject constructor(
             if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadStvEmotes(channelId).let {
+                        playerRepository.loadStvEmotes(channelId, useWebp).let {
                             if (it.second.isNotEmpty()) {
                                 channelStvEmoteSetId = it.first
                                 addEmotes(it.second)
@@ -313,7 +312,7 @@ class ChatViewModel @Inject constructor(
                 } else {
                     viewModelScope.launch {
                         try {
-                            playerRepository.loadGlobalBttvEmotes().let { emotes ->
+                            playerRepository.loadGlobalBttvEmotes(useWebp).let { emotes ->
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalBttvEmotes = emotes
                                     addEmotes(emotes)
@@ -332,7 +331,7 @@ class ChatViewModel @Inject constructor(
             if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadBttvEmotes(channelId).let {
+                        playerRepository.loadBttvEmotes(channelId, useWebp).let {
                             if (it.isNotEmpty()) {
                                 addEmotes(it)
                                 _channelBttvEmotes.value = it
@@ -358,7 +357,7 @@ class ChatViewModel @Inject constructor(
                 } else {
                     viewModelScope.launch {
                         try {
-                            playerRepository.loadGlobalFfzEmotes().let { emotes ->
+                            playerRepository.loadGlobalFfzEmotes(useWebp).let { emotes ->
                                 if (emotes.isNotEmpty()) {
                                     savedGlobalFfzEmotes = emotes
                                     addEmotes(emotes)
@@ -377,7 +376,7 @@ class ChatViewModel @Inject constructor(
             if (!channelId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
-                        playerRepository.loadFfzEmotes(channelId).let {
+                        playerRepository.loadFfzEmotes(channelId, useWebp).let {
                             if (it.isNotEmpty()) {
                                 addEmotes(it)
                                 _channelFfzEmotes.value = it
@@ -881,6 +880,7 @@ class ChatViewModel @Inject constructor(
         if ((showNamePaints || showStvBadges || showPersonalEmotes || stvLiveUpdates) && !channelId.isNullOrBlank()) {
             stvEventApi = StvEventApiWebSocket(
                 channelId = channelId,
+                useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true),
                 client = okHttpClient,
                 coroutineScope = viewModelScope,
                 onPaint = { paint ->
@@ -1044,7 +1044,11 @@ class ChatViewModel @Inject constructor(
 
     private fun onClearMessage(message: String, nameDisplay: String?) {
         val pair = ChatUtils.parseClearMessage(message)
-        val deletedMessage = pair.second?.let { targetId -> _chatMessages.value.toList().find { it.id == targetId } }
+        val deletedMessage = try {
+            pair.second?.let { targetId -> _chatMessages.value.toList().find { it.id == targetId } }
+        } catch (e: NullPointerException) {
+            null
+        }
         onMessage(getClearMessage(pair.first, deletedMessage, nameDisplay))
     }
 

@@ -23,5 +23,6 @@ class StvResponse(
     @Serializable
     class File(
         val name: String? = null,
+        val format: String? = null,
     )
 }

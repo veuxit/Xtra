@@ -49,6 +49,13 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="chat_use_webp"
+        android:title="@string/use_webp_images"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <ListPreference
         android:defaultValue="4"
         android:entries="@array/imageQualityEntries"

@@ -1163,15 +1163,19 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     private fun updateUserMessages(userId: String) {
-        adapter.messages?.toList()?.let { messages ->
-            messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
-                messages.indexOf(message).takeIf { it != -1 }?.let {
-                    adapter.notifyItemChanged(it)
+        try {
+            adapter.messages?.toList()?.let { messages ->
+                messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
+                    messages.indexOf(message).takeIf { it != -1 }?.let {
+                        adapter.notifyItemChanged(it)
+                    }
                 }
             }
+            messageDialog?.updateUserMessages(userId)
+            replyDialog?.updateUserMessages(userId)
+        } catch (e: NullPointerException) {
+
         }
-        messageDialog?.updateUserMessages(userId)
-        replyDialog?.updateUserMessages(userId)
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {

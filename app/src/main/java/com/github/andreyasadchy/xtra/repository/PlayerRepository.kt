@@ -244,23 +244,29 @@ class PlayerRepository @Inject constructor(
         misc.getRecentMessages(channelLogin, limit)
     }
 
-    suspend fun loadGlobalStvEmotes(): List<Emote> = withContext(Dispatchers.IO) {
-        parseStvEmotes(misc.getGlobalStvEmotes().emotes)
+    suspend fun loadGlobalStvEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        parseStvEmotes(misc.getGlobalStvEmotes().emotes, useWebp)
     }
 
-    suspend fun loadStvEmotes(channelId: String): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
+    suspend fun loadStvEmotes(channelId: String, useWebp: Boolean): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
         val set = misc.getStvEmotes(channelId).emoteSet
-        Pair(set.id, parseStvEmotes(set.emotes))
+        Pair(set.id, parseStvEmotes(set.emotes, useWebp))
     }
 
-    private fun parseStvEmotes(response: List<StvResponse>): List<Emote> {
+    private fun parseStvEmotes(response: List<StvResponse>, useWebp: Boolean): List<Emote> {
         return response.mapNotNull { emote ->
             emote.name?.takeIf { it.isNotBlank() }?.let { name ->
                 emote.data?.let { data ->
                     data.host?.let { host ->
                         host.url?.takeIf { it.isNotBlank() }?.let { template ->
                             val urls = host.files?.mapNotNull { file ->
-                                file.name?.takeIf { it.isNotBlank() && !it.contains("avif", true) }?.let { name ->
+                                file.name?.takeIf { it.isNotBlank() &&
+                                        if (useWebp) {
+                                            file.format == "WEBP"
+                                        } else {
+                                            file.format == "GIF" || file.format == "PNG"
+                                        }
+                                }?.let { name ->
                                     "https:${template}/${name}"
                                 }
                             }
@@ -298,30 +304,31 @@ class PlayerRepository @Inject constructor(
         misc.sendStvPresence(stvUserId, json)
     }
 
-    suspend fun loadGlobalBttvEmotes(): List<Emote> = withContext(Dispatchers.IO) {
-        parseBttvEmotes(misc.getGlobalBttvEmotes())
+    suspend fun loadGlobalBttvEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        parseBttvEmotes(misc.getGlobalBttvEmotes(), useWebp)
     }
 
-    suspend fun loadBttvEmotes(channelId: String): List<Emote> = withContext(Dispatchers.IO) {
+    suspend fun loadBttvEmotes(channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         parseBttvEmotes(
             misc.getBttvEmotes(channelId).entries.filter { it.key != "bots" && it.value is JsonArray }.map { entry ->
                 (entry.value as JsonArray).map { json.decodeFromJsonElement<BttvResponse>(it) }
-            }.flatten()
+            }.flatten(),
+            useWebp
         )
     }
 
-    private fun parseBttvEmotes(response: List<BttvResponse>): List<Emote> {
+    private fun parseBttvEmotes(response: List<BttvResponse>, useWebp: Boolean): List<Emote> {
         val list = listOf("IceCold", "SoSnowy", "SantaHat", "TopHat", "CandyCane", "ReinDeer", "cvHazmat", "cvMask")
         return response.mapNotNull { emote ->
             emote.code?.takeIf { it.isNotBlank() }?.let { name ->
                 emote.id?.takeIf { it.isNotBlank() }?.let { id ->
                     Emote(
                         name = name,
-                        url1x = "https://cdn.betterttv.net/emote/$id/1x.webp",
-                        url2x = "https://cdn.betterttv.net/emote/$id/2x.webp",
-                        url3x = "https://cdn.betterttv.net/emote/$id/2x.webp",
-                        url4x = "https://cdn.betterttv.net/emote/$id/3x.webp",
-                        format = "webp",
+                        url1x = if (useWebp) "https://cdn.betterttv.net/emote/$id/1x.webp" else "https://cdn.betterttv.net/emote/$id/1x",
+                        url2x = if (useWebp) "https://cdn.betterttv.net/emote/$id/2x.webp" else "https://cdn.betterttv.net/emote/$id/2x",
+                        url3x = if (useWebp) "https://cdn.betterttv.net/emote/$id/2x.webp" else "https://cdn.betterttv.net/emote/$id/2x",
+                        url4x = if (useWebp) "https://cdn.betterttv.net/emote/$id/3x.webp" else "https://cdn.betterttv.net/emote/$id/3x",
+                        format = if (useWebp) "webp" else null,
                         isAnimated = emote.animated != false,
                         isZeroWidth = list.contains(name)
                     )
@@ -330,25 +337,33 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadGlobalFfzEmotes(): List<Emote> = withContext(Dispatchers.IO) {
+    suspend fun loadGlobalFfzEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = misc.getGlobalFfzEmotes()
         response.sets.entries.filter { it.key.toIntOrNull()?.let { set -> response.globalSets.contains(set) } == true }.flatMap {
-            it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes) } ?: emptyList()
+            it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes, useWebp) } ?: emptyList()
         }
     }
 
-    suspend fun loadFfzEmotes(channelId: String): List<Emote> = withContext(Dispatchers.IO) {
+    suspend fun loadFfzEmotes(channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         misc.getFfzEmotes(channelId).sets.entries.flatMap {
-            it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes) } ?: emptyList()
+            it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes, useWebp) } ?: emptyList()
         }
     }
 
-    private fun parseFfzEmotes(response: List<FfzResponse.Emote>): List<Emote> {
+    private fun parseFfzEmotes(response: List<FfzResponse.Emote>, useWebp: Boolean): List<Emote> {
         return response.mapNotNull { emote ->
             emote.name?.takeIf { it.isNotBlank() }?.let { name ->
                 val isAnimated = emote.animated != null
                 if (isAnimated) {
-                    emote.animated
+                    if (useWebp) {
+                        emote.animated
+                    } else {
+                        FfzResponse.Urls(
+                            url1x = emote.animated.url1x + ".gif",
+                            url2x = emote.animated.url2x + ".gif",
+                            url4x = emote.animated.url4x + ".gif",
+                        )
+                    }
                 } else {
                     emote.urls
                 }?.let { urls ->
@@ -358,7 +373,7 @@ class PlayerRepository @Inject constructor(
                         url2x = urls.url2x,
                         url3x = urls.url2x,
                         url4x = urls.url4x,
-                        format = if (isAnimated) "webp" else null,
+                        format = if (isAnimated && useWebp) "webp" else null,
                         isAnimated = isAnimated
                     )
                 }
