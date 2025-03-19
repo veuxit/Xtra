@@ -16,6 +16,7 @@ import org.json.JSONObject
 
 class StvEventApiWebSocket(
     private val channelId: String,
+    private val useWebp: Boolean,
     private val client: OkHttpClient,
     private val coroutineScope: CoroutineScope,
     private val onPaint: (NamePaint) -> Unit,
@@ -204,7 +205,14 @@ class StvEventApiWebSocket(
                                                             for (i in 0 until files.length()) {
                                                                 val fileObject = files.get(i) as? JSONObject
                                                                 val fileName = if (fileObject?.isNull("name") == false) fileObject.optString("name").takeIf { it.isNotBlank() } else null
-                                                                if (fileName != null && !fileName.contains("avif", true)) {
+                                                                val fileFormat = if (fileObject?.isNull("format") == false) fileObject.optString("format").takeIf { it.isNotBlank() } else null
+                                                                if (fileName != null &&
+                                                                    if (useWebp) {
+                                                                        fileFormat == "WEBP"
+                                                                    } else {
+                                                                        fileFormat == "GIF" || fileFormat == "PNG"
+                                                                    }
+                                                                ) {
                                                                     urls.add("https:${template}/${fileName}")
                                                                 }
                                                             }
@@ -297,7 +305,14 @@ class StvEventApiWebSocket(
                             for (i in 0 until files.length()) {
                                 val fileObject = files.get(i) as? JSONObject
                                 val fileName = if (fileObject?.isNull("name") == false) fileObject.optString("name").takeIf { it.isNotBlank() } else null
-                                if (fileName != null && !fileName.contains("avif", true)) {
+                                val fileFormat = if (fileObject?.isNull("format") == false) fileObject.optString("format").takeIf { it.isNotBlank() } else null
+                                if (fileName != null &&
+                                    if (useWebp) {
+                                        fileFormat == "WEBP"
+                                    } else {
+                                        fileFormat == "GIF" || fileFormat == "PNG"
+                                    }
+                                ) {
                                     urls.add("https:${template}/${fileName}")
                                 }
                             }

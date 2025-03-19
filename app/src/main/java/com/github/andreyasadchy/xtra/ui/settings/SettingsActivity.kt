@@ -69,7 +69,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.getValue
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -502,6 +501,12 @@ class SettingsActivity : AppCompatActivity() {
     class ChatSettingsFragment : MaterialPreferenceFragment() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.chat_preferences, rootKey)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                findPreference<ListPreference>(C.CHAT_IMAGE_LIBRARY)?.apply {
+                    setEntries(R.array.imageLibraryEntriesNoWebp)
+                    setEntryValues(R.array.imageLibraryValuesNoWebp)
+                }
+            }
             findPreference<SeekBarPreference>("chatWidth")?.apply {
                 summary = requireContext().getString(R.string.pixels, requireContext().prefs().getInt(C.LANDSCAPE_CHAT_WIDTH, 30))
                 setOnPreferenceChangeListener { _, newValue ->

@@ -80,6 +80,16 @@
         <item>2</item>
     </string-array>
 
+    <string-array name="imageLibraryEntriesNoWebp">
+        <item>@string/imageLibraryEntries2</item>
+        <item>@string/imageLibraryEntries3</item>
+    </string-array>
+
+    <string-array name="imageLibraryValuesNoWebp">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
     <string-array name="spinnerMedia">
         <item>@string/live</item>
         <item>@string/videos</item>
