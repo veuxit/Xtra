@@ -13,7 +13,11 @@ import androidx.navigation.fragment.findNavController
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import coil3.imageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentFollowedGamesListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Game
@@ -24,7 +28,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
@@ -77,10 +80,13 @@ class FollowedGamesAdapter(
                     }
                     if (item.boxArt != null) {
                         gameImage.visible()
-                        gameImage.loadImage(
-                            fragment,
-                            item.boxArt,
-                            diskCacheStrategy = DiskCacheStrategy.NONE
+                        fragment.requireContext().imageLoader.enqueue(
+                            ImageRequest.Builder(fragment.requireContext()).apply {
+                                data(item.boxArt)
+                                diskCachePolicy(CachePolicy.DISABLED)
+                                crossfade(true)
+                                target(gameImage)
+                            }.build()
                         )
                     } else {
                         gameImage.gone()

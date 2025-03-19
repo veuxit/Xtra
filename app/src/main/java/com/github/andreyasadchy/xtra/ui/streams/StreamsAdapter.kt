@@ -13,7 +13,13 @@ import androidx.navigation.fragment.findNavController
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import coil3.imageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentStreamsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -27,7 +33,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 
@@ -98,10 +103,15 @@ class StreamsAdapter(
                     }
                     if (item.channelLogo != null) {
                         userImage.visible()
-                        userImage.loadImage(
-                            fragment,
-                            item.channelLogo,
-                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                        fragment.requireContext().imageLoader.enqueue(
+                            ImageRequest.Builder(fragment.requireContext()).apply {
+                                data(item.channelLogo)
+                                if (context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                                    transformations(CircleCropTransformation())
+                                }
+                                crossfade(true)
+                                target(userImage)
+                            }.build()
                         )
                         userImage.setOnClickListener(channelListener)
                     } else {
@@ -137,11 +147,18 @@ class StreamsAdapter(
                     }
                     if (item.thumbnailUrl != null) {
                         thumbnail.visible()
-                        thumbnail.loadImage(
-                            fragment,
-                            item.thumbnail,
-                            changes = true,
-                            diskCacheStrategy = DiskCacheStrategy.NONE
+                        //update every 5 minutes
+                        val minutes = System.currentTimeMillis() / 60000L
+                        val lastMinute = minutes % 10
+                        val key = if (lastMinute < 5) minutes - lastMinute else minutes - (lastMinute - 5)
+                        fragment.requireContext().imageLoader.enqueue(
+                            ImageRequest.Builder(fragment.requireContext()).apply {
+                                data(item.thumbnail)
+                                memoryCacheKeyExtra("minutes", key.toString())
+                                diskCachePolicy(CachePolicy.DISABLED)
+                                crossfade(true)
+                                target(thumbnail)
+                            }.build()
                         )
                     } else {
                         thumbnail.gone()

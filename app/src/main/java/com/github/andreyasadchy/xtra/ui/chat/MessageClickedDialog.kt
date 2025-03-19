@@ -20,6 +20,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatMessageClickBinding
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
@@ -28,7 +34,6 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -259,17 +264,28 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
             if (user.bannerImageURL != null) {
                 userLayout.visible()
                 bannerImage.visible()
-                bannerImage.loadImage(this@MessageClickedDialog, user.bannerImageURL)
+                this@MessageClickedDialog.requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(this@MessageClickedDialog.requireContext()).apply {
+                        data(user.bannerImageURL)
+                        crossfade(true)
+                        target(bannerImage)
+                    }.build()
+                )
             } else {
                 bannerImage.gone()
             }
             if (user.channelLogo != null) {
                 userLayout.visible()
                 userImage.visible()
-                userImage.loadImage(
-                    this@MessageClickedDialog,
-                    user.channelLogo,
-                    circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                this@MessageClickedDialog.requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(this@MessageClickedDialog.requireContext()).apply {
+                        data(user.channelLogo)
+                        if (requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                            transformations(CircleCropTransformation())
+                        }
+                        crossfade(true)
+                        target(userImage)
+                    }.build()
                 )
                 userImage.setOnClickListener {
                     listener.onViewProfileClicked(user.channelId, user.channelLogin, user.channelName, user.channelLogo)

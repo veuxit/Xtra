@@ -6,12 +6,15 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentGamesListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.visible
 
 class PlayerGamesDialogAdapter(
@@ -48,7 +51,13 @@ class PlayerGamesDialogAdapter(
                 }
                 if (item?.boxArt != null) {
                     gameImage.visible()
-                    gameImage.loadImage(fragment, item.boxArt)
+                    fragment.requireContext().imageLoader.enqueue(
+                        ImageRequest.Builder(fragment.requireContext()).apply {
+                            data(item.boxArt)
+                            crossfade(true)
+                            target(gameImage)
+                        }.build()
+                    )
                 } else {
                     gameImage.gone()
                 }

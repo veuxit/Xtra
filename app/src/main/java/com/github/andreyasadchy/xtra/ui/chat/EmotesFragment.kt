@@ -49,8 +49,12 @@ class EmotesFragment : Fragment() {
         val context = requireContext()
         val args = requireArguments()
         val position = args.getInt(KEY_POSITION)
-        val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
-        val emotesAdapter = EmotesAdapter(this, listener, emoteQuality)
+        val emotesAdapter = EmotesAdapter(
+            this,
+            listener,
+            context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+            context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
+        )
         with(view as RecyclerView) {
             itemAnimator = null
             adapter = emotesAdapter

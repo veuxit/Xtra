@@ -7,15 +7,21 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.util.loadImage
 
 class EmotesAdapter(
     private val fragment: Fragment,
     private val clickListener: (Emote) -> Unit,
     private val emoteQuality: String,
+    private val imageLibrary: String?,
 ) : ListAdapter<Emote, RecyclerView.ViewHolder>(
     object : DiffUtil.ItemCallback<Emote>() {
         override fun areItemsTheSame(oldItem: Emote, newItem: Emote): Boolean {
@@ -36,18 +42,35 @@ class EmotesAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val emote = getItem(position)
-        (holder.itemView as ImageView).apply {
-            loadImage(
-                fragment,
-                when (emoteQuality) {
-                    "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                    "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                    "2" -> emote.url2x ?: emote.url1x
-                    else -> emote.url1x
-                },
-                diskCacheStrategy = DiskCacheStrategy.DATA
+        if (imageLibrary == "0" || (imageLibrary == "1" && !emote.format.equals("webp", true))) {
+            fragment.requireContext().imageLoader.enqueue(
+                ImageRequest.Builder(fragment.requireContext()).apply {
+                    data(
+                        when (emoteQuality) {
+                            "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                            "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                            "2" -> emote.url2x ?: emote.url1x
+                            else -> emote.url1x
+                        }
+                    )
+                    crossfade(true)
+                    target(holder.itemView as ImageView)
+                }.build()
             )
-            setOnClickListener { clickListener(emote) }
+        } else {
+            Glide.with(fragment)
+                .load(
+                    when (emoteQuality) {
+                        "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
+                        "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
+                        "2" -> emote.url2x ?: emote.url1x
+                        else -> emote.url1x
+                    }
+                )
+                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .into(holder.itemView as ImageView)
         }
+        holder.itemView.setOnClickListener { clickListener(emote) }
     }
 }

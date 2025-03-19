@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Filter
-import android.widget.Filter.FilterResults
 import android.widget.ImageView
 import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
@@ -30,7 +29,15 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
 import com.github.andreyasadchy.xtra.model.chat.Chatter
@@ -49,7 +56,6 @@ import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.hideKeyboard
 import com.github.andreyasadchy.xtra.util.isLightTheme
-import com.github.andreyasadchy.xtra.util.loadImage
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.reduceDragSensitivity
 import com.github.andreyasadchy.xtra.util.tokenPrefs
@@ -63,7 +69,6 @@ import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.toString
 
 @AndroidEntryPoint
 class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
@@ -248,7 +253,13 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                                 }
                             }
                         }
-                        autoCompleteAdapter = AutoCompleteAdapter(requireContext(), this@ChatFragment, autoCompleteList, requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
+                        autoCompleteAdapter = AutoCompleteAdapter(
+                            requireContext(),
+                            this@ChatFragment,
+                            autoCompleteList,
+                            requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+                            requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
+                        ).apply {
                             setNotifyOnChange(false)
                             editText.setAdapter(this)
 
@@ -608,10 +619,15 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                                         } else {
                                             raidLayout.visible()
                                             raidLayout.setOnClickListener { viewModel.raidClicked.value = raid }
-                                            raidImage.loadImage(
-                                                this@ChatFragment,
-                                                raid.targetLogo,
-                                                circle = requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
+                                            this@ChatFragment.requireContext().imageLoader.enqueue(
+                                                ImageRequest.Builder(this@ChatFragment.requireContext()).apply {
+                                                    data(raid.targetLogo)
+                                                    if (requireContext().prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
+                                                        transformations(CircleCropTransformation())
+                                                    }
+                                                    crossfade(true)
+                                                    target(raidImage)
+                                                }.build()
                                             )
                                             raidClose.setOnClickListener {
                                                 raidLayout.gone()
@@ -1321,6 +1337,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         private val fragment: Fragment,
         list: List<Any>,
         private val emoteQuality: String,
+        private val imageLibrary: String?,
     ) : ArrayAdapter<Any>(context, 0, list) {
 
         private var mFilter: ArrayFilter? = null
@@ -1381,16 +1398,37 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                     }
                     viewHolder.containerView.apply {
                         item as Emote
-                        findViewById<ImageView>(R.id.image)?.loadImage(
-                            fragment,
-                            when (emoteQuality) {
-                                "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
-                                "3" -> item.url3x ?: item.url2x ?: item.url1x
-                                "2" -> item.url2x ?: item.url1x
-                                else -> item.url1x
-                            },
-                            diskCacheStrategy = DiskCacheStrategy.DATA
-                        )
+                        findViewById<ImageView>(R.id.image)?.let {
+                            if (imageLibrary == "0" || (imageLibrary == "1" && !item.format.equals("webp", true))) {
+                                fragment.requireContext().imageLoader.enqueue(
+                                    ImageRequest.Builder(fragment.requireContext()).apply {
+                                        data(
+                                            when (emoteQuality) {
+                                                "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
+                                                "3" -> item.url3x ?: item.url2x ?: item.url1x
+                                                "2" -> item.url2x ?: item.url1x
+                                                else -> item.url1x
+                                            }
+                                        )
+                                        crossfade(true)
+                                        target(it)
+                                    }.build()
+                                )
+                            } else {
+                                Glide.with(fragment)
+                                    .load(
+                                        when (emoteQuality) {
+                                            "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
+                                            "3" -> item.url3x ?: item.url2x ?: item.url1x
+                                            "2" -> item.url2x ?: item.url1x
+                                            else -> item.url1x
+                                        }
+                                    )
+                                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                                    .transition(DrawableTransitionOptions.withCrossFade())
+                                    .into(it)
+                            }
+                        }
                         findViewById<TextView>(R.id.name)?.text = item.name
                     }
                 }
