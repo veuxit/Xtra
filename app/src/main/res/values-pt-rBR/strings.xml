@@ -680,4 +680,5 @@
     <string name="delete_video_positions_message">Are you sure you want to delete all saved video positions?</string>
     <string name="enabled_setting">Enabled</string>
     <string name="disabled_setting">Disabled</string>
+    <string name="use_webp_images">Use WEBP images</string>
 </resources>

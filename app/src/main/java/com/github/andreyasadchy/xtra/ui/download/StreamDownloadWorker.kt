@@ -633,6 +633,7 @@ class StreamDownloadWorker @AssistedInject constructor(
             val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
             val helixHeaders = TwitchApiHelper.getHelixHeaders(context)
             val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
+            val useWebp = context.prefs().getBoolean(C.CHAT_USE_WEBP, true)
             val channelId = offlineVideo.channelId
             val badgeList = mutableListOf<TwitchBadge>().apply {
                 if (downloadEmotes) {
@@ -652,13 +653,13 @@ class StreamDownloadWorker @AssistedInject constructor(
             val emoteList = mutableListOf<Emote>().apply {
                 if (downloadEmotes) {
                     if (channelId != null) {
-                        try { addAll(playerRepository.loadStvEmotes(channelId).second) } catch (e: Exception) {}
-                        try { addAll(playerRepository.loadBttvEmotes(channelId)) } catch (e: Exception) {}
-                        try { addAll(playerRepository.loadFfzEmotes(channelId)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadStvEmotes(channelId, useWebp).second) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadBttvEmotes(channelId, useWebp)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadFfzEmotes(channelId, useWebp)) } catch (e: Exception) {}
                     }
-                    try { addAll(playerRepository.loadGlobalStvEmotes()) } catch (e: Exception) {}
-                    try { addAll(playerRepository.loadGlobalBttvEmotes()) } catch (e: Exception) {}
-                    try { addAll(playerRepository.loadGlobalFfzEmotes()) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalStvEmotes(useWebp)) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalBttvEmotes(useWebp)) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadGlobalFfzEmotes(useWebp)) } catch (e: Exception) {}
                 }
             }
             chatFileWriter = if (isShared) {

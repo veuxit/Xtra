@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Filter
-import android.widget.Filter.FilterResults
 import android.widget.ImageView
 import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
@@ -63,7 +62,6 @@ import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.toString
 
 @AndroidEntryPoint
 class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
@@ -1147,15 +1145,19 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
     }
 
     private fun updateUserMessages(userId: String) {
-        adapter.messages?.toList()?.let { messages ->
-            messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
-                messages.indexOf(message).takeIf { it != -1 }?.let {
-                    adapter.notifyItemChanged(it)
+        try {
+            adapter.messages?.toList()?.let { messages ->
+                messages.filter { it.userId != null && it.userId == userId }.forEach { message ->
+                    messages.indexOf(message).takeIf { it != -1 }?.let {
+                        adapter.notifyItemChanged(it)
+                    }
                 }
             }
+            messageDialog?.updateUserMessages(userId)
+            replyDialog?.updateUserMessages(userId)
+        } catch (e: NullPointerException) {
+
         }
-        messageDialog?.updateUserMessages(userId)
-        replyDialog?.updateUserMessages(userId)
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
