@@ -388,7 +388,7 @@ class GraphQLRepository @Inject constructor(
 
     suspend fun loadQueryUsersLastBroadcast(headers: Map<String, String>, ids: List<String>? = null, logins: List<String>? = null): QueryResponse {
         val json = buildJsonObject {
-            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { id lastBroadcast { startedAt } profileImageURL(width: 300) }}")
+            put("query", "query null(\$ids: [ID!], \$logins: [String!]) { users(ids: \$ids, logins: \$logins) { displayName id lastBroadcast { startedAt } login profileImageURL(width: 300) }}")
             putJsonObject("variables") {
                 putJsonArray("ids") {
                     ids?.forEach {

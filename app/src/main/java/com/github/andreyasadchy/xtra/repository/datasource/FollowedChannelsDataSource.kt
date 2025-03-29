@@ -9,23 +9,11 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okio.buffer
-import okio.sink
-import java.io.File
 
 class FollowedChannelsDataSource(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val okHttpClient: OkHttpClient,
-    private val coroutineScope: CoroutineScope,
-    private val filesDir: String,
     private val userId: String?,
     private val helixHeaders: Map<String, String>,
     private val helixApi: HelixApi,
@@ -75,7 +63,6 @@ class FollowedChannelsDataSource(
                             channelId = it.userId,
                             channelLogin = it.userLogin,
                             channelName = it.userName,
-                            profileImageUrl = it.channelLogo,
                             followLocal = true
                         ))
                     }
@@ -115,13 +102,44 @@ class FollowedChannelsDataSource(
                             user.followAccount = true
                             list.add(user)
                         } else {
-                            item.followAccount = true
-                            item.followedAt = user.followedAt
-                            item.lastBroadcast = user.lastBroadcast
+                            list.remove(item)
+                            list.add(
+                                User(
+                                    channelId = item.channelId,
+                                    channelLogin = user.channelLogin ?: item.channelLogin,
+                                    channelName = user.channelName ?: item.channelName,
+                                    profileImageUrl = user.profileImageUrl,
+                                    followedAt = user.followedAt,
+                                    lastBroadcast = user.lastBroadcast,
+                                    followAccount = item.followAccount,
+                                    followLocal = item.followLocal,
+                                )
+                            )
+                            if (item.followLocal && item.channelId != null && user.channelLogin != null && user.channelName != null
+                                && (item.channelLogin != user.channelLogin || item.channelName != user.channelName)) {
+                                localFollowsChannel.getFollowByUserId(item.channelId)?.let {
+                                    localFollowsChannel.updateFollow(it.apply {
+                                        userLogin = user.channelLogin
+                                        userName = user.channelName
+                                    })
+                                }
+                                offlineRepository.getVideosByUserId(item.channelId).forEach {
+                                    offlineRepository.updateVideo(it.apply {
+                                        channelLogin = user.channelLogin
+                                        channelName = user.channelName
+                                    })
+                                }
+                                bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
+                                    bookmarksRepository.updateBookmark(it.apply {
+                                        userLogin = user.channelLogin
+                                        userName = user.channelName
+                                    })
+                                }
+                            }
                         }
                     }
                     list.filter {
-                        it.lastBroadcast == null || it.profileImageUrl == null || it.profileImageUrl?.contains("image_manager_disk_cache") == true
+                        it.lastBroadcast == null || it.profileImageUrl == null
                     }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
                         val response = gqlApi.loadQueryUsersLastBroadcast(
                             headers = gqlHeaders,
@@ -132,16 +150,40 @@ class FollowedChannelsDataSource(
                         }
                         response.data?.users?.forEach { user ->
                             list.find { it.channelId == user?.id }?.let { item ->
-                                if (item.followLocal) {
-                                    if (item.profileImageUrl == null || item.profileImageUrl?.contains("image_manager_disk_cache") == true) {
-                                        updateLocalUser(item.channelId, user?.profileImageURL)
+                                list.remove(item)
+                                list.add(
+                                    User(
+                                        channelId = item.channelId,
+                                        channelLogin = user?.login ?: item.channelLogin,
+                                        channelName = user?.displayName ?: item.channelName,
+                                        profileImageUrl = user?.profileImageURL,
+                                        followedAt = item.followedAt,
+                                        lastBroadcast = user?.lastBroadcast?.startedAt?.toString(),
+                                        followAccount = item.followAccount,
+                                        followLocal = item.followLocal,
+                                    )
+                                )
+                                if (item.followLocal && item.channelId != null && user?.login != null && user.displayName != null
+                                    && (item.channelLogin != user.login || item.channelName != user.displayName)) {
+                                    localFollowsChannel.getFollowByUserId(item.channelId)?.let {
+                                        localFollowsChannel.updateFollow(it.apply {
+                                            userLogin = user.login
+                                            userName = user.displayName
+                                        })
                                     }
-                                } else {
-                                    if (item.profileImageUrl == null) {
-                                        item.profileImageUrl = user?.profileImageURL
+                                    offlineRepository.getVideosByUserId(item.channelId).forEach {
+                                        offlineRepository.updateVideo(it.apply {
+                                            channelLogin = user.login
+                                            channelName = user.displayName
+                                        })
+                                    }
+                                    bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
+                                        bookmarksRepository.updateBookmark(it.apply {
+                                            userLogin = user.login
+                                            userName = user.displayName
+                                        })
                                     }
                                 }
-                                item.lastBroadcast = user?.lastBroadcast?.startedAt?.toString()
                             }
                         }
                     }
@@ -244,47 +286,6 @@ class FollowedChannelsDataSource(
         offset = items.lastOrNull()?.cursor
         nextPage = data.pageInfo?.hasNextPage != false
         return list
-    }
-
-    private fun updateLocalUser(userId: String?, profileImageURL: String?) {
-        if (!userId.isNullOrBlank()) {
-            coroutineScope.launch {
-                profileImageURL.takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "profileimage") }?.let {
-                    File(filesDir, "profile_pics").mkdir()
-                    val path = filesDir + File.separator + "profile_pics" + File.separator + userId
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                if (response.isSuccessful) {
-                                    File(path).sink().buffer().use { sink ->
-                                        sink.writeAll(response.body()!!.source())
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-
-                        }
-                    }
-                    path
-                }?.let { downloadedLogo ->
-                    localFollowsChannel.getFollowByUserId(userId)?.let {
-                        localFollowsChannel.updateFollow(it.apply {
-                            channelLogo = downloadedLogo
-                        })
-                    }
-                    offlineRepository.getVideosByUserId(userId).forEach {
-                        offlineRepository.updateVideo(it.apply {
-                            channelLogo = downloadedLogo
-                        })
-                    }
-                    bookmarksRepository.getBookmarksByUserId(userId).forEach {
-                        bookmarksRepository.updateBookmark(it.apply {
-                            userLogo = downloadedLogo
-                        })
-                    }
-                }
-            }
-        }
     }
 
     override fun getRefreshKey(state: PagingState<Int, User>): Int? {

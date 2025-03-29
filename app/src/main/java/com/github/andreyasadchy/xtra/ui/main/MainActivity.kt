@@ -838,7 +838,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     putBoolean(C.CHAT_USE_WEBP, false)
                     putString(C.CHAT_IMAGE_LIBRARY, "1")
                 }
-                putInt(C.SETTINGS_VERSION, 9)
+            }
+        }
+        if (version < 10) {
+            viewModel.deleteOldImages()
+            prefs.edit {
+                putInt(C.SETTINGS_VERSION, 10)
             }
         }
     }

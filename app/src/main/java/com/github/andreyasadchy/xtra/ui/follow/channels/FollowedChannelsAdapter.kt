@@ -7,7 +7,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentFollowedChannelsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.User
@@ -53,7 +52,6 @@ class FollowedChannelsAdapter(
                                 channelLogin = item.channelLogin,
                                 channelName = item.channelName,
                                 channelLogo = item.channelLogo,
-                                updateLocal = item.followLocal
                             )
                         )
                     }
@@ -62,8 +60,7 @@ class FollowedChannelsAdapter(
                         userImage.loadImage(
                             fragment,
                             item.channelLogo,
-                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true),
-                            diskCacheStrategy = DiskCacheStrategy.NONE
+                            circle = context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)
                         )
                     } else {
                         userImage.gone()

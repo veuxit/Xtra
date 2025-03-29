@@ -71,7 +71,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
-import kotlin.text.isNullOrBlank
 
 @AndroidEntryPoint
 class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, IntegrityDialog.CallbackListener {
@@ -232,18 +231,12 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                     .show()
                             } else {
                                 viewModel.saveFollowChannel(
-                                    requireContext().filesDir.path,
                                     TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                     setting,
                                     requireContext().tokenPrefs().getString(C.USER_ID, null),
                                     args.channelId,
                                     args.channelLogin,
                                     args.channelName,
-                                    if (args.updateLocal) {
-                                        viewModel.stream.value?.channelLogo ?: viewModel.user.value?.channelLogo
-                                    } else {
-                                        args.channelLogo
-                                    },
                                     requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
                                 )
                             }
@@ -701,14 +694,12 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                             )
                         }
                         "follow" -> viewModel.saveFollowChannel(
-                            requireContext().filesDir.path,
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             args.channelId,
                             args.channelLogin,
                             args.channelName,
-                            args.channelLogo,
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
                         )
                         "unfollow" -> viewModel.deleteFollowChannel(

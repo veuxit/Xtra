@@ -23,7 +23,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,7 +34,6 @@ class FollowedChannelsViewModel @Inject constructor(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val okHttpClient: OkHttpClient,
 ) : ViewModel() {
 
     val filter = MutableStateFlow<Filter?>(null)
@@ -55,9 +53,6 @@ class FollowedChannelsViewModel @Inject constructor(
                 localFollowsChannel = localFollowsChannel,
                 offlineRepository = offlineRepository,
                 bookmarksRepository = bookmarksRepository,
-                okHttpClient = okHttpClient,
-                coroutineScope = viewModelScope,
-                filesDir = applicationContext.filesDir.path,
                 userId = applicationContext.tokenPrefs().getString(C.USER_ID, null),
                 helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
                 helixApi = helix,
