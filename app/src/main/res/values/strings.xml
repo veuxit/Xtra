@@ -431,7 +431,6 @@
     <string name="imageLibraryEntries1">Coil</string>
     <string name="imageLibraryEntries2">Coil + Glide WebP</string>
     <string name="imageLibraryEntries3">Glide</string>
-    <string name="background_playback">Background playback</string>
     <string name="disabled">Disabled</string>
     <string name="live_target_offset">Live target offset</string>
     <string name="buffer_for_playback">Buffer for playback</string>
@@ -697,4 +696,5 @@
     <string name="enabled_setting">Enabled</string>
     <string name="disabled_setting">Disabled</string>
     <string name="use_webp_images">Use WEBP images</string>
+    <string name="use_background_audio">Play audio in the background</string>
 </resources>

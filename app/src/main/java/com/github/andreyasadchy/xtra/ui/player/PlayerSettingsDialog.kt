@@ -4,8 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.media3.common.Tracks
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.PlayerSettingsBinding
 import com.github.andreyasadchy.xtra.util.C
@@ -92,16 +94,16 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                     }
                     if (requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_DISCONNECT, true)) {
                         menuChatDisconnect.visible()
-                        if ((parentFragment as? PlayerFragment)?.isActive() == false) {
-                            menuChatDisconnect.text = requireContext().getString(R.string.connect_chat)
-                            menuChatDisconnect.setOnClickListener {
-                                (parentFragment as? PlayerFragment)?.reconnect()
-                                dismiss()
-                            }
-                        } else {
+                        if ((parentFragment as? PlayerFragment)?.isActive() == true) {
                             menuChatDisconnect.text = requireContext().getString(R.string.disconnect_chat)
                             menuChatDisconnect.setOnClickListener {
                                 (parentFragment as? PlayerFragment)?.disconnect()
+                                dismiss()
+                            }
+                        } else {
+                            menuChatDisconnect.text = requireContext().getString(R.string.connect_chat)
+                            menuChatDisconnect.setOnClickListener {
+                                (parentFragment as? PlayerFragment)?.reconnect()
                                 dismiss()
                             }
                         }
@@ -233,20 +235,22 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
         }
     }
 
-    fun setSubtitles(available: Boolean, enabled: Boolean) {
+    fun setSubtitles(subtitles: Tracks.Group? = null) {
         with(binding) {
-            if (available && requireContext().prefs().getBoolean(C.PLAYER_MENU_SUBTITLES, false)) {
+            if (subtitles != null && requireContext().prefs().getBoolean(C.PLAYER_MENU_SUBTITLES, true)) {
                 menuSubtitles.visible()
-                if (enabled) {
+                if (subtitles.isSelected) {
                     menuSubtitles.text = requireContext().getString(R.string.hide_subtitles)
                     menuSubtitles.setOnClickListener {
                         (parentFragment as? PlayerFragment)?.toggleSubtitles(false)
+                        requireContext().prefs().edit { putBoolean(C.PLAYER_SUBTITLES_ENABLED, false) }
                         dismiss()
                     }
                 } else {
                     menuSubtitles.text = requireContext().getString(R.string.show_subtitles)
                     menuSubtitles.setOnClickListener {
                         (parentFragment as? PlayerFragment)?.toggleSubtitles(true)
+                        requireContext().prefs().edit { putBoolean(C.PLAYER_SUBTITLES_ENABLED, true) }
                         dismiss()
                     }
                 }

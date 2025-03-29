@@ -36,6 +36,7 @@ class ChatReplayManager @Inject constructor(
     private var startTime = 0
     private var lastCheckedPosition = 0L
     private var playbackSpeed: Float? = null
+    var isActive = true
 
     fun start() {
         startTime = startTimeSeconds.times(1000)
@@ -50,6 +51,7 @@ class ChatReplayManager @Inject constructor(
     fun stop() {
         loadJob?.cancel()
         messageJob?.cancel()
+        isActive = false
     }
 
     private fun load(offsetSeconds: Int? = null) {

@@ -1,13 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.player
 
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -48,6 +52,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -74,7 +79,6 @@ import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.disable
 import com.github.andreyasadchy.xtra.util.enable
@@ -98,11 +102,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
-class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, HasDownloadDialog, PlayerGamesDialog.PlayerSeekListener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener, IntegrityDialog.CallbackListener {
+class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloadDialog, PlayerGamesDialog.PlayerSeekListener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener, IntegrityDialog.CallbackListener {
 
     private var _binding: FragmentPlayerBinding? = null
     private val binding get() = _binding!!
@@ -114,9 +117,9 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     var clip: Clip? = null
     var offlineVideo: OfflineVideo? = null
 
-    private lateinit var controllerFuture: ListenableFuture<MediaController>
+    private var controllerFuture: ListenableFuture<MediaController>? = null
     private val player: MediaController?
-        get() = if (controllerFuture.isDone) controllerFuture.get() else null
+        get() = controllerFuture?.let { if (it.isDone && !it.isCancelled) it.get() else null }
 
     private var isPortrait = false
     private var isKeyboardShown = false
@@ -272,7 +275,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
             if (prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
                 view.keepScreenOn = true
             }
-            changePlayerMode(viewModel.playerMode)
+            changePlayerMode()
             var channelId: String? = null
             var channelLogin: String? = null
             var channelName: String? = null
@@ -392,27 +395,23 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 view.findViewById<ImageButton>(R.id.playerMode)?.apply {
                     visible()
                     setOnClickListener {
-                        player?.sendCustomCommand(
-                            SessionCommand(
-                                PlaybackService.SWITCH_AUDIO_MODE,
-                                Bundle.EMPTY
-                            ), Bundle.EMPTY
-                        )?.let { result ->
-                            result.addListener({
-                                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                    result.get().extras.getString(PlaybackService.RESULT)?.let {
-                                        changePlayerMode(it)
-                                    }
-                                }
-                            }, MoreExecutors.directExecutor())
+                        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
+                            changeQuality(viewModel.previousIndex)
+                        } else {
+                            changeQuality(viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY))
                         }
+                        changePlayerMode()
                     }
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR_BUTTON, true)) {
                 view.findViewById<ImageButton>(R.id.playerAudioCompressor)?.apply {
                     visible()
-                    setImageResource(if (prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR, false)) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
+                    if (prefs.getBoolean(C.PLAYER_AUDIO_COMPRESSOR, false)) {
+                        setImageResource(R.drawable.baseline_audio_compressor_on_24dp)
+                    } else {
+                        setImageResource(R.drawable.baseline_audio_compressor_off_24dp)
+                    }
                     setOnClickListener {
                         player?.sendCustomCommand(
                             SessionCommand(
@@ -423,7 +422,11 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                             result.addListener({
                                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                                     val state = result.get().extras.getBoolean(PlaybackService.RESULT)
-                                    setImageResource(if (state) R.drawable.baseline_audio_compressor_on_24dp else R.drawable.baseline_audio_compressor_off_24dp)
+                                    if (state) {
+                                        setImageResource(R.drawable.baseline_audio_compressor_on_24dp)
+                                    } else {
+                                        setImageResource(R.drawable.baseline_audio_compressor_off_24dp)
+                                    }
                                 }
                             }, MoreExecutors.directExecutor())
                         }
@@ -448,29 +451,17 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.streamResult.collectLatest {
                                 if (it != null) {
-                                    val headers = prefs.getString(C.PLAYER_STREAM_HEADERS, null)?.let {
-                                        try {
-                                            val json = JSONObject(it)
-                                            hashMapOf<String, String>().apply {
-                                                json.keys().forEach { key ->
-                                                    put(key, json.optString(key))
-                                                }
-                                            }
-                                        } catch (e: Exception) {
-                                            null
-                                        }
-                                    }
                                     val proxyHost = prefs.getString(C.PROXY_HOST, null)
                                     val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                                     val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                     player?.sendCustomCommand(
                                         SessionCommand(
                                             PlaybackService.START_STREAM, bundleOf(
-                                                PlaybackService.ITEM to stream,
                                                 PlaybackService.URI to it,
-                                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
-                                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray(),
-                                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist
+                                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist,
+                                                PlaybackService.TITLE to stream.title,
+                                                PlaybackService.CHANNEL_NAME to stream.channelName,
+                                                PlaybackService.CHANNEL_LOGO to stream.channelLogo,
                                             )
                                         ), Bundle.EMPTY
                                     )
@@ -592,10 +583,12 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                     player?.sendCustomCommand(
                                         SessionCommand(
                                             PlaybackService.START_VIDEO, bundleOf(
-                                                PlaybackService.ITEM to video,
                                                 PlaybackService.URI to it.toString(),
-                                                PlaybackService.USING_PLAYLIST to true,
                                                 PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
+                                                PlaybackService.VIDEO_ID to video.id?.toLongOrNull(),
+                                                PlaybackService.TITLE to video.title,
+                                                PlaybackService.CHANNEL_NAME to video.channelName,
+                                                PlaybackService.CHANNEL_LOGO to video.channelLogo,
                                             )
                                         ), Bundle.EMPTY
                                     )
@@ -657,15 +650,41 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                             emptyMap()
                                         }
                                     }
-                                    player?.sendCustomCommand(
-                                        SessionCommand(
-                                            PlaybackService.START_CLIP, bundleOf(
-                                                PlaybackService.ITEM to clip,
-                                                PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
-                                                PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                                    val map = mutableMapOf<String, Pair<String, String?>>()
+                                    urls.forEach {
+                                        if (it.key == "source") {
+                                            map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                                        } else {
+                                            map[it.key] = Pair(it.key, it.value)
+                                        }
+                                    }
+                                    map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
+                                    viewModel.qualities = map
+                                    setQualityIndex()
+                                    player?.let { player ->
+                                        val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                                        if (quality?.key == AUDIO_ONLY_QUALITY) {
+                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                            }.build()
+                                        } else {
+                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                            }.build()
+                                        }
+                                        (quality?.value?.second ?: viewModel.qualities.values.firstOrNull()?.second)?.let { url ->
+                                            player.sendCustomCommand(
+                                                SessionCommand(
+                                                    PlaybackService.START_CLIP, bundleOf(
+                                                        PlaybackService.URI to url,
+                                                        PlaybackService.TITLE to clip.title,
+                                                        PlaybackService.CHANNEL_NAME to clip.channelName,
+                                                        PlaybackService.CHANNEL_LOGO to clip.channelLogo,
+                                                    )
+                                                ), Bundle.EMPTY
                                             )
-                                        ), Bundle.EMPTY
-                                    )
+                                        }
+                                    }
                                     viewModel.clipUrls.value = null
                                 }
                             }
@@ -702,14 +721,35 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.offlineVideo.collectLatest {
-                                player?.sendCustomCommand(
-                                    SessionCommand(
-                                        PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                                            PlaybackService.ITEM to (it ?: offlineVideo),
-                                            PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
-                                        )
-                                    ), Bundle.EMPTY
+                                viewModel.qualities = mapOf(
+                                    "source" to Pair(requireContext().getString(R.string.source), it?.url ?: offlineVideo.url),
+                                    AUDIO_ONLY_QUALITY to Pair(requireContext().getString(R.string.audio_only), null)
                                 )
+                                setQualityIndex()
+                                player?.let { player ->
+                                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                                    if (quality?.key == AUDIO_ONLY_QUALITY) {
+                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                        }.build()
+                                    } else {
+                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                        }.build()
+                                    }
+                                    player.sendCustomCommand(
+                                        SessionCommand(
+                                            PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                                                PlaybackService.URI to offlineVideo.url,
+                                                PlaybackService.VIDEO_ID to offlineVideo.id,
+                                                PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
+                                                PlaybackService.TITLE to offlineVideo.name,
+                                                PlaybackService.CHANNEL_NAME to offlineVideo.channelName,
+                                                PlaybackService.CHANNEL_LOGO to offlineVideo.channelLogo,
+                                            )
+                                        ), Bundle.EMPTY
+                                    )
+                                }
                             }
                         }
                     }
@@ -727,7 +767,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                     settings?.enable()
                                     download?.enable()
                                     mode?.enable()
-                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
+                                    setQualityText()
                                 }
                             }
                         }
@@ -967,19 +1007,8 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     }
 
     fun showQualityDialog() {
-        player?.sendCustomCommand(
-            SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY),
-            Bundle.EMPTY
-        )?.let { result ->
-            result.addListener({
-                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                    val qualities = result.get().extras.getStringArray(PlaybackService.RESULT)?.toList()
-                    val qualityIndex = result.get().extras.getInt(PlaybackService.INDEX)
-                    if (!qualities.isNullOrEmpty()) {
-                        RadioButtonDialogFragment.newInstance(REQUEST_CODE_QUALITY, qualities, null, qualityIndex).show(childFragmentManager, "closeOnPip")
-                    }
-                }
-            }, MoreExecutors.directExecutor())
+        if (viewModel.qualities.isNotEmpty()) {
+            RadioButtonDialogFragment.newInstance(REQUEST_CODE_QUALITY, viewModel.qualities.values.map { it.first }, null, viewModel.qualityIndex).show(childFragmentManager, "closeOnPip")
         }
     }
 
@@ -1051,34 +1080,32 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         }
     }
 
-    fun setSubtitles(available: Boolean = null ?: subtitlesAvailable(), enabled: Boolean = null ?: subtitlesEnabled()) {
+    fun setSubtitles() {
+        val subtitles = player?.currentTracks?.groups?.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }
         requireView().findViewById<ImageButton>(R.id.playerSubtitleToggle)?.apply {
-            if (available && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
+            if (subtitles != null && prefs.getBoolean(C.PLAYER_SUBTITLES, false)) {
                 visible()
-                if (enabled) {
+                if (subtitles.isSelected) {
                     setImageResource(androidx.media3.ui.R.drawable.exo_ic_subtitle_on)
-                    setOnClickListener { toggleSubtitles(false) }
+                    setOnClickListener {
+                        toggleSubtitles(false)
+                        prefs.edit { putBoolean(C.PLAYER_SUBTITLES_ENABLED, false) }
+                    }
                 } else {
                     setImageResource(androidx.media3.ui.R.drawable.exo_ic_subtitle_off)
-                    setOnClickListener { toggleSubtitles(true) }
+                    setOnClickListener {
+                        toggleSubtitles(true)
+                        prefs.edit { putBoolean(C.PLAYER_SUBTITLES_ENABLED, true) }
+                    }
                 }
             } else {
                 gone()
             }
         }
-        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSubtitles(available, enabled)
-    }
-
-    private fun subtitlesAvailable(): Boolean {
-        return player?.currentTracks?.groups?.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT } != null
-    }
-
-    private fun subtitlesEnabled(): Boolean {
-        return player?.currentTracks?.groups?.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }?.isSelected == true
+        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setSubtitles(subtitles)
     }
 
     fun toggleSubtitles(enabled: Boolean) {
-        setSubtitles(enabled = enabled)
         player?.let { player ->
             if (enabled) {
                 player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }?.let {
@@ -1105,17 +1132,9 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     }
 
     fun setQualityText() {
-        player?.sendCustomCommand(
-            SessionCommand(PlaybackService.GET_QUALITY_TEXT, Bundle.EMPTY),
-            Bundle.EMPTY
-        )?.let { result ->
-            result.addListener({
-                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                    val qualityText = result.get().extras.getString(PlaybackService.RESULT)
-                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(qualityText)
-                }
-            }, MoreExecutors.directExecutor())
-        }
+        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(
+            viewModel.qualities.values.elementAtOrNull(viewModel.qualityIndex)?.first
+        )
     }
 
     fun updateViewerCount(viewerCount: Int?) {
@@ -1203,7 +1222,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     }
 
     fun restartPlayer() {
-        if (viewModel.playerMode != PlaybackService.PLAYER_MODE_DISABLED) {
+        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != CHAT_ONLY_QUALITY) {
             loadStream(stream)
         }
     }
@@ -1227,7 +1246,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         )?.let { result ->
             result.addListener({
                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                    val tags = result.get().extras.getString(PlaybackService.RESULT)
+                    val tags = result.get().extras.getStringArray(PlaybackService.RESULT)?.joinToString("\n")
                     if (!tags.isNullOrBlank()) {
                         requireContext().getAlertDialogBuilder().apply {
                             setView(NestedScrollView(context).apply {
@@ -1272,15 +1291,165 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         }
     }
 
-    private fun changePlayerMode(mode: String) {
+    private fun setQualityIndex() {
+        val defaultQuality = prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved")?.substringBefore(" ")
+        viewModel.qualityIndex = when (defaultQuality) {
+            "saved" -> {
+                val savedQuality = prefs.getString(C.PLAYER_QUALITY, "720p60")?.substringBefore(" ")
+                when (savedQuality) {
+                    AUTO_QUALITY -> 0
+                    AUDIO_ONLY_QUALITY -> viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY).takeIf { it != -1 }
+                    CHAT_ONLY_QUALITY -> viewModel.qualities.keys.indexOf(CHAT_ONLY_QUALITY).takeIf { it != -1 }
+                    else -> findQualityIndex(savedQuality)
+                }
+            }
+            "Auto" -> 0
+            "Source" -> {
+                if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                    1
+                } else {
+                    0
+                }
+            }
+            AUDIO_ONLY_QUALITY -> {
+                viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY).takeIf { it != -1 }
+            }
+            CHAT_ONLY_QUALITY -> {
+                viewModel.qualities.keys.indexOf(CHAT_ONLY_QUALITY).takeIf { it != -1 }
+            }
+            else -> findQualityIndex(defaultQuality)
+        } ?: 0
+    }
+
+    private fun findQualityIndex(targetQualityString: String?): Int? {
+        return targetQualityString?.split("p")?.let { targetQuality ->
+            targetQuality[0].filter(Char::isDigit).toIntOrNull()?.let { targetRes ->
+                val targetFps = if (targetQuality.size >= 2) targetQuality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                val qualities = viewModel.qualities.keys
+                qualities.indexOf(qualities.find { qualityString ->
+                    qualityString.split("p").let { quality ->
+                        quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
+                            val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                            (targetRes == qualityRes && targetFps >= qualityFps) || targetRes > qualityRes || qualities.indexOf(qualityString) == qualities.indexOf(AUDIO_ONLY_QUALITY) - 1
+                        } == true
+                    }
+                }).let { if (it != -1) it else null }
+            }
+        }
+    }
+
+    private fun changeQuality(index: Int) {
+        viewModel.previousIndex = viewModel.qualityIndex
+        viewModel.qualityIndex = index
+        viewModel.qualities.entries.elementAtOrNull(index)?.let { quality ->
+            player?.let { player ->
+                player.currentMediaItem?.let { mediaItem ->
+                    when (quality.key) {
+                        AUTO_QUALITY -> {
+                            viewModel.playlistUrl?.let { uri ->
+                                if (mediaItem.localConfiguration?.uri != uri) {
+                                    val position = player.currentPosition
+                                    player.setMediaItem(mediaItem.buildUpon().setUri(uri).build())
+                                    player.prepare()
+                                    player.seekTo(position)
+                                }
+                                viewModel.playlistUrl = null
+                            } ?: player.prepare()
+                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO)
+                            }.build()
+                        }
+                        AUDIO_ONLY_QUALITY -> {
+                            if (viewModel.usingProxy) {
+                                player.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.TOGGLE_PROXY, bundleOf(
+                                            PlaybackService.USING_PROXY to false
+                                        )
+                                    ), Bundle.EMPTY
+                                )
+                                viewModel.usingProxy = false
+                            }
+                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                            }.build()
+                            quality.value.second?.let {
+                                val position = player.currentPosition
+                                if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                                    viewModel.playlistUrl = mediaItem.localConfiguration?.uri
+                                }
+                                player.setMediaItem(mediaItem.buildUpon().setUri(it).build())
+                                player.prepare()
+                                player.seekTo(position)
+                            }
+                        }
+                        CHAT_ONLY_QUALITY -> {
+                            if (viewModel.usingProxy) {
+                                player.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.TOGGLE_PROXY, bundleOf(
+                                            PlaybackService.USING_PROXY to false
+                                        )
+                                    ), Bundle.EMPTY
+                                )
+                                viewModel.usingProxy = false
+                            }
+                            player.stop()
+                        }
+                        else -> {
+                            if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                                viewModel.playlistUrl?.let { uri ->
+                                    player.currentMediaItem?.let {
+                                        val position = player.currentPosition
+                                        player.setMediaItem(it.buildUpon().setUri(uri).build())
+                                        player.prepare()
+                                        player.seekTo(position)
+                                        viewModel.playlistUrl = null
+                                    }
+                                } ?: player.prepare()
+                                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                    setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                    if (!player.currentTracks.isEmpty) {
+                                        player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO }?.let {
+                                            val trackIndex = index - 1
+                                            if (trackIndex <= it.length - 1) {
+                                                setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, trackIndex))
+                                            }
+                                        }
+                                    }
+                                }.build()
+                            } else {
+                                player.currentMediaItem?.let {
+                                    if (it.localConfiguration?.uri?.toString() != quality.value.second) {
+                                        val position = player.currentPosition
+                                        player.setMediaItem(it.buildUpon().setUri(quality.value.second).build())
+                                        player.prepare()
+                                        player.seekTo(position)
+                                    }
+                                }
+                                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                    setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                }.build()
+                            }
+                        }
+                    }
+                    if (prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved") == "saved") {
+                        prefs.edit { putString(C.PLAYER_QUALITY, quality.key) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun changePlayerMode() {
         with(binding) {
-            viewModel.playerMode = mode
-            if (mode == PlaybackService.PLAYER_MODE_NORMAL) {
+            if (enterPictureInPicture()) {
                 playerView.controllerHideOnTouch = true
                 playerView.controllerShowTimeoutMs = 3000
                 if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0"
+                    prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)
                 ) {
                     requireActivity().setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
                 }
@@ -1329,127 +1498,198 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     fun secondViewIsHidden() = binding.slidingLayout.secondView?.isVisible == false
 
     fun enterPictureInPicture(): Boolean {
-        return viewModel.playerMode == PlaybackService.PLAYER_MODE_NORMAL
+        val quality = viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex)
+        return quality != AUDIO_ONLY_QUALITY && quality != CHAT_ONLY_QUALITY
     }
 
     override fun onStart() {
         super.onStart()
         controllerFuture = MediaController.Builder(
-            requireActivity(),
+            requireContext(),
             SessionToken(
-                requireActivity(),
-                ComponentName(requireActivity(), PlaybackService::class.java)
+                requireContext(),
+                ComponentName(requireContext(), PlaybackService::class.java)
             )
         ).buildAsync()
-        controllerFuture.addListener({
-            val player = controllerFuture.get()
-            binding.playerView.player = player
-            player.addListener(object : Player.Listener {
+        controllerFuture?.addListener({
+            val controller = controllerFuture?.get()
+            binding.playerView.player = controller
+            if (!viewModel.started && offlineVideo == null) {
+                player?.removeMediaItem(0)
+            }
+            controller?.addListener(object : Player.Listener {
 
                 override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
-                    if (view != null) {
-                        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-                            chatFragment?.updatePosition(newPosition.positionMs)
-                        }
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                        chatFragment?.updatePosition(newPosition.positionMs)
                     }
                 }
 
                 override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                    if (view != null) {
-                        chatFragment?.updateSpeed(playbackParameters.speed)
-                    }
+                    chatFragment?.updateSpeed(playbackParameters.speed)
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    if (view != null) {
-                        if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
-                            requireView().keepScreenOn = isPlaying
-                        }
+                    if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
+                        requireView().keepScreenOn = isPlaying
                     }
                 }
 
                 override fun onTracksChanged(tracks: Tracks) {
-                    if (view != null) {
-                        val available = tracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT } != null
-                        setSubtitles(available = available)
-                        if (!tracks.isEmpty && !viewModel.loaded.value) {
-                            viewModel.loaded.value = true
-                        }
+                    if (!tracks.isEmpty && !viewModel.loaded.value) {
+                        viewModel.loaded.value = true
+                        toggleSubtitles(prefs.getBoolean(C.PLAYER_SUBTITLES_ENABLED, false))
+                    }
+                    setSubtitles()
+                    if (!tracks.isEmpty
+                        && viewModel.qualities.containsKey(AUTO_QUALITY)
+                        && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
+                        && !viewModel.hidden) {
+                        changeQuality(viewModel.qualityIndex)
                     }
                 }
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                    if (view != null && stream != null) {
+                    if (viewModel.qualities.isEmpty()) {
                         player?.sendCustomCommand(
-                            SessionCommand(PlaybackService.GET_LAST_TAG, Bundle.EMPTY),
+                            SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY),
                             Bundle.EMPTY
                         )?.let { result ->
                             result.addListener({
                                 if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                    val tag = result.get().extras.getString(PlaybackService.RESULT)
-                                    val usingProxy = result.get().extras.getBoolean(PlaybackService.USING_PROXY)
-                                    val stopProxy = result.get().extras.getBoolean(PlaybackService.STOP_PROXY)
-                                    val playlist = result.get().extras.getString(PlaybackService.ITEM)
-                                    val oldValue = viewModel.playingAds
-                                    viewModel.playingAds = tag == "ads=true"
-                                    if (viewModel.playingAds) {
-                                        if (usingProxy) {
-                                            player.sendCustomCommand(
-                                                SessionCommand(
-                                                    PlaybackService.TOGGLE_PROXY, bundleOf(
-                                                        PlaybackService.USING_PROXY to false,
-                                                        PlaybackService.STOP_PROXY to true
-                                                    )
-                                                ), Bundle.EMPTY
-                                            )
-                                        } else {
-                                            if (!oldValue) {
-                                                if (!stopProxy &&
-                                                    !playlist.isNullOrBlank() &&
-                                                    prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true) &&
-                                                    !prefs.getString(C.PROXY_HOST, null).isNullOrBlank() &&
-                                                    prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null
-                                                ) {
-                                                    player.sendCustomCommand(
-                                                        SessionCommand(
-                                                            PlaybackService.TOGGLE_PROXY, bundleOf(
-                                                                PlaybackService.USING_PROXY to true
-                                                            )
-                                                        ), Bundle.EMPTY
-                                                    )
-                                                    viewLifecycleOwner.lifecycleScope.launch {
-                                                        for (i in 0 until 10) {
-                                                            delay(10000)
-                                                            if (!viewModel.checkPlaylist(playlist)) {
-                                                                break
-                                                            }
-                                                        }
-                                                        player.sendCustomCommand(
-                                                            SessionCommand(
-                                                                PlaybackService.TOGGLE_PROXY, bundleOf(
-                                                                    PlaybackService.USING_PROXY to false
-                                                                )
-                                                            ), Bundle.EMPTY
-                                                        )
-                                                    }
+                                    val names = result.get().extras.getStringArray(PlaybackService.NAMES)
+                                    val codecs = result.get().extras.getStringArray(PlaybackService.CODECS)?.map { codec ->
+                                        codec.substringBefore('.').let {
+                                            when (it) {
+                                                "av01" -> "AV1"
+                                                "hvc1" -> "H.265"
+                                                "avc1" -> "H.264"
+                                                else -> it
+                                            }
+                                        }
+                                    }?.takeUnless { it.all { it == "H.264" || it == "mp4a" } }
+                                    val urls = result.get().extras.getStringArray(PlaybackService.URLS)
+                                    if (!names.isNullOrEmpty() && !urls.isNullOrEmpty()) {
+                                        val map = mutableMapOf<String, Pair<String, String?>>()
+                                        map[AUTO_QUALITY] = Pair(requireContext().getString(R.string.auto), null)
+                                        names.forEachIndexed { index, quality ->
+                                            urls.getOrNull(index)?.let { url ->
+                                                if (quality.startsWith("audio", true)) {
+                                                    map[AUDIO_ONLY_QUALITY] = Pair(requireContext().getString(R.string.audio_only), url)
                                                 } else {
-                                                    if (prefs.getBoolean(C.PLAYER_HIDE_ADS, false)) {
-                                                        requireContext().toast(R.string.waiting_ads)
-                                                    }
+                                                    map[quality] = Pair(codecs?.getOrNull(index)?.let { "$quality $it" } ?: quality, url)
                                                 }
                                             }
+                                        }
+                                        map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
+                                            ?: Pair(requireContext().getString(R.string.audio_only), null))
+                                        if (stream != null) {
+                                            map[CHAT_ONLY_QUALITY] = Pair(requireContext().getString(R.string.chat_only), null)
+                                        }
+                                        viewModel.qualities = map
+                                        setQualityIndex()
+                                        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
+                                            changeQuality(viewModel.qualityIndex)
                                         }
                                     }
                                 }
                             }, MoreExecutors.directExecutor())
                         }
                     }
+                    if (stream != null) {
+                        val hideAds = prefs.getBoolean(C.PLAYER_HIDE_ADS, false)
+                        val useProxy = prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true)
+                                && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank()
+                                && prefs.getString(C.PROXY_PORT, null)?.toIntOrNull() != null
+                        if (hideAds || useProxy) {
+                            player?.sendCustomCommand(
+                                SessionCommand(PlaybackService.CHECK_ADS, Bundle.EMPTY),
+                                Bundle.EMPTY
+                            )?.let { result ->
+                                result.addListener({
+                                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                        val playingAds = result.get().extras.getBoolean(PlaybackService.RESULT)
+                                        val oldValue = viewModel.playingAds
+                                        viewModel.playingAds = playingAds
+                                        if (playingAds) {
+                                            if (viewModel.usingProxy) {
+                                                if (!viewModel.stopProxy) {
+                                                    player?.sendCustomCommand(
+                                                        SessionCommand(
+                                                            PlaybackService.TOGGLE_PROXY, bundleOf(
+                                                                PlaybackService.USING_PROXY to false
+                                                            )
+                                                        ), Bundle.EMPTY
+                                                    )
+                                                    viewModel.usingProxy = false
+                                                    viewModel.stopProxy = true
+                                                }
+                                            } else {
+                                                if (!oldValue) {
+                                                    val playlist = viewModel.qualities.values.elementAtOrNull(viewModel.qualityIndex)?.second
+                                                    if (!viewModel.stopProxy && !playlist.isNullOrBlank() && useProxy) {
+                                                        player?.sendCustomCommand(
+                                                            SessionCommand(
+                                                                PlaybackService.TOGGLE_PROXY, bundleOf(
+                                                                    PlaybackService.USING_PROXY to true
+                                                                )
+                                                            ), Bundle.EMPTY
+                                                        )
+                                                        viewModel.usingProxy = true
+                                                        viewLifecycleOwner.lifecycleScope.launch {
+                                                            for (i in 0 until 10) {
+                                                                delay(10000)
+                                                                if (!viewModel.checkPlaylist(playlist)) {
+                                                                    break
+                                                                }
+                                                            }
+                                                            player?.sendCustomCommand(
+                                                                SessionCommand(
+                                                                    PlaybackService.TOGGLE_PROXY, bundleOf(
+                                                                        PlaybackService.USING_PROXY to false
+                                                                    )
+                                                                ), Bundle.EMPTY
+                                                            )
+                                                            viewModel.usingProxy = false
+                                                        }
+                                                    } else {
+                                                        if (hideAds) {
+                                                            viewModel.hidden = true
+                                                            player?.let { player ->
+                                                                if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                                                                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                                                        setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                                                    }.build()
+                                                                }
+                                                                player.volume = 0f
+                                                            }
+                                                            requireContext().toast(R.string.waiting_ads)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            if (hideAds && viewModel.hidden) {
+                                                viewModel.hidden = false
+                                                player?.let { player ->
+                                                    if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                                        }.build()
+                                                    }
+                                                    player.volume = prefs.getInt(C.PLAYER_VOLUME, 100) / 100f
+                                                }
+                                            }
+                                        }
+                                    }
+                                }, MoreExecutors.directExecutor())
+                            }
+                        }
+                    }
                 }
-
                 override fun onEvents(player: Player, events: Player.Events) {
-                    if (view != null) {
-                        if (stream != null && !prefs.getBoolean(C.PLAYER_PAUSE, false) &&
-                            events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
+                    if (events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
+                        if (stream != null && !prefs.getBoolean(C.PLAYER_PAUSE, false)) {
                             requireView().findViewById<ImageButton>(androidx.media3.ui.R.id.exo_play_pause)?.apply {
                                 if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
                                     gone()
@@ -1458,130 +1698,181 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                 }
                             }
                         }
+                        setPipActions(player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady)
                     }
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
-                    if (view != null) {
-                        Log.e(tag, "Player error", error)
-                        when {
-                            stream != null -> {
-                                player?.sendCustomCommand(
-                                    SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
-                                    Bundle.EMPTY
-                                )?.let { result ->
-                                    result.addListener({
-                                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                            val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
-                                            if (requireContext().isNetworkAvailable) {
-                                                when {
-                                                    responseCode == 404 -> {
-                                                        requireContext().toast(R.string.stream_ended)
-                                                    }
-                                                    viewModel.useProxy && responseCode >= 400 -> {
-                                                        requireContext().toast(R.string.proxy_error)
-                                                        viewModel.useProxy = false
-                                                        viewLifecycleOwner.lifecycleScope.launch {
-                                                            delay(1500L)
-                                                            try {
-                                                                restartPlayer()
-                                                            } catch (e: Exception) {
-                                                            }
+                    Log.e(tag, "Player error", error)
+                    when {
+                        stream != null -> {
+                            player?.sendCustomCommand(
+                                SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
+                                Bundle.EMPTY
+                            )?.let { result ->
+                                result.addListener({
+                                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                        val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
+                                        if (requireContext().isNetworkAvailable) {
+                                            when {
+                                                responseCode == 404 -> {
+                                                    requireContext().toast(R.string.stream_ended)
+                                                }
+                                                viewModel.useCustomProxy && responseCode >= 400 -> {
+                                                    requireContext().toast(R.string.proxy_error)
+                                                    viewModel.useCustomProxy = false
+                                                    viewLifecycleOwner.lifecycleScope.launch {
+                                                        delay(1500L)
+                                                        try {
+                                                            restartPlayer()
+                                                        } catch (e: Exception) {
                                                         }
                                                     }
-                                                    else -> {
-                                                        requireContext().shortToast(R.string.player_error)
-                                                        viewLifecycleOwner.lifecycleScope.launch {
-                                                            delay(1500L)
-                                                            try {
-                                                                restartPlayer()
-                                                            } catch (e: Exception) {
-                                                            }
+                                                }
+                                                else -> {
+                                                    requireContext().shortToast(R.string.player_error)
+                                                    viewLifecycleOwner.lifecycleScope.launch {
+                                                        delay(1500L)
+                                                        try {
+                                                            restartPlayer()
+                                                        } catch (e: Exception) {
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }, MoreExecutors.directExecutor())
-                                }
+                                    }
+                                }, MoreExecutors.directExecutor())
                             }
-                            video != null -> {
-                                player?.sendCustomCommand(
-                                    SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
-                                    Bundle.EMPTY
-                                )?.let { result ->
-                                    result.addListener({
-                                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                                            val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
-                                            if (requireContext().isNetworkAvailable) {
-                                                val skipAccessToken = prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
-                                                when {
-                                                    skipAccessToken == 1 && viewModel.shouldRetry && responseCode != 0 -> {
-                                                        viewModel.shouldRetry = false
-                                                        playVideo(false, player.currentPosition)
-                                                    }
-                                                    skipAccessToken == 2 && viewModel.shouldRetry && responseCode != 0 -> {
-                                                        viewModel.shouldRetry = false
-                                                        playVideo(true, player.currentPosition)
-                                                    }
-                                                    responseCode == 403 -> {
-                                                        requireContext().toast(R.string.video_subscribers_only)
-                                                    }
-                                                    else -> {
-                                                        requireContext().shortToast(R.string.player_error)
-                                                        viewLifecycleOwner.lifecycleScope.launch {
-                                                            delay(1500L)
-                                                            try {
-                                                                player.prepare()
-                                                            } catch (e: Exception) {
-                                                            }
+                        }
+                        video != null -> {
+                            player?.sendCustomCommand(
+                                SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
+                                Bundle.EMPTY
+                            )?.let { result ->
+                                result.addListener({
+                                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                        val responseCode = result.get().extras.getInt(PlaybackService.RESULT)
+                                        if (requireContext().isNetworkAvailable) {
+                                            val skipAccessToken = prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                                            when {
+                                                skipAccessToken == 1 && viewModel.shouldRetry && responseCode != 0 -> {
+                                                    viewModel.shouldRetry = false
+                                                    playVideo(false, player?.currentPosition)
+                                                }
+                                                skipAccessToken == 2 && viewModel.shouldRetry && responseCode != 0 -> {
+                                                    viewModel.shouldRetry = false
+                                                    playVideo(true, player?.currentPosition)
+                                                }
+                                                responseCode == 403 -> {
+                                                    requireContext().toast(R.string.video_subscribers_only)
+                                                }
+                                                else -> {
+                                                    requireContext().shortToast(R.string.player_error)
+                                                    viewLifecycleOwner.lifecycleScope.launch {
+                                                        delay(1500L)
+                                                        try {
+                                                            player?.prepare()
+                                                        } catch (e: Exception) {
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }, MoreExecutors.directExecutor())
-                                }
+                                    }
+                                }, MoreExecutors.directExecutor())
                             }
                         }
                     }
                 }
             })
+            if (viewModel.restoreQuality) {
+                viewModel.restoreQuality = false
+                changeQuality(viewModel.previousIndex)
+            }
             if (viewModel.background) {
                 viewModel.background = false
-                player.sendCustomCommand(
+                player?.sendCustomCommand(
                     SessionCommand(
-                        PlaybackService.MOVE_FOREGROUND,
+                        PlaybackService.SET_SLEEP_TIMER,
                         Bundle.EMPTY
                     ), Bundle.EMPTY
-                ).let { result ->
-                    result.addListener({
-                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            result.get().extras.getString(PlaybackService.RESULT)?.let {
-                                changePlayerMode(it)
-                            }
-                        }
-                    }, MoreExecutors.directExecutor())
+                )
+            }
+            if (viewModel.resume) {
+                viewModel.resume = false
+                player?.playWhenReady = true
+                player?.prepare()
+            }
+            player?.let { player ->
+                if (viewModel.loaded.value && player.currentMediaItem == null) {
+                    viewModel.started = false
                 }
             }
-            if (!viewModel.started) {
-                player.sendCustomCommand(
-                    SessionCommand(
-                        PlaybackService.CLEAR,
-                        Bundle.EMPTY
-                    ),
-                    Bundle.EMPTY
-                )
-                if ((isInitialized || !enableNetworkCheck)) {
-                    startPlayer()
-                }
+            if ((isInitialized || !enableNetworkCheck) && !viewModel.started) {
+                startPlayer()
+            }
+            player?.let { player ->
+                setPipActions(player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady)
             }
         }, MoreExecutors.directExecutor())
     }
 
+    private fun setPipActions(playing: Boolean) {
+        if (requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)
+        ) {
+            requireActivity().setPictureInPictureParams(
+                PictureInPictureParams.Builder().apply {
+                    setActions(listOf(
+                        RemoteAction(
+                            Icon.createWithResource(requireContext(), R.drawable.baseline_audiotrack_black_24),
+                            requireContext().getString(R.string.audio_only),
+                            requireContext().getString(R.string.audio_only),
+                            PendingIntent.getBroadcast(
+                                requireContext(),
+                                REQUEST_CODE_AUDIO_ONLY,
+                                Intent(MainActivity.INTENT_START_AUDIO_ONLY).setPackage(requireContext().packageName),
+                                PendingIntent.FLAG_IMMUTABLE
+                            )
+                        ),
+                        if (playing) {
+                            RemoteAction(
+                                Icon.createWithResource(requireContext(), R.drawable.baseline_pause_black_48),
+                                requireContext().getString(R.string.pause),
+                                requireContext().getString(R.string.pause),
+                                PendingIntent.getBroadcast(
+                                    requireContext(),
+                                    REQUEST_CODE_PLAY_PAUSE,
+                                    Intent(MainActivity.INTENT_PLAY_PAUSE_PLAYER).setPackage(requireContext().packageName),
+                                    PendingIntent.FLAG_IMMUTABLE
+                                )
+                            )
+                        } else {
+                            RemoteAction(
+                                Icon.createWithResource(requireContext(), R.drawable.baseline_play_arrow_black_48),
+                                requireContext().getString(R.string.resume),
+                                requireContext().getString(R.string.resume),
+                                PendingIntent.getBroadcast(
+                                    requireContext(),
+                                    REQUEST_CODE_PLAY_PAUSE,
+                                    Intent(MainActivity.INTENT_PLAY_PAUSE_PLAYER).setPackage(requireContext().packageName),
+                                    PendingIntent.FLAG_IMMUTABLE
+                                )
+                            )
+                        }
+                    ))
+                }.build()
+            )
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        viewModel.pipMode = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode) {
+            binding.playerView.useController = false
+        }
     }
 
     override fun initialize() {
@@ -1606,7 +1897,7 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     private fun startPlayer() {
         viewModel.started = true
         stream?.let { stream ->
-            viewModel.useProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
+            viewModel.useCustomProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
             if (viewModel.stream.value == null) {
                 viewModel.stream.value = stream
                 loadStream(stream)
@@ -1642,29 +1933,76 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
             } else {
                 val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
-                player?.sendCustomCommand(
-                    SessionCommand(
-                        PlaybackService.START_CLIP, bundleOf(
-                            PlaybackService.ITEM to clip,
-                            PlaybackService.URLS_KEYS to urls.keys.toTypedArray(),
-                            PlaybackService.URLS_VALUES to urls.values.toTypedArray()
+                val map = mutableMapOf<String, Pair<String, String?>>()
+                urls.forEach {
+                    if (it.key == "source") {
+                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                    } else {
+                        map[it.key] = Pair(it.key, it.value)
+                    }
+                }
+                map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
+                viewModel.qualities = map
+                setQualityIndex()
+                player?.let { player ->
+                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                    if (quality?.key == AUDIO_ONLY_QUALITY) {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                        }.build()
+                    } else {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                        }.build()
+                    }
+                    (quality?.value?.second ?: viewModel.qualities.values.firstOrNull()?.second)?.let { url ->
+                        player.sendCustomCommand(
+                            SessionCommand(
+                                PlaybackService.START_CLIP, bundleOf(
+                                    PlaybackService.URI to url,
+                                    PlaybackService.TITLE to clip.title,
+                                    PlaybackService.CHANNEL_NAME to clip.channelName,
+                                    PlaybackService.CHANNEL_LOGO to clip.channelLogo,
+                                )
+                            ), Bundle.EMPTY
                         )
-                    ), Bundle.EMPTY
-                )
+                    }
+                }
             }
         } ?:
         offlineVideo?.let { offlineVideo ->
             if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
                 viewModel.getOfflineVideo(offlineVideo.id)
             } else {
-                player?.sendCustomCommand(
-                    SessionCommand(
-                        PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                            PlaybackService.ITEM to offlineVideo,
-                            PlaybackService.PLAYBACK_POSITION to 0L,
-                        )
-                    ), Bundle.EMPTY
+                viewModel.qualities = mapOf(
+                    "source" to Pair(requireContext().getString(R.string.source), offlineVideo.url),
+                    AUDIO_ONLY_QUALITY to Pair(requireContext().getString(R.string.audio_only), null)
                 )
+                setQualityIndex()
+                player?.let { player ->
+                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                    if (quality?.key == AUDIO_ONLY_QUALITY) {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                        }.build()
+                    } else {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                        }.build()
+                    }
+                    player.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.START_OFFLINE_VIDEO, bundleOf(
+                                PlaybackService.URI to offlineVideo.url,
+                                PlaybackService.VIDEO_ID to offlineVideo.id,
+                                PlaybackService.PLAYBACK_POSITION to 0L,
+                                PlaybackService.TITLE to offlineVideo.name,
+                                PlaybackService.CHANNEL_NAME to offlineVideo.channelName,
+                                PlaybackService.CHANNEL_LOGO to offlineVideo.channelLogo,
+                            )
+                        ), Bundle.EMPTY
+                    )
+                }
             }
         }
     }
@@ -1674,33 +2012,21 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         try {
             stream?.channelLogin?.let { channelLogin ->
                 val proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "")
-                if (viewModel.useProxy && !proxyUrl.isNullOrBlank()) {
-                    val headers = prefs.getString(C.PLAYER_STREAM_HEADERS, null)?.let {
-                        try {
-                            val json = JSONObject(it)
-                            hashMapOf<String, String>().apply {
-                                json.keys().forEach { key ->
-                                    put(key, json.optString(key))
-                                }
-                            }
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
+                if (viewModel.useCustomProxy && !proxyUrl.isNullOrBlank()) {
                     player?.sendCustomCommand(
                         SessionCommand(
                             PlaybackService.START_STREAM, bundleOf(
-                                PlaybackService.ITEM to stream,
                                 PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
-                                PlaybackService.HEADERS_KEYS to headers?.keys?.toTypedArray(),
-                                PlaybackService.HEADERS_VALUES to headers?.values?.toTypedArray()
+                                PlaybackService.TITLE to stream.title,
+                                PlaybackService.CHANNEL_NAME to stream.channelName,
+                                PlaybackService.CHANNEL_LOGO to stream.channelLogo,
                             )
                         ), Bundle.EMPTY
                     )
                     player?.prepare()
                 } else {
-                    if (viewModel.useProxy) {
-                        viewModel.useProxy = false
+                    if (viewModel.useCustomProxy) {
+                        viewModel.useCustomProxy = false
                     }
                     val proxyHost = prefs.getString(C.PROXY_HOST, null)
                     val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
@@ -1729,15 +2055,40 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
 
     private fun playVideo(skipAccessToken: Boolean, playbackPosition: Long?) {
         if (skipAccessToken && !video?.animatedPreviewURL.isNullOrBlank()) {
-            player?.sendCustomCommand(
-                SessionCommand(
-                    PlaybackService.START_VIDEO, bundleOf(
-                        PlaybackService.ITEM to video,
-                        PlaybackService.USING_PLAYLIST to false,
-                        PlaybackService.PLAYBACK_POSITION to playbackPosition,
+            video?.animatedPreviewURL?.let { preview ->
+                val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, video?.type)
+                val map = mutableMapOf<String, Pair<String, String?>>()
+                qualityMap.forEach {
+                    if (it.key == "source") {
+                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                    } else {
+                        map[it.key] = Pair(it.key, it.value)
+                    }
+                }
+                map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
+                    ?: Pair(requireContext().getString(R.string.audio_only), null))
+                viewModel.qualities = map
+                viewModel.qualityIndex = 0
+                map.values.firstOrNull()?.second
+            }?.let { url ->
+                player?.let { player ->
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                        setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                    }.build()
+                    player.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.START_VIDEO, bundleOf(
+                                PlaybackService.URI to url,
+                                PlaybackService.PLAYBACK_POSITION to playbackPosition,
+                                PlaybackService.VIDEO_ID to video?.id?.toLongOrNull(),
+                                PlaybackService.TITLE to video?.title,
+                                PlaybackService.CHANNEL_NAME to video?.channelName,
+                                PlaybackService.CHANNEL_LOGO to video?.channelLogo,
+                            )
+                        ), Bundle.EMPTY
                     )
-                ), Bundle.EMPTY
-            )
+                }
+            }
         } else {
             viewModel.playbackPosition = playbackPosition
             viewModel.loadVideo(
@@ -1767,7 +2118,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         with(binding) {
             if (isInPictureInPictureMode) {
-                viewModel.pipMode = true
                 if (!slidingLayout.isMaximized) {
                     slidingLayout.maximize()
                 }
@@ -1801,32 +2151,144 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
         }
     }
 
-    override fun onMovedToForeground() {}
+    fun handlePlayPauseAction() {
+        Util.handlePlayPauseButtonAction(player)
+    }
 
-    override fun onMovedToBackground() {
-        viewModel.background = true
-        player?.sendCustomCommand(
-            SessionCommand(
-                PlaybackService.MOVE_BACKGROUND, bundleOf(
-                    PlaybackService.PIP_MODE to viewModel.pipMode,
-                    PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
-                )
-            ), Bundle.EMPTY
-        )?.let { result ->
-            result.addListener({
-                if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                    result.get().extras.getString(PlaybackService.RESULT)?.let {
-                        changePlayerMode(it)
-                        releaseController()
+    fun startAudioOnly() {
+        player?.let { player ->
+            if (player.isConnected) {
+                savePosition()
+                if (viewModel.usingProxy) {
+                    player.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.TOGGLE_PROXY, bundleOf(
+                                PlaybackService.USING_PROXY to false
+                            )
+                        ), Bundle.EMPTY
+                    )
+                    viewModel.usingProxy = false
+                }
+                if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                    viewModel.restoreQuality = true
+                    viewModel.previousIndex = viewModel.qualityIndex
+                    viewModel.qualityIndex = viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY)
+                    viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)?.let { quality ->
+                        player.currentMediaItem?.let { mediaItem ->
+                            if (prefs.getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
+                                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                    setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                }.build()
+                            }
+                            if (prefs.getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                                quality.value.second?.let {
+                                    val position = player.currentPosition
+                                    if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                                        viewModel.playlistUrl = mediaItem.localConfiguration?.uri
+                                    }
+                                    player.setMediaItem(mediaItem.buildUpon().setUri(it).build())
+                                    player.prepare()
+                                    player.seekTo(position)
+                                }
+                            }
+                        }
                     }
                 }
-            }, MoreExecutors.directExecutor())
+                viewModel.background = true
+                player.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.SET_SLEEP_TIMER, bundleOf(
+                            PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+                        )
+                    ), Bundle.EMPTY
+                )
+            }
+        }
+        releaseController()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        player?.let { player ->
+            if (player.isConnected) {
+                savePosition()
+                if (viewModel.usingProxy) {
+                    player.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.TOGGLE_PROXY, bundleOf(
+                                PlaybackService.USING_PROXY to false
+                            )
+                        ), Bundle.EMPTY
+                    )
+                    viewModel.usingProxy = false
+                }
+                if (prefs.getBoolean(C.PLAYER_BACKGROUND_AUDIO, true)
+                    && !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode)
+                ) {
+                    if (player.playWhenReady == true && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                        viewModel.restoreQuality = true
+                        viewModel.previousIndex = viewModel.qualityIndex
+                        viewModel.qualityIndex = viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY)
+                        viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)?.let { quality ->
+                            player.currentMediaItem?.let { mediaItem ->
+                                if (prefs.getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
+                                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                        setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                    }.build()
+                                }
+                                if (prefs.getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                                    quality.value.second?.let {
+                                        val position = player.currentPosition
+                                        if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                                            viewModel.playlistUrl = mediaItem.localConfiguration?.uri
+                                        }
+                                        player.setMediaItem(mediaItem.buildUpon().setUri(it).build())
+                                        player.prepare()
+                                        player.seekTo(position)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    viewModel.background = true
+                    player.sendCustomCommand(
+                        SessionCommand(
+                            PlaybackService.SET_SLEEP_TIMER, bundleOf(
+                                PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+                            )
+                        ), Bundle.EMPTY
+                    )
+                } else {
+                    viewModel.resume = player.playWhenReady
+                    player.pause()
+                }
+            }
+        }
+        releaseController()
+    }
+
+    private fun savePosition() {
+        video?.let { video ->
+            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                video.id?.toLongOrNull()?.let { id ->
+                    player?.currentPosition?.let { position ->
+                        viewModel.saveVideoPosition(id, position)
+                    }
+                }
+            }
+        } ?:
+        offlineVideo?.let { offlineVideo ->
+            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                player?.currentPosition?.let { position ->
+                    viewModel.saveOfflineVideoPosition(offlineVideo.id, position)
+                }
+            }
         }
     }
 
     private fun releaseController() {
         binding.playerView.player = null
-        MediaController.releaseFuture(controllerFuture)
+        controllerFuture?.let { MediaController.releaseFuture(it) }
     }
 
     override fun onMinimize() {
@@ -1866,78 +2328,44 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     }
 
     override fun onClose() {
-        video?.let { video ->
-            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                video.id?.toLongOrNull()?.let { id ->
-                    player?.currentPosition?.let { position ->
-                        viewModel.saveVideoPosition(id, position)
-                    }
-                }
-            }
-        } ?:
-        offlineVideo?.let { offlineVideo ->
-            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                player?.currentPosition?.let { position ->
-                    viewModel.saveOfflineVideoPosition(offlineVideo.id, position)
-                }
-            }
-        }
+        savePosition()
         player?.pause()
         player?.stop()
+        if (offlineVideo == null) {
+            player?.removeMediaItem(0)
+        }
         releaseController()
     }
 
     override fun showDownloadDialog() {
         if (viewModel.loaded.value) {
             stream?.let { stream ->
-                player?.sendCustomCommand(
-                    SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY),
-                    Bundle.EMPTY
-                )?.let { result ->
-                    result.addListener({
-                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
-                                result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                    DownloadDialog.newInstance(stream, keys, values).show(childFragmentManager, null)
-                                }
-                            }
-                        }
-                    }, MoreExecutors.directExecutor())
+                val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                    pair.second?.let { pair.first to it }
                 }
+                DownloadDialog.newInstance(stream, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray()).show(childFragmentManager, null)
             } ?:
             video?.let { video ->
                 player?.sendCustomCommand(
-                    SessionCommand(PlaybackService.GET_VIDEO_DOWNLOAD_INFO, Bundle.EMPTY),
+                    SessionCommand(PlaybackService.GET_DURATION, Bundle.EMPTY),
                     Bundle.EMPTY
                 )?.let { result ->
                     result.addListener({
                         if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
-                                result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                    val totalDuration = result.get().extras.getLong(PlaybackService.TOTAL_DURATION)
-                                    val currentPosition = result.get().extras.getLong(PlaybackService.CURRENT_POSITION)
-                                    DownloadDialog.newInstance(video, keys, values, totalDuration, currentPosition).show(childFragmentManager, null)
-                                }
+                            val totalDuration = result.get().extras.getLong(PlaybackService.RESULT)
+                            val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                                pair.second?.let { pair.first to it }
                             }
+                            DownloadDialog.newInstance(video, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray(), totalDuration, player?.currentPosition).show(childFragmentManager, null)
                         }
                     }, MoreExecutors.directExecutor())
                 }
             } ?:
             clip?.let { clip ->
-                player?.sendCustomCommand(
-                    SessionCommand(PlaybackService.GET_URLS, Bundle.EMPTY),
-                    Bundle.EMPTY
-                )?.let { result ->
-                    result.addListener({
-                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            result.get().extras.getStringArray(PlaybackService.URLS_KEYS)?.let { keys ->
-                                result.get().extras.getStringArray(PlaybackService.URLS_VALUES)?.let { values ->
-                                    DownloadDialog.newInstance(clip, keys, values).show(childFragmentManager, null)
-                                }
-                            }
-                        }
-                    }, MoreExecutors.directExecutor())
+                val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                    pair.second?.let { pair.first to it }
                 }
+                DownloadDialog.newInstance(clip, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray()).show(childFragmentManager, null)
             }
         }
     }
@@ -1977,21 +2405,9 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {
         when (requestCode) {
             REQUEST_CODE_QUALITY -> {
-                player?.sendCustomCommand(
-                    SessionCommand(
-                        PlaybackService.CHANGE_QUALITY,
-                        bundleOf(PlaybackService.INDEX to index)
-                    ), Bundle.EMPTY
-                )?.let { result ->
-                    result.addListener({
-                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            result.get().extras.getString(PlaybackService.RESULT)?.let {
-                                changePlayerMode(it)
-                                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.let { setQualityText() }
-                            }
-                        }
-                    }, MoreExecutors.directExecutor())
-                }
+                changeQuality(index)
+                changePlayerMode()
+                setQualityText()
             }
             REQUEST_CODE_SPEED -> {
                 prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")?.split("\n")?.let { speeds ->
@@ -2111,8 +2527,15 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
     }
 
     companion object {
+        private const val AUTO_QUALITY = "auto"
+        private const val AUDIO_ONLY_QUALITY = "audio_only"
+        private const val CHAT_ONLY_QUALITY = "chat_only"
+
         private const val REQUEST_CODE_QUALITY = 0
         private const val REQUEST_CODE_SPEED = 1
+        private const val REQUEST_CODE_AUDIO_ONLY = 2
+        private const val REQUEST_CODE_PLAY_PAUSE = 3
+
         private const val KEY_STREAM = "stream"
         private const val KEY_VIDEO = "video"
         private const val KEY_CLIP = "clip"

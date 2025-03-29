@@ -18,8 +18,12 @@ package com.github.andreyasadchy.xtra.player.lowlatency;
 import static androidx.media3.common.util.Assertions.checkNotNull;
 import static androidx.media3.common.util.Assertions.checkState;
 import static androidx.media3.common.util.Util.castNonNull;
+import static androidx.media3.common.util.Util.msToUs;
+import static androidx.media3.common.util.Util.parseXsDateTime;
+import static androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Interstitial.CUE_TRIGGER_ONCE;
+import static androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Interstitial.CUE_TRIGGER_POST;
+import static androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Interstitial.CUE_TRIGGER_PRE;
 
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -40,6 +44,7 @@ import androidx.media3.common.util.Util;
 import androidx.media3.exoplayer.hls.HlsTrackMetadataEntry;
 import androidx.media3.exoplayer.hls.HlsTrackMetadataEntry.VariantInfo;
 import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist;
+import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Interstitial;
 import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Part;
 import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.RenditionReport;
 import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist.Segment;
@@ -49,9 +54,8 @@ import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist.Variant;
 import androidx.media3.exoplayer.hls.playlist.HlsPlaylist;
 import androidx.media3.exoplayer.upstream.ParsingLoadable;
 import androidx.media3.extractor.mp4.PsshAtomUtil;
-import androidx.preference.PreferenceManager;
 
-import com.github.andreyasadchy.xtra.XtraApp;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import java.io.BufferedReader;
@@ -112,6 +116,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
   private static final String TAG_SKIP = "#EXT-X-SKIP";
   private static final String TAG_PRELOAD_HINT = "#EXT-X-PRELOAD-HINT";
   private static final String TAG_RENDITION_REPORT = "#EXT-X-RENDITION-REPORT";
+  private static final String TAG_DATERANGE = "#EXT-X-DATERANGE";
 
   private static final String TYPE_AUDIO = "AUDIO";
   private static final String TYPE_VIDEO = "VIDEO";
@@ -145,12 +150,17 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
   private static final Pattern REGEX_CLOSED_CAPTIONS = Pattern.compile("CLOSED-CAPTIONS=\"(.+?)\"");
   private static final Pattern REGEX_BANDWIDTH = Pattern.compile("[^-]BANDWIDTH=(\\d+)\\b");
   private static final Pattern REGEX_CHANNELS = Pattern.compile("CHANNELS=\"(.+?)\"");
+  private static final Pattern REGEX_VIDEO_RANGE = Pattern.compile("VIDEO-RANGE=(SDR|PQ|HLG)");
   private static final Pattern REGEX_CODECS = Pattern.compile("CODECS=\"(.+?)\"");
+  private static final Pattern REGEX_SUPPLEMENTAL_CODECS =
+      Pattern.compile("SUPPLEMENTAL-CODECS=\"(.+?)\"");
   private static final Pattern REGEX_RESOLUTION = Pattern.compile("RESOLUTION=(\\d+x\\d+)");
   private static final Pattern REGEX_FRAME_RATE = Pattern.compile("FRAME-RATE=([\\d\\.]+)\\b");
   private static final Pattern REGEX_TARGET_DURATION =
       Pattern.compile(TAG_TARGET_DURATION + ":(\\d+)\\b");
   private static final Pattern REGEX_ATTR_DURATION = Pattern.compile("DURATION=([\\d\\.]+)\\b");
+  private static final Pattern REGEX_ATTR_DURATION_PREFIXED =
+      Pattern.compile("[:,]DURATION=([\\d\\.]+)\\b");
   private static final Pattern REGEX_PART_TARGET_DURATION =
       Pattern.compile("PART-TARGET=([\\d\\.]+)\\b");
   private static final Pattern REGEX_VERSION = Pattern.compile(TAG_VERSION + ":(\\d+)\\b");
@@ -229,8 +239,28 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
   private static final Pattern REGEX_PRECISE = compileBooleanAttrPattern("PRECISE");
   private static final Pattern REGEX_VALUE = Pattern.compile("VALUE=\"(.+?)\"");
   private static final Pattern REGEX_IMPORT = Pattern.compile("IMPORT=\"(.+?)\"");
+  private static final Pattern REGEX_ID = Pattern.compile("[:,]ID=\"(.+?)\"");
+  private static final Pattern REGEX_CLASS = Pattern.compile("CLASS=\"(.+?)\"");
+  private static final Pattern REGEX_START_DATE = Pattern.compile("START-DATE=\"(.+?)\"");
+  private static final Pattern REGEX_CUE = Pattern.compile("CUE=\"(.+?)\"");
+  private static final Pattern REGEX_END_DATE = Pattern.compile("END-DATE=\"(.+?)\"");
+  private static final Pattern REGEX_PLANNED_DURATION =
+      Pattern.compile("PLANNED-DURATION=([\\d\\.]+)\\b");
+  private static final Pattern REGEX_END_ON_NEXT = compileBooleanAttrPattern("END-ON-NEXT");
+  private static final Pattern REGEX_ASSET_URI = Pattern.compile("X-ASSET-URI=\"(.+?)\"");
+  private static final Pattern REGEX_ASSET_LIST_URI = Pattern.compile("X-ASSET-LIST=\"(.+?)\"");
+  private static final Pattern REGEX_RESUME_OFFSET =
+      Pattern.compile("X-RESUME-OFFSET=(-?[\\d\\.]+)\\b");
+  private static final Pattern REGEX_PLAYOUT_LIMIT =
+      Pattern.compile("X-PLAYOUT-LIMIT=([\\d\\.]+)\\b");
+  private static final Pattern REGEX_SNAP = Pattern.compile("X-SNAP=\"(.+?)\"");
+  private static final Pattern REGEX_RESTRICT = Pattern.compile("X-RESTRICT=\"(.+?)\"");
   private static final Pattern REGEX_VARIABLE_REFERENCE =
       Pattern.compile("\\{\\$([a-zA-Z0-9\\-_]+)\\}");
+  private static final Pattern REGEX_CLIENT_DEFINED_ATTRIBUTE_PREFIX =
+      Pattern.compile("\\b(X-[A-Z0-9-]+)=");
+
+  private static final String DATERANGE_CLASS_INTERSTITIALS = "com.apple.hls.interstitial";
 
   private final HlsMultivariantPlaylist multivariantPlaylist;
   @Nullable private final HlsMediaPlaylist previousMediaPlaylist;
@@ -330,6 +360,30 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     return c;
   }
 
+  private static boolean isDolbyVisionFormat(
+      @Nullable String videoRange,
+      @Nullable String codecs,
+      @Nullable String supplementalCodecs,
+      @Nullable String supplementalProfiles) {
+    if (!MimeTypes.isDolbyVisionCodec(codecs, supplementalCodecs)) {
+      return false;
+    }
+    if (supplementalCodecs == null) {
+      // Dolby Vision profile 5 that doesn't define supplemental codecs.
+      return true;
+    }
+    if (videoRange == null || supplementalProfiles == null) {
+      // Video range and supplemental profiles need to be defined for a full validity check.
+      return false;
+    }
+    if ((videoRange.equals("PQ") && !supplementalProfiles.equals("db1p"))
+        || (videoRange.equals("SDR") && !supplementalProfiles.equals("db2g"))
+        || (videoRange.equals("HLG") && !supplementalProfiles.startsWith("db4"))) { // db4g or db4h
+      return false;
+    }
+    return true;
+  }
+
   private static HlsMultivariantPlaylist parseMultivariantPlaylist(
       LineIterator iterator, String baseUri) throws IOException {
     HashMap<Uri, ArrayList<VariantInfo>> urlToVariantInfos = new HashMap<>();
@@ -381,7 +435,29 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         int roleFlags = isIFrameOnlyVariant ? C.ROLE_FLAG_TRICK_PLAY : 0;
         int peakBitrate = parseIntAttr(line, REGEX_BANDWIDTH);
         int averageBitrate = parseOptionalIntAttr(line, REGEX_AVERAGE_BANDWIDTH, -1);
+        String videoRange = parseOptionalStringAttr(line, REGEX_VIDEO_RANGE, variableDefinitions);
         String codecs = parseOptionalStringAttr(line, REGEX_CODECS, variableDefinitions);
+        String supplementalCodecsStrings =
+            parseOptionalStringAttr(line, REGEX_SUPPLEMENTAL_CODECS, variableDefinitions);
+        String supplementalCodecs = null;
+        String supplementalProfiles = null; // i.e. Compatibility brand
+        if (supplementalCodecsStrings != null) {
+          String[] supplementalCodecsString = Util.splitAtFirst(supplementalCodecsStrings, ",");
+          // TODO: Support more than one element
+          String[] codecsAndProfiles = Util.split(supplementalCodecsString[0], "/");
+          supplementalCodecs = codecsAndProfiles[0];
+          if (codecsAndProfiles.length > 1) {
+            supplementalProfiles = codecsAndProfiles[1];
+          }
+        }
+        String videoCodecs = Util.getCodecsOfType(codecs, C.TRACK_TYPE_VIDEO);
+        if (isDolbyVisionFormat(
+            videoRange, videoCodecs, supplementalCodecs, supplementalProfiles)) {
+          videoCodecs = supplementalCodecs != null ? supplementalCodecs : videoCodecs;
+          String nonVideoCodecs = Util.getCodecsWithoutType(codecs, C.TRACK_TYPE_VIDEO);
+          codecs = nonVideoCodecs != null ? videoCodecs + "," + nonVideoCodecs : videoCodecs;
+        }
+
         String resolutionString =
             parseOptionalStringAttr(line, REGEX_RESOLUTION, variableDefinitions);
         int width;
@@ -507,6 +583,8 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
           }
           if (uri == null) {
             // TODO: Remove this case and add a Rendition with a null uri to videos.
+            formatBuilder.setMetadata(metadata);
+            videos.add(new Rendition(uri, formatBuilder.build(), groupId, name)); // xtra: quality names
           } else {
             formatBuilder.setMetadata(metadata);
             videos.add(new Rendition(uri, formatBuilder.build(), groupId, name));
@@ -589,6 +667,13 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       muxedCaptionFormats = Collections.emptyList();
     }
 
+    muxedCaptionFormats = new ArrayList<>(); // xtra: closed captions
+    muxedCaptionFormats.add(
+            new Format.Builder()
+                    .setSampleMimeType(MimeTypes.APPLICATION_CEA608)
+                    .build()
+    );
+
     return new HlsMultivariantPlaylist(
         baseUri,
         tags,
@@ -643,12 +728,6 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       LineIterator iterator,
       String baseUri)
       throws IOException {
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(XtraApp.INSTANCE.getApplicationContext()); // settings
-    boolean hideAds = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PLAYER_HIDE_ADS, false);
-    @Nullable String proxyHost = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_HOST, null);
-    @Nullable String proxyPort = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_PORT, null);
-    boolean usingProxy = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PROXY_MEDIA_PLAYLIST, true) && proxyHost != null && !proxyHost.isBlank() && proxyPort != null && !proxyPort.isBlank();
-    List<DateRange> adRanges = new ArrayList<>(); // ad segments
     @HlsMediaPlaylist.PlaylistType int playlistType = HlsMediaPlaylist.PLAYLIST_TYPE_UNKNOWN;
     long startOffsetUs = C.TIME_UNSET;
     long mediaSequence = 0;
@@ -665,6 +744,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     @Nullable Part preloadPart = null;
     List<RenditionReport> renditionReports = new ArrayList<>();
     List<String> tags = new ArrayList<>();
+    List<Interstitial> interstitials = new ArrayList<>();
 
     long segmentDurationUs = 0;
     String segmentTitle = "";
@@ -756,7 +836,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         }
         segmentByteRangeLength = C.LENGTH_UNSET;
       } else if (line.startsWith(TAG_TARGET_DURATION)) {
-        targetDurationUs = 2 * C.MICROS_PER_SECOND; // low latency
+        targetDurationUs = 2 * C.MICROS_PER_SECOND; // xtra: low latency
       } else if (line.startsWith(TAG_MEDIA_SEQUENCE)) {
         mediaSequence = parseLongAttr(line, REGEX_MEDIA_SEQUENCE);
         segmentMediaSequence = mediaSequence;
@@ -861,33 +941,8 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       } else if (line.startsWith(TAG_PROGRAM_DATE_TIME)) {
         if (playlistStartTimeUs == 0) {
           long programDatetimeUs =
-              Util.msToUs(Util.parseXsDateTime(line.substring(line.indexOf(':') + 1)));
+              msToUs(Util.parseXsDateTime(line.substring(line.indexOf(':') + 1)));
           playlistStartTimeUs = programDatetimeUs - segmentStartTimeUs;
-        }
-      } else if (line.startsWith("#EXT-X-DATERANGE")) { // ad segments
-        if (hideAds || usingProxy) {
-          String id = parseOptionalStringAttr(line, Pattern.compile("ID=\"(.+?)\""), variableDefinitions);
-          String classAttr = parseOptionalStringAttr(line, Pattern.compile("CLASS=\"(.+?)\""), variableDefinitions);
-          String ad = parseOptionalStringAttr(line, Pattern.compile("X-TV-TWITCH-AD-.+?=\"(.+?)\""), variableDefinitions);
-          if (id.startsWith("stitched-ad-") || classAttr.equals("twitch-stitched-ad") || ad != null) {
-            String startDate = parseOptionalStringAttr(line, Pattern.compile("START-DATE=\"(.+?)\""), variableDefinitions);
-            if (startDate != null) {
-              long startUs = Util.msToUs(Util.parseXsDateTime(startDate));
-              String endDate = parseOptionalStringAttr(line, Pattern.compile("END-DATE=\"(.+?)\""), variableDefinitions);
-              if (endDate != null) {
-                long endUs = Util.msToUs(Util.parseXsDateTime(endDate));
-                adRanges.add(new DateRange(startUs, endUs));
-              } else {
-                String durationAttr = parseOptionalStringAttr(line, Pattern.compile("DURATION=(.+?)"), variableDefinitions);
-                String plannedDuration = parseOptionalStringAttr(line, Pattern.compile("PLANNED-DURATION=(.+?)"), variableDefinitions);
-                String duration = durationAttr != null ? durationAttr : plannedDuration;
-                if (duration != null) {
-                  long endUs = startUs + (new BigDecimal(duration).multiply(new BigDecimal(C.MICROS_PER_SECOND)).longValue());
-                  adRanges.add(new DateRange(startUs, endUs));
-                }
-              }
-            }
-          }
         }
       } else if (line.equals(TAG_GAP)) {
         hasGapTag = true;
@@ -995,31 +1050,163 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         if (partByteRangeLength != C.LENGTH_UNSET) {
           partByteRangeOffset += partByteRangeLength;
         }
-      } else if (!line.startsWith("#") || line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // low latency
+      } else if (line.startsWith(TAG_DATERANGE)) { // xtra: ad segments
+        String className = parseOptionalStringAttr(line, REGEX_CLASS, /* defaultValue= */ "", variableDefinitions);
+        String id = parseStringAttr(line, REGEX_ID, variableDefinitions);
+        @Nullable Uri assetUri = null;
+        String assetUriString = parseOptionalStringAttr(line, REGEX_ASSET_URI, variableDefinitions);
+        if (assetUriString != null) {
+          assetUri = Uri.parse(assetUriString);
+        } else {
+          assetUri = Uri.parse(""); // xtra: ad segments
+        }
+        @Nullable Uri assetListUri = null;
+        String assetListUriString =
+            parseOptionalStringAttr(line, REGEX_ASSET_LIST_URI, variableDefinitions);
+        if (assetListUriString != null) {
+          assetListUri = Uri.parse(assetListUriString);
+        }
+        long startDateUnixUs =
+            msToUs(parseXsDateTime(parseStringAttr(line, REGEX_START_DATE, variableDefinitions)));
+        long endDateUnixUs = C.TIME_UNSET;
+        @Nullable
+        String endDateUnixMsString =
+            parseOptionalStringAttr(line, REGEX_END_DATE, variableDefinitions);
+        if (endDateUnixMsString != null) {
+          endDateUnixUs = msToUs(parseXsDateTime(endDateUnixMsString));
+        }
+        List<@Interstitial.CueTriggerType String> cue = new ArrayList<>();
+        String cueString = parseOptionalStringAttr(line, REGEX_CUE, variableDefinitions);
+        if (cueString != null) {
+          String[] identifiers = Util.split(/* value= */ cueString, /* regex= */ ",");
+          for (String identifier : identifiers) {
+            identifier = identifier.trim();
+            switch (identifier) {
+              case CUE_TRIGGER_ONCE:
+              case CUE_TRIGGER_POST:
+              case CUE_TRIGGER_PRE:
+                cue.add(identifier);
+                break;
+              default:
+                break; // ignore for forward compatibility
+            }
+          }
+        }
+        double durationSec = parseOptionalDoubleAttr(line, REGEX_ATTR_DURATION_PREFIXED, -1.0d);
+        long durationUs = C.TIME_UNSET;
+        if (durationSec >= 0) {
+          durationUs = (long) (durationSec * C.MICROS_PER_SECOND);
+        }
+        double plannedDurationSec = parseOptionalDoubleAttr(line, REGEX_PLANNED_DURATION, -1.0d);
+        long plannedDurationUs = C.TIME_UNSET;
+        if (plannedDurationSec >= 0) {
+          plannedDurationUs = (long) (plannedDurationSec * C.MICROS_PER_SECOND);
+        }
+        boolean endOnNext = parseOptionalBooleanAttribute(line, REGEX_END_ON_NEXT, false);
+        double resumeOffsetUsDouble =
+            parseOptionalDoubleAttr(line, REGEX_RESUME_OFFSET, Double.MIN_VALUE);
+        long resumeOffsetUs = C.TIME_UNSET;
+        if (resumeOffsetUsDouble != Double.MIN_VALUE) {
+          resumeOffsetUs = (long) (resumeOffsetUsDouble * C.MICROS_PER_SECOND);
+        }
+        double playoutLimitSec = parseOptionalDoubleAttr(line, REGEX_PLAYOUT_LIMIT, -1.0d);
+        long playoutLimitUs = C.TIME_UNSET;
+        if (playoutLimitSec >= 0) {
+          playoutLimitUs = (long) (playoutLimitSec * C.MICROS_PER_SECOND);
+        }
+        List<@Interstitial.SnapType String> snapTypes = new ArrayList<>();
+        String snapTypesString = parseOptionalStringAttr(line, REGEX_SNAP, variableDefinitions);
+        if (snapTypesString != null) {
+          String[] snapTypesSplit = Util.split(snapTypesString, ",");
+          for (String snapType : snapTypesSplit) {
+            snapType = snapType.trim();
+            switch (snapType) {
+              case Interstitial.SNAP_TYPE_IN:
+              case Interstitial.SNAP_TYPE_OUT:
+                snapTypes.add(snapType);
+                break;
+              default:
+                break; // ignore for forward compatibility
+            }
+          }
+        }
+        List<@Interstitial.NavigationRestriction String> restrictions = new ArrayList<>();
+        String restrictionsString =
+            parseOptionalStringAttr(line, REGEX_RESTRICT, variableDefinitions);
+        if (restrictionsString != null) {
+          String[] restrictionsSplit = Util.split(restrictionsString, ",");
+          for (String restriction : restrictionsSplit) {
+            restriction = restriction.trim();
+            switch (restriction) {
+              case Interstitial.NAVIGATION_RESTRICTION_JUMP:
+              case Interstitial.NAVIGATION_RESTRICTION_SKIP:
+                restrictions.add(restriction);
+                break;
+              default:
+                break; // ignore for forward compatibility
+            }
+          }
+        }
+
+        ImmutableList.Builder<HlsMediaPlaylist.ClientDefinedAttribute> clientDefinedAttributes =
+            new ImmutableList.Builder<>();
+        String attributes = line.substring("#EXT-X-DATERANGE:".length());
+        Matcher matcher = REGEX_CLIENT_DEFINED_ATTRIBUTE_PREFIX.matcher(attributes);
+        while (matcher.find()) {
+          String attributePrefix = matcher.group();
+          switch (attributePrefix) {
+            case "X-ASSET-URI=": // fall through
+            case "X-ASSET-LIST=": // fall through
+            case "X-RESUME-OFFSET=": // fall through
+            case "X-PLAYOUT-LIMIT=": // fall through
+            case "X-SNAP=": // fall through
+            case "X-RESTRICT=": // fall through
+              // ignore interstitial attributes
+              break;
+            default:
+              clientDefinedAttributes.add(
+                  parseClientDefinedAttribute(
+                      attributes,
+                      attributePrefix.substring(0, attributePrefix.length() - 1),
+                      variableDefinitions));
+              break;
+          }
+        }
+        clientDefinedAttributes.add( // xtra: ad segments
+                new HlsMediaPlaylist.ClientDefinedAttribute(
+                        "CLASS", className, HlsMediaPlaylist.ClientDefinedAttribute.TYPE_TEXT)
+        );
+        if ((assetListUri == null && assetUri != null)
+            || (assetListUri != null && assetUri == null)) {
+          interstitials.add(
+              new Interstitial(
+                  id,
+                  assetUri,
+                  assetListUri,
+                  startDateUnixUs,
+                  endDateUnixUs,
+                  durationUs,
+                  plannedDurationUs,
+                  cue,
+                  endOnNext,
+                  resumeOffsetUs,
+                  playoutLimitUs,
+                  snapTypes,
+                  restrictions,
+                  clientDefinedAttributes.build()));
+        }
+      } else if (!line.startsWith("#") || line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // xtra: low latency
         @Nullable
         String segmentEncryptionIV =
             getSegmentEncryptionIV(
                 segmentMediaSequence, fullSegmentEncryptionKeyUri, fullSegmentEncryptionIV);
         segmentMediaSequence++;
-        if (line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // low latency
+        if (line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // xtra: low latency
           segmentDurationUs = 2 * C.MICROS_PER_SECOND;
           line = line.substring(line.indexOf(':') + 1);
         }
         String segmentUri = replaceVariableReferences(line, variableDefinitions)
-                .replace("-unmuted", "-muted"); // unmuted segments
-        if (hideAds) { // ad segments
-          if (segmentTitle.contains("Amazon") || segmentTitle.contains("Adform") || segmentTitle.contains("DCM")) {
-            segmentUri = null;
-          } else {
-            for (DateRange range : adRanges) {
-              long current = playlistStartTimeUs + segmentStartTimeUs;
-              if ((range.startDateUs <= current) && (current < range.endDateUs)) {
-                segmentUri = null;
-                break;
-              }
-            }
-          }
-        }
+                .replace("-unmuted", "-muted"); // xtra: unmuted segments
         @Nullable Segment inferredInitSegment = urlToInferredInitSegment.get(segmentUri);
         if (segmentByteRangeLength == C.LENGTH_UNSET) {
           // The segment has no byte range defined.
@@ -1098,27 +1285,6 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       trailingParts.add(preloadPart);
     }
 
-    if (!segments.isEmpty()) { // ad segments
-      HlsMediaPlaylist.Segment segment = segments.get(segments.size() - 1);
-      if (hideAds && segment.url == null) {
-        tags.add("ads=true");
-      } else {
-        if (usingProxy) {
-          if (segment.title.contains("Amazon") || segment.title.contains("Adform") || segment.title.contains("DCM")) {
-            tags.add("ads=true");
-          } else {
-            for (DateRange range : adRanges) {
-              long current = playlistStartTimeUs + segment.relativeStartTimeUs;
-              if ((range.startDateUs <= current) && (current < range.endDateUs)) {
-                tags.add("ads=true");
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-
     return new HlsMediaPlaylist(
         playlistType,
         baseUri,
@@ -1139,7 +1305,8 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         segments,
         trailingParts,
         serverControl,
-        renditionReportMap);
+        renditionReportMap,
+        interstitials);
   }
 
   private static DrmInitData getPlaylistProtectionSchemes(
@@ -1330,6 +1497,35 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     return defaultValue;
   }
 
+  private static HlsMediaPlaylist.ClientDefinedAttribute parseClientDefinedAttribute(
+      String attributes, String clientAttribute, Map<String, String> variableDefinitions)
+      throws ParserException {
+    String prefix = clientAttribute + "=";
+    int index = attributes.indexOf(prefix);
+    int valueBeginIndex = index + prefix.length();
+    int valueBeginMaxLength = attributes.length() == valueBeginIndex + 1 ? 1 : 2;
+    String valueBegin =
+        attributes.substring(valueBeginIndex, valueBeginIndex + valueBeginMaxLength);
+    if (valueBegin.startsWith("\"")) {
+      // a quoted string value
+      Pattern pattern = Pattern.compile(clientAttribute + "=\"(.+?)\"");
+      String value = parseStringAttr(attributes, pattern, variableDefinitions);
+      return new HlsMediaPlaylist.ClientDefinedAttribute(
+          clientAttribute, value, HlsMediaPlaylist.ClientDefinedAttribute.TYPE_TEXT);
+    } else if (valueBegin.equals("0x") || valueBegin.equals("0X")) {
+      // a hexadecimal sequence value
+      Pattern pattern = Pattern.compile(clientAttribute + "=(0[xX][A-F0-9]+)");
+      String value = parseStringAttr(attributes, pattern, variableDefinitions);
+      return new HlsMediaPlaylist.ClientDefinedAttribute(
+          clientAttribute, value, HlsMediaPlaylist.ClientDefinedAttribute.TYPE_HEX_TEXT);
+    } else {
+      // a decimal-floating-point value
+      Pattern pattern = Pattern.compile(clientAttribute + "=([\\d\\.]+)\\b");
+      return new HlsMediaPlaylist.ClientDefinedAttribute(
+          clientAttribute, parseDoubleAttr(attributes, pattern));
+    }
+  }
+
   private static String replaceVariableReferences(
       String string, Map<String, String> variableDefinitions) {
     Matcher matcher = REGEX_VARIABLE_REFERENCE.matcher(string);
@@ -1359,16 +1555,6 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
 
   private static Pattern compileBooleanAttrPattern(String attribute) {
     return Pattern.compile(attribute + "=(" + BOOLEAN_FALSE + "|" + BOOLEAN_TRUE + ")");
-  }
-
-  private static class DateRange { // ad segments
-    private final long startDateUs;
-    private final long endDateUs;
-
-    public DateRange(long startDateUs, long endDateUs) {
-      this.startDateUs = startDateUs;
-      this.endDateUs = endDateUs;
-    }
   }
 
   private static class LineIterator {

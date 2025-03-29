@@ -1,21 +1,16 @@
 package com.github.andreyasadchy.xtra.util.chat
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 class EventSubWebSocket(
     private val client: OkHttpClient,
-    private val coroutineScope: CoroutineScope,
     private val onConnect: () -> Unit,
     private val onWelcomeMessage: (String) -> Unit,
     private val onChatMessage: (JSONObject, String?) -> Unit,
@@ -24,9 +19,9 @@ class EventSubWebSocket(
     private val onRoomState: (JSONObject, String?) -> Unit,
 ) {
     private var socket: WebSocket? = null
-    var isActive = false
-    private var pongReceived = false
-    private var timeout = 10
+    private var pongTimer: Timer? = null
+    var isActive = true
+    private var timeout = 10000L
     private var usingReconnectUrl = false
     private val handledMessageIds = mutableListOf<String>()
 
@@ -38,47 +33,26 @@ class EventSubWebSocket(
     }
 
     fun disconnect() {
-        isActive = false
+        pongTimer?.cancel()
         socket?.close(1000, null)
+        isActive = false
     }
 
     private fun reconnect(reconnectUrl: String? = null) {
-        if (isActive) {
-            coroutineScope.launch {
-                disconnect()
-                delay(1000)
-                connect(reconnectUrl)
-            }
-        }
+        socket?.close(1000, null)
+        connect(reconnectUrl)
     }
 
-    private fun checkPong() {
-        tickerFlowPong().onCompletion {
-            if (isActive) {
-                if (pongReceived) {
-                    pongReceived = false
-                    checkPong()
-                } else {
-                    reconnect()
-                }
-            }
-        }.launchIn(coroutineScope)
-    }
-
-    private fun tickerFlowPong() = flow {
-        for (i in timeout downTo 0) {
-            if (pongReceived || !isActive) {
-                emit(i downTo 0)
-            } else {
-                emit(i)
-                delay(1000)
+    private fun startPongTimer() {
+        pongTimer = Timer().apply {
+            schedule(timeout) {
+                reconnect()
             }
         }
     }
 
     private inner class EventSubWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            isActive = true
             onConnect()
         }
 
@@ -101,7 +75,8 @@ class EventSubWebSocket(
                     }
                     when (metadata?.optString("message_type")) {
                         "notification" -> {
-                            pongReceived = true
+                            pongTimer?.cancel()
+                            startPongTimer()
                             val payload = json.optJSONObject("payload")
                             val event = payload?.optJSONObject("event")
                             if (event != null) {
@@ -113,21 +88,26 @@ class EventSubWebSocket(
                                 }
                             }
                         }
-                        "session_keepalive" -> pongReceived = true
+                        "session_keepalive" -> {
+                            pongTimer?.cancel()
+                            startPongTimer()
+                        }
                         "session_reconnect" -> {
                             val payload = json.optJSONObject("payload")
                             val session = payload?.optJSONObject("session")
                             val reconnectUrl = if (session?.isNull("reconnect_url") == false) session.optString("reconnect_url").takeIf { it.isNotBlank() } else null
                             usingReconnectUrl = reconnectUrl != null
+                            pongTimer?.cancel()
                             reconnect(reconnectUrl)
                         }
                         "session_welcome" -> {
                             val payload = json.optJSONObject("payload")
                             val session = payload?.optJSONObject("session")
                             if (session?.isNull("keepalive_timeout_seconds") == false) {
-                                session.optInt("keepalive_timeout_seconds").takeIf { it > 0 }?.let { timeout = it }
+                                session.optInt("keepalive_timeout_seconds").takeIf { it > 0 }?.let { timeout = it * 1000L }
                             }
-                            checkPong()
+                            pongTimer?.cancel()
+                            startPongTimer()
                             if (!usingReconnectUrl) {
                                 val sessionId = session?.optString("id")
                                 if (!sessionId.isNullOrBlank()) {

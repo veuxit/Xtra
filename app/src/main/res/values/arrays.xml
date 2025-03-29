@@ -32,28 +32,6 @@
         <item>@string/hide</item>
     </string-array>
 
-    <string-array name="backgroundPlaybackEntries">
-        <item>@string/picture_in_picture</item>
-        <item>@string/audio_only</item>
-        <item>@string/disabled</item>
-    </string-array>
-
-    <string-array name="backgroundPlaybackValues">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-
-    <string-array name="backgroundPlaybackNoPipEntries">
-        <item>@string/audio_only</item>
-        <item>@string/disabled</item>
-    </string-array>
-
-    <string-array name="backgroundPlaybackNoPipValues">
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-
     <string-array name="imageQualityEntries">
         <item>1x</item>
         <item>2x</item>
@@ -208,6 +186,8 @@
         <item>480p</item>
         <item>360p</item>
         <item>160p</item>
+        <item>@string/audio_only</item>
+        <item>@string/chat_only</item>
     </string-array>
 
     <string-array name="playerQualityValues">
@@ -221,6 +201,8 @@
         <item>480</item>
         <item>360</item>
         <item>160</item>
+        <item>audio_only</item>
+        <item>chat_only</item>
     </string-array>
 
     <string-array name="languageEntries">

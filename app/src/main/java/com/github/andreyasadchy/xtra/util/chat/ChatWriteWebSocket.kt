@@ -1,30 +1,25 @@
 package com.github.andreyasadchy.xtra.util.chat
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 class ChatWriteWebSocket(
     private val userLogin: String?,
     private val userToken: String?,
     channelName: String,
     private val client: OkHttpClient,
-    private val coroutineScope: CoroutineScope,
     private val onNotice: (String) -> Unit,
     private val onUserState: (String) -> Unit,
 ) {
     private val hashChannelName: String = "#$channelName"
     private var socket: WebSocket? = null
-    private var isActive = false
-    private var pongReceived = false
+    private var pingTimer: Timer? = null
+    private var pongTimer: Timer? = null
 
     fun connect() {
         socket = client.newWebSocket(
@@ -34,66 +29,29 @@ class ChatWriteWebSocket(
     }
 
     fun disconnect() {
-        isActive = false
+        pingTimer?.cancel()
+        pongTimer?.cancel()
         socket?.close(1000, null)
     }
 
     private fun reconnect() {
-        if (isActive) {
-            coroutineScope.launch {
-                disconnect()
-                delay(1000)
-                connect()
+        socket?.close(1000, null)
+        connect()
+    }
+
+    private fun startPingTimer() {
+        pingTimer = Timer().apply {
+            schedule(270000) {
+                write("PING")
+                startPongTimer()
             }
         }
     }
 
-    private fun ping() {
-        if (isActive) {
-            write("PING")
-            checkPong()
-        }
-    }
-
-    private fun checkPong() {
-        tickerFlowPong().onCompletion {
-            if (isActive) {
-                if (pongReceived) {
-                    pongReceived = false
-                    checkPongWait()
-                } else {
-                    reconnect()
-                }
-            }
-        }.launchIn(coroutineScope)
-    }
-
-    private fun tickerFlowPong() = flow {
-        for (i in 10 downTo 0) {
-            if (pongReceived || !isActive) {
-                emit(i downTo 0)
-            } else {
-                emit(i)
-                delay(1000)
-            }
-        }
-    }
-
-    private fun checkPongWait() {
-        tickerFlowActive(270).onCompletion {
-            if (isActive) {
-                ping()
-            }
-        }.launchIn(coroutineScope)
-    }
-
-    private fun tickerFlowActive(seconds: Int) = flow {
-        for (i in seconds downTo 0) {
-            if (!isActive) {
-                emit(i downTo 0)
-            } else {
-                emit(i)
-                delay(1000)
+    private fun startPongTimer() {
+        pongTimer = Timer().apply {
+            schedule(10000) {
+                reconnect()
             }
         }
     }
@@ -109,12 +67,13 @@ class ChatWriteWebSocket(
 
     private inner class ChatWriteWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            isActive = true
             write("CAP REQ :twitch.tv/tags twitch.tv/commands")
             write("PASS oauth:$userToken")
             write("NICK $userLogin")
             write("JOIN $hashChannelName")
-            ping()
+            pingTimer?.cancel()
+            pongTimer?.cancel()
+            startPingTimer()
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -129,8 +88,16 @@ class ChatWriteWebSocket(
                         contains("ROOMSTATE") -> {}
                         contains("USERSTATE") -> onUserState(this)
                         startsWith("PING") -> write("PONG")
-                        startsWith("PONG") -> pongReceived = true
-                        startsWith("RECONNECT") -> reconnect()
+                        startsWith("PONG") -> {
+                            pingTimer?.cancel()
+                            pongTimer?.cancel()
+                            startPingTimer()
+                        }
+                        startsWith("RECONNECT") -> {
+                            pingTimer?.cancel()
+                            pongTimer?.cancel()
+                            reconnect()
+                        }
                     }
                 }
             }

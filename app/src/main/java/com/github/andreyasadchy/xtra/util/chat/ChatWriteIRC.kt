@@ -1,7 +1,13 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.util.Log
-import java.io.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.IOException
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.net.Socket
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
@@ -80,15 +86,9 @@ class ChatWriteIRC(
         }
     }
 
-    fun disconnect() {
-        if (isActive) {
-            val thread = Thread {
-                isActive = false
-                close()
-            }
-            thread.start()
-            thread.join()
-        }
+    suspend fun disconnect() = withContext(Dispatchers.IO) {
+        close()
+        isActive = false
     }
 
     private fun close() {

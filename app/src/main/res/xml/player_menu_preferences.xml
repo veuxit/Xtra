@@ -65,7 +65,7 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="player_menu_subtitles"
         android:title="@string/toggle_subtitles"
         app:iconSpaceReserved="false"

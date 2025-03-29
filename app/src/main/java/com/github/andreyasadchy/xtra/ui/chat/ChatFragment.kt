@@ -50,7 +50,6 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.PlayerFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
 import com.github.andreyasadchy.xtra.util.gone
@@ -71,7 +70,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
-class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
+class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickListener, ReplyClickedDialog.OnButtonClickListener {
 
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
@@ -1055,6 +1054,26 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        val args = requireArguments()
+        val channelId = args.getString(KEY_CHANNEL_ID)
+        val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
+        if (args.getBoolean(KEY_IS_LIVE)) {
+            viewModel.resumeLive(channelId, channelLogin)
+        } else {
+            viewModel.resumeReplay(
+                channelId = channelId,
+                channelLogin = channelLogin,
+                chatUrl = args.getString(KEY_CHAT_URL),
+                videoId = args.getString(KEY_VIDEO_ID),
+                startTime = args.getInt(KEY_START_TIME),
+                getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
+                getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
+            )
+        }
+    }
+
     fun isActive(): Boolean? {
         return viewModel.isActive()
     }
@@ -1071,6 +1090,7 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
                 viewModel.loadRecentMessages(channelLogin)
             }
         }
+        viewModel.autoReconnect = true
     }
 
     fun reloadEmotes() {
@@ -1267,32 +1287,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         }
     }
 
-    override fun onMovedToBackground() {
+    override fun onStop() {
+        super.onStop()
         if (!requireArguments().getBoolean(KEY_IS_LIVE) || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false)) {
             viewModel.stopLiveChat()
             viewModel.stopReplayChat()
-        }
-    }
-
-    override fun onMovedToForeground() {
-        val args = requireArguments()
-        val isLive = args.getBoolean(KEY_IS_LIVE)
-        if (!isLive || !requireContext().prefs().getBoolean(C.PLAYER_KEEP_CHAT_OPEN, false)) {
-            val channelId = args.getString(KEY_CHANNEL_ID)
-            val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
-            if (isLive) {
-                viewModel.resumeLive(channelId, channelLogin)
-            } else {
-                viewModel.resumeReplay(
-                    channelId = channelId,
-                    channelLogin = channelLogin,
-                    chatUrl = args.getString(KEY_CHAT_URL),
-                    videoId = args.getString(KEY_VIDEO_ID),
-                    startTime = args.getInt(KEY_START_TIME),
-                    getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
-                    getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
-                )
-            }
         }
     }
 

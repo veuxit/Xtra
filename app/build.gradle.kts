@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 35
-        versionCode = 277
-        versionName = "2.42.1"
+        versionCode = 278
+        versionName = "2.43.0"
     }
 
     buildTypes {
@@ -71,7 +71,6 @@ dependencies {
     implementation(libs.documentfile)
     implementation(libs.fragment.ktx)
     implementation(libs.lifecycle.viewmodel)
-    implementation(libs.lifecycle.process)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
     implementation(libs.paging.runtime)
