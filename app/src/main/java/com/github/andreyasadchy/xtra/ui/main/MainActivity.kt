@@ -547,6 +547,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
 //Player methods
 
     private fun startPlayer(fragment: PlayerFragment) {
+        playerFragment?.onClose()
         playerFragment = fragment
         supportFragmentManager.beginTransaction()
             .replace(R.id.playerContainer, fragment).commit()
