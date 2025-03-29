@@ -1547,9 +1547,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         controllerFuture?.addListener({
             val controller = controllerFuture?.get()
             binding.playerView.player = controller
-            if (!viewModel.started && offlineVideo == null) {
-                player?.removeMediaItem(0)
-            }
             controller?.addListener(object : Player.Listener {
 
                 override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
@@ -2349,9 +2346,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         savePosition()
         player?.pause()
         player?.stop()
-        if (offlineVideo == null) {
-            player?.removeMediaItem(0)
-        }
+        player?.removeMediaItem(0)
         releaseController()
     }
 
