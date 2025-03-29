@@ -88,6 +88,7 @@ class ChatViewModel @Inject constructor(
     private var pollTimeoutJob: Job? = null
     private var usedPredictionId: String? = null
     private var predictionTimeoutJob: Job? = null
+    var autoReconnect = true
 
     private var chatReplayManager: ChatReplayManager? = null
     private var chatReplayManagerLocal: ChatReplayManagerLocal? = null
@@ -195,13 +196,13 @@ class ChatViewModel @Inject constructor(
     }
 
     fun resumeLive(channelId: String?, channelLogin: String?) {
-        if ((chatReadIRC != null || chatReadWebSocket != null || eventSub != null) && channelLogin != null) {
+        if ((chatReadIRC?.isActive == false || chatReadWebSocket?.isActive == false || eventSub?.isActive == false) && channelLogin != null && autoReconnect) {
             startLiveChat(channelId, channelLogin)
         }
     }
 
     fun resumeReplay(channelId: String?, channelLogin: String?, chatUrl: String?, videoId: String?, startTime: Int, getCurrentPosition: () -> Long?, getCurrentSpeed: () -> Float?) {
-        if (chatReplayManager != null || chatReplayManagerLocal != null) {
+        if (chatReplayManager?.isActive == false || chatReplayManagerLocal?.isActive == false) {
             startReplayChat(videoId, startTime, chatUrl, getCurrentPosition, getCurrentSpeed, channelId, channelLogin)
         }
     }
@@ -625,7 +626,6 @@ class ChatViewModel @Inject constructor(
         if (applicationContext.prefs().getBoolean(C.DEBUG_EVENTSUB_CHAT, false) && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             eventSub = EventSubWebSocket(
                 client = okHttpClient,
-                coroutineScope = viewModelScope,
                 onConnect = { onConnect(channelLogin) },
                 onWelcomeMessage = { sessionId ->
                     listOf(
@@ -671,7 +671,6 @@ class ChatViewModel @Inject constructor(
                     loggedIn = isLoggedIn,
                     channelName = channelLogin,
                     client = okHttpClient,
-                    coroutineScope = viewModelScope,
                     onConnect = { onConnect(channelLogin) },
                     onDisconnect = { message, fullMsg -> onDisconnect(channelLogin, message, fullMsg) },
                     onChatMessage = { message, fullMsg -> onChatMessage(message, fullMsg, showUserNotice, usePubSub, isLoggedIn, accountId, channelId) },
@@ -686,7 +685,6 @@ class ChatViewModel @Inject constructor(
                         userToken = gqlToken?.takeIf { it.isNotBlank() } ?: helixToken,
                         channelName = channelLogin,
                         client = okHttpClient,
-                        coroutineScope = viewModelScope,
                         onNotice = { onNotice(it) },
                         onUserState = { onUserState(it, channelId) }
                     ).apply { connect() }
@@ -730,7 +728,6 @@ class ChatViewModel @Inject constructor(
                 showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
                 showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
                 client = okHttpClient,
-                coroutineScope = viewModelScope,
                 onPlaybackMessage = { message ->
                     val playbackMessage = PubSubUtils.parsePlaybackMessage(message)
                     if (playbackMessage != null) {
@@ -882,7 +879,6 @@ class ChatViewModel @Inject constructor(
                 channelId = channelId,
                 useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true),
                 client = okHttpClient,
-                coroutineScope = viewModelScope,
                 onPaint = { paint ->
                     if (showNamePaints) {
                         namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
@@ -974,8 +970,16 @@ class ChatViewModel @Inject constructor(
     }
 
     fun stopLiveChat() {
-        chatReadIRC?.disconnect() ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
-        chatWriteIRC?.disconnect() ?: chatWriteWebSocket?.disconnect()
+        chatReadIRC?.let {
+            viewModelScope.launch {
+                it.disconnect()
+            }
+        } ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
+        chatWriteIRC?.let {
+            viewModelScope.launch {
+                it.disconnect()
+            }
+        } ?: chatWriteWebSocket?.disconnect()
         pubSub?.disconnect()
         stvEventApi?.disconnect()
     }
@@ -985,32 +989,31 @@ class ChatViewModel @Inject constructor(
     }
 
     fun disconnect() {
-        if (isActive() == true) {
-            stopLiveChat()
-            usedRaidId = null
-            raidClosed = true
-            usedPollId = null
-            pollClosed = true
-            pollSecondsLeft.value = null
-            pollTimer?.cancel()
-            usedPredictionId = null
-            predictionClosed = true
-            predictionSecondsLeft.value = null
-            predictionTimer?.cancel()
-            _chatMessages.value = arrayListOf(
-                ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.disconnected))
-            )
-            if (!hideRaid.value) {
-                hideRaid.value = true
-            }
-            if (!hidePoll.value) {
-                hidePoll.value = true
-            }
-            if (!hidePrediction.value) {
-                hidePrediction.value = true
-            }
-            roomState.value = RoomState("0", "-1", "0", "0", "0")
+        stopLiveChat()
+        usedRaidId = null
+        raidClosed = true
+        usedPollId = null
+        pollClosed = true
+        pollSecondsLeft.value = null
+        pollTimer?.cancel()
+        usedPredictionId = null
+        predictionClosed = true
+        predictionSecondsLeft.value = null
+        predictionTimer?.cancel()
+        _chatMessages.value = arrayListOf(
+            ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.disconnected))
+        )
+        if (!hideRaid.value) {
+            hideRaid.value = true
         }
+        if (!hidePoll.value) {
+            hidePoll.value = true
+        }
+        if (!hidePrediction.value) {
+            hidePrediction.value = true
+        }
+        roomState.value = RoomState("0", "-1", "0", "0", "0")
+        autoReconnect = false
     }
 
     private fun onConnect(channelLogin: String?) {
@@ -1227,9 +1230,7 @@ class ChatViewModel @Inject constructor(
                 }
             } else {
                 if (message.toString() == "/dc" || message.toString() == "/disconnect") {
-                    if ((chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive) == true) {
-                        disconnect()
-                    }
+                    disconnect()
                 } else {
                     sendMessage(message, helixHeaders, accountId, channelId, useApiChatMessages)
                 }

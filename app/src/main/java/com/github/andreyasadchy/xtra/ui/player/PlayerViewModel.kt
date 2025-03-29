@@ -53,8 +53,10 @@ class PlayerViewModel @Inject constructor(
 
     val streamResult = MutableStateFlow<String?>(null)
     val stream = MutableStateFlow<Stream?>(null)
-    var useProxy = false
+    var useCustomProxy = false
     var playingAds = false
+    var usingProxy = false
+    var stopProxy = false
 
     val videoResult = MutableStateFlow<Uri?>(null)
     var playbackPosition: Long? = null
@@ -67,10 +69,15 @@ class PlayerViewModel @Inject constructor(
 
     val offlineVideo = MutableSharedFlow<OfflineVideo?>()
 
+    var qualities: Map<String, Pair<String, String?>> = emptyMap()
+    var qualityIndex: Int = 0
+    var previousIndex: Int = 0
+    var playlistUrl: Uri? = null
     var started = false
+    var restoreQuality = false
     var background = false
-    var pipMode = false
-    var playerMode = PlaybackService.PLAYER_MODE_NORMAL
+    var resume = false
+    var hidden = false
     val loaded = MutableStateFlow(false)
     private val _isFollowing = MutableStateFlow<Boolean?>(null)
     val isFollowing: StateFlow<Boolean?> = _isFollowing

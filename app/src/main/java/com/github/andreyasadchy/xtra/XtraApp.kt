@@ -2,7 +2,6 @@ package com.github.andreyasadchy.xtra
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -10,9 +9,6 @@ import coil3.SingletonImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.util.DebugLogger
-import com.github.andreyasadchy.xtra.di.AppInjector
-import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
-import com.github.andreyasadchy.xtra.util.LifecycleListener
 import com.github.andreyasadchy.xtra.util.coil.CacheControlCacheStrategy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.Dispatchers
@@ -27,22 +23,9 @@ class XtraApp : Application(), Configuration.Provider, SingletonImageLoader.Fact
         lateinit var INSTANCE: Application
     }
 
-    private val appLifecycleObserver = AppLifecycleObserver()
-
     override fun onCreate() {
         super.onCreate()
         INSTANCE = this
-        AppInjector.init(this)
-
-        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
-    }
-
-    fun addLifecycleListener(listener: LifecycleListener) {
-        appLifecycleObserver.addListener(listener)
-    }
-
-    fun removeLifecycleListener(listener: LifecycleListener) {
-        appLifecycleObserver.removeListener(listener)
     }
 
     @Inject

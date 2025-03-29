@@ -3,7 +3,10 @@ package com.github.andreyasadchy.xtra.ui.main
 import android.app.ActivityOptions
 import android.app.PictureInPictureParams
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
@@ -92,6 +95,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         const val INTENT_OPEN_DOWNLOADS_TAB = "com.github.andreyasadchy.xtra.OPEN_DOWNLOADS_TAB"
         const val INTENT_OPEN_DOWNLOADED_VIDEO = "com.github.andreyasadchy.xtra.OPEN_DOWNLOADED_VIDEO"
         const val INTENT_OPEN_PLAYER = "com.github.andreyasadchy.xtra.OPEN_PLAYER"
+        const val INTENT_START_AUDIO_ONLY = "com.github.andreyasadchy.xtra.START_AUDIO_ONLY"
+        const val INTENT_PLAY_PAUSE_PLAYER = "com.github.andreyasadchy.xtra.PLAY_PAUSE_PLAYER"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -109,6 +114,19 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         override fun onLost(network: Network) {
             lifecycleScope.launch {
                 viewModel.checkNetworkStatus.value = true
+            }
+        }
+    }
+    private val pipActionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                INTENT_START_AUDIO_ONLY -> {
+                    playerFragment?.startAudioOnly()
+                    moveTaskToBack(false)
+                }
+                INTENT_PLAY_PAUSE_PLAYER -> {
+                    playerFragment?.handlePlayPauseAction()
+                }
             }
         }
     }
@@ -263,6 +281,15 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
             }.build(), networkCallback
         )
+        ContextCompat.registerReceiver(
+            this,
+            pipActionReceiver,
+            IntentFilter().apply {
+                addAction(INTENT_START_AUDIO_ONLY)
+                addAction(INTENT_PLAY_PAUSE_PLAYER)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         restorePlayerFragment()
         handleIntent(intent)
         if (prefs.getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)) {
@@ -325,6 +352,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     override fun onDestroy() {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         connectivityManager.unregisterNetworkCallback(networkCallback)
+        unregisterReceiver(pipActionReceiver)
         if (isFinishing) {
             playerFragment?.onClose()
         }
@@ -351,7 +379,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
             Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0" &&
+            prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true) &&
             playerFragment?.enterPictureInPicture() == true
         ) {
             try {
@@ -592,7 +620,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         viewModel.onPlayerStarted()
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0"
+            prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)
         ) {
             setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(true).build())
         }
@@ -617,7 +645,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             if (playerFragment == null) {
                 playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as PlayerFragment?
             } else {
-                if (playerFragment?.secondViewIsHidden() == true && prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0") == "0") {
+                if (playerFragment?.secondViewIsHidden() == true && prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)) {
                     playerFragment?.maximize()
                 }
             }
@@ -750,15 +778,6 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 }
             }
         }
-        if (version < 2) {
-            prefs.edit {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "1")
-                } else {
-                    putString(C.PLAYER_BACKGROUND_PLAYBACK, "0")
-                }
-            }
-        }
         if (version < 3) {
             val langPref = prefs.getString(C.UI_LANGUAGE, "")
             if (!langPref.isNullOrBlank() && langPref != "auto") {
@@ -829,6 +848,14 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         if (version < 10) {
             viewModel.deleteOldImages()
             prefs.edit {
+                prefs.getString(C.PLAYER_BACKGROUND_PLAYBACK, "0")?.let {
+                    if (it == "1") {
+                        putBoolean(C.PLAYER_PICTURE_IN_PICTURE, false)
+                    } else if (it == "2") {
+                        putBoolean(C.PLAYER_PICTURE_IN_PICTURE, false)
+                        putBoolean(C.PLAYER_BACKGROUND_AUDIO, false)
+                    }
+                }
                 putInt(C.SETTINGS_VERSION, 10)
             }
         }
