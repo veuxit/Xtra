@@ -424,4 +424,10 @@ class MainViewModel @Inject constructor(
         }
         TwitchApiHelper.checkedValidation = true
     }
+
+    fun deleteOldImages() {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineRepository.deleteOldImages()
+        }
+    }
 }

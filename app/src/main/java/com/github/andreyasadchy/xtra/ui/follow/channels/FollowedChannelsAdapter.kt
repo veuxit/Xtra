@@ -8,7 +8,6 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import coil3.imageLoader
-import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.target
@@ -58,7 +57,6 @@ class FollowedChannelsAdapter(
                                 channelLogin = item.channelLogin,
                                 channelName = item.channelName,
                                 channelLogo = item.channelLogo,
-                                updateLocal = item.followLocal
                             )
                         )
                     }
@@ -67,7 +65,6 @@ class FollowedChannelsAdapter(
                         fragment.requireContext().imageLoader.enqueue(
                             ImageRequest.Builder(fragment.requireContext()).apply {
                                 data(item.channelLogo)
-                                diskCachePolicy(CachePolicy.DISABLED)
                                 if (context.prefs().getBoolean(C.UI_ROUNDUSERIMAGE, true)) {
                                     transformations(CircleCropTransformation())
                                 }

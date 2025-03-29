@@ -50,7 +50,7 @@ class OfflineRepository @Inject constructor(
             }
         }
         video.channelId?.let { id ->
-            if (id.isNotBlank() && getVideosByUserId(id).none { it.id != video.id } && bookmarksDao.getByUserId(id).isEmpty() && localFollowsChannelDao.getByUserId(id) == null) {
+            if (id.isNotBlank() && getVideosByUserId(id).none { it.id != video.id } && bookmarksDao.getByUserId(id).isEmpty()) {
                 video.channelLogo?.let {
                     if (it.isNotBlank()) {
                         File(it).delete()
@@ -71,5 +71,15 @@ class OfflineRepository @Inject constructor(
 
     suspend fun deletePositions() = withContext(Dispatchers.IO) {
         videosDao.deletePositions()
+    }
+
+    suspend fun deleteOldImages() = withContext(Dispatchers.IO) {
+        localFollowsChannelDao.getAll().forEach { item ->
+            item.channelLogo?.let {
+                if (it.isNotBlank() && !item.userId.isNullOrBlank() && bookmarksDao.getByUserId(item.userId).isEmpty() && videosDao.getByUserId(item.userId).isEmpty()) {
+                    File(it).delete()
+                }
+            }
+        }
     }
 }

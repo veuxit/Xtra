@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.repository
 
 import com.github.andreyasadchy.xtra.db.BookmarksDao
-import com.github.andreyasadchy.xtra.db.LocalFollowsChannelDao
 import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +12,6 @@ import javax.inject.Singleton
 @Singleton
 class BookmarksRepository @Inject constructor(
     private val bookmarksDao: BookmarksDao,
-    private val localFollowsChannelDao: LocalFollowsChannelDao,
     private val videosDao: VideosDao,
 ) {
 
@@ -45,7 +43,7 @@ class BookmarksRepository @Inject constructor(
                 }
             }
         }
-        if (!item.userId.isNullOrBlank() && getBookmarksByUserId(item.userId).none { it.id != item.id } && videosDao.getByUserId(item.userId).isEmpty() && localFollowsChannelDao.getByUserId(item.userId) == null) {
+        if (!item.userId.isNullOrBlank() && getBookmarksByUserId(item.userId).none { it.id != item.id } && videosDao.getByUserId(item.userId).isEmpty()) {
             item.userLogo?.let {
                 if (it.isNotBlank()) {
                     File(it).delete()

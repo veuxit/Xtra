@@ -344,7 +344,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowChannel(filesDir: String, gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, notificationsEnabled: Boolean, startedAt: String?) {
+    fun saveFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?, channelName: String?, notificationsEnabled: Boolean, startedAt: String?) {
         viewModelScope.launch {
             try {
                 if (!channelId.isNullOrBlank()) {
@@ -366,21 +366,7 @@ class PlayerViewModel @Inject constructor(
                             }
                         }
                     } else {
-                        val downloadedLogo = channelLogo.takeIf { !it.isNullOrBlank() }?.let {
-                            File(filesDir, "profile_pics").mkdir()
-                            val path = filesDir + File.separator + "profile_pics" + File.separator + channelId
-                            viewModelScope.launch(Dispatchers.IO) {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(path).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body.source())
-                                        }
-                                    }
-                                }
-                            }
-                            path
-                        }
-                        localFollowsChannel.saveFollow(LocalFollowChannel(channelId, channelLogin, channelName, downloadedLogo))
+                        localFollowsChannel.saveFollow(LocalFollowChannel(channelId, channelLogin, channelName))
                         _isFollowing.value = true
                         follow.value = Pair(true, null)
                         notificationUsersRepository.saveUser(NotificationUser(channelId))

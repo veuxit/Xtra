@@ -41,7 +41,7 @@ class DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesLocalFollowsChannelRepository(localFollowsChannelDao: LocalFollowsChannelDao, videosDao: VideosDao, bookmarksDao: BookmarksDao): LocalFollowChannelRepository = LocalFollowChannelRepository(localFollowsChannelDao, videosDao, bookmarksDao)
+    fun providesLocalFollowsChannelRepository(localFollowsChannelDao: LocalFollowsChannelDao): LocalFollowChannelRepository = LocalFollowChannelRepository(localFollowsChannelDao)
 
     @Singleton
     @Provides
@@ -49,7 +49,7 @@ class DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesBookmarksRepository(bookmarksDao: BookmarksDao, localFollowsChannelDao: LocalFollowsChannelDao, videosDao: VideosDao): BookmarksRepository = BookmarksRepository(bookmarksDao, localFollowsChannelDao, videosDao)
+    fun providesBookmarksRepository(bookmarksDao: BookmarksDao, videosDao: VideosDao): BookmarksRepository = BookmarksRepository(bookmarksDao, videosDao)
 
     @Singleton
     @Provides

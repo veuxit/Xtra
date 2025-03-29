@@ -99,7 +99,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import kotlin.getValue
 
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
@@ -277,7 +276,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
             var channelId: String? = null
             var channelLogin: String? = null
             var channelName: String? = null
-            var channelLogo: String? = null
             var title: String? = null
             var gameId: String? = null
             var gameSlug: String? = null
@@ -286,7 +284,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 channelId = it.channelId
                 channelLogin = it.channelLogin
                 channelName = it.channelName
-                channelLogo = it.channelLogo
                 title = it.title
                 gameId = it.gameId
                 gameSlug = it.gameSlug
@@ -296,7 +293,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 channelId = it.channelId
                 channelLogin = it.channelLogin
                 channelName = it.channelName
-                channelLogo = it.channelLogo
                 title = it.title
                 gameId = it.gameId
                 gameSlug = it.gameSlug
@@ -306,7 +302,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 channelId = it.channelId
                 channelLogin = it.channelLogin
                 channelName = it.channelName
-                channelLogo = it.channelLogo
                 title = it.title
                 gameId = it.gameId
                 gameSlug = it.gameSlug
@@ -316,7 +311,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                 channelId = it.channelId
                 channelLogin = it.channelLogin
                 channelName = it.channelName
-                channelLogo = it.channelLogo
                 title = it.name
                 gameId = it.gameId
                 gameSlug = it.gameSlug
@@ -340,7 +334,6 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                 channelId = channelId,
                                 channelLogin = channelLogin,
                                 channelName = channelName,
-                                channelLogo = channelLogo
                             )
                         )
                         slidingLayout.minimize()
@@ -776,14 +769,12 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                                         .show()
                                 } else {
                                     viewModel.saveFollowChannel(
-                                        requireContext().filesDir.path,
                                         TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                         setting,
                                         requireContext().tokenPrefs().getString(C.USER_ID, null),
                                         channelId,
                                         channelLogin,
                                         channelName,
-                                        channelLogo,
                                         requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
                                         stream?.startedAt
                                     )
@@ -2093,14 +2084,12 @@ class PlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.L
                             }
                         }
                         "follow" -> viewModel.saveFollowChannel(
-                            requireContext().filesDir.path,
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             stream?.channelId ?: video?.channelId ?: clip?.channelId,
                             stream?.channelLogin ?: video?.channelLogin ?: clip?.channelLogin,
                             stream?.channelName ?: video?.channelName ?: clip?.channelName,
-                            stream?.channelLogo ?: video?.channelLogo ?: clip?.channelLogo,
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
                             stream?.startedAt
                         )
