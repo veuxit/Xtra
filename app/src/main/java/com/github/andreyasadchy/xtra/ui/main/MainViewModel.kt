@@ -489,4 +489,10 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteOldImages() {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineRepository.deleteOldImages()
+        }
+    }
 }
