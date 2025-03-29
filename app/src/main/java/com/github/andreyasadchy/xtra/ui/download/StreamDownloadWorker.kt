@@ -686,15 +686,16 @@ class StreamDownloadWorker @AssistedInject constructor(
                     writer.name("liveStartTime".also { position += it.length + 4 }).value(streamStartTime.also { position += it.length + 2 })
                 }
                 chatPosition = position
-                chatReadWebSocket = ChatReadWebSocket(false, channelLogin, okHttpClient, coroutineScope,
+                chatReadWebSocket = ChatReadWebSocket(false, channelLogin, okHttpClient,
                     webSocketListener = object : WebSocketListener() {
                         override fun onOpen(webSocket: WebSocket, response: Response) {
                             chatReadWebSocket?.apply {
-                                isActive = true
                                 write("CAP REQ :twitch.tv/tags twitch.tv/commands")
                                 write("NICK justinfan${Random().nextInt(((9999 - 1000) + 1)) + 1000}") //random number between 1000 and 9999
                                 write("JOIN $hashChannelName")
-                                ping()
+                                pingTimer?.cancel()
+                                pongTimer?.cancel()
+                                startPingTimer()
                             }
                         }
 
@@ -710,8 +711,20 @@ class StreamDownloadWorker @AssistedInject constructor(
                                         contains("NOTICE") -> {}
                                         contains("ROOMSTATE") -> {}
                                         startsWith("PING") -> chatReadWebSocket?.write("PONG")
-                                        startsWith("PONG") -> chatReadWebSocket?.pongReceived = true
-                                        startsWith("RECONNECT") -> chatReadWebSocket?.reconnect()
+                                        startsWith("PONG") -> {
+                                            chatReadWebSocket?.apply {
+                                                pingTimer?.cancel()
+                                                pongTimer?.cancel()
+                                                startPingTimer()
+                                            }
+                                        }
+                                        startsWith("RECONNECT") -> {
+                                            chatReadWebSocket?.apply {
+                                                pingTimer?.cancel()
+                                                pongTimer?.cancel()
+                                                reconnect()
+                                            }
+                                        }
                                     }
                                 }
                             }

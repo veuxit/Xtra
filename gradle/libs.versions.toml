@@ -1,6 +1,6 @@
 [versions]
 activity = "1.10.1"
-android-gradle-plugin = "8.9.0"
+android-gradle-plugin = "8.9.1"
 apollo = "4.1.1"
 appcompat = "1.7.0"
 coil = "3.1.0"
@@ -14,14 +14,14 @@ draglistview = "1.7.3"
 fragment = "1.8.6"
 glide = "4.16.0"
 glide-webpdecoder = "2.6.4.16.0"
-hilt = "2.55"
+hilt = "2.56.1"
 hilt-extension-compiler = "1.2.0"
 hilt-work = "1.2.0"
-kotlin = "2.1.10"
-ksp = "2.1.10-1.0.31"
+kotlin = "2.1.20"
+ksp = "2.1.20-1.0.32"
 lifecycle = "2.8.7"
 material = "1.12.0"
-media3 = "1.5.1"
+media3 = "1.6.0"
 navigation = "2.8.9"
 okhttp = "5.0.0-alpha.14"
 okio = "3.10.2"
@@ -59,7 +59,6 @@ hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-extension-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-extension-compiler" }
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }

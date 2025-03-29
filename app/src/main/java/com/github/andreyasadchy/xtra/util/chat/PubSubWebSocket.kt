@@ -1,11 +1,5 @@
 package com.github.andreyasadchy.xtra.util.chat
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -13,6 +7,9 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Timer
+import kotlin.concurrent.schedule
+import kotlin.concurrent.scheduleAtFixedRate
 
 class PubSubWebSocket(
     private val channelId: String,
@@ -24,7 +21,6 @@ class PubSubWebSocket(
     private val showPolls: Boolean,
     private val showPredictions: Boolean,
     private val client: OkHttpClient,
-    private val coroutineScope: CoroutineScope,
     private val onPlaybackMessage: (JSONObject) -> Unit,
     private val onStreamInfo: (JSONObject) -> Unit,
     private val onRewardMessage: (JSONObject) -> Unit,
@@ -36,8 +32,9 @@ class PubSubWebSocket(
     private val onPredictionUpdate: (JSONObject) -> Unit,
 ) {
     private var socket: WebSocket? = null
-    private var isActive = false
-    private var pongReceived = false
+    private var pingTimer: Timer? = null
+    private var pongTimer: Timer? = null
+    private var minuteWatchedTimer: Timer? = null
 
     fun connect() {
         socket = client.newWebSocket(
@@ -47,18 +44,16 @@ class PubSubWebSocket(
     }
 
     fun disconnect() {
-        isActive = false
+        pingTimer?.cancel()
+        pongTimer?.cancel()
+        minuteWatchedTimer?.cancel()
+        minuteWatchedTimer = null
         socket?.close(1000, null)
     }
 
     private fun reconnect() {
-        if (isActive) {
-            coroutineScope.launch {
-                disconnect()
-                delay(1000)
-                connect()
-            }
-        }
+        socket?.close(1000, null)
+        connect()
     }
 
     private fun listen() {
@@ -92,73 +87,40 @@ class PubSubWebSocket(
         socket?.send(message)
     }
 
-    private fun ping() {
-        if (isActive) {
-            val ping = JSONObject().apply { put("type", "PING") }.toString()
-            socket?.send(ping)
-            checkPong()
-        }
-    }
-
-    private fun checkPong() {
-        tickerFlowPong().onCompletion {
-            if (isActive) {
-                if (pongReceived) {
-                    pongReceived = false
-                    checkPongWait()
-                } else {
-                    reconnect()
-                }
-            }
-        }.launchIn(coroutineScope)
-    }
-
-    private fun tickerFlowPong() = flow {
-        for (i in 10 downTo 0) {
-            if (pongReceived || !isActive) {
-                emit(i downTo 0)
-            } else {
-                emit(i)
-                delay(1000)
+    private fun startPingTimer() {
+        pingTimer = Timer().apply {
+            schedule(270000) {
+                val ping = JSONObject().apply { put("type", "PING") }.toString()
+                socket?.send(ping)
+                startPongTimer()
             }
         }
     }
 
-    private fun checkPongWait() {
-        tickerFlowActive(270).onCompletion {
-            if (isActive) {
-                ping()
+    private fun startPongTimer() {
+        pongTimer = Timer().apply {
+            schedule(10000) {
+                reconnect()
             }
-        }.launchIn(coroutineScope)
+        }
     }
 
-    private fun minuteWatched() {
-        tickerFlowActive(60).onCompletion {
-            if (isActive) {
+    private fun startMinuteWatchedTimer() {
+        minuteWatchedTimer = Timer().apply {
+            scheduleAtFixedRate(60000, 60000) {
                 onMinuteWatched()
-                minuteWatched()
-            }
-        }.launchIn(coroutineScope)
-    }
-
-    private fun tickerFlowActive(seconds: Int) = flow {
-        for (i in seconds downTo 0) {
-            if (!isActive) {
-                emit(i downTo 0)
-            } else {
-                emit(i)
-                delay(1000)
             }
         }
     }
 
     private inner class PubSubWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            isActive = true
             listen()
-            ping()
-            if (collectPoints && !userId.isNullOrBlank() && !gqlToken.isNullOrBlank()) {
-                minuteWatched()
+            pingTimer?.cancel()
+            pongTimer?.cancel()
+            startPingTimer()
+            if (collectPoints && !userId.isNullOrBlank() && !gqlToken.isNullOrBlank() && minuteWatchedTimer == null) {
+                startMinuteWatchedTimer()
             }
         }
 
@@ -199,8 +161,16 @@ class PubSubWebSocket(
                             }
                         }
                     }
-                    "PONG" -> pongReceived = true
-                    "RECONNECT" -> reconnect()
+                    "PONG" -> {
+                        pingTimer?.cancel()
+                        pongTimer?.cancel()
+                        startPingTimer()
+                    }
+                    "RECONNECT" -> {
+                        pingTimer?.cancel()
+                        pongTimer?.cancel()
+                        reconnect()
+                    }
                 }
             } catch (e: Exception) {
 

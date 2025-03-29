@@ -507,6 +507,8 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
           }
           if (uri == null) {
             // TODO: Remove this case and add a Rendition with a null uri to videos.
+            formatBuilder.setMetadata(metadata);
+            videos.add(new Rendition(uri, formatBuilder.build(), groupId, name)); // xtra: quality names
           } else {
             formatBuilder.setMetadata(metadata);
             videos.add(new Rendition(uri, formatBuilder.build(), groupId, name));
@@ -589,6 +591,13 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       muxedCaptionFormats = Collections.emptyList();
     }
 
+    muxedCaptionFormats = new ArrayList<>(); // xtra: closed captions
+    muxedCaptionFormats.add(
+            new Format.Builder()
+                    .setSampleMimeType(MimeTypes.APPLICATION_CEA608)
+                    .build()
+    );
+
     return new HlsMultivariantPlaylist(
         baseUri,
         tags,
@@ -643,12 +652,12 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       LineIterator iterator,
       String baseUri)
       throws IOException {
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(XtraApp.INSTANCE.getApplicationContext()); // settings
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(XtraApp.INSTANCE.getApplicationContext()); // xtra: settings
     boolean hideAds = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PLAYER_HIDE_ADS, false);
     @Nullable String proxyHost = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_HOST, null);
     @Nullable String proxyPort = prefs.getString(com.github.andreyasadchy.xtra.util.C.PROXY_PORT, null);
     boolean usingProxy = prefs.getBoolean(com.github.andreyasadchy.xtra.util.C.PROXY_MEDIA_PLAYLIST, true) && proxyHost != null && !proxyHost.isBlank() && proxyPort != null && !proxyPort.isBlank();
-    List<DateRange> adRanges = new ArrayList<>(); // ad segments
+    List<DateRange> adRanges = new ArrayList<>(); // xtra: ad segments
     @HlsMediaPlaylist.PlaylistType int playlistType = HlsMediaPlaylist.PLAYLIST_TYPE_UNKNOWN;
     long startOffsetUs = C.TIME_UNSET;
     long mediaSequence = 0;
@@ -756,7 +765,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         }
         segmentByteRangeLength = C.LENGTH_UNSET;
       } else if (line.startsWith(TAG_TARGET_DURATION)) {
-        targetDurationUs = 2 * C.MICROS_PER_SECOND; // low latency
+        targetDurationUs = 2 * C.MICROS_PER_SECOND; // xtra: low latency
       } else if (line.startsWith(TAG_MEDIA_SEQUENCE)) {
         mediaSequence = parseLongAttr(line, REGEX_MEDIA_SEQUENCE);
         segmentMediaSequence = mediaSequence;
@@ -864,7 +873,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
               Util.msToUs(Util.parseXsDateTime(line.substring(line.indexOf(':') + 1)));
           playlistStartTimeUs = programDatetimeUs - segmentStartTimeUs;
         }
-      } else if (line.startsWith("#EXT-X-DATERANGE")) { // ad segments
+      } else if (line.startsWith("#EXT-X-DATERANGE")) { // xtra: ad segments
         if (hideAds || usingProxy) {
           String id = parseOptionalStringAttr(line, Pattern.compile("ID=\"(.+?)\""), variableDefinitions);
           String classAttr = parseOptionalStringAttr(line, Pattern.compile("CLASS=\"(.+?)\""), variableDefinitions);
@@ -995,19 +1004,19 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         if (partByteRangeLength != C.LENGTH_UNSET) {
           partByteRangeOffset += partByteRangeLength;
         }
-      } else if (!line.startsWith("#") || line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // low latency
+      } else if (!line.startsWith("#") || line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // xtra: low latency
         @Nullable
         String segmentEncryptionIV =
             getSegmentEncryptionIV(
                 segmentMediaSequence, fullSegmentEncryptionKeyUri, fullSegmentEncryptionIV);
         segmentMediaSequence++;
-        if (line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // low latency
+        if (line.startsWith("#EXT-X-TWITCH-PREFETCH")) { // xtra: low latency
           segmentDurationUs = 2 * C.MICROS_PER_SECOND;
           line = line.substring(line.indexOf(':') + 1);
         }
         String segmentUri = replaceVariableReferences(line, variableDefinitions)
-                .replace("-unmuted", "-muted"); // unmuted segments
-        if (hideAds) { // ad segments
+                .replace("-unmuted", "-muted"); // xtra: unmuted segments
+        if (hideAds) { // xtra: ad segments
           if (segmentTitle.contains("Amazon") || segmentTitle.contains("Adform") || segmentTitle.contains("DCM")) {
             segmentUri = null;
           } else {
@@ -1098,7 +1107,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
       trailingParts.add(preloadPart);
     }
 
-    if (!segments.isEmpty()) { // ad segments
+    if (!segments.isEmpty()) { // xtra: ad segments
       HlsMediaPlaylist.Segment segment = segments.get(segments.size() - 1);
       if (hideAds && segment.url == null) {
         tags.add("ads=true");
@@ -1361,7 +1370,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     return Pattern.compile(attribute + "=(" + BOOLEAN_FALSE + "|" + BOOLEAN_TRUE + ")");
   }
 
-  private static class DateRange { // ad segments
+  private static class DateRange { // xtra: ad segments
     private final long startDateUs;
     private final long endDateUs;
 

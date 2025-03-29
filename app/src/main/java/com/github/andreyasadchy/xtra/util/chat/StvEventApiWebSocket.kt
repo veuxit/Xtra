@@ -4,9 +4,6 @@ import android.graphics.Color
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.StvBadge
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -18,7 +15,6 @@ class StvEventApiWebSocket(
     private val channelId: String,
     private val useWebp: Boolean,
     private val client: OkHttpClient,
-    private val coroutineScope: CoroutineScope,
     private val onPaint: (NamePaint) -> Unit,
     private val onBadge: (StvBadge) -> Unit,
     private val onEmoteSet: (String, List<Emote>, List<Emote>, List<Pair<Emote, Emote>>) -> Unit,
@@ -28,7 +24,6 @@ class StvEventApiWebSocket(
     private val onUpdatePresence: (String) -> Unit,
 ) {
     private var socket: WebSocket? = null
-    private var isActive = false
 
     fun connect() {
         socket = client.newWebSocket(
@@ -38,18 +33,12 @@ class StvEventApiWebSocket(
     }
 
     fun disconnect() {
-        isActive = false
         socket?.close(1000, null)
     }
 
     private fun reconnect() {
-        if (isActive) {
-            coroutineScope.launch {
-                disconnect()
-                delay(1000)
-                connect()
-            }
-        }
+        socket?.close(1000, null)
+        connect()
     }
 
     private fun listen(type: String) {
@@ -69,7 +58,6 @@ class StvEventApiWebSocket(
 
     private inner class STVEventApiWebSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            isActive = true
             listOf(
                 "emote_set.*",
                 "cosmetic.*",

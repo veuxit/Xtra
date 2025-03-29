@@ -43,12 +43,17 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <ListPreference
-        android:entries="@array/backgroundPlaybackEntries"
-        android:entryValues="@array/backgroundPlaybackValues"
-        android:key="player_background_playback"
-        android:summary="%s"
-        android:title="@string/background_playback"
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="player_picture_in_picture"
+        android:title="@string/picture_in_picture"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="player_background_audio"
+        android:title="@string/use_background_audio"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

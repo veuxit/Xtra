@@ -358,10 +358,7 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-                findPreference<ListPreference>(C.PLAYER_BACKGROUND_PLAYBACK)?.apply {
-                    setEntries(R.array.backgroundPlaybackNoPipEntries)
-                    setEntryValues(R.array.backgroundPlaybackNoPipValues)
-                }
+                findPreference<SwitchPreferenceCompat>(C.PLAYER_PICTURE_IN_PICTURE)?.isVisible = false
             }
             findPreference<Preference>("player_settings")?.setOnPreferenceClickListener {
                 requireActivity().findViewById<AppBarLayout>(R.id.appBar)?.setExpanded(true)
