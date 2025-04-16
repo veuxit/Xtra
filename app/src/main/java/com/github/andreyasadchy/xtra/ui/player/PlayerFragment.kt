@@ -112,15 +112,11 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     private val viewModel: PlayerViewModel by viewModels()
     private var chatFragment: ChatFragment? = null
 
-    var stream: Stream? = null
-    var video: Video? = null
-    var clip: Clip? = null
-    var offlineVideo: OfflineVideo? = null
-
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private val player: MediaController?
         get() = controllerFuture?.let { if (it.isDone && !it.isCancelled) it.get() else null }
 
+    private var videoType: String? = null
     private var isPortrait = false
     private var isKeyboardShown = false
     private var resizeMode = 0
@@ -135,32 +131,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_STREAM, Stream::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_STREAM)
-        }?.let { stream = it } ?:
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_VIDEO, Video::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_VIDEO)
-        }?.let { video = it } ?:
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_CLIP, Clip::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_CLIP)
-        }?.let { clip = it } ?:
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_OFFLINE_VIDEO, OfflineVideo::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_OFFLINE_VIDEO)
-        }?.let {
+        videoType = requireArguments().getString(KEY_TYPE)
+        if (videoType == OFFLINE_VIDEO) {
             enableNetworkCheck = false
-            offlineVideo = it
         }
         super.onCreate(savedInstanceState)
         val activity = requireActivity()
@@ -260,7 +233,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 }
             }
             initLayout()
-            playerView.controllerAutoShow = stream == null
+            playerView.controllerAutoShow = videoType != STREAM
             if (prefs.getBoolean(C.PLAYER_DOUBLETAP, true) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
                 playerView.setOnDoubleTapListener {
                     if (!isPortrait && slidingLayout.isMaximized) {
@@ -276,100 +249,64 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 view.keepScreenOn = true
             }
             changePlayerMode()
-            var channelId: String? = null
-            var channelLogin: String? = null
-            var channelName: String? = null
-            var title: String? = null
-            var gameId: String? = null
-            var gameSlug: String? = null
-            var gameName: String? = null
-            stream?.let {
-                channelId = it.channelId
-                channelLogin = it.channelLogin
-                channelName = it.channelName
-                title = it.title
-                gameId = it.gameId
-                gameSlug = it.gameSlug
-                gameName = it.gameName
-            } ?:
-            video?.let {
-                channelId = it.channelId
-                channelLogin = it.channelLogin
-                channelName = it.channelName
-                title = it.title
-                gameId = it.gameId
-                gameSlug = it.gameSlug
-                gameName = it.gameName
-            } ?:
-            clip?.let {
-                channelId = it.channelId
-                channelLogin = it.channelLogin
-                channelName = it.channelName
-                title = it.title
-                gameId = it.gameId
-                gameSlug = it.gameSlug
-                gameName = it.gameName
-            } ?:
-            offlineVideo?.let {
-                channelId = it.channelId
-                channelLogin = it.channelLogin
-                channelName = it.channelName
-                title = it.name
-                gameId = it.gameId
-                gameSlug = it.gameSlug
-                gameName = it.gameName
+            val channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN)
+            val channelName = requireArguments().getString(KEY_CHANNEL_NAME)
+            val displayName = if (channelLogin != null && !channelLogin.equals(channelName, true)) {
+                when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
+                    "0" -> "${channelName}(${channelLogin})"
+                    "1" -> channelName
+                    else -> channelLogin
+                }
+            } else {
+                channelName
             }
             if (prefs.getBoolean(C.PLAYER_CHANNEL, true)) {
                 requireView().findViewById<TextView>(R.id.playerChannel)?.apply {
                     visible()
-                    text = if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                        when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                            "0" -> "${channelName}(${channelLogin})"
-                            "1" -> channelName
-                            else -> channelLogin
-                        }
-                    } else {
-                        channelName
-                    }
+                    text = displayName
                     setOnClickListener {
                         findNavController().navigate(
                             ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
-                                channelId = channelId,
-                                channelLogin = channelLogin,
-                                channelName = channelName,
+                                channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                                channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                channelName = requireArguments().getString(KEY_CHANNEL_NAME),
                             )
                         )
                         slidingLayout.minimize()
                     }
                 }
             }
-            if (!title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
-                requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
-                    visible()
-                    text = title
+            requireArguments().getString(KEY_TITLE).let { title ->
+                if (!title.isNullOrBlank() && prefs.getBoolean(C.PLAYER_TITLE, true)) {
+                    requireView().findViewById<TextView>(R.id.playerTitle)?.apply {
+                        visible()
+                        text = title
+                    }
                 }
             }
-            if (!gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
-                requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
-                    visible()
-                    text = gameName
-                    setOnClickListener {
-                        findNavController().navigate(
-                            if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
-                                GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                    gameId = gameId,
-                                    gameSlug = gameSlug,
-                                    gameName = gameName
-                                )
-                            } else {
-                                GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                    gameId = gameId,
-                                    gameSlug = gameSlug,
-                                    gameName = gameName
-                                )
-                            }
-                        )
-                        slidingLayout.minimize()
+            requireArguments().getString(KEY_GAME_NAME).let { gameName ->
+                if (!gameName.isNullOrBlank() && prefs.getBoolean(C.PLAYER_CATEGORY, true)) {
+                    requireView().findViewById<TextView>(R.id.playerCategory)?.apply {
+                        visible()
+                        text = gameName
+                        setOnClickListener {
+                            findNavController().navigate(
+                                if (prefs.getBoolean(C.UI_GAMEPAGER, true)) {
+                                    GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                        gameId = requireArguments().getString(KEY_GAME_ID),
+                                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                                        gameName = gameName
+                                    )
+                                } else {
+                                    GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                        gameId = requireArguments().getString(KEY_GAME_ID),
+                                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                                        gameName = gameName
+                                    )
+                                }
+                            )
+                            slidingLayout.minimize()
+                        }
                     }
                 }
             }
@@ -438,6 +375,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                     visible()
                     setOnClickListener {
                         PlayerSettingsDialog.newInstance(
+                            videoType = videoType,
                             speedText = prefs.getString(C.PLAYER_SPEED_LIST, "0.25\n0.5\n0.75\n1.0\n1.25\n1.5\n1.75\n2.0\n3.0\n4.0\n8.0")
                                 ?.split("\n")?.find { it == player?.playbackParameters?.speed.toString() },
                             vodGames = !viewModel.gamesList.value.isNullOrEmpty()
@@ -445,284 +383,290 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                     }
                 }
             }
-            stream.let { stream ->
-                if (stream != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.streamResult.collectLatest {
-                                if (it != null) {
-                                    val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                                    val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
-                                    player?.sendCustomCommand(
-                                        SessionCommand(
-                                            PlaybackService.START_STREAM, bundleOf(
-                                                PlaybackService.URI to it,
-                                                PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist,
-                                                PlaybackService.TITLE to stream.title,
-                                                PlaybackService.CHANNEL_NAME to stream.channelName,
-                                                PlaybackService.CHANNEL_LOGO to stream.channelLogo,
-                                            )
-                                        ), Bundle.EMPTY
-                                    )
-                                    player?.prepare()
-                                    viewModel.streamResult.value = null
-                                }
+            if (videoType == STREAM) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.streamResult.collectLatest {
+                            if (it != null) {
+                                val proxyHost = prefs.getString(C.PROXY_HOST, null)
+                                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
+                                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
+                                player?.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.START_STREAM, bundleOf(
+                                            PlaybackService.URI to it,
+                                            PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist,
+                                            PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                                            PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                                            PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
+                                        )
+                                    ), Bundle.EMPTY
+                                )
+                                viewModel.streamResult.value = null
                             }
-                        }
-                    }
-                    if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
-                        (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
-                                !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
-                    ) {
-                        if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
-                            view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
-                                visible()
-                                setOnClickListener { toggleChatBar() }
-                            }
-                        }
-                        slidingLayout.viewTreeObserver.addOnGlobalLayoutListener {
-                            if (slidingLayout.isKeyboardShown) {
-                                if (!isKeyboardShown) {
-                                    isKeyboardShown = true
-                                    if (!isPortrait) {
-                                        chatLayout.updateLayoutParams { width = (slidingLayout.width / 1.8f).toInt() }
-                                        showStatusBar()
-                                    }
-                                }
-                            } else {
-                                if (isKeyboardShown) {
-                                    isKeyboardShown = false
-                                    chatLayout.clearFocus()
-                                    if (!isPortrait) {
-                                        chatLayout.updateLayoutParams { width = chatWidthLandscape }
-                                        if (slidingLayout.isMaximized) {
-                                            hideStatusBar()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.stream.collectLatest {
-                                if (it != null) {
-                                    chatFragment?.updateStreamId(it.id)
-                                    if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
-                                        !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
-                                        requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()
-                                    ) {
-                                        updateViewerCount(it.viewerCount)
-                                    }
-                                    if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
-                                        !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
-                                        requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
-                                        requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()
-                                    ) {
-                                        updateStreamInfo(it.title, it.gameId, it.gameSlug, it.gameName)
-                                    }
-                                    if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
-                                        requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false
-                                    ) {
-                                        it.startedAt?.let { date ->
-                                            TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
-                                                updateUptime(startedAtMs)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
-                        requireView().findViewById<ImageButton>(R.id.playerRestart)?.apply {
-                            visible()
-                            setOnClickListener { restartPlayer() }
-                        }
-                    }
-                    if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
-                        requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
-                            visible()
-                            setOnClickListener { player?.seekToDefaultPosition() }
-                        }
-                    }
-                    if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
-                        requireView().findViewById<LinearLayout>(R.id.playerViewers)?.apply {
-                            setOnClickListener { openViewerList() }
-                        }
-                    }
-                    if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
-                        stream.startedAt?.let {
-                            TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
-                                updateUptime(startedAtMs)
-                            }
-                        }
-                    }
-                    requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_rew_with_amount)?.gone()
-                    requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_ffwd_with_amount)?.gone()
-                    requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_position)?.gone()
-                    requireView().findViewById<DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.gone()
-                    requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)?.gone()
-                    updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
-                } else {
-                    if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, true)) {
-                        view.findViewById<ImageButton>(R.id.playerSpeed)?.apply {
-                            visible()
-                            setOnClickListener { showSpeedDialog() }
                         }
                     }
                 }
-            }
-            video.let { video ->
-                if (video != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.videoResult.collectLatest {
-                                if (it != null) {
-                                    player?.sendCustomCommand(
-                                        SessionCommand(
-                                            PlaybackService.START_VIDEO, bundleOf(
-                                                PlaybackService.URI to it.toString(),
-                                                PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
-                                                PlaybackService.VIDEO_ID to video.id?.toLongOrNull(),
-                                                PlaybackService.TITLE to video.title,
-                                                PlaybackService.CHANNEL_NAME to video.channelName,
-                                                PlaybackService.CHANNEL_LOGO to video.channelLogo,
-                                            )
-                                        ), Bundle.EMPTY
-                                    )
-                                    viewModel.videoResult.value = null
+                if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
+                    (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
+                            !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
+                ) {
+                    if (prefs.getBoolean(C.PLAYER_CHATBARTOGGLE, false) && !prefs.getBoolean(C.CHAT_DISABLE, false)) {
+                        view.findViewById<ImageButton>(R.id.playerChatBarToggle)?.apply {
+                            visible()
+                            setOnClickListener { toggleChatBar() }
+                        }
+                    }
+                    slidingLayout.viewTreeObserver.addOnGlobalLayoutListener {
+                        if (slidingLayout.isKeyboardShown) {
+                            if (!isKeyboardShown) {
+                                isKeyboardShown = true
+                                if (!isPortrait) {
+                                    chatLayout.updateLayoutParams { width = (slidingLayout.width / 1.8f).toInt() }
+                                    showStatusBar()
                                 }
                             }
-                        }
-                    }
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.savedPosition.collectLatest {
-                                playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, it?.position ?: 0)
-                            }
-                        }
-                    }
-                    if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.isBookmarked.collectLatest {
-                                    if (it != null) {
-                                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it)
-                                        viewModel.isBookmarked.value = null
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (!video.id.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.gamesList.collectLatest { list ->
-                                    if (!list.isNullOrEmpty()) {
-                                        if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
-                                            requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
-                                                visible()
-                                                setOnClickListener { showVodGames() }
-                                            }
-                                        }
-                                        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
+                        } else {
+                            if (isKeyboardShown) {
+                                isKeyboardShown = false
+                                chatLayout.clearFocus()
+                                if (!isPortrait) {
+                                    chatLayout.updateLayoutParams { width = chatWidthLandscape }
+                                    if (slidingLayout.isMaximized) {
+                                        hideStatusBar()
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            clip.let { clip ->
-                if (clip != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.clipUrls.collectLatest { map ->
-                                if (map != null) {
-                                    val urls = map.ifEmpty {
-                                        if ((prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) == 2
-                                            && !clip.thumbnailUrl.isNullOrBlank()
-                                        ) {
-                                            TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
-                                        } else {
-                                            emptyMap()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.stream.collectLatest { stream ->
+                            if (stream != null) {
+                                stream.id?.let { chatFragment?.updateStreamId(it) }
+                                if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                                    !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                                    requireView().findViewById<TextView>(R.id.playerViewersText)?.text.isNullOrBlank()
+                                ) {
+                                    updateViewerCount(stream.viewerCount)
+                                }
+                                if (prefs.getBoolean(C.CHAT_DISABLE, false) ||
+                                    !prefs.getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
+                                    requireView().findViewById<TextView>(R.id.playerTitle)?.text.isNullOrBlank() ||
+                                    requireView().findViewById<TextView>(R.id.playerCategory)?.text.isNullOrBlank()
+                                ) {
+                                    updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
+                                }
+                                if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
+                                    requireView().findViewById<LinearLayout>(R.id.playerUptime)?.isVisible == false
+                                ) {
+                                    stream.startedAt?.let { date ->
+                                        TwitchApiHelper.parseIso8601DateUTC(date)?.let { startedAtMs ->
+                                            updateUptime(startedAtMs)
                                         }
                                     }
-                                    val map = mutableMapOf<String, Pair<String, String?>>()
-                                    urls.forEach {
-                                        if (it.key == "source") {
-                                            map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
-                                        } else {
-                                            map[it.key] = Pair(it.key, it.value)
-                                        }
-                                    }
-                                    map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
-                                    viewModel.qualities = map
-                                    setQualityIndex()
-                                    player?.let { player ->
-                                        val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
-                                        if (quality?.key == AUDIO_ONLY_QUALITY) {
-                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
-                                            }.build()
-                                        } else {
-                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                                                setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
-                                            }.build()
-                                        }
-                                        (quality?.value?.second ?: viewModel.qualities.values.firstOrNull()?.second)?.let { url ->
-                                            player.sendCustomCommand(
-                                                SessionCommand(
-                                                    PlaybackService.START_CLIP, bundleOf(
-                                                        PlaybackService.URI to url,
-                                                        PlaybackService.TITLE to clip.title,
-                                                        PlaybackService.CHANNEL_NAME to clip.channelName,
-                                                        PlaybackService.CHANNEL_LOGO to clip.channelLogo,
-                                                    )
-                                                ), Bundle.EMPTY
-                                            )
-                                        }
-                                    }
-                                    viewModel.clipUrls.value = null
                                 }
                             }
                         }
                     }
-                    if (!clip.videoId.isNullOrBlank()) {
-                        watchVideo.visible()
-                        watchVideo.setOnClickListener {
-                            (requireActivity() as MainActivity).startVideo(
-                                Video(
-                                    id = clip.videoId,
-                                    channelId = clip.channelId,
-                                    channelLogin = clip.channelLogin,
-                                    channelName = clip.channelName,
-                                    profileImageUrl = clip.profileImageUrl,
-                                    animatedPreviewURL = clip.videoAnimatedPreviewURL
-                                ),
-                                clip.vodOffset?.let { (it.toDouble() * 1000.0) + (player?.currentPosition ?: 0) } ?: 0.0,
-                                true
-                            )
+                }
+                if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
+                    requireView().findViewById<ImageButton>(R.id.playerRestart)?.apply {
+                        visible()
+                        setOnClickListener { restartPlayer() }
+                    }
+                }
+                if (prefs.getBoolean(C.PLAYER_SEEKLIVE, false)) {
+                    requireView().findViewById<ImageButton>(R.id.playerSeekLive)?.apply {
+                        visible()
+                        setOnClickListener { player?.seekToDefaultPosition() }
+                    }
+                }
+                if (prefs.getBoolean(C.PLAYER_VIEWERLIST, false)) {
+                    requireView().findViewById<LinearLayout>(R.id.playerViewers)?.apply {
+                        setOnClickListener { openViewerList() }
+                    }
+                }
+                if (prefs.getBoolean(C.PLAYER_SHOW_UPTIME, true)) {
+                    requireArguments().getString(KEY_STARTED_AT)?.let {
+                        TwitchApiHelper.parseIso8601DateUTC(it)?.let { startedAtMs ->
+                            updateUptime(startedAtMs)
                         }
                     }
-                } else {
-                    if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {
-                        view.findViewById<ImageButton>(R.id.playerSleepTimer)?.apply {
-                            visible()
-                            setOnClickListener { showSleepTimerDialog() }
+                }
+                requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_rew_with_amount)?.gone()
+                requireView().findViewById<Button>(androidx.media3.ui.R.id.exo_ffwd_with_amount)?.gone()
+                requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_position)?.gone()
+                requireView().findViewById<DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.gone()
+                requireView().findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)?.gone()
+                updateStreamInfo(
+                    requireArguments().getString(KEY_TITLE),
+                    requireArguments().getString(KEY_GAME_ID),
+                    requireArguments().getString(KEY_GAME_SLUG),
+                    requireArguments().getString(KEY_GAME_NAME)
+                )
+                updateViewerCount(requireArguments().getInt(KEY_VIEWER_COUNT).takeIf { it != -1 })
+            } else {
+                if (prefs.getBoolean(C.PLAYER_SPEEDBUTTON, true)) {
+                    view.findViewById<ImageButton>(R.id.playerSpeed)?.apply {
+                        visible()
+                        setOnClickListener { showSpeedDialog() }
+                    }
+                }
+            }
+            if (videoType == VIDEO) {
+                val videoId = requireArguments().getString(KEY_VIDEO_ID)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.videoResult.collectLatest {
+                            if (it != null) {
+                                player?.sendCustomCommand(
+                                    SessionCommand(
+                                        PlaybackService.START_VIDEO, bundleOf(
+                                            PlaybackService.URI to it.toString(),
+                                            PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
+                                            PlaybackService.VIDEO_ID to videoId?.toLongOrNull(),
+                                            PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                                            PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                                            PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
+                                        )
+                                    ), Bundle.EMPTY
+                                )
+                                viewModel.videoResult.value = null
+                            }
+                        }
+                    }
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.savedPosition.collectLatest {
+                            if (it != null) {
+                                playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, it)
+                                viewModel.savedPosition.value = null
+                            }
+                        }
+                    }
+                }
+                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.isBookmarked.collectLatest {
+                                if (it != null) {
+                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it)
+                                    viewModel.isBookmarked.value = null
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.gamesList.collectLatest { list ->
+                                if (!list.isNullOrEmpty()) {
+                                    if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
+                                        requireView().findViewById<ImageButton>(R.id.playerGames)?.apply {
+                                            visible()
+                                            setOnClickListener { showVodGames() }
+                                        }
+                                    }
+                                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
+                                }
+                            }
                         }
                     }
                 }
             }
-            offlineVideo.let { offlineVideo ->
-                if (offlineVideo != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.offlineVideo.collectLatest {
+            if (videoType == CLIP) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.clipUrls.collectLatest { map ->
+                            if (map != null) {
+                                val urls = map.ifEmpty {
+                                    val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
+                                    if ((prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) == 2 && !thumbnailUrl.isNullOrBlank()) {
+                                        TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
+                                    } else {
+                                        emptyMap()
+                                    }
+                                }
+                                val map = mutableMapOf<String, Pair<String, String?>>()
+                                urls.forEach {
+                                    if (it.key == "source") {
+                                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                                    } else {
+                                        map[it.key] = Pair(it.key, it.value)
+                                    }
+                                }
+                                map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
+                                viewModel.qualities = map
+                                setQualityIndex()
+                                player?.let { player ->
+                                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                                    if (quality?.key == AUDIO_ONLY_QUALITY) {
+                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                                        }.build()
+                                    } else {
+                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+                                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                        }.build()
+                                    }
+                                    (quality?.value?.second ?: viewModel.qualities.values.firstOrNull()?.second)?.let { url ->
+                                        player.sendCustomCommand(
+                                            SessionCommand(
+                                                PlaybackService.START_CLIP, bundleOf(
+                                                    PlaybackService.URI to url,
+                                                    PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                                                    PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                                                    PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
+                                                )
+                                            ), Bundle.EMPTY
+                                        )
+                                    }
+                                }
+                                viewModel.clipUrls.value = null
+                            }
+                        }
+                    }
+                }
+                val videoId = requireArguments().getString(KEY_VIDEO_ID)
+                if (!videoId.isNullOrBlank()) {
+                    watchVideo.visible()
+                    watchVideo.setOnClickListener {
+                        (requireActivity() as MainActivity).startVideo(
+                            Video(
+                                id = videoId,
+                                channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                                channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                                profileImageUrl = requireArguments().getString(KEY_PROFILE_IMAGE_URL),
+                                animatedPreviewURL = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW)
+                            ),
+                            requireArguments().getInt(KEY_VOD_OFFSET).takeIf { it != -1 }?.let {
+                                (it * 1000) + (player?.currentPosition ?: 0)
+                            } ?: 0,
+                            true
+                        )
+                    }
+                }
+            } else {
+                if (prefs.getBoolean(C.PLAYER_SLEEP, false)) {
+                    view.findViewById<ImageButton>(R.id.playerSleepTimer)?.apply {
+                        visible()
+                        setOnClickListener { showSleepTimerDialog() }
+                    }
+                }
+            }
+            if (videoType == OFFLINE_VIDEO) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.savedOfflineVideoPosition.collectLatest {
+                            if (it != null) {
+                                val url = requireArguments().getString(KEY_URL)
                                 viewModel.qualities = mapOf(
-                                    "source" to Pair(requireContext().getString(R.string.source), it?.url ?: offlineVideo.url),
+                                    "source" to Pair(requireContext().getString(R.string.source), url),
                                     AUDIO_ONLY_QUALITY to Pair(requireContext().getString(R.string.audio_only), null)
                                 )
                                 setQualityIndex()
@@ -740,151 +684,143 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                     player.sendCustomCommand(
                                         SessionCommand(
                                             PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                                                PlaybackService.URI to offlineVideo.url,
-                                                PlaybackService.VIDEO_ID to offlineVideo.id,
-                                                PlaybackService.PLAYBACK_POSITION to (it?.lastWatchPosition ?: 0L),
-                                                PlaybackService.TITLE to offlineVideo.name,
-                                                PlaybackService.CHANNEL_NAME to offlineVideo.channelName,
-                                                PlaybackService.CHANNEL_LOGO to offlineVideo.channelLogo,
+                                                PlaybackService.URI to url,
+                                                PlaybackService.VIDEO_ID to requireArguments().getInt(KEY_OFFLINE_VIDEO_ID),
+                                                PlaybackService.PLAYBACK_POSITION to it,
+                                                PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                                                PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                                                PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
                                             )
                                         ), Bundle.EMPTY
                                     )
                                 }
+                                viewModel.savedOfflineVideoPosition.value = null
                             }
                         }
                     }
-                } else {
-                    val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
-                    val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
-                    val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
-                    settings?.disable()
-                    download?.disable()
-                    mode?.disable()
+                }
+            } else {
+                val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
+                val download = requireView().findViewById<ImageButton>(R.id.playerDownload)
+                val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
+                settings?.disable()
+                download?.disable()
+                mode?.disable()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.loaded.collectLatest {
+                            if (it) {
+                                settings?.enable()
+                                download?.enable()
+                                mode?.enable()
+                                setQualityText()
+                            }
+                        }
+                    }
+                }
+                if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
+                    download?.apply {
+                        visible()
+                        setOnClickListener { showDownloadDialog() }
+                    }
+                }
+                val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
+                if (prefs.getBoolean(C.PLAYER_FOLLOW, false) && (setting == 0 || setting == 1)) {
+                    val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
+                    followButton?.visible()
+                    followButton?.setOnClickListener {
+                        viewModel.isFollowing.value?.let {
+                            if (it) {
+                                requireContext().getAlertDialogBuilder()
+                                    .setMessage(requireContext().getString(R.string.unfollow_channel, displayName))
+                                    .setNegativeButton(getString(R.string.no), null)
+                                    .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                                        viewModel.deleteFollowChannel(
+                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            setting,
+                                            requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                            requireArguments().getString(KEY_CHANNEL_ID)
+                                        )
+                                    }
+                                    .show()
+                            } else {
+                                viewModel.saveFollowChannel(
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    setting,
+                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                    requireArguments().getString(KEY_CHANNEL_ID),
+                                    requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                    requireArguments().getString(KEY_CHANNEL_NAME),
+                                    requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                                    requireArguments().getString(KEY_STARTED_AT)
+                                )
+                            }
+                        }
+                    }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.loaded.collectLatest {
-                                if (it) {
-                                    settings?.enable()
-                                    download?.enable()
-                                    mode?.enable()
-                                    setQualityText()
-                                }
-                            }
-                        }
-                    }
-                    if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
-                        download?.apply {
-                            visible()
-                            setOnClickListener { showDownloadDialog() }
-                        }
-                    }
-                    val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
-                    if (prefs.getBoolean(C.PLAYER_FOLLOW, false) && (setting == 0 || setting == 1)) {
-                        val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
-                        followButton?.visible()
-                        followButton?.setOnClickListener {
-                            viewModel.isFollowing.value?.let {
-                                if (it) {
-                                    requireContext().getAlertDialogBuilder()
-                                        .setMessage(requireContext().getString(R.string.unfollow_channel,
-                                            if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                                when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                    "0" -> "${channelName}(${channelLogin})"
-                                                    "1" -> channelName
-                                                    else -> channelLogin
-                                                }
-                                            } else {
-                                                channelName
-                                            }
-                                        ))
-                                        .setNegativeButton(getString(R.string.no), null)
-                                        .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                                            viewModel.deleteFollowChannel(
-                                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                                setting,
-                                                requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                                channelId
-                                            )
-                                        }
-                                        .show()
-                                } else {
-                                    viewModel.saveFollowChannel(
-                                        TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                        setting,
-                                        requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                        channelId,
-                                        channelLogin,
-                                        channelName,
-                                        requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                                        stream?.startedAt
-                                    )
-                                }
-                            }
-                        }
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.isFollowing.collectLatest {
-                                    if (it != null) {
-                                        followButton?.apply {
-                                            if (it) {
-                                                setImageResource(R.drawable.baseline_favorite_black_24)
-                                            } else {
-                                                setImageResource(R.drawable.baseline_favorite_border_black_24)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                viewModel.follow.collectLatest { pair ->
-                                    if (pair != null) {
-                                        val following = pair.first
-                                        val errorMessage = pair.second
-                                        if (!errorMessage.isNullOrBlank()) {
-                                            requireContext().shortToast(errorMessage)
+                            viewModel.isFollowing.collectLatest {
+                                if (it != null) {
+                                    followButton?.apply {
+                                        if (it) {
+                                            setImageResource(R.drawable.baseline_favorite_black_24)
                                         } else {
-                                            if (following) {
-                                                requireContext().shortToast(requireContext().getString(R.string.now_following,
-                                                    if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                                        when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                            "0" -> "${channelName}(${channelLogin})"
-                                                            "1" -> channelName
-                                                            else -> channelLogin
-                                                        }
-                                                    } else {
-                                                        channelName
-                                                    }
-                                                ))
-                                            } else {
-                                                requireContext().shortToast(requireContext().getString(R.string.unfollowed,
-                                                    if (channelLogin != null && !channelLogin.equals(channelName, true)) {
-                                                        when (prefs.getString(C.UI_NAME_DISPLAY, "0")) {
-                                                            "0" -> "${channelName}(${channelLogin})"
-                                                            "1" -> channelName
-                                                            else -> channelLogin
-                                                        }
-                                                    } else {
-                                                        channelName
-                                                    }
-                                                ))
-                                            }
+                                            setImageResource(R.drawable.baseline_favorite_border_black_24)
                                         }
-                                        viewModel.follow.value = null
                                     }
+                                }
+                            }
+                        }
+                    }
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            viewModel.follow.collectLatest { pair ->
+                                if (pair != null) {
+                                    val following = pair.first
+                                    val errorMessage = pair.second
+                                    if (!errorMessage.isNullOrBlank()) {
+                                        requireContext().shortToast(errorMessage)
+                                    } else {
+                                        if (following) {
+                                            requireContext().shortToast(requireContext().getString(R.string.now_following, displayName))
+                                        } else {
+                                            requireContext().shortToast(requireContext().getString(R.string.unfollowed, displayName))
+                                        }
+                                    }
+                                    viewModel.follow.value = null
                                 }
                             }
                         }
                     }
                 }
             }
-            chatFragment = (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment) ?: (
-                    stream?.let { stream -> ChatFragment.newInstance(stream.channelId, stream.channelLogin, stream.channelName, stream.id) }
-                        ?: video?.let { video -> ChatFragment.newInstance(video.channelId, video.channelLogin, video.id, 0) }
-                        ?: clip?.let { clip -> ChatFragment.newInstance(clip.channelId, clip.channelLogin, clip.videoId, clip.vodOffset) }
-                        ?: offlineVideo?.let { offlineVideo -> ChatFragment.newLocalInstance(offlineVideo.channelId, offlineVideo.channelLogin, offlineVideo.chatUrl) }
-                    )?.also { fragment -> childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit() }
+            chatFragment = (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment)
+                ?: when (videoType) {
+                    STREAM -> ChatFragment.newInstance(
+                        requireArguments().getString(KEY_CHANNEL_ID),
+                        requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        requireArguments().getString(KEY_CHANNEL_NAME),
+                        requireArguments().getString(KEY_STREAM_ID)
+                    )
+                    VIDEO -> ChatFragment.newInstance(
+                        requireArguments().getString(KEY_CHANNEL_ID),
+                        requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        requireArguments().getString(KEY_VIDEO_ID),
+                        0
+                    )
+                    CLIP -> ChatFragment.newInstance(
+                        requireArguments().getString(KEY_CHANNEL_ID),
+                        requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        requireArguments().getString(KEY_VIDEO_ID),
+                        requireArguments().getInt(KEY_VOD_OFFSET).takeIf { it != -1 }
+                    )
+                    OFFLINE_VIDEO -> ChatFragment.newLocalInstance(
+                        requireArguments().getString(KEY_CHANNEL_ID),
+                        requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        requireArguments().getString(KEY_CHAT_URL)
+                    )
+                    else -> null
+                }?.also { fragment -> childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit() }
         }
     }
 
@@ -1030,7 +966,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 if (it.isVisible) {
                     chatLayout.hideKeyboard()
                     chatLayout.clearFocus()
-                    if (stream != null && chatFragment?.emoteMenuIsVisible() == true) {
+                    if (videoType == STREAM && chatFragment?.emoteMenuIsVisible() == true) {
                         chatFragment?.toggleEmoteMenu(false)
                     }
                     it.gone()
@@ -1152,7 +1088,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     }
 
     fun updateLiveStatus(live: Boolean, serverTime: Long?, channelLogin: String?) {
-        if (channelLogin == stream?.channelLogin) {
+        if (channelLogin == requireArguments().getString(KEY_CHANNEL_LOGIN)) {
             if (live) {
                 restartPlayer()
             }
@@ -1223,12 +1159,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
 
     fun restartPlayer() {
         if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != CHAT_ONLY_QUALITY) {
-            loadStream(stream)
+            loadStream()
         }
     }
 
     fun openViewerList() {
-        stream?.channelLogin?.let { login ->
+        requireArguments().getString(KEY_CHANNEL_LOGIN)?.let { login ->
             PlayerViewerListDialog.newInstance(login).show(childFragmentManager, "closeOnPip")
         }
     }
@@ -1277,18 +1213,29 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     }
 
     fun checkBookmark() {
-        video?.id?.let { viewModel.checkBookmark(it) }
+        requireArguments().getString(KEY_VIDEO_ID)?.let { viewModel.checkBookmark(it) }
     }
 
     fun saveBookmark() {
-        video?.let { video ->
-            viewModel.saveBookmark(
-                requireContext().filesDir.path,
-                TwitchApiHelper.getHelixHeaders(requireContext()),
-                TwitchApiHelper.getGQLHeaders(requireContext()),
-                video
-            )
-        }
+        viewModel.saveBookmark(
+            filesDir = requireContext().filesDir.path,
+            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+            videoId = requireArguments().getString(KEY_VIDEO_ID),
+            title = requireArguments().getString(KEY_TITLE),
+            uploadDate = requireArguments().getString(KEY_UPLOAD_DATE),
+            duration = requireArguments().getString(KEY_DURATION),
+            type = requireArguments().getString(KEY_VIDEO_TYPE),
+            animatedPreviewUrl = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW),
+            channelId = requireArguments().getString(KEY_CHANNEL_ID),
+            channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+            channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+            channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+            thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+            gameId = requireArguments().getString(KEY_GAME_ID),
+            gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+            gameName = requireArguments().getString(KEY_GAME_NAME),
+        )
     }
 
     private fun setQualityIndex() {
@@ -1527,7 +1474,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false)) {
+                    if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false) && enterPictureInPicture()) {
                         requireView().keepScreenOn = isPlaying
                     }
                 }
@@ -1538,11 +1485,13 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                         toggleSubtitles(prefs.getBoolean(C.PLAYER_SUBTITLES_ENABLED, false))
                     }
                     setSubtitles()
-                    if (!tracks.isEmpty
-                        && viewModel.qualities.containsKey(AUTO_QUALITY)
-                        && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
-                        && !viewModel.hidden) {
-                        changeQuality(viewModel.qualityIndex)
+                    if (!tracks.isEmpty) {
+                        if (viewModel.qualities.containsKey(AUTO_QUALITY)
+                            && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
+                            && !viewModel.hidden) {
+                            changeQuality(viewModel.qualityIndex)
+                        }
+                        chatFragment?.startReplayChatLoad()
                     }
                 }
 
@@ -1580,7 +1529,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                         }
                                         map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
                                             ?: Pair(requireContext().getString(R.string.audio_only), null))
-                                        if (stream != null) {
+                                        if (videoType == STREAM) {
                                             map[CHAT_ONLY_QUALITY] = Pair(requireContext().getString(R.string.chat_only), null)
                                         }
                                         viewModel.qualities = map
@@ -1593,7 +1542,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                             }, MoreExecutors.directExecutor())
                         }
                     }
-                    if (stream != null) {
+                    if (videoType == STREAM) {
                         val hideAds = prefs.getBoolean(C.PLAYER_HIDE_ADS, false)
                         val useProxy = prefs.getBoolean(C.PROXY_MEDIA_PLAYLIST, true)
                                 && !prefs.getString(C.PROXY_HOST, null).isNullOrBlank()
@@ -1684,9 +1633,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                         }
                     }
                 }
+
                 override fun onEvents(player: Player, events: Player.Events) {
                     if (events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
-                        if (stream != null && !prefs.getBoolean(C.PLAYER_PAUSE, false)) {
+                        if (videoType == STREAM && !prefs.getBoolean(C.PLAYER_PAUSE, false)) {
                             requireView().findViewById<ImageButton>(androidx.media3.ui.R.id.exo_play_pause)?.apply {
                                 if (player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE && player.playWhenReady) {
                                     gone()
@@ -1701,8 +1651,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
 
                 override fun onPlayerError(error: PlaybackException) {
                     Log.e(tag, "Player error", error)
-                    when {
-                        stream != null -> {
+                    when (videoType) {
+                        STREAM -> {
                             player?.sendCustomCommand(
                                 SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
                                 Bundle.EMPTY
@@ -1742,7 +1692,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                 }, MoreExecutors.directExecutor())
                             }
                         }
-                        video != null -> {
+                        VIDEO -> {
                             player?.sendCustomCommand(
                                 SessionCommand(PlaybackService.GET_ERROR_CODE, Bundle.EMPTY),
                                 Bundle.EMPTY
@@ -1787,14 +1737,28 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 viewModel.restoreQuality = false
                 changeQuality(viewModel.previousIndex)
             }
-            if (viewModel.background) {
-                viewModel.background = false
-                player?.sendCustomCommand(
-                    SessionCommand(
-                        PlaybackService.SET_SLEEP_TIMER,
-                        Bundle.EMPTY
-                    ), Bundle.EMPTY
-                )
+            player?.sendCustomCommand(
+                SessionCommand(
+                    PlaybackService.SET_SLEEP_TIMER, bundleOf(
+                        PlaybackService.DURATION to -1L
+                    )
+                ), Bundle.EMPTY
+            )?.let { result ->
+                result.addListener({
+                    if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                        val endTime = result.get().extras.getLong(PlaybackService.RESULT)
+                        if (endTime > 0L) {
+                            val duration = endTime - System.currentTimeMillis()
+                            if (duration > 0L) {
+                                (activity as? MainActivity)?.setSleepTimer(duration)
+                            } else {
+                                minimize()
+                                onClose()
+                                (activity as? MainActivity)?.closePlayer()
+                            }
+                        }
+                    }
+                }, MoreExecutors.directExecutor())
             }
             if (viewModel.resume) {
                 viewModel.resume = false
@@ -1804,6 +1768,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
             player?.let { player ->
                 if (viewModel.loaded.value && player.currentMediaItem == null) {
                     viewModel.started = false
+                }
+                if (viewModel.started && player.currentMediaItem != null) {
+                    chatFragment?.startReplayChatLoad()
+                }
+                if (!prefs.getBoolean(C.PLAYER_KEEP_SCREEN_ON_WHEN_PAUSED, false) && enterPictureInPicture()) {
+                    requireView().keepScreenOn = player.isPlaying
                 }
             }
             if ((isInitialized || !enableNetworkCheck) && !viewModel.started) {
@@ -1876,30 +1846,34 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         if (player != null && !viewModel.started) {
             startPlayer()
         }
-        if (offlineVideo == null) {
+        if (requireArguments().getString(KEY_TYPE) != OFFLINE_VIDEO) {
             viewModel.isFollowingChannel(
                 TwitchApiHelper.getHelixHeaders(requireContext()),
                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                 requireContext().tokenPrefs().getString(C.USER_ID, null),
-                stream?.channelId ?: video?.channelId ?: clip?.channelId,
-                stream?.channelLogin ?: video?.channelLogin ?: clip?.channelLogin,
+                requireArguments().getString(KEY_CHANNEL_ID),
+                requireArguments().getString(KEY_CHANNEL_LOGIN),
             )
-            if (!video?.id.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
-                viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), video?.id)
+            if (videoType == VIDEO) {
+                val videoId = requireArguments().getString(KEY_VIDEO_ID)
+                if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
+                    viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), videoId)
+                }
             }
         }
     }
 
     private fun startPlayer() {
         viewModel.started = true
-        stream?.let { stream ->
-            viewModel.useCustomProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
-            if (viewModel.stream.value == null) {
-                viewModel.stream.value = stream
-                loadStream(stream)
+        when (videoType) {
+            STREAM -> {
+                viewModel.useCustomProxy = prefs.getBoolean(C.PLAYER_STREAM_PROXY, false)
+                loadStream()
                 viewModel.loadStream(
-                    stream = stream,
+                    channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                    channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                    viewerCount = requireArguments().getInt(KEY_VIEWER_COUNT).takeIf { it != -1 },
                     loop = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
                             !requireContext().prefs().getBoolean(C.CHAT_PUBSUB_ENABLED, true) ||
                             (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) &&
@@ -1911,149 +1885,89 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                             requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
                 )
             }
-        } ?:
-        video?.let { video ->
-            if (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION) && !viewModel.loaded.value) {
-                playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getDouble(KEY_OFFSET).toLong())
-            } else {
-                val id = video.id?.toLongOrNull()
-                if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true) && id != null) {
-                    viewModel.getVideoPosition(id)
+            VIDEO -> {
+                if (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION)) {
+                    playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getLong(KEY_OFFSET).takeIf { it != -1L } ?: 0)
+                    requireArguments().putBoolean(KEY_IGNORE_SAVED_POSITION, false)
+                    requireArguments().putLong(KEY_OFFSET, -1)
                 } else {
-                    playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
-                }
-            }
-        } ?:
-        clip?.let { clip ->
-            val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
-            if (skipAccessToken >= 2 || clip.thumbnailUrl.isNullOrBlank()) {
-                viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
-            } else {
-                val urls = TwitchApiHelper.getClipUrlMapFromPreview(clip.thumbnailUrl)
-                val map = mutableMapOf<String, Pair<String, String?>>()
-                urls.forEach {
-                    if (it.key == "source") {
-                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                    if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                        val id = requireArguments().getString(KEY_VIDEO_ID)?.toLongOrNull()
+                        if (id != null) {
+                            viewModel.getVideoPosition(id)
+                        } else {
+                            playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
+                        }
                     } else {
-                        map[it.key] = Pair(it.key, it.value)
-                    }
-                }
-                map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
-                viewModel.qualities = map
-                setQualityIndex()
-                player?.let { player ->
-                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
-                    if (quality?.key == AUDIO_ONLY_QUALITY) {
-                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
-                        }.build()
-                    } else {
-                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
-                        }.build()
-                    }
-                    (quality?.value?.second ?: viewModel.qualities.values.firstOrNull()?.second)?.let { url ->
-                        player.sendCustomCommand(
-                            SessionCommand(
-                                PlaybackService.START_CLIP, bundleOf(
-                                    PlaybackService.URI to url,
-                                    PlaybackService.TITLE to clip.title,
-                                    PlaybackService.CHANNEL_NAME to clip.channelName,
-                                    PlaybackService.CHANNEL_LOGO to clip.channelLogo,
-                                )
-                            ), Bundle.EMPTY
-                        )
+                        playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
                     }
                 }
             }
-        } ?:
-        offlineVideo?.let { offlineVideo ->
-            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                viewModel.getOfflineVideo(offlineVideo.id)
-            } else {
-                viewModel.qualities = mapOf(
-                    "source" to Pair(requireContext().getString(R.string.source), offlineVideo.url),
-                    AUDIO_ONLY_QUALITY to Pair(requireContext().getString(R.string.audio_only), null)
-                )
-                setQualityIndex()
-                player?.let { player ->
-                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
-                    if (quality?.key == AUDIO_ONLY_QUALITY) {
-                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
-                        }.build()
-                    } else {
-                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
-                            setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
-                        }.build()
+            CLIP -> {
+                val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
+                if (skipAccessToken >= 2 || thumbnailUrl.isNullOrBlank()) {
+                    viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(KEY_CLIP_ID))
+                } else {
+                    viewModel.clipUrls.value = TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
+                }
+            }
+            OFFLINE_VIDEO -> {
+                if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    viewModel.getOfflineVideoPosition(requireArguments().getInt(KEY_OFFLINE_VIDEO_ID))
+                } else {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        viewModel.savedOfflineVideoPosition.value = 0
                     }
-                    player.sendCustomCommand(
-                        SessionCommand(
-                            PlaybackService.START_OFFLINE_VIDEO, bundleOf(
-                                PlaybackService.URI to offlineVideo.url,
-                                PlaybackService.VIDEO_ID to offlineVideo.id,
-                                PlaybackService.PLAYBACK_POSITION to 0L,
-                                PlaybackService.TITLE to offlineVideo.name,
-                                PlaybackService.CHANNEL_NAME to offlineVideo.channelName,
-                                PlaybackService.CHANNEL_LOGO to offlineVideo.channelLogo,
-                            )
-                        ), Bundle.EMPTY
-                    )
                 }
             }
         }
     }
 
-    private fun loadStream(stream: Stream?) {
-        player?.prepare()
-        try {
-            stream?.channelLogin?.let { channelLogin ->
-                val proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "")
-                if (viewModel.useCustomProxy && !proxyUrl.isNullOrBlank()) {
-                    player?.sendCustomCommand(
-                        SessionCommand(
-                            PlaybackService.START_STREAM, bundleOf(
-                                PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
-                                PlaybackService.TITLE to stream.title,
-                                PlaybackService.CHANNEL_NAME to stream.channelName,
-                                PlaybackService.CHANNEL_LOGO to stream.channelLogo,
-                            )
-                        ), Bundle.EMPTY
-                    )
-                    player?.prepare()
-                } else {
-                    if (viewModel.useCustomProxy) {
-                        viewModel.useCustomProxy = false
-                    }
-                    val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                    val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
-                    viewModel.loadStreamResult(
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
-                        channelLogin = channelLogin,
-                        randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
-                        xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
-                        playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
-                        supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
-                        proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
-                        proxyMultivariantPlaylist = proxyMultivariantPlaylist,
-                        proxyHost = proxyHost,
-                        proxyPort = proxyPort,
-                        proxyUser = prefs.getString(C.PROXY_USER, null),
-                        proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
-                        enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
-                    )
+    private fun loadStream() {
+        requireArguments().getString(KEY_CHANNEL_LOGIN)?.let { channelLogin ->
+            val proxyUrl = prefs.getString(C.PLAYER_PROXY_URL, "")
+            if (viewModel.useCustomProxy && !proxyUrl.isNullOrBlank()) {
+                player?.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.START_STREAM, bundleOf(
+                            PlaybackService.URI to proxyUrl.replace("\$channel", channelLogin),
+                            PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                            PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                            PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
+                        )
+                    ), Bundle.EMPTY
+                )
+            } else {
+                if (viewModel.useCustomProxy) {
+                    viewModel.useCustomProxy = false
                 }
+                val proxyHost = prefs.getString(C.PROXY_HOST, null)
+                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
+                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
+                viewModel.loadStreamResult(
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
+                    channelLogin = channelLogin,
+                    randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                    xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                    playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
+                    supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
+                    proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
+                    proxyMultivariantPlaylist = proxyMultivariantPlaylist,
+                    proxyHost = proxyHost,
+                    proxyPort = proxyPort,
+                    proxyUser = prefs.getString(C.PROXY_USER, null),
+                    proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
+                    enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
+                )
             }
-        } catch (e: Exception) {
-            requireContext().toast(R.string.error_stream)
         }
     }
 
     private fun playVideo(skipAccessToken: Boolean, playbackPosition: Long?) {
-        if (skipAccessToken && !video?.animatedPreviewURL.isNullOrBlank()) {
-            video?.animatedPreviewURL?.let { preview ->
-                val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, video?.type)
+        if (skipAccessToken && !requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW).isNullOrBlank()) {
+            requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW)?.let { preview ->
+                val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, requireArguments().getString(KEY_VIDEO_TYPE))
                 val map = mutableMapOf<String, Pair<String, String?>>()
                 qualityMap.forEach {
                     if (it.key == "source") {
@@ -2077,10 +1991,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                             PlaybackService.START_VIDEO, bundleOf(
                                 PlaybackService.URI to url,
                                 PlaybackService.PLAYBACK_POSITION to playbackPosition,
-                                PlaybackService.VIDEO_ID to video?.id?.toLongOrNull(),
-                                PlaybackService.TITLE to video?.title,
-                                PlaybackService.CHANNEL_NAME to video?.channelName,
-                                PlaybackService.CHANNEL_LOGO to video?.channelLogo,
+                                PlaybackService.VIDEO_ID to requireArguments().getString(KEY_VIDEO_ID)?.toLongOrNull(),
+                                PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
+                                PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
+                                PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
                             )
                         ), Bundle.EMPTY
                     )
@@ -2090,7 +2004,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
             viewModel.playbackPosition = playbackPosition
             viewModel.loadVideo(
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                videoId = video?.id,
+                videoId = requireArguments().getString(KEY_VIDEO_ID),
                 playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                 supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                 enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
@@ -2134,7 +2048,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
 
     override fun onNetworkRestored() {
         if (isResumed) {
-            if (stream != null) {
+            if (videoType == STREAM) {
                 restartPlayer()
             } else {
                 player?.prepare()
@@ -2143,7 +2057,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     }
 
     override fun onNetworkLost() {
-        if (stream == null && isResumed) {
+        if (videoType != STREAM && isResumed) {
             player?.stop()
         }
     }
@@ -2191,7 +2105,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                         }
                     }
                 }
-                viewModel.background = true
                 player.sendCustomCommand(
                     SessionCommand(
                         PlaybackService.SET_SLEEP_TIMER, bundleOf(
@@ -2247,44 +2160,45 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                             }
                         }
                     }
-                    viewModel.background = true
-                    player.sendCustomCommand(
-                        SessionCommand(
-                            PlaybackService.SET_SLEEP_TIMER, bundleOf(
-                                PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
-                            )
-                        ), Bundle.EMPTY
-                    )
                 } else {
                     viewModel.resume = player.playWhenReady
                     player.pause()
                 }
+                player.sendCustomCommand(
+                    SessionCommand(
+                        PlaybackService.SET_SLEEP_TIMER, bundleOf(
+                            PlaybackService.DURATION to ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0)
+                        )
+                    ), Bundle.EMPTY
+                )
             }
         }
         releaseController()
     }
 
     private fun savePosition() {
-        video?.let { video ->
-            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                video.id?.toLongOrNull()?.let { id ->
-                    player?.currentPosition?.let { position ->
-                        viewModel.saveVideoPosition(id, position)
+        when (videoType) {
+            VIDEO -> {
+                if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    requireArguments().getString(KEY_VIDEO_ID)?.toLongOrNull()?.let { id ->
+                        player?.currentPosition?.let { position ->
+                            viewModel.saveVideoPosition(id, position)
+                        }
                     }
                 }
             }
-        } ?:
-        offlineVideo?.let { offlineVideo ->
-            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                player?.currentPosition?.let { position ->
-                    viewModel.saveOfflineVideoPosition(offlineVideo.id, position)
+            OFFLINE_VIDEO -> {
+                if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    player?.currentPosition?.let { position ->
+                        viewModel.saveOfflineVideoPosition(requireArguments().getInt(KEY_OFFLINE_VIDEO_ID), position)
+                    }
                 }
             }
         }
     }
 
     private fun releaseController() {
-        binding.playerView.player = null
+        _binding?.playerView?.player = null
         controllerFuture?.let { MediaController.releaseFuture(it) }
     }
 
@@ -2292,7 +2206,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         with(binding) {
             chatLayout.hideKeyboard()
             chatLayout.clearFocus()
-            if (stream != null && chatFragment?.emoteMenuIsVisible() == true) {
+            if (videoType == STREAM && chatFragment?.emoteMenuIsVisible() == true) {
                 chatFragment?.toggleBackPressedCallback(false)
             }
             backPressedCallback.remove()
@@ -2311,7 +2225,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     override fun onMaximize() {
         with(binding) {
             requireActivity().onBackPressedDispatcher.addCallback(this@PlayerFragment, backPressedCallback)
-            if (stream != null && chatFragment?.emoteMenuIsVisible() == true) {
+            if (videoType == STREAM && chatFragment?.emoteMenuIsVisible() == true) {
                 chatFragment?.toggleBackPressedCallback(true)
             }
             playerView.useController = true
@@ -2334,33 +2248,86 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
 
     override fun showDownloadDialog() {
         if (viewModel.loaded.value) {
-            stream?.let { stream ->
-                val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                    pair.second?.let { pair.first to it }
+            when (videoType) {
+                STREAM -> {
+                    val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                        pair.second?.let { pair.first to it }
+                    }
+                    DownloadDialog.newInstance(
+                        id = requireArguments().getString(KEY_STREAM_ID),
+                        title = requireArguments().getString(KEY_TITLE),
+                        startedAt = requireArguments().getString(KEY_STARTED_AT),
+                        channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                        channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                        channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                        thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                        gameId = requireArguments().getString(KEY_GAME_ID),
+                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                        gameName = requireArguments().getString(KEY_GAME_NAME),
+                        keys = qualities.map { it.first }.toTypedArray(),
+                        values = qualities.map { it.second }.toTypedArray()
+                    ).show(childFragmentManager, null)
                 }
-                DownloadDialog.newInstance(stream, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray()).show(childFragmentManager, null)
-            } ?:
-            video?.let { video ->
-                player?.sendCustomCommand(
-                    SessionCommand(PlaybackService.GET_DURATION, Bundle.EMPTY),
-                    Bundle.EMPTY
-                )?.let { result ->
-                    result.addListener({
-                        if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
-                            val totalDuration = result.get().extras.getLong(PlaybackService.RESULT)
-                            val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                                pair.second?.let { pair.first to it }
+                VIDEO -> {
+                    player?.sendCustomCommand(
+                        SessionCommand(PlaybackService.GET_DURATION, Bundle.EMPTY),
+                        Bundle.EMPTY
+                    )?.let { result ->
+                        result.addListener({
+                            if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
+                                val totalDuration = result.get().extras.getLong(PlaybackService.RESULT)
+                                val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                                    pair.second?.let { pair.first to it }
+                                }
+                                DownloadDialog.newInstance(
+                                    id = requireArguments().getString(KEY_VIDEO_ID),
+                                    title = requireArguments().getString(KEY_TITLE),
+                                    uploadDate = requireArguments().getString(KEY_UPLOAD_DATE),
+                                    duration = requireArguments().getString(KEY_DURATION),
+                                    videoType = requireArguments().getString(KEY_VIDEO_TYPE),
+                                    animatedPreviewUrl = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW),
+                                    channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                                    channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                    channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                                    channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                                    thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                                    gameId = requireArguments().getString(KEY_GAME_ID),
+                                    gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                                    gameName = requireArguments().getString(KEY_GAME_NAME),
+                                    totalDuration = totalDuration,
+                                    currentPosition = player?.currentPosition,
+                                    keys = qualities.map { it.first }.toTypedArray(),
+                                    values = qualities.map { it.second }.toTypedArray()
+                                ).show(childFragmentManager, null)
                             }
-                            DownloadDialog.newInstance(video, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray(), totalDuration, player?.currentPosition).show(childFragmentManager, null)
-                        }
-                    }, MoreExecutors.directExecutor())
+                        }, MoreExecutors.directExecutor())
+                    }
                 }
-            } ?:
-            clip?.let { clip ->
-                val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                    pair.second?.let { pair.first to it }
+                CLIP -> {
+                    val qualities = viewModel.qualities.values.mapNotNull { pair ->
+                        pair.second?.let { pair.first to it }
+                    }
+                    DownloadDialog.newInstance(
+                        clipId = requireArguments().getString(KEY_CLIP_ID),
+                        title = requireArguments().getString(KEY_TITLE),
+                        uploadDate = requireArguments().getString(KEY_UPLOAD_DATE),
+                        duration = requireArguments().getDouble(KEY_DURATION),
+                        videoId = requireArguments().getString(KEY_VIDEO_ID),
+                        vodOffset = requireArguments().getInt(KEY_VOD_OFFSET),
+                        channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                        channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                        channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                        thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL),
+                        thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                        gameId = requireArguments().getString(KEY_GAME_ID),
+                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                        gameName = requireArguments().getString(KEY_GAME_NAME),
+                        keys = qualities.map { it.first }.toTypedArray(),
+                        values = qualities.map { it.second }.toTypedArray()
+                    ).show(childFragmentManager, null)
                 }
-                DownloadDialog.newInstance(clip, qualities.map { it.first }.toTypedArray(), qualities.map { it.second }.toTypedArray()).show(childFragmentManager, null)
             }
         }
     }
@@ -2428,87 +2395,82 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     when (callback) {
                         "refreshStream" -> {
-                            stream?.let { stream ->
-                                stream.channelLogin?.let { channelLogin ->
-                                    val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                                    val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                    val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
-                                    viewModel.loadStreamResult(
-                                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
-                                        channelLogin = channelLogin,
-                                        randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
-                                        xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
-                                        playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
-                                        supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
-                                        proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
-                                        proxyMultivariantPlaylist = proxyMultivariantPlaylist,
-                                        proxyHost = proxyHost,
-                                        proxyPort = proxyPort,
-                                        proxyUser = prefs.getString(C.PROXY_USER, null),
-                                        proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
-                                        enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
-                                    )
-                                }
-                                viewModel.isFollowingChannel(
-                                    TwitchApiHelper.getHelixHeaders(requireContext()),
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                    stream.channelId,
-                                    stream.channelLogin
-                                )
-                            }
-                        }
-                        "refreshVideo" -> {
-                            video?.let { video ->
-                                viewModel.loadVideo(
-                                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                                    videoId = video.id,
-                                    playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                            requireArguments().getString(KEY_CHANNEL_LOGIN)?.let { channelLogin ->
+                                val proxyHost = prefs.getString(C.PROXY_HOST, null)
+                                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
+                                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
+                                viewModel.loadStreamResult(
+                                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
+                                    channelLogin = channelLogin,
+                                    randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                                    xDeviceId = prefs.getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                                    playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
                                     supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
+                                    proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
+                                    proxyMultivariantPlaylist = proxyMultivariantPlaylist,
+                                    proxyHost = proxyHost,
+                                    proxyPort = proxyPort,
+                                    proxyUser = prefs.getString(C.PROXY_USER, null),
+                                    proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
                                     enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
                                 )
-                                viewModel.isFollowingChannel(
-                                    TwitchApiHelper.getHelixHeaders(requireContext()),
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                    video.channelId,
-                                    video.channelLogin
-                                )
-                                if (!video.id.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
-                                    viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), video.id)
-                                }
+                            }
+                            viewModel.isFollowingChannel(
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                requireArguments().getString(KEY_CHANNEL_ID),
+                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                            )
+                        }
+                        "refreshVideo" -> {
+                            val videoId = requireArguments().getString(KEY_VIDEO_ID)
+                            viewModel.loadVideo(
+                                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
+                                videoId = videoId,
+                                playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
+                                supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
+                                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
+                            )
+                            viewModel.isFollowingChannel(
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                requireArguments().getString(KEY_CHANNEL_ID),
+                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                            )
+                            if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
+                                viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), videoId)
                             }
                         }
                         "refreshClip" -> {
-                            clip?.let { clip ->
-                                viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), clip.id)
-                                viewModel.isFollowingChannel(
-                                    TwitchApiHelper.getHelixHeaders(requireContext()),
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                    requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                    clip.channelId,
-                                    clip.channelLogin
-                                )
-                            }
+                            viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(KEY_CLIP_ID))
+                            viewModel.isFollowingChannel(
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().tokenPrefs().getString(C.USER_ID, null),
+                                requireArguments().getString(KEY_CHANNEL_ID),
+                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                            )
                         }
                         "follow" -> viewModel.saveFollowChannel(
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                            stream?.channelId ?: video?.channelId ?: clip?.channelId,
-                            stream?.channelLogin ?: video?.channelLogin ?: clip?.channelLogin,
-                            stream?.channelName ?: video?.channelName ?: clip?.channelName,
+                            requireArguments().getString(KEY_CHANNEL_ID),
+                            requireArguments().getString(KEY_CHANNEL_LOGIN),
+                            requireArguments().getString(KEY_CHANNEL_NAME),
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                            stream?.startedAt
+                            requireArguments().getString(KEY_STARTED_AT)
                         )
                         "unfollow" -> viewModel.deleteFollowChannel(
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                            stream?.channelId ?: video?.channelId ?: clip?.channelId
+                            requireArguments().getString(KEY_CHANNEL_ID)
                         )
                     }
                 }
@@ -2531,43 +2493,123 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         private const val REQUEST_CODE_AUDIO_ONLY = 2
         private const val REQUEST_CODE_PLAY_PAUSE = 3
 
-        private const val KEY_STREAM = "stream"
-        private const val KEY_VIDEO = "video"
-        private const val KEY_CLIP = "clip"
-        private const val KEY_OFFLINE_VIDEO = "offlineVideo"
+        internal const val STREAM = "stream"
+        internal const val VIDEO = "video"
+        internal const val CLIP = "clip"
+        internal const val OFFLINE_VIDEO = "offlineVideo"
+
+        private const val KEY_TYPE = "type"
+        private const val KEY_STREAM_ID = "streamId"
+        private const val KEY_VIDEO_ID = "videoId"
+        private const val KEY_CLIP_ID = "clipId"
+        private const val KEY_OFFLINE_VIDEO_ID = "offlineVideoId"
+        private const val KEY_TITLE = "title"
+        private const val KEY_VIEWER_COUNT = "viewerCount"
+        private const val KEY_STARTED_AT = "startedAt"
+        private const val KEY_UPLOAD_DATE = "uploadDate"
+        private const val KEY_DURATION = "duration"
         private const val KEY_OFFSET = "offset"
         private const val KEY_IGNORE_SAVED_POSITION = "ignoreSavedPosition"
+        private const val KEY_VIDEO_TYPE = "videoType"
+        private const val KEY_VIDEO_ANIMATED_PREVIEW = "videoAnimatedPreview"
+        private const val KEY_VOD_OFFSET = "vodOffset"
+        private const val KEY_URL = "url"
+        private const val KEY_CHAT_URL = "chatUrl"
+        private const val KEY_CHANNEL_ID = "channelId"
+        private const val KEY_CHANNEL_LOGIN = "channelLogin"
+        private const val KEY_CHANNEL_NAME = "channelName"
+        private const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
+        private const val KEY_CHANNEL_LOGO = "channelLogo"
+        private const val KEY_THUMBNAIL_URL = "thumbnailUrl"
+        private const val KEY_THUMBNAIL = "thumbnail"
+        private const val KEY_GAME_ID = "gameId"
+        private const val KEY_GAME_SLUG = "gameSlug"
+        private const val KEY_GAME_NAME = "gameName"
 
-        fun newInstance(stream: Stream): PlayerFragment {
+        fun newInstance(item: Stream): PlayerFragment {
             return PlayerFragment().apply {
                 arguments = bundleOf(
-                    KEY_STREAM to stream
+                    KEY_TYPE to STREAM,
+                    KEY_STREAM_ID to item.id,
+                    KEY_TITLE to item.title,
+                    KEY_VIEWER_COUNT to (item.viewerCount ?: -1),
+                    KEY_STARTED_AT to item.startedAt,
+                    KEY_CHANNEL_ID to item.channelId,
+                    KEY_CHANNEL_LOGIN to item.channelLogin,
+                    KEY_CHANNEL_NAME to item.channelName,
+                    KEY_CHANNEL_LOGO to item.channelLogo,
+                    KEY_THUMBNAIL to item.thumbnail,
+                    KEY_GAME_ID to item.gameId,
+                    KEY_GAME_SLUG to item.gameSlug,
+                    KEY_GAME_NAME to item.gameName,
                 )
             }
         }
 
-        fun newInstance(video: Video, offset: Double? = null, ignoreSavedPosition: Boolean = false): PlayerFragment {
+        fun newInstance(item: Video, offset: Long?, ignoreSavedPosition: Boolean): PlayerFragment {
             return PlayerFragment().apply {
                 arguments = bundleOf(
-                    KEY_VIDEO to video,
-                    KEY_OFFSET to offset,
-                    KEY_IGNORE_SAVED_POSITION to ignoreSavedPosition
+                    KEY_TYPE to VIDEO,
+                    KEY_VIDEO_ID to item.id,
+                    KEY_TITLE to item.title,
+                    KEY_UPLOAD_DATE to item.uploadDate,
+                    KEY_DURATION to item.duration,
+                    KEY_OFFSET to (offset ?: -1L),
+                    KEY_IGNORE_SAVED_POSITION to ignoreSavedPosition,
+                    KEY_VIDEO_TYPE to item.type,
+                    KEY_VIDEO_ANIMATED_PREVIEW to item.animatedPreviewURL,
+                    KEY_CHANNEL_ID to item.channelId,
+                    KEY_CHANNEL_LOGIN to item.channelLogin,
+                    KEY_CHANNEL_NAME to item.channelName,
+                    KEY_CHANNEL_LOGO to item.channelLogo,
+                    KEY_THUMBNAIL to item.thumbnail,
+                    KEY_GAME_ID to item.gameId,
+                    KEY_GAME_SLUG to item.gameSlug,
+                    KEY_GAME_NAME to item.gameName,
                 )
             }
         }
 
-        fun newInstance(clip: Clip): PlayerFragment {
+        fun newInstance(item: Clip): PlayerFragment {
             return PlayerFragment().apply {
                 arguments = bundleOf(
-                    KEY_CLIP to clip
+                    KEY_TYPE to CLIP,
+                    KEY_CLIP_ID to item.id,
+                    KEY_TITLE to item.title,
+                    KEY_UPLOAD_DATE to item.uploadDate,
+                    KEY_DURATION to item.duration,
+                    KEY_VIDEO_ID to item.videoId,
+                    KEY_VIDEO_ANIMATED_PREVIEW to item.videoAnimatedPreviewURL,
+                    KEY_VOD_OFFSET to (item.vodOffset ?: -1),
+                    KEY_CHANNEL_ID to item.channelId,
+                    KEY_CHANNEL_LOGIN to item.channelLogin,
+                    KEY_CHANNEL_NAME to item.channelName,
+                    KEY_PROFILE_IMAGE_URL to item.profileImageUrl,
+                    KEY_CHANNEL_LOGO to item.channelLogo,
+                    KEY_THUMBNAIL_URL to item.thumbnailUrl,
+                    KEY_THUMBNAIL to item.thumbnail,
+                    KEY_GAME_ID to item.gameId,
+                    KEY_GAME_SLUG to item.gameSlug,
+                    KEY_GAME_NAME to item.gameName,
                 )
             }
         }
 
-        fun newInstance(video: OfflineVideo): PlayerFragment {
+        fun newInstance(item: OfflineVideo): PlayerFragment {
             return PlayerFragment().apply {
                 arguments = bundleOf(
-                    KEY_OFFLINE_VIDEO to video
+                    KEY_TYPE to OFFLINE_VIDEO,
+                    KEY_OFFLINE_VIDEO_ID to item.id,
+                    KEY_TITLE to item.name,
+                    KEY_URL to item.url,
+                    KEY_CHAT_URL to item.chatUrl,
+                    KEY_CHANNEL_ID to item.channelId,
+                    KEY_CHANNEL_LOGIN to item.channelLogin,
+                    KEY_CHANNEL_NAME to item.channelName,
+                    KEY_CHANNEL_LOGO to item.channelLogo,
+                    KEY_GAME_ID to item.gameId,
+                    KEY_GAME_SLUG to item.gameSlug,
+                    KEY_GAME_NAME to item.gameName,
                 )
             }
         }

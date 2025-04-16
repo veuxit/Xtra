@@ -133,7 +133,7 @@ class BookmarksAdapter(
                                 type = item.type,
                                 duration = item.duration,
                                 animatedPreviewURL = item.animatedPreviewURL,
-                            ), position?.toDouble()
+                            ), position
                         )
                     }
                     root.setOnLongClickListener { deleteVideo(item); true }

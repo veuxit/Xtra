@@ -15,7 +15,6 @@ import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
-import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
@@ -131,91 +130,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun downloadStream(filesDir: String, stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadStream(filesDir: String, id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         viewModelScope.launch {
-            with(stream) {
-                if (!channelLogin.isNullOrBlank()) {
-                    val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
-                        thumbnail.takeIf { !it.isNullOrBlank() }?.let {
-                            File(filesDir, "thumbnails").mkdir()
-                            val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
-                            viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                        if (response.isSuccessful) {
-                                            File(filePath).sink().buffer().use { sink ->
-                                                sink.writeAll(response.body.source())
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-
-                                }
-                            }
-                            filePath
-                        }
-                    }
-                    val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
-                        channelLogo.takeIf { !it.isNullOrBlank() }?.let {
-                            File(filesDir, "profile_pics").mkdir()
-                            val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
-                            viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                        if (response.isSuccessful) {
-                                            File(filePath).sink().buffer().use { sink ->
-                                                sink.writeAll(response.body.source())
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-
-                                }
-                            }
-                            filePath
-                        }
-                    }
-                    val videoId = offlineRepository.saveVideo(
-                        OfflineVideo(
-                            name = title,
-                            channelId = channelId,
-                            channelLogin = channelLogin,
-                            channelName = channelName,
-                            channelLogo = downloadedLogo,
-                            thumbnail = downloadedThumbnail,
-                            gameId = gameId,
-                            gameSlug = gameSlug,
-                            gameName = gameName,
-                            uploadDate = startedAt?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                            downloadDate = System.currentTimeMillis(),
-                            downloadPath = path,
-                            status = OfflineVideo.STATUS_BLOCKED,
-                            quality = if (!quality.contains("Audio", true)) quality else "audio",
-                            downloadChat = downloadChat,
-                            downloadChatEmotes = downloadChatEmotes,
-                            live = true
-                        )
-                    ).toInt()
-                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                        channelLogin,
-                        ExistingWorkPolicy.REPLACE,
-                        OneTimeWorkRequestBuilder<StreamDownloadWorker>()
-                            .setInputData(workDataOf(StreamDownloadWorker.KEY_VIDEO_ID to videoId))
-                            .setConstraints(
-                                Constraints.Builder()
-                                    .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-                                    .build()
-                            )
-                            .build()
-                    )
-                }
-            }
-        }
-    }
-
-    fun downloadVideo(filesDir: String, video: Video, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
-        viewModelScope.launch {
-            with(video) {
+            if (!channelLogin.isNullOrBlank()) {
                 val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
                     thumbnail.takeIf { !it.isNullOrBlank() }?.let {
                         File(filesDir, "thumbnails").mkdir()
@@ -258,7 +175,6 @@ class MainViewModel @Inject constructor(
                 }
                 val videoId = offlineRepository.saveVideo(
                     OfflineVideo(
-                        sourceUrl = url,
                         name = title,
                         channelId = channelId,
                         channelLogin = channelLogin,
@@ -268,26 +184,21 @@ class MainViewModel @Inject constructor(
                         gameId = gameId,
                         gameSlug = gameSlug,
                         gameName = gameName,
-                        uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                        uploadDate = startedAt?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
                         downloadDate = System.currentTimeMillis(),
                         downloadPath = path,
-                        fromTime = from,
-                        toTime = to,
                         status = OfflineVideo.STATUS_BLOCKED,
-                        type = type,
-                        videoId = id,
                         quality = if (!quality.contains("Audio", true)) quality else "audio",
                         downloadChat = downloadChat,
                         downloadChatEmotes = downloadChatEmotes,
-                        playlistToFile = playlistToFile
+                        live = true
                     )
                 ).toInt()
                 WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                    "download",
-                    ExistingWorkPolicy.APPEND_OR_REPLACE,
-                    OneTimeWorkRequestBuilder<VideoDownloadWorker>()
-                        .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to videoId))
-                        .addTag(videoId.toString())
+                    channelLogin,
+                    ExistingWorkPolicy.REPLACE,
+                    OneTimeWorkRequestBuilder<StreamDownloadWorker>()
+                        .setInputData(workDataOf(StreamDownloadWorker.KEY_VIDEO_ID to videoId))
                         .setConstraints(
                             Constraints.Builder()
                                 .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
@@ -299,88 +210,170 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun downloadClip(filesDir: String, clip: Clip, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadVideo(filesDir: String, id: String?, title: String?, uploadDate: String?, type: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
         viewModelScope.launch {
-            with(clip) {
-                val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
-                    thumbnail.takeIf { !it.isNullOrBlank() }?.let {
-                        File(filesDir, "thumbnails").mkdir()
-                        val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
-                        viewModelScope.launch(Dispatchers.IO) {
-                            try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(filePath).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body.source())
-                                        }
+            val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
+                thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                    File(filesDir, "thumbnails").mkdir()
+                    val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    File(filePath).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body.source())
                                     }
                                 }
-                            } catch (e: Exception) {
-
                             }
-                        }
-                        filePath
-                    }
-                }
-                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
-                    channelLogo.takeIf { !it.isNullOrBlank() }?.let {
-                        File(filesDir, "profile_pics").mkdir()
-                        val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
-                        viewModelScope.launch(Dispatchers.IO) {
-                            try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(filePath).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body.source())
-                                        }
-                                    }
-                                }
-                            } catch (e: Exception) {
+                        } catch (e: Exception) {
 
-                            }
                         }
-                        filePath
                     }
+                    filePath
                 }
-                val videoId = offlineRepository.saveVideo(
-                    OfflineVideo(
-                        sourceUrl = url,
-                        sourceStartPosition = vodOffset?.toLong()?.times(1000L),
-                        name = title,
-                        channelId = channelId,
-                        channelLogin = channelLogin,
-                        channelName = channelName,
-                        channelLogo = downloadedLogo,
-                        thumbnail = downloadedThumbnail,
-                        gameId = gameId,
-                        gameSlug = gameSlug,
-                        gameName = gameName,
-                        duration = duration?.toLong()?.times(1000L),
-                        uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
-                        downloadDate = System.currentTimeMillis(),
-                        downloadPath = path,
-                        status = OfflineVideo.STATUS_BLOCKED,
-                        videoId = videoId,
-                        clipId = id,
-                        quality = if (!quality.contains("Audio", true)) quality else "audio",
-                        downloadChat = downloadChat,
-                        downloadChatEmotes = downloadChatEmotes
-                    )
-                ).toInt()
-                WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                    "download",
-                    ExistingWorkPolicy.APPEND_OR_REPLACE,
-                    OneTimeWorkRequestBuilder<VideoDownloadWorker>()
-                        .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to videoId))
-                        .addTag(videoId.toString())
-                        .setConstraints(
-                            Constraints.Builder()
-                                .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-                                .build()
-                        )
-                        .build()
-                )
             }
+            val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                    File(filesDir, "profile_pics").mkdir()
+                    val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    File(filePath).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body.source())
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                    filePath
+                }
+            }
+            val videoId = offlineRepository.saveVideo(
+                OfflineVideo(
+                    sourceUrl = url,
+                    name = title,
+                    channelId = channelId,
+                    channelLogin = channelLogin,
+                    channelName = channelName,
+                    channelLogo = downloadedLogo,
+                    thumbnail = downloadedThumbnail,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                    downloadDate = System.currentTimeMillis(),
+                    downloadPath = path,
+                    fromTime = from,
+                    toTime = to,
+                    status = OfflineVideo.STATUS_BLOCKED,
+                    type = type,
+                    videoId = id,
+                    quality = if (!quality.contains("Audio", true)) quality else "audio",
+                    downloadChat = downloadChat,
+                    downloadChatEmotes = downloadChatEmotes,
+                    playlistToFile = playlistToFile
+                )
+            ).toInt()
+            WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                "download",
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                OneTimeWorkRequestBuilder<VideoDownloadWorker>()
+                    .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to videoId))
+                    .addTag(videoId.toString())
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                            .build()
+                    )
+                    .build()
+            )
+        }
+    }
+
+    fun downloadClip(filesDir: String, clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        viewModelScope.launch {
+            val downloadedThumbnail = clipId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                    File(filesDir, "thumbnails").mkdir()
+                    val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    File(filePath).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body.source())
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                    filePath
+                }
+            }
+            val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                    File(filesDir, "profile_pics").mkdir()
+                    val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    File(filePath).sink().buffer().use { sink ->
+                                        sink.writeAll(response.body.source())
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                    filePath
+                }
+            }
+            val videoId = offlineRepository.saveVideo(
+                OfflineVideo(
+                    sourceUrl = url,
+                    sourceStartPosition = vodOffset?.toLong()?.times(1000L),
+                    name = title,
+                    channelId = channelId,
+                    channelLogin = channelLogin,
+                    channelName = channelName,
+                    channelLogo = downloadedLogo,
+                    thumbnail = downloadedThumbnail,
+                    gameId = gameId,
+                    gameSlug = gameSlug,
+                    gameName = gameName,
+                    duration = duration?.toLong()?.times(1000L),
+                    uploadDate = uploadDate?.let { TwitchApiHelper.parseIso8601DateUTC(it) },
+                    downloadDate = System.currentTimeMillis(),
+                    downloadPath = path,
+                    status = OfflineVideo.STATUS_BLOCKED,
+                    videoId = videoId,
+                    clipId = clipId,
+                    quality = if (!quality.contains("Audio", true)) quality else "audio",
+                    downloadChat = downloadChat,
+                    downloadChatEmotes = downloadChatEmotes
+                )
+            ).toInt()
+            WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                "download",
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                OneTimeWorkRequestBuilder<VideoDownloadWorker>()
+                    .setInputData(workDataOf(VideoDownloadWorker.KEY_VIDEO_ID to videoId))
+                    .addTag(videoId.toString())
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                            .build()
+                    )
+                    .build()
+            )
         }
     }
 

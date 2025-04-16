@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 35
-        versionCode = 279
-        versionName = "2.43.1"
+        versionCode = 280
+        versionName = "2.43.2"
     }
 
     buildTypes {
@@ -77,7 +77,6 @@ dependencies {
     implementation(libs.preference.ktx)
     implementation(libs.recyclerview)
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.room.paging)
     implementation(libs.swiperefreshlayout)

@@ -26,9 +26,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
-import com.github.andreyasadchy.xtra.model.ui.Clip
-import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
@@ -48,40 +45,101 @@ import kotlin.math.max
 class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
 
     companion object {
-        private const val KEY_STREAM = "stream"
-        private const val KEY_URLS_KEYS = "urls_keys"
-        private const val KEY_URLS_VALUES = "urls_values"
-        private const val KEY_VIDEO = "video"
+        private const val STREAM = "stream"
+        private const val VIDEO = "video"
+        private const val CLIP = "clip"
+
+        private const val KEY_TYPE = "type"
+        private const val KEY_STREAM_ID = "streamId"
+        private const val KEY_VIDEO_ID = "videoId"
+        private const val KEY_CLIP_ID = "clipId"
+        private const val KEY_TITLE = "title"
+        private const val KEY_STARTED_AT = "startedAt"
+        private const val KEY_UPLOAD_DATE = "uploadDate"
+        private const val KEY_DURATION = "duration"
+        private const val KEY_VIDEO_TYPE = "videoType"
+        private const val KEY_VIDEO_ANIMATED_PREVIEW = "animatedPreviewUrl"
+        private const val KEY_VOD_OFFSET = "vodOffset"
+        private const val KEY_CHANNEL_ID = "channelId"
+        private const val KEY_CHANNEL_LOGIN = "channelLogin"
+        private const val KEY_CHANNEL_NAME = "channelName"
+        private const val KEY_CHANNEL_LOGO = "channelLogo"
+        private const val KEY_THUMBNAIL_URL = "thumbnailUrl"
+        private const val KEY_THUMBNAIL = "thumbnail"
+        private const val KEY_GAME_ID = "gameId"
+        private const val KEY_GAME_SLUG = "gameSlug"
+        private const val KEY_GAME_NAME = "gameName"
         private const val KEY_VIDEO_TOTAL_DURATION = "totalDuration"
         private const val KEY_VIDEO_CURRENT_POSITION = "currentPosition"
-        private const val KEY_CLIP = "clip"
+        private const val KEY_URLS_KEYS = "urls_keys"
+        private const val KEY_URLS_VALUES = "urls_values"
 
-        fun newInstance(stream: Stream, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
+        fun newInstance(id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
             return DownloadDialog().apply {
                 arguments = bundleOf(
-                    KEY_STREAM to stream,
+                    KEY_TYPE to STREAM,
+                    KEY_STREAM_ID to id,
+                    KEY_TITLE to title,
+                    KEY_STARTED_AT to startedAt,
+                    KEY_CHANNEL_ID to channelId,
+                    KEY_CHANNEL_LOGIN to channelLogin,
+                    KEY_CHANNEL_NAME to channelName,
+                    KEY_CHANNEL_LOGO to channelLogo,
+                    KEY_THUMBNAIL to thumbnail,
+                    KEY_GAME_ID to gameId,
+                    KEY_GAME_SLUG to gameSlug,
+                    KEY_GAME_NAME to gameName,
                     KEY_URLS_KEYS to keys,
                     KEY_URLS_VALUES to values
                 )
             }
         }
 
-        fun newInstance(video: Video, keys: Array<String>? = null, values: Array<String>? = null, totalDuration: Long? = null, currentPosition: Long? = null): DownloadDialog {
+        fun newInstance(id: String?, title: String?, uploadDate: String?, duration: String?, videoType: String?, animatedPreviewUrl: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, totalDuration: Long? = null, currentPosition: Long? = null, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
             return DownloadDialog().apply {
                 arguments = bundleOf(
-                    KEY_VIDEO to video,
-                    KEY_URLS_KEYS to keys,
-                    KEY_URLS_VALUES to values,
+                    KEY_TYPE to VIDEO,
+                    KEY_VIDEO_ID to id,
+                    KEY_TITLE to title,
+                    KEY_UPLOAD_DATE to uploadDate,
+                    KEY_DURATION to duration,
+                    KEY_VIDEO_TYPE to videoType,
+                    KEY_VIDEO_ANIMATED_PREVIEW to animatedPreviewUrl,
+                    KEY_CHANNEL_ID to channelId,
+                    KEY_CHANNEL_LOGIN to channelLogin,
+                    KEY_CHANNEL_NAME to channelName,
+                    KEY_CHANNEL_LOGO to channelLogo,
+                    KEY_THUMBNAIL to thumbnail,
+                    KEY_GAME_ID to gameId,
+                    KEY_GAME_SLUG to gameSlug,
+                    KEY_GAME_NAME to gameName,
                     KEY_VIDEO_TOTAL_DURATION to totalDuration,
-                    KEY_VIDEO_CURRENT_POSITION to currentPosition
+                    KEY_VIDEO_CURRENT_POSITION to currentPosition,
+                    KEY_URLS_KEYS to keys,
+                    KEY_URLS_VALUES to values
                 )
             }
         }
 
-        fun newInstance(clip: Clip, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
+        fun newInstance(clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnailUrl: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, keys: Array<String>? = null, values: Array<String>? = null): DownloadDialog {
             return DownloadDialog().apply {
                 arguments = bundleOf(
-                    KEY_CLIP to clip,
+                    KEY_TYPE to CLIP,
+                    KEY_CLIP_ID to clipId,
+                    KEY_TITLE to title,
+                    KEY_UPLOAD_DATE to uploadDate,
+                    KEY_DURATION to duration,
+                    KEY_VIDEO_ID to videoId,
+                    KEY_VOD_OFFSET to vodOffset,
+                    KEY_CHANNEL_ID to channelId,
+                    KEY_CHANNEL_LOGIN to channelLogin,
+                    KEY_CHANNEL_NAME to channelName,
+                    KEY_CHANNEL_LOGO to channelLogo,
+                    KEY_THUMBNAIL_URL to thumbnailUrl,
+                    KEY_THUMBNAIL to thumbnail,
+                    KEY_GAME_ID to gameId,
+                    KEY_GAME_SLUG to gameSlug,
+                    KEY_GAME_NAME to gameName,
                     KEY_URLS_KEYS to keys,
                     KEY_URLS_VALUES to values
                 )
@@ -148,50 +206,44 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
     }
 
     private fun init() {
-        val args = requireArguments()
-        val stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireArguments().getParcelable(KEY_STREAM, Stream::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            requireArguments().getParcelable(KEY_STREAM)
-        }
-        if (stream != null) {
-            lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    viewModel.qualities.collectLatest {
-                        if (!it.isNullOrEmpty()) {
-                            initStream(stream, it)
-                        }
-                    }
-                }
-            }
-            viewModel.setStream(
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
-                stream = stream,
-                qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
-                    args.getStringArray(KEY_URLS_VALUES)?.let { values ->
-                        keys.zip(values).toMap(mutableMapOf())
-                    }
-                },
-                randomDeviceId = requireContext().prefs().getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
-                xDeviceId = requireContext().prefs().getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
-                playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE, "site"),
-                supportedCodecs = requireContext().prefs().getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
-                enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
-            )
-        } else {
-            val video = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requireArguments().getParcelable(KEY_VIDEO, Video::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                requireArguments().getParcelable(KEY_VIDEO)
-            }
-            if (video != null) {
+        when (requireArguments().getString(KEY_TYPE)) {
+            STREAM -> {
                 lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.qualities.collectLatest {
                             if (!it.isNullOrEmpty()) {
-                                initVideo(video, it, args.getLong(KEY_VIDEO_TOTAL_DURATION).takeIf { it > 0 } ?: video.duration?.let { TwitchApiHelper.getDuration(it)?.times(1000) } ?: 0, args.getLong(KEY_VIDEO_CURRENT_POSITION))
+                                initStream(it)
+                            }
+                        }
+                    }
+                }
+                viewModel.setStream(
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
+                    channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                    qualities = requireArguments().getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                        requireArguments().getStringArray(KEY_URLS_VALUES)?.let { values ->
+                            keys.zip(values).toMap(mutableMapOf())
+                        }
+                    },
+                    randomDeviceId = requireContext().prefs().getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
+                    xDeviceId = requireContext().prefs().getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason"),
+                    playerType = requireContext().prefs().getString(C.TOKEN_PLAYERTYPE, "site"),
+                    supportedCodecs = requireContext().prefs().getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
+                )
+            }
+            VIDEO -> {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.qualities.collectLatest {
+                            if (!it.isNullOrEmpty()) {
+                                initVideo(
+                                    it,
+                                    requireArguments().getLong(KEY_VIDEO_TOTAL_DURATION).takeIf { it > 0 }
+                                        ?: requireArguments().getString(KEY_DURATION)?.let { TwitchApiHelper.getDuration(it)?.times(1000) }
+                                        ?: 0,
+                                    requireArguments().getLong(KEY_VIDEO_CURRENT_POSITION)
+                                )
                             }
                         }
                     }
@@ -207,9 +259,11 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 }
                 viewModel.setVideo(
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
-                    video = video,
-                    qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
-                        args.getStringArray(KEY_URLS_VALUES)?.let { values ->
+                    videoId = requireArguments().getString(KEY_VIDEO_ID),
+                    animatedPreviewUrl = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW),
+                    videoType = requireArguments().getString(KEY_VIDEO_TYPE),
+                    qualities = requireArguments().getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                        requireArguments().getStringArray(KEY_URLS_VALUES)?.let { values ->
                             keys.zip(values).toMap(mutableMapOf())
                         }
                     },
@@ -217,34 +271,28 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
                     enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false)
                 )
-            } else {
-                val clip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    args.getParcelable(KEY_CLIP, Clip::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    args.getParcelable(KEY_CLIP)
-                }
-                if (clip != null) {
-                    lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            viewModel.qualities.collectLatest {
-                                if (!it.isNullOrEmpty()) {
-                                    initClip(clip, it)
-                                }
+            }
+            CLIP -> {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.qualities.collectLatest {
+                            if (!it.isNullOrEmpty()) {
+                                initClip(it)
                             }
                         }
                     }
-                    viewModel.setClip(
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                        clip = clip,
-                        qualities = args.getStringArray(KEY_URLS_KEYS)?.let { keys ->
-                            args.getStringArray(KEY_URLS_VALUES)?.let { values ->
-                                keys.zip(values).toMap(mutableMapOf())
-                            }
-                        },
-                        skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
-                    )
                 }
+                viewModel.setClip(
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                    clipId = requireArguments().getString(KEY_CLIP_ID),
+                    thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL),
+                    qualities = requireArguments().getStringArray(KEY_URLS_KEYS)?.let { keys ->
+                        requireArguments().getStringArray(KEY_URLS_VALUES)?.let { values ->
+                            keys.zip(values).toMap(mutableMapOf())
+                        }
+                    },
+                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
+                )
             }
         }
     }
@@ -316,7 +364,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         }
     }
 
-    private fun initStream(stream: Stream, qualities: Map<String, Pair<String, String>>) {
+    private fun initStream(qualities: Map<String, Pair<String, String>>) {
         with(binding) {
             layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.timeLayout && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
             initDialog(qualities)
@@ -327,7 +375,25 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    (requireActivity() as? MainActivity)?.downloadStream(requireContext().filesDir.path, stream, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    (requireActivity() as? MainActivity)?.downloadStream(
+                        filesDir = requireContext().filesDir.path,
+                        id = requireArguments().getString(KEY_STREAM_ID),
+                        title = requireArguments().getString(KEY_TITLE),
+                        startedAt = requireArguments().getString(KEY_STARTED_AT),
+                        channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                        channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                        channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                        thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                        gameId = requireArguments().getString(KEY_GAME_ID),
+                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                        gameName = requireArguments().getString(KEY_GAME_NAME),
+                        path = path,
+                        quality = quality.first,
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes,
+                        wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
+                    )
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {
@@ -343,7 +409,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         }
     }
 
-    private fun initVideo(video: Video, qualities: Map<String, Pair<String, String>>, totalDuration: Long, currentPosition: Long) {
+    private fun initVideo(qualities: Map<String, Pair<String, String>>, totalDuration: Long, currentPosition: Long) {
         with(binding) {
             layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
             initDialog(qualities)
@@ -372,7 +438,30 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                         val downloadChat = downloadChat.isChecked
                         val downloadChatEmotes = downloadChatEmotes.isChecked
                         if (!path.isNullOrBlank()) {
-                            (requireActivity() as? MainActivity)?.downloadVideo(requireContext().filesDir.path, video, quality.second, path, quality.first, from, to, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false), requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                            (requireActivity() as? MainActivity)?.downloadVideo(
+                                filesDir = requireContext().filesDir.path,
+                                id = requireArguments().getString(KEY_VIDEO_ID),
+                                title = requireArguments().getString(KEY_TITLE),
+                                uploadDate = requireArguments().getString(KEY_UPLOAD_DATE),
+                                type = requireArguments().getString(KEY_VIDEO_TYPE),
+                                channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                                channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                                channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                                thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                                gameId = requireArguments().getString(KEY_GAME_ID),
+                                gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                                gameName = requireArguments().getString(KEY_GAME_NAME),
+                                url = quality.second,
+                                path = path,
+                                quality = quality.first,
+                                from = from,
+                                to = to,
+                                downloadChat = downloadChat,
+                                downloadChatEmotes = downloadChatEmotes,
+                                playlistToFile = requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false),
+                                wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
+                            )
                             requireContext().prefs().edit {
                                 putInt(C.DOWNLOAD_LOCATION, location)
                                 if (location == 0) {
@@ -407,7 +496,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         }
     }
 
-    private fun initClip(clip: Clip, qualities: Map<String, Pair<String, String>>) {
+    private fun initClip(qualities: Map<String, Pair<String, String>>) {
         with(binding) {
             layout.children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.timeLayout && v.id != R.id.sharedStorageLayout && v.id != R.id.appStorageLayout }
             initDialog(qualities)
@@ -418,7 +507,29 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                 val downloadChat = downloadChat.isChecked
                 val downloadChatEmotes = downloadChatEmotes.isChecked
                 if (!path.isNullOrBlank()) {
-                    (requireActivity() as? MainActivity)?.downloadClip(requireContext().filesDir.path, clip, quality.second, path, quality.first, downloadChat, downloadChatEmotes, requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false))
+                    (requireActivity() as? MainActivity)?.downloadClip(
+                        filesDir = requireContext().filesDir.path,
+                        clipId = requireArguments().getString(KEY_CLIP_ID),
+                        title = requireArguments().getString(KEY_TITLE),
+                        uploadDate = requireArguments().getString(KEY_UPLOAD_DATE),
+                        duration = requireArguments().getDouble(KEY_DURATION),
+                        videoId = requireArguments().getString(KEY_VIDEO_ID),
+                        vodOffset = requireArguments().getInt(KEY_VOD_OFFSET),
+                        channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                        channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                        channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                        channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
+                        thumbnail = requireArguments().getString(KEY_THUMBNAIL),
+                        gameId = requireArguments().getString(KEY_GAME_ID),
+                        gameSlug = requireArguments().getString(KEY_GAME_SLUG),
+                        gameName = requireArguments().getString(KEY_GAME_NAME),
+                        url = quality.second,
+                        path = path,
+                        quality = quality.first,
+                        downloadChat = downloadChat,
+                        downloadChatEmotes = downloadChatEmotes,
+                        wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
+                    )
                     requireContext().prefs().edit {
                         putInt(C.DOWNLOAD_LOCATION, location)
                         if (location == 0) {

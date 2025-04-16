@@ -129,7 +129,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
                                 !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                 val chatUrl = args.getString(KEY_CHAT_URL)
-                if (isLive || (args.getString(KEY_VIDEO_ID) != null && !args.getBoolean(KEY_START_TIME_EMPTY)) || chatUrl != null) {
+                if (isLive || (args.getString(KEY_VIDEO_ID) != null && args.getInt(KEY_START_TIME) != -1) || chatUrl != null) {
                     adapter = ChatAdapter(
                         enableTimestamps = requireContext().prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
                         timestampFormat = requireContext().prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
@@ -1040,12 +1040,13 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                 viewModel.startLive(channelId, channelLogin, args.getString(KEY_CHANNEL_NAME), args.getString(KEY_STREAM_ID))
             } else {
                 val videoId = args.getString(KEY_VIDEO_ID)
-                if (videoId != null && !args.getBoolean(KEY_START_TIME_EMPTY)) {
+                val startTime = args.getInt(KEY_START_TIME)
+                if (videoId != null && startTime != -1) {
                     viewModel.startReplay(
                         channelId = channelId,
                         channelLogin = channelLogin,
                         videoId = videoId,
-                        startTime = args.getInt(KEY_START_TIME),
+                        startTime = startTime,
                         getCurrentPosition = (parentFragment as PlayerFragment)::getCurrentPosition,
                         getCurrentSpeed = (parentFragment as PlayerFragment)::getCurrentSpeed
                     )
@@ -1098,6 +1099,10 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
             requireArguments().getString(KEY_CHANNEL_ID),
             requireArguments().getString(KEY_CHANNEL_LOGIN)
         )
+    }
+
+    fun startReplayChatLoad() {
+        viewModel.startReplayChatLoad()
     }
 
     fun updatePosition(position: Long) {
@@ -1471,7 +1476,6 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         private const val KEY_STREAM_ID = "streamId"
         private const val KEY_VIDEO_ID = "videoId"
         private const val KEY_CHAT_URL = "chatUrl"
-        private const val KEY_START_TIME_EMPTY = "startTime_empty"
         private const val KEY_START_TIME = "startTime"
 
         fun newInstance(channelId: String?, channelLogin: String?, channelName: String?, streamId: String?): ChatFragment {
@@ -1493,12 +1497,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                     putString(KEY_CHANNEL_ID, channelId)
                     putString(KEY_CHANNEL_LOGIN, channelLogin)
                     putString(KEY_VIDEO_ID, videoId)
-                    if (startTime != null) {
-                        putBoolean(KEY_START_TIME_EMPTY, false)
-                        putInt(KEY_START_TIME, startTime)
-                    } else {
-                        putBoolean(KEY_START_TIME_EMPTY, true)
-                    }
+                    putInt(KEY_START_TIME, (startTime ?: -1))
                 }
             }
         }
