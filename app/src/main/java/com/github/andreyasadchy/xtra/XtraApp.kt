@@ -11,7 +11,6 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.util.DebugLogger
 import com.github.andreyasadchy.xtra.util.coil.CacheControlCacheStrategy
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
@@ -33,7 +32,6 @@ class XtraApp : Application(), Configuration.Provider, SingletonImageLoader.Fact
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
-            .setWorkerCoroutineContext(Dispatchers.IO)
             .setWorkerFactory(workerFactory)
             .build()
 

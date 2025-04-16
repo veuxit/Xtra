@@ -22,6 +22,7 @@ object C {
     const val USER_ID = "user_id"
     const val DOWNLOAD_PLAYLIST_TO_FILE = "download_playlist_to_file"
     const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
+    const val DOWNLOAD_USE_CRONET = "download_use_cronet"
     const val DOWNLOAD_CONCURRENT_LIMIT = "download_concurrent_limit"
     const val DOWNLOAD_STREAM_LIVE_CHECK = "download_stream_live_check"
     const val DOWNLOAD_STREAM_OFFLINE_CHECK = "download_stream_offline_check"

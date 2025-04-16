@@ -69,6 +69,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.chromium.net.CronetProvider
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -870,6 +871,9 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.download_preferences, rootKey)
+            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
+                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
+            }
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
                 viewModel.importDownloads()
                 true

@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.webkit)
     implementation(libs.work.runtime)
 
+    implementation(libs.cronet.api)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)
