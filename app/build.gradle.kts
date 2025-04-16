@@ -90,6 +90,8 @@ android {
 dependencies {
     implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("com.google.guava:guava:33.3.1-android")
+    implementation("com.google.android.gms:play-services-cronet:18.0.1")
 
     implementation(libs.material)
     implementation(libs.draglistview)
@@ -116,6 +118,7 @@ dependencies {
     implementation(libs.webkit)
     implementation(libs.work.runtime)
 
+    implementation(libs.cronet.api)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)

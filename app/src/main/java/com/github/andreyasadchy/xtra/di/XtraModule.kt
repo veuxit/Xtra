@@ -23,11 +23,15 @@ import okhttp3.OkHttpClient
 import okhttp3.TlsVersion
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.tls.HandshakeCertificates
+import org.chromium.net.CronetEngine
+import org.chromium.net.CronetProvider
 import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 import javax.net.ssl.SSLContext
@@ -150,5 +154,23 @@ class XtraModule {
             readTimeout(5, TimeUnit.MINUTES)
         }
         return builder.build()
+    }
+
+    @Singleton
+    @Provides
+    fun providesCronetEngine(application: Application): CronetEngine? {
+        return if (CronetProvider.getAllProviders(application).any { it.isEnabled }) {
+            CronetEngine.Builder(application).apply {
+                setUserAgent("Cronet/" + defaultUserAgent.substringAfter("Cronet/", "").substringBefore(')'))
+            }.build()
+        } else {
+            null
+        }
+    }
+
+    @Singleton
+    @Provides
+    fun providesCronetExecutor(): ExecutorService {
+        return Executors.newCachedThreadPool()
     }
 }
