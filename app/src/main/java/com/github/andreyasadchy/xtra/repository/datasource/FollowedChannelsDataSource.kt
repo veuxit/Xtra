@@ -115,7 +115,7 @@ class FollowedChannelsDataSource(
                                     profileImageUrl = user.profileImageUrl,
                                     followedAt = user.followedAt,
                                     lastBroadcast = user.lastBroadcast,
-                                    followAccount = item.followAccount,
+                                    followAccount = true,
                                     followLocal = item.followLocal,
                                 )
                             )
