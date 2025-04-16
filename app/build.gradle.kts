@@ -59,6 +59,8 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-cronet:18.1.0")
+
     implementation(libs.material)
     implementation(libs.draglistview)
 
@@ -85,6 +87,7 @@ dependencies {
     implementation(libs.webkit)
     implementation(libs.work.runtime)
 
+    implementation(libs.cronet.api)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)

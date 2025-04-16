@@ -15,6 +15,13 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="download_use_cronet"
+        android:title="@string/use_cronet_downloads"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <SeekBarPreference
         android:defaultValue="10"
         android:key="download_concurrent_limit"
