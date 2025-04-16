@@ -23,12 +23,17 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
 
     companion object {
 
+        private const val TYPE = "type"
         private const val SPEED = "speed"
         private const val VOD_GAMES = "vod_games"
 
-        fun newInstance(speedText: String? = null, vodGames: Boolean? = false): PlayerSettingsDialog {
+        fun newInstance(videoType: String?, speedText: String?, vodGames: Boolean?): PlayerSettingsDialog {
             return PlayerSettingsDialog().apply {
-                arguments = bundleOf(SPEED to speedText, VOD_GAMES to vodGames)
+                arguments = bundleOf(
+                    TYPE to videoType,
+                    SPEED to speedText,
+                    VOD_GAMES to vodGames
+                )
             }
         }
     }
@@ -47,8 +52,9 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
         behavior.skipCollapsed = true
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         val arguments = requireArguments()
+        val videoType = arguments.getString(TYPE)
         with(binding) {
-            if ((parentFragment as? PlayerFragment)?.stream == null && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, false)) {
+            if (videoType != PlayerFragment.STREAM && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, false)) {
                 menuSpeed.visible()
                 menuSpeed.setOnClickListener {
                     (parentFragment as? PlayerFragment)?.showSpeedDialog()
@@ -61,7 +67,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                 menuQuality.setOnClickListener { dismiss() }
                 (parentFragment as? PlayerFragment)?.setQualityText()
             }
-            if ((parentFragment as? PlayerFragment)?.stream != null) {
+            if (videoType == PlayerFragment.STREAM) {
                 if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VIEWER_LIST, true)) {
                     menuViewerList.visible()
                     menuViewerList.setOnClickListener {
@@ -122,7 +128,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                     }
                 }
             }
-            if ((parentFragment as? PlayerFragment)?.video != null) {
+            if (videoType == PlayerFragment.VIDEO) {
                 if (arguments.getBoolean(VOD_GAMES)) {
                     setVodGames()
                 }
@@ -130,14 +136,14 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                     (parentFragment as? PlayerFragment)?.checkBookmark()
                 }
             }
-            if ((parentFragment as? PlayerFragment)?.offlineVideo == null && requireContext().prefs().getBoolean(C.PLAYER_MENU_DOWNLOAD, true)) {
+            if (videoType != PlayerFragment.OFFLINE_VIDEO && requireContext().prefs().getBoolean(C.PLAYER_MENU_DOWNLOAD, true)) {
                 menuDownload.visible()
                 menuDownload.setOnClickListener {
                     (parentFragment as? PlayerFragment)?.showDownloadDialog()
                     dismiss()
                 }
             }
-            if ((parentFragment as? PlayerFragment)?.clip == null && requireContext().prefs().getBoolean(C.PLAYER_MENU_SLEEP, true)) {
+            if (videoType != PlayerFragment.CLIP && requireContext().prefs().getBoolean(C.PLAYER_MENU_SLEEP, true)) {
                 menuTimer.visible()
                 menuTimer.setOnClickListener {
                     (parentFragment as? PlayerFragment)?.showSleepTimerDialog()
@@ -177,7 +183,7 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                 }
             }
             (parentFragment as? PlayerFragment)?.setSubtitles()
-            if (((parentFragment as? PlayerFragment)?.stream != null || (parentFragment as? PlayerFragment)?.video != null) &&
+            if ((videoType == PlayerFragment.STREAM || videoType == PlayerFragment.VIDEO) &&
                 !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) &&
                 requireContext().prefs().getBoolean(C.PLAYER_MENU_RELOAD_EMOTES, true)
             ) {

@@ -15,6 +15,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
@@ -75,9 +76,11 @@ class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var dynamicsProcessing: DynamicsProcessing? = null
+    private var background = false
     private var videoId: Long? = null
     private var offlineVideoId: Int? = null
     private var sleepTimer: Timer? = null
+    private var sleepTimerEndTime = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -106,6 +109,12 @@ class PlaybackService : MediaSessionService() {
         }
         player.addListener(
             object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    if (background) {
+                        player.prepare()
+                    }
+                }
+
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
                     dynamicsProcessing?.let {
                         it.release()
@@ -223,7 +232,13 @@ class PlaybackService : MediaSessionService() {
                                 val title = customCommand.customExtras.getString(TITLE)
                                 val channelName = customCommand.customExtras.getString(CHANNEL_NAME)
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
-                                videoId = customCommand.customExtras.getLong(VIDEO_ID).takeIf { it != 0L }
+                                val newId = customCommand.customExtras.getLong(VIDEO_ID).takeIf { it != 0L }
+                                val position = if (videoId == newId && session.player.currentMediaItem != null) {
+                                    session.player.currentPosition
+                                } else {
+                                    customCommand.customExtras.getLong(PLAYBACK_POSITION)
+                                }
+                                videoId = newId
                                 offlineVideoId = null
                                 player.setMediaSource(
                                     HlsMediaSource.Factory(
@@ -250,7 +265,7 @@ class PlaybackService : MediaSessionService() {
                                 session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 session.player.prepare()
                                 session.player.playWhenReady = true
-                                session.player.seekTo(customCommand.customExtras.getLong(PLAYBACK_POSITION))
+                                session.player.seekTo(position)
                                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                             }
                             START_CLIP -> {
@@ -283,8 +298,14 @@ class PlaybackService : MediaSessionService() {
                                 val title = customCommand.customExtras.getString(TITLE)
                                 val channelName = customCommand.customExtras.getString(CHANNEL_NAME)
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
+                                val newId = customCommand.customExtras.getInt(VIDEO_ID).takeIf { it != 0 }
+                                val position = if (offlineVideoId == newId && session.player.currentMediaItem != null) {
+                                    session.player.currentPosition
+                                } else {
+                                    customCommand.customExtras.getLong(PLAYBACK_POSITION)
+                                }
                                 videoId = null
-                                offlineVideoId = customCommand.customExtras.getInt(VIDEO_ID).takeIf { it != 0 }
+                                offlineVideoId = newId
                                 session.player.setMediaItem(
                                     MediaItem.Builder().apply {
                                         setUri(uri)
@@ -301,7 +322,7 @@ class PlaybackService : MediaSessionService() {
                                 session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
                                 session.player.prepare()
                                 session.player.playWhenReady = true
-                                session.player.seekTo(customCommand.customExtras.getLong(PLAYBACK_POSITION))
+                                session.player.seekTo(position)
                                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                             }
                             TOGGLE_DYNAMICS_PROCESSING -> {
@@ -386,23 +407,27 @@ class PlaybackService : MediaSessionService() {
                             }
                             SET_SLEEP_TIMER -> {
                                 val duration = customCommand.customExtras.getLong(DURATION)
-                                sleepTimer?.let {
-                                    it.cancel()
-                                    sleepTimer = null
-                                }
+                                background = duration != -1L
+                                val endTime = sleepTimerEndTime
+                                sleepTimer?.cancel()
+                                sleepTimerEndTime = 0L
                                 if (duration > 0L) {
                                     sleepTimer = Timer().apply {
                                         schedule(duration) {
                                             Handler(Looper.getMainLooper()).post {
                                                 savePosition()
-                                                session.player.pause()
-                                                session.player.stop()
+                                                mediaSession?.player?.clearMediaItems()
+                                                mediaSession?.player?.pause()
+                                                mediaSession?.player?.stop()
                                                 stopSelf()
                                             }
                                         }
                                     }
+                                    sleepTimerEndTime = System.currentTimeMillis() + duration
                                 }
-                                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS, bundleOf(
+                                    RESULT to endTime
+                                )))
                             }
                             CHECK_ADS -> {
                                 val playlist = (session.player.currentManifest as? HlsManifest)?.mediaPlaylist
@@ -499,6 +524,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         savePosition()
+        mediaSession?.player?.clearMediaItems()
         mediaSession?.player?.pause()
         mediaSession?.player?.stop()
         stopSelf()

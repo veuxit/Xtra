@@ -66,7 +66,22 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
             )
         }, {
             if (DownloadUtils.hasStoragePermission(requireActivity())) {
-                DownloadDialog.newInstance(it).show(childFragmentManager, null)
+                DownloadDialog.newInstance(
+                    id = it.id,
+                    title = it.title,
+                    uploadDate = it.uploadDate,
+                    duration = it.duration,
+                    videoType = it.type,
+                    animatedPreviewUrl = it.animatedPreviewURL,
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    channelLogo = it.channelLogo,
+                    thumbnail = it.thumbnail,
+                    gameId = it.gameId,
+                    gameSlug = it.gameSlug,
+                    gameName = it.gameName,
+                ).show(childFragmentManager, null)
             }
         }, {
             viewModel.vodIgnoreUser(it)

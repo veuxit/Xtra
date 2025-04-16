@@ -37,6 +37,7 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withStarted
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
@@ -401,7 +402,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 when {
                     url.contains("twitch.tv/videos/") -> {
                         val id = url.substringAfter("twitch.tv/videos/").takeIf { it.isNotBlank() }?.let { it.substringBefore("?", it.substringBefore("/")) }
-                        val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it)?.toDouble() ?: 0.0) * 1000.0 }
+                        val offset = url.substringAfter("?t=").takeIf { it.isNotBlank() }?.let { (TwitchApiHelper.getDuration(it) ?: 0) * 1000 }
                         if (!id.isNullOrBlank()) {
                             viewModel.loadVideo(
                                 id,
@@ -589,7 +590,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         startPlayer(PlayerFragment.newInstance(stream))
     }
 
-    fun startVideo(video: Video, offset: Double?, ignoreSavedPosition: Boolean = false) {
+    fun startVideo(video: Video, offset: Long?, ignoreSavedPosition: Boolean = false) {
         startPlayer(PlayerFragment.newInstance(video, offset, ignoreSavedPosition))
     }
 
@@ -646,13 +647,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     private fun restorePlayerFragment() {
-        if (viewModel.isPlayerOpened) {
-            if (playerFragment == null) {
-                playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as PlayerFragment?
-            } else {
-                if (playerFragment?.secondViewIsHidden() == true && prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)) {
-                    playerFragment?.maximize()
-                }
+        if (playerFragment == null) {
+            playerFragment = supportFragmentManager.findFragmentById(R.id.playerContainer) as? PlayerFragment
+        } else {
+            if (viewModel.isPlayerOpened && playerFragment?.secondViewIsHidden() == true && prefs.getBoolean(C.PLAYER_PICTURE_IN_PICTURE, true)) {
+                playerFragment?.maximize()
             }
         }
     }
@@ -664,26 +663,34 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             viewModel.sleepTimer = Timer().apply {
                 schedule(duration) {
                     lifecycleScope.launch {
-                        repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                             playerFragment?.let {
                                 it.onMinimize()
                                 it.onClose()
                                 closePlayer()
-                                if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, false)) {
-                                    if ((getSystemService(POWER_SERVICE) as PowerManager).let {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-                                                it.isInteractive
-                                            } else {
-                                                @Suppress("DEPRECATION")
-                                                it.isScreenOn
-                                            }
-                                        }) {
-                                        try {
-                                            (getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
-                                        } catch (e: SecurityException) {
-
+                            }
+                            if (prefs.getBoolean(C.SLEEP_TIMER_LOCK, false)) {
+                                if ((getSystemService(POWER_SERVICE) as PowerManager).let {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                                            it.isInteractive
+                                        } else {
+                                            @Suppress("DEPRECATION")
+                                            it.isScreenOn
                                         }
+                                    }) {
+                                    try {
+                                        (getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
+                                    } catch (e: SecurityException) {
+
                                     }
+                                }
+                            }
+                        } else {
+                            withStarted {
+                                playerFragment?.let {
+                                    it.onMinimize()
+                                    it.onClose()
+                                    closePlayer()
                                 }
                             }
                         }
@@ -698,16 +705,16 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         return viewModel.sleepTimerEndTime - System.currentTimeMillis()
     }
 
-    fun downloadStream(filesDir: String, stream: Stream, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadStream(filesDir, stream, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
+    fun downloadStream(filesDir: String, id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadStream(filesDir, id, title, startedAt, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
     }
 
-    fun downloadVideo(filesDir: String, video: Video, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadVideo(filesDir, video, url, path, quality, from, to, downloadChat, downloadChatEmotes, playlistToFile, wifiOnly)
+    fun downloadVideo(filesDir: String, id: String?, title: String?, uploadDate: String?, type: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadVideo(filesDir, id, title, uploadDate, type, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, from, to, downloadChat, downloadChatEmotes, playlistToFile, wifiOnly)
     }
 
-    fun downloadClip(filesDir: String, clip: Clip, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadClip(filesDir, clip, url, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
+    fun downloadClip(filesDir: String, clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+        viewModel.downloadClip(filesDir, clipId, title, uploadDate, duration, videoId, vodOffset, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
     }
 
     fun popFragment() {

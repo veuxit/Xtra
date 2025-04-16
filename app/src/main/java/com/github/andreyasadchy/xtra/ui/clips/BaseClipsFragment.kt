@@ -13,7 +13,23 @@ abstract class BaseClipsFragment : PagedListFragment(), HasDownloadDialog {
     override fun showDownloadDialog() {
         if (DownloadUtils.hasStoragePermission(requireActivity())) {
             lastSelectedItem?.let {
-                DownloadDialog.newInstance(it).show(childFragmentManager, null)
+                DownloadDialog.newInstance(
+                    clipId = it.id,
+                    title = it.title,
+                    uploadDate = it.uploadDate,
+                    duration = it.duration,
+                    videoId = it.videoId,
+                    vodOffset = it.vodOffset,
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    channelLogo = it.channelLogo,
+                    thumbnailUrl = it.thumbnailUrl,
+                    thumbnail = it.thumbnail,
+                    gameId = it.gameId,
+                    gameSlug = it.gameSlug,
+                    gameName = it.gameName,
+                ).show(childFragmentManager, null)
             }
         }
     }

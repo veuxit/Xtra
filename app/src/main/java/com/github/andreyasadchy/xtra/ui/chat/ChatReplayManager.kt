@@ -11,7 +11,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -19,7 +18,7 @@ class ChatReplayManager @Inject constructor(
     private val gqlHeaders: Map<String, String>,
     private val repository: ApiRepository,
     private val videoId: String,
-    private val startTimeSeconds: Int,
+    private val startTime: Long,
     private val getCurrentPosition: () -> Long?,
     private val getCurrentSpeed: () -> Float?,
     private val onMessage: (ChatMessage) -> Unit,
@@ -30,22 +29,24 @@ class ChatReplayManager @Inject constructor(
 
     private var cursor: String? = null
     private val list = mutableListOf<VideoChatMessage>()
+    private var started = false
     private var isLoading = false
     private var loadJob: Job? = null
     private var messageJob: Job? = null
-    private var startTime = 0
     private var lastCheckedPosition = 0L
     private var playbackSpeed: Float? = null
     var isActive = true
 
     fun start() {
-        startTime = startTimeSeconds.times(1000)
-        val currentPosition = getCurrentPosition() ?: 0
-        lastCheckedPosition = currentPosition
-        playbackSpeed = getCurrentSpeed()
-        list.clear()
-        clearMessages()
-        load(currentPosition.div(1000).toInt() + startTimeSeconds)
+        if (!started) {
+            started = true
+            val currentPosition = getCurrentPosition() ?: 0
+            lastCheckedPosition = currentPosition
+            playbackSpeed = getCurrentSpeed()
+            list.clear()
+            clearMessages()
+            load(currentPosition + startTime)
+        }
     }
 
     fun stop() {
@@ -54,12 +55,12 @@ class ChatReplayManager @Inject constructor(
         isActive = false
     }
 
-    private fun load(offsetSeconds: Int? = null) {
+    private fun load(position: Long? = null) {
         isLoading = true
         loadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
-                val response = if (offsetSeconds != null) {
-                    repository.loadVideoMessages(gqlHeaders, videoId, offset = offsetSeconds)
+                val response = if (position != null) {
+                    repository.loadVideoMessages(gqlHeaders, videoId, offset = position.div(1000).toInt())
                 } else {
                     repository.loadVideoMessages(gqlHeaders, videoId, cursor = cursor)
                 }
@@ -119,13 +120,19 @@ class ChatReplayManager @Inject constructor(
     }
 
     private fun startJob() {
-        messageJob = coroutineScope.launch(Dispatchers.IO) {
+        messageJob = coroutineScope.launch {
             while (isActive) {
                 val message = list.firstOrNull() ?: break
                 if (message.offsetSeconds != null) {
                     var currentPosition: Long
                     val messageOffset = message.offsetSeconds.times(1000)
-                    while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
+                    while (
+                        (getCurrentPosition() ?: 0).let { position ->
+                            lastCheckedPosition = position
+                            currentPosition = position + startTime
+                            currentPosition < messageOffset
+                        }
+                    ) {
                         delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
                     }
                     if (!isActive) {
@@ -155,13 +162,13 @@ class ChatReplayManager @Inject constructor(
     }
 
     fun updatePosition(position: Long) {
-        if (lastCheckedPosition != position) {
+        if (started && lastCheckedPosition != position) {
             if (position - lastCheckedPosition !in 0..20000) {
                 loadJob?.cancel()
                 messageJob?.cancel()
                 list.clear()
                 clearMessages()
-                load(position.div(1000).toInt() + startTimeSeconds)
+                load(position + startTime)
             } else {
                 messageJob?.cancel()
                 startJob()
@@ -171,7 +178,7 @@ class ChatReplayManager @Inject constructor(
     }
 
     fun updateSpeed(speed: Float) {
-        if (playbackSpeed != speed) {
+        if (started && playbackSpeed != speed) {
             playbackSpeed = speed
             messageJob?.cancel()
             startJob()

@@ -29,7 +29,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.43.1"
+        versionName = "2.43.2"
     }
 
     buildTypes {
@@ -66,7 +66,7 @@ android {
             "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",
             "androidx.hilt:hilt-work:1.1.0",
-            "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0-alpha03",
+            "androidx.lifecycle:lifecycle-viewmodel:2.7.0-alpha03",
             "androidx.media3:media3-exoplayer:1.2.1",
             "androidx.media3:media3-exoplayer-hls:1.2.1",
             "androidx.media3:media3-session:1.2.1",
@@ -75,6 +75,10 @@ android {
             "androidx.navigation:navigation-ui:2.7.7",
             "androidx.paging:paging-runtime:3.3.0-alpha02",
             "androidx.recyclerview:recyclerview:1.4.0-alpha01",
+            "androidx.room:room-ktx:2.6.1",
+            "androidx.room:room-compiler:2.6.1",
+            "androidx.room:room-paging:2.6.1",
+            "androidx.room:room-runtime:2.6.1",
             "androidx.viewpager2:viewpager2:1.1.0-beta02",
             "androidx.webkit:webkit:1.9.0-alpha01",
             "androidx.work:work-runtime:2.9.1",
@@ -90,6 +94,7 @@ android {
 dependencies {
     implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("androidx.room:room-ktx:2.6.1")
     implementation("com.google.guava:guava:33.3.1-android")
     implementation("com.google.android.gms:play-services-cronet:18.0.1")
 
@@ -104,13 +109,13 @@ dependencies {
     implementation(libs.customview)
     implementation(libs.documentfile)
     implementation(libs.fragment.ktx)
+    implementation(libs.lifecycle.viewmodel)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
     implementation(libs.paging.runtime)
     implementation(libs.preference.ktx)
     implementation(libs.recyclerview)
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.room.paging)
     implementation(libs.swiperefreshlayout)

@@ -10,9 +10,7 @@ import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
-import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
@@ -24,8 +22,8 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
@@ -53,6 +51,7 @@ class PlayerViewModel @Inject constructor(
 
     val streamResult = MutableStateFlow<String?>(null)
     val stream = MutableStateFlow<Stream?>(null)
+    private var streamJob: Job? = null
     var useCustomProxy = false
     var playingAds = false
     var usingProxy = false
@@ -60,14 +59,14 @@ class PlayerViewModel @Inject constructor(
 
     val videoResult = MutableStateFlow<Uri?>(null)
     var playbackPosition: Long? = null
-    val savedPosition = MutableSharedFlow<VideoPosition?>()
+    val savedPosition = MutableStateFlow<Long?>(null)
     val isBookmarked = MutableStateFlow<Boolean?>(null)
     val gamesList = MutableStateFlow<List<Game>?>(null)
     var shouldRetry = true
 
     val clipUrls = MutableStateFlow<Map<String, String>?>(null)
 
-    val offlineVideo = MutableSharedFlow<OfflineVideo?>()
+    val savedOfflineVideoPosition = MutableStateFlow<Long?>(null)
 
     var qualities: Map<String, Pair<String, String?>> = emptyMap()
     var qualityIndex: Int = 0
@@ -75,7 +74,6 @@ class PlayerViewModel @Inject constructor(
     var playlistUrl: Uri? = null
     var started = false
     var restoreQuality = false
-    var background = false
     var resume = false
     var hidden = false
     val loaded = MutableStateFlow(false)
@@ -127,12 +125,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadStream(stream: Stream, loop: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadStream(channelId: String?, channelLogin: String?, viewerCount: Int?, loop: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
         if (loop) {
-            viewModelScope.launch {
+            streamJob?.cancel()
+            streamJob = viewModelScope.launch {
                 while (isActive) {
                     try {
-                        updateStream(stream, helixHeaders, gqlHeaders, checkIntegrity)
+                        updateStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
                         delay(300000L)
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
@@ -142,10 +141,10 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
             }
-        } else if (stream.viewerCount == null) {
+        } else if (viewerCount == null) {
             viewModelScope.launch {
                 try {
-                    updateStream(stream, helixHeaders, gqlHeaders, checkIntegrity)
+                    updateStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "stream"
@@ -155,28 +154,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateStream(stream: Stream, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        repository.loadStream(stream.channelId, stream.channelLogin, helixHeaders, gqlHeaders, checkIntegrity).let {
-            this.stream.value = Stream(
-                id = if (!it?.id.isNullOrBlank()) {
-                    it.id
-                } else stream.id,
-                channelId = stream.channelId,
-                channelLogin = stream.channelLogin,
-                channelName = stream.channelName,
-                gameId = it?.gameId,
-                gameSlug = it?.gameSlug,
-                gameName = it?.gameName,
-                type = stream.type,
-                title = it?.title,
-                viewerCount = it?.viewerCount,
-                startedAt = it?.startedAt,
-                thumbnailUrl = stream.thumbnailUrl,
-                profileImageUrl = stream.profileImageUrl,
-                tags = stream.tags,
-                user = stream.user,
-            )
-        }
+    private suspend fun updateStream(channelId: String?, channelLogin: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+        stream.value = repository.loadStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
     }
 
     fun loadVideo(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
@@ -195,7 +174,7 @@ class PlayerViewModel @Inject constructor(
 
     fun getVideoPosition(id: Long) {
         viewModelScope.launch {
-            savedPosition.emit(playerRepository.getVideoPosition(id))
+            savedPosition.value = playerRepository.getVideoPosition(id)?.position ?: 0
         }
     }
 
@@ -227,14 +206,14 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveBookmark(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, video: Video) {
+    fun saveBookmark(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, videoId: String?, title: String?, uploadDate: String?, duration: String?, type: String?, animatedPreviewUrl: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?) {
         viewModelScope.launch {
-            val item = video.id?.let { bookmarksRepository.getBookmarkByVideoId(it) }
+            val item = videoId?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
                 bookmarksRepository.deleteBookmark(item)
             } else {
-                val downloadedThumbnail = video.id.takeIf { !it.isNullOrBlank() }?.let { id ->
-                    video.thumbnail.takeIf { !it.isNullOrBlank() }?.let {
+                val downloadedThumbnail = videoId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    thumbnail.takeIf { !it.isNullOrBlank() }?.let {
                         File(filesDir, "thumbnails").mkdir()
                         val path = filesDir + File.separator + "thumbnails" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
@@ -253,8 +232,8 @@ class PlayerViewModel @Inject constructor(
                         path
                     }
                 }
-                val downloadedLogo = video.channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
-                    video.channelLogo.takeIf { !it.isNullOrBlank() }?.let {
+                val downloadedLogo = channelId.takeIf { !it.isNullOrBlank() }?.let { id ->
+                    channelLogo.takeIf { !it.isNullOrBlank() }?.let {
                         File(filesDir, "profile_pics").mkdir()
                         val path = filesDir + File.separator + "profile_pics" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
@@ -274,28 +253,28 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
                 val userTypes = try {
-                    video.channelId?.let { repository.loadUserTypes(listOf(it), helixHeaders, gqlHeaders) }?.firstOrNull()
+                    channelId?.let { repository.loadUserTypes(listOf(it), helixHeaders, gqlHeaders) }?.firstOrNull()
                 } catch (e: Exception) {
                     null
                 }
                 bookmarksRepository.saveBookmark(
                     Bookmark(
-                        videoId = video.id,
-                        userId = video.channelId,
-                        userLogin = video.channelLogin,
-                        userName = video.channelName,
+                        videoId = videoId,
+                        userId = channelId,
+                        userLogin = channelLogin,
+                        userName = channelName,
                         userType = userTypes?.type,
                         userBroadcasterType = userTypes?.broadcasterType,
                         userLogo = downloadedLogo,
-                        gameId = video.gameId,
-                        gameSlug = video.gameSlug,
-                        gameName = video.gameName,
-                        title = video.title,
-                        createdAt = video.uploadDate,
+                        gameId = gameId,
+                        gameSlug = gameSlug,
+                        gameName = gameName,
+                        title = title,
+                        createdAt = uploadDate,
                         thumbnail = downloadedThumbnail,
-                        type = video.type,
-                        duration = video.duration,
-                        animatedPreviewURL = video.animatedPreviewURL
+                        type = type,
+                        duration = duration,
+                        animatedPreviewURL = animatedPreviewUrl
                     )
                 )
             }
@@ -318,9 +297,9 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun getOfflineVideo(id: Int) {
+    fun getOfflineVideoPosition(id: Int) {
         viewModelScope.launch {
-            offlineVideo.emit(offlineRepository.getVideoById(id))
+            savedOfflineVideoPosition.value = offlineRepository.getVideoById(id)?.lastWatchPosition ?: 0
         }
     }
 
