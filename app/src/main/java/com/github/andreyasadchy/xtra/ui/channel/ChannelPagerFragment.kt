@@ -278,7 +278,21 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         true
                     }
                     R.id.download -> {
-                        viewModel.stream.value?.let { DownloadDialog.newInstance(it).show(childFragmentManager, null) }
+                        viewModel.stream.value?.let {
+                            DownloadDialog.newInstance(
+                                id = it.id,
+                                title = it.title,
+                                startedAt = it.startedAt,
+                                channelId = it.channelId,
+                                channelLogin = it.channelLogin,
+                                channelName = it.channelName,
+                                channelLogo = it.channelLogo,
+                                thumbnail = it.thumbnail,
+                                gameId = it.gameId,
+                                gameSlug = it.gameSlug,
+                                gameName = it.gameName,
+                            ).show(childFragmentManager, null)
+                        }
                         true
                     }
                     else -> false

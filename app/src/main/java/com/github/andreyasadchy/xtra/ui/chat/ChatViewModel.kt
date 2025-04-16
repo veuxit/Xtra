@@ -1657,16 +1657,20 @@ class ChatViewModel @Inject constructor(
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
                     repository = repository,
                     videoId = videoId,
-                    startTimeSeconds = startTime,
+                    startTime = startTime.times(1000L),
                     getCurrentPosition = getCurrentPosition,
                     getCurrentSpeed = getCurrentSpeed,
                     onMessage = { onMessage(it) },
                     clearMessages = { _chatMessages.value = ArrayList() },
                     getIntegrityToken = { if (integrity.value == null) { integrity.value = "refresh" } },
                     coroutineScope = viewModelScope
-                ).apply { start() }
+                )
             }
         }
+    }
+
+    fun startReplayChatLoad() {
+        chatReplayManager?.start() ?: chatReplayManagerLocal?.startLoad()
     }
 
     fun stopReplayChat() {
@@ -2062,7 +2066,7 @@ class ChatViewModel @Inject constructor(
                 }
                 if (messages.isNotEmpty()) {
                     viewModelScope.launch {
-                        chatReplayManagerLocal?.start(messages, startTimeMs)
+                        chatReplayManagerLocal?.setMessages(messages, startTimeMs)
                     }
                 }
             } catch (e: Exception) {

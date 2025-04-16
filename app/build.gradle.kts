@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 121
-        versionName = "2.43.1"
+        versionName = "2.43.2"
     }
 
     buildTypes {
@@ -79,7 +79,6 @@ dependencies {
     implementation(libs.preference.ktx)
     implementation(libs.recyclerview)
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.room.paging)
     implementation(libs.swiperefreshlayout)

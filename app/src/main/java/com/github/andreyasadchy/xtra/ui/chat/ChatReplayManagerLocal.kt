@@ -7,7 +7,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -22,6 +21,7 @@ class ChatReplayManagerLocal @Inject constructor(
     private var messages: List<ChatMessage> = emptyList()
     private var startTime = 0L
     private val list = mutableListOf<ChatMessage>()
+    private var started = false
     private var isLoading = false
     private var loadJob: Job? = null
     private var messageJob: Job? = null
@@ -29,9 +29,24 @@ class ChatReplayManagerLocal @Inject constructor(
     private var playbackSpeed: Float? = null
     var isActive = true
 
-    fun start(newMessages: List<ChatMessage>, newStartTime: Long) {
+    fun setMessages(newMessages: List<ChatMessage>, newStartTime: Long) {
         messages = newMessages
         startTime = newStartTime
+        if (started) {
+            start()
+        }
+    }
+
+    fun startLoad() {
+        if (!started) {
+            started = true
+            if (messages.isNotEmpty()) {
+                start()
+            }
+        }
+    }
+
+    fun start() {
         val currentPosition = getCurrentPosition() ?: 0
         lastCheckedPosition = currentPosition
         playbackSpeed = getCurrentSpeed()
@@ -61,13 +76,19 @@ class ChatReplayManagerLocal @Inject constructor(
     }
 
     private fun startJob() {
-        messageJob = coroutineScope.launch(Dispatchers.IO) {
+        messageJob = coroutineScope.launch {
             while (isActive) {
                 val message = list.firstOrNull() ?: break
                 if (message.timestamp != null) {
                     var currentPosition: Long
                     val messageOffset = message.timestamp
-                    while (((runBlocking(Dispatchers.Main) { getCurrentPosition() } ?: 0).also { lastCheckedPosition = it } + startTime).also { currentPosition = it } < messageOffset) {
+                    while (
+                        (getCurrentPosition() ?: 0).let { position ->
+                            lastCheckedPosition = position
+                            currentPosition = position + startTime
+                            currentPosition < messageOffset
+                        }
+                    ) {
                         delay(max((messageOffset - currentPosition).div(playbackSpeed ?: 1f).toLong(), 0))
                     }
                     if (!isActive) {
@@ -99,7 +120,7 @@ class ChatReplayManagerLocal @Inject constructor(
     }
 
     fun updatePosition(position: Long) {
-        if (lastCheckedPosition != position) {
+        if (started && messages.isNotEmpty() && lastCheckedPosition != position) {
             if (position - lastCheckedPosition !in 0..20000) {
                 loadJob?.cancel()
                 messageJob?.cancel()
@@ -115,7 +136,7 @@ class ChatReplayManagerLocal @Inject constructor(
     }
 
     fun updateSpeed(speed: Float) {
-        if (playbackSpeed != speed) {
+        if (started && messages.isNotEmpty() && playbackSpeed != speed) {
             playbackSpeed = speed
             messageJob?.cancel()
             startJob()
