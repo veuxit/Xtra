@@ -95,7 +95,7 @@ dependencies {
     implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    implementation("com.google.guava:guava:33.3.1-android")
+    implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.google.android.gms:play-services-cronet:18.0.1")
 
     implementation(libs.material)
