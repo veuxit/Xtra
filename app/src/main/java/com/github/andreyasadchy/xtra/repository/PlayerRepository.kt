@@ -1,42 +1,50 @@
 package com.github.andreyasadchy.xtra.repository
 
 import android.net.Uri
-import androidx.core.net.toUri
-import com.github.andreyasadchy.xtra.api.MiscApi
-import com.github.andreyasadchy.xtra.api.UsherApi
+import android.util.Base64
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.model.VideoPosition
+import com.github.andreyasadchy.xtra.model.chat.CheerEmote
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.RecentEmote
+import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
+import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.gql.playlist.PlaybackAccessTokenResponse
 import com.github.andreyasadchy.xtra.model.misc.BttvResponse
+import com.github.andreyasadchy.xtra.model.misc.FfzChannelResponse
+import com.github.andreyasadchy.xtra.model.misc.FfzGlobalResponse
 import com.github.andreyasadchy.xtra.model.misc.FfzResponse
 import com.github.andreyasadchy.xtra.model.misc.RecentMessagesResponse
+import com.github.andreyasadchy.xtra.model.misc.StvChannelResponse
+import com.github.andreyasadchy.xtra.model.misc.StvGlobalResponse
 import com.github.andreyasadchy.xtra.model.misc.StvResponse
+import com.github.andreyasadchy.xtra.type.BadgeImageSize
+import com.github.andreyasadchy.xtra.type.EmoteType
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.m3u8.MediaPlaylist
-import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
+import com.github.andreyasadchy.xtra.util.toRequestBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.Credentials
-import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.ResponseBody
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UploadDataProviders
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import org.json.JSONObject
-import retrofit2.Response
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URLEncoder
 import java.util.UUID
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -44,51 +52,26 @@ import kotlin.random.Random
 
 @Singleton
 class PlayerRepository @Inject constructor(
-    private val json: Json,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
-    private val usher: UsherApi,
-    private val misc: MiscApi,
-    private val graphQL: GraphQLRepository,
+    private val json: Json,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val recentEmotes: RecentEmotesDao,
     private val videoPositions: VideoPositionsDao,
 ) {
 
-    suspend fun getMediaPlaylist(url: String): MediaPlaylist = withContext(Dispatchers.IO) {
-        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            response.body()!!.byteStream().use {
-                PlaylistUtils.parseMediaPlaylist(it)
-            }
-        }
-    }
-
-    suspend fun loadStreamPlaylistUrl(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
-        val accessToken = loadStreamPlaybackAccessToken(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken?.let { token ->
+    suspend fun loadStreamPlaylistUrl(useCronet: Boolean, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
+        val accessToken = loadStreamPlaybackAccessToken(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken?.let { token ->
             if (token.value?.contains("\"forbidden\":true") == true && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                loadStreamPlaybackAccessToken(gqlHeaders.filterNot { it.key == C.HEADER_TOKEN }, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken
+                loadStreamPlaybackAccessToken(useCronet, gqlHeaders.filterNot { it.key == C.HEADER_TOKEN }, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken
             } else token
         }
-        buildUrl(
-            "https://usher.ttvnw.net/api/channel/hls/$channelLogin.m3u8?",
-            "allow_source", "true",
-            "allow_audio_only", "true",
-            "fast_bread", "true", //low latency
-            "p", Random.nextInt(9999999).toString(),
-            "platform", if (supportedCodecs?.contains("av1", true) == true) "web" else null,
-            "sig", accessToken?.signature,
-            "supported_codecs", supportedCodecs,
-            "token", accessToken?.value
-        ).toString()
-    }
-
-    suspend fun loadStreamPlaylist(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
-        val accessToken = loadStreamPlaybackAccessToken(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, false, null, null, null, null, enableIntegrity)?.data?.streamPlaybackAccessToken?.let { token ->
-            if (token.value?.contains("\"forbidden\":true") == true && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                loadStreamPlaybackAccessToken(gqlHeaders.filterNot { it.key == C.HEADER_TOKEN }, channelLogin, randomDeviceId, xDeviceId, playerType, false, null, null, null, null, enableIntegrity)?.data?.streamPlaybackAccessToken
-            } else token
-        }
-        val playlistQueryOptions = HashMap<String, String>().apply {
+        val query = mutableMapOf<String, String>().apply {
             put("allow_source", "true")
             put("allow_audio_only", "true")
+            put("fast_bread", "true") //low latency
             put("p", Random.nextInt(9999999).toString())
             if (supportedCodecs?.contains("av1", true) == true) {
                 put("platform", "web")
@@ -96,51 +79,55 @@ class PlayerRepository @Inject constructor(
             accessToken?.signature?.let { put("sig", it) }
             supportedCodecs?.let { put("supported_codecs", it) }
             accessToken?.value?.let { put("token", it) }
-        }
-        usher.getStreamPlaylist(channelLogin, playlistQueryOptions).body()?.string()
+        }.map { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8.name())}" }.joinToString("&", "?")
+        "https://usher.ttvnw.net/api/channel/hls/${channelLogin}.m3u8${query}"
     }
 
-    suspend fun loadStreamPlaylistResponse(url: String, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?): String = withContext(Dispatchers.IO) {
-        okHttpClient.newBuilder().apply {
-            if (proxyMultivariantPlaylist && !proxyHost.isNullOrBlank() && proxyPort != null) {
-                proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
-                if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
-                    proxyAuthenticator { _, response ->
-                        response.request().newBuilder().header("Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)).build()
-                    }
-                }
+    suspend fun loadStreamPlaylist(useCronet: Boolean, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
+        val url = loadStreamPlaylistUrl(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, false, null, null, null, null, enableIntegrity)
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+            val response = request.future.get()
+            if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                response.responseBody as String
+            } else null
+        } else {
+            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                if (response.isSuccessful) {
+                    response.body.string()
+                } else null
             }
-        }.build().newCall(Request.Builder().url(url).build()).execute().use { response ->
-            response.body()!!.string()
         }
     }
 
-    private suspend fun loadStreamPlaybackAccessToken(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): PlaybackAccessTokenResponse? = withContext(Dispatchers.IO) {
+    private suspend fun loadStreamPlaybackAccessToken(useCronet: Boolean, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): PlaybackAccessTokenResponse? = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId, enableIntegrity)
         if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
             okHttpClient.newBuilder().apply {
                 proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
                 if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
                     proxyAuthenticator { _, response ->
-                        response.request().newBuilder().header(
+                        response.request.newBuilder().header(
                             "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
                         ).build()
                     }
                 }
             }.build().newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
-                post(RequestBody.create(MediaType.get("application/x-www-form-urlencoded; charset=utf-8"), graphQL.getPlaybackAccessTokenRequestBody(channelLogin, "", playerType).toString()))
+                post(graphQLRepository.getPlaybackAccessTokenRequestBody(channelLogin, "", playerType).toRequestBody())
                 accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" }.forEach {
                     addHeader(it.key, it.value)
                 }
             }.build()).execute().use { response ->
-                val text = response.body()!!.string()
+                val text = response.body.string()
                 if (text.isNotBlank()) {
                     json.decodeFromString<PlaybackAccessTokenResponse>(text)
                 } else null
             }
         } else {
-            graphQL.loadPlaybackAccessToken(
+            graphQLRepository.loadPlaybackAccessToken(
+                useCronet = useCronet,
                 headers = accessTokenHeaders,
                 login = channelLogin,
                 playerType = playerType
@@ -152,41 +139,46 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadVideoPlaylistUrl(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): Uri = withContext(Dispatchers.IO) {
-        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType, enableIntegrity).data?.videoPlaybackAccessToken
-        buildUrl(
-            "https://usher.ttvnw.net/vod/$videoId.m3u8?",
-            "allow_source", "true",
-            "allow_audio_only", "true",
-            "p", Random.nextInt(9999999).toString(),
-            "platform", if (supportedCodecs?.contains("av1", true) == true) "web" else null,
-            "sig", accessToken?.signature,
-            "supported_codecs", supportedCodecs,
-            "token", accessToken?.value,
-        )
-    }
-
-    suspend fun loadVideoPlaylist(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, enableIntegrity: Boolean): Response<ResponseBody> = withContext(Dispatchers.IO) {
-        val accessToken = loadVideoPlaybackAccessToken(gqlHeaders, videoId, playerType, enableIntegrity).data?.videoPlaybackAccessToken
-        val playlistQueryOptions = HashMap<String, String>().apply {
-            put("allow_source", "true")
-            put("allow_audio_only", "true")
-            put("p", Random.nextInt(9999999).toString())
-            accessToken?.signature?.let { put("sig", it) }
-            accessToken?.value?.let { put("token", it) }
-        }
-        usher.getVideoPlaylist(videoId, playlistQueryOptions)
-    }
-
-    private suspend fun loadVideoPlaybackAccessToken(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, enableIntegrity: Boolean): PlaybackAccessTokenResponse {
+    suspend fun loadVideoPlaylistUrl(useCronet: Boolean, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders = gqlHeaders, randomDeviceId = true, enableIntegrity = enableIntegrity)
-        return graphQL.loadPlaybackAccessToken(
+        val accessToken = graphQLRepository.loadPlaybackAccessToken(
+            useCronet = useCronet,
             headers = accessTokenHeaders,
             vodId = videoId,
             playerType = playerType
         ).also { response ->
             if (enableIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+        }.data?.videoPlaybackAccessToken
+        val query = mutableMapOf<String, String>().apply {
+            put("allow_source", "true")
+            put("allow_audio_only", "true")
+            put("p", Random.nextInt(9999999).toString())
+            if (supportedCodecs?.contains("av1", true) == true) {
+                put("platform", "web")
+            }
+            accessToken?.signature?.let { put("sig", it) }
+            supportedCodecs?.let { put("supported_codecs", it) }
+            accessToken?.value?.let { put("token", it) }
+        }.map { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8.name())}" }.joinToString("&", "?")
+        "https://usher.ttvnw.net/vod/${videoId}.m3u8${query}"
+    }
+
+    suspend fun loadVideoPlaylist(useCronet: Boolean, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
+        val url = loadVideoPlaylistUrl(useCronet, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+            val response = request.future.get()
+            if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                response.responseBody as String
+            } else null
+        } else {
+            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                if (response.isSuccessful) {
+                    response.body.string()
+                } else null
             }
         }
     }
@@ -206,9 +198,11 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadClipUrls(gqlHeaders: Map<String, String>, clipId: String?): Map<String, String>? = withContext(Dispatchers.IO) {
-        val response = graphQL.loadClipUrls(gqlHeaders, clipId)
-        response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    suspend fun loadClipUrls(useCronet: Boolean, gqlHeaders: Map<String, String>, clipId: String?, enableIntegrity: Boolean): Map<String, String>? = withContext(Dispatchers.IO) {
+        val response = graphQLRepository.loadClipUrls(useCronet, gqlHeaders, clipId)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        }
         val accessToken = response.data?.clip?.playbackAccessToken
         response.data?.clip?.videoQualities?.withIndex()?.associateBy({
             if (!it.value.quality.isNullOrBlank()) {
@@ -224,33 +218,102 @@ class PlayerRepository @Inject constructor(
         }, { "${it.value.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}" })
     }
 
-    private fun buildUrl(url: String, vararg queryParams: String?): Uri {
-        val stringBuilder = StringBuilder(url)
-        stringBuilder.append(queryParams[0])
-            .append("=")
-            .append(URLEncoder.encode(queryParams[1], Charsets.UTF_8.name()))
-        for (i in 2 until queryParams.size step 2) {
-            val value = queryParams[i + 1]
-            if (!value.isNullOrBlank()) {
-                stringBuilder.append("&")
-                    .append(queryParams[i])
-                    .append("=")
-                    .append(URLEncoder.encode(value, Charsets.UTF_8.name()))
+    suspend fun sendMinuteWatched(useCronet: Boolean, userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
+        val pageResponse = channelLogin?.let {
+            if (useCronet && cronetEngine != null) {
+                val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                cronetEngine.newUrlRequestBuilder("https://www.twitch.tv/${channelLogin}", request.callback, cronetExecutor).build().start()
+                request.future.get().responseBody as String
+            } else {
+                okHttpClient.newCall(Request.Builder().url("https://www.twitch.tv/${channelLogin}").build()).execute().use { response ->
+                    response.body.string()
+                }
             }
         }
-        return stringBuilder.toString().toUri()
+        if (!pageResponse.isNullOrBlank()) {
+            val settingsRegex = Regex("(https://assets.twitch.tv/config/settings.*?.js|https://static.twitchcdn.net/config/settings.*?js)")
+            val settingsUrl = settingsRegex.find(pageResponse)?.value
+            val settingsResponse = settingsUrl?.let {
+                if (useCronet && cronetEngine != null) {
+                    val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                    cronetEngine.newUrlRequestBuilder(settingsUrl, request.callback, cronetExecutor).build().start()
+                    request.future.get().responseBody as String
+                } else {
+                    okHttpClient.newCall(Request.Builder().url(settingsUrl).build()).execute().use { response ->
+                        response.body.string()
+                    }
+                }
+            }
+            if (!settingsResponse.isNullOrBlank()) {
+                val spadeRegex = Regex("\"spade_url\":\"(.*?)\"")
+                val spadeUrl = spadeRegex.find(settingsResponse)?.groups?.get(1)?.value
+                if (!spadeUrl.isNullOrBlank()) {
+                    val body = buildJsonObject {
+                        put("event", "minute-watched")
+                        putJsonObject("properties") {
+                            put("channel_id", channelId)
+                            put("broadcast_id", streamId)
+                            put("player", "site")
+                            put("user_id", userId?.toLong())
+                        }
+                    }.toString()
+                    val spadeRequest = "data=" + Base64.encodeToString(body.toByteArray(), Base64.NO_WRAP)
+                    if (useCronet && cronetEngine != null) {
+                        val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                        cronetEngine.newUrlRequestBuilder(spadeUrl, request.callback, cronetExecutor).apply {
+                            addHeader("Content-Type", "application/x-www-form-urlencoded")
+                            setUploadDataProvider(UploadDataProviders.create(spadeRequest.toByteArray()), cronetExecutor)
+                        }.build().start()
+                    } else {
+                        okHttpClient.newCall(Request.Builder().apply {
+                            url(spadeUrl)
+                            post(spadeRequest.toRequestBody())
+                        }.build()).execute()
+                    }
+                }
+            }
+        }
     }
 
-    suspend fun loadRecentMessages(channelLogin: String, limit: String): RecentMessagesResponse = withContext(Dispatchers.IO) {
-        misc.getRecentMessages(channelLogin, limit)
+    suspend fun loadRecentMessages(useCronet: Boolean, channelLogin: String, limit: String): RecentMessagesResponse = withContext(Dispatchers.IO) {
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<RecentMessagesResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}").build()).execute().use { response ->
+                json.decodeFromString<RecentMessagesResponse>(response.body.string())
+            }
+        }
     }
 
-    suspend fun loadGlobalStvEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
-        parseStvEmotes(misc.getGlobalStvEmotes().emotes, useWebp)
+    suspend fun loadGlobalStvEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/emote-sets/global", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<StvGlobalResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/emote-sets/global").build()).execute().use { response ->
+                json.decodeFromString<StvGlobalResponse>(response.body.string())
+            }
+        }
+        parseStvEmotes(response.emotes, useWebp)
     }
 
-    suspend fun loadStvEmotes(channelId: String, useWebp: Boolean): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
-        val set = misc.getStvEmotes(channelId).emoteSet
+    suspend fun loadStvEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${channelId}", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<StvChannelResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/users/twitch/${channelId}").build()).execute().use { response ->
+                json.decodeFromString<StvChannelResponse>(response.body.string())
+            }
+        }
+        val set = response.emoteSet
         Pair(set.id, parseStvEmotes(set.emotes, useWebp))
     }
 
@@ -288,12 +351,21 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun getStvUser(userId: String): String? = withContext(Dispatchers.IO) {
-        JSONObject(misc.getStvUser(userId).string()).optJSONObject("user")?.optString("id")
+    suspend fun getStvUser(useCronet: Boolean, userId: String): String? = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${userId}", request.callback, cronetExecutor).build().start()
+            request.future.get().responseBody as String
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/users/twitch/${userId}").build()).execute().use { response ->
+                response.body.string()
+            }
+        }
+        JSONObject(response).optJSONObject("user")?.optString("id")
     }
 
-    suspend fun sendStvPresence(stvUserId: String, channelId: String, sessionId: String?, self: Boolean) = withContext(Dispatchers.IO) {
-        val json = buildJsonObject {
+    suspend fun sendStvPresence(useCronet: Boolean, stvUserId: String, channelId: String, sessionId: String?, self: Boolean) = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
             put("kind", 1)
             put("passive", self)
             put("session_id", if (self) sessionId else "undefined")
@@ -302,16 +374,47 @@ class PlayerRepository @Inject constructor(
                 put("id", channelId)
             }
         }.toString()
-        misc.sendStvPresence(stvUserId, RequestBody.create(MediaType.get("application/x-www-form-urlencoded; charset=utf-8"), json))
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/${stvUserId}/presences", request.callback, cronetExecutor).apply {
+                addHeader("Content-Type", "application/json")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+        } else {
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://7tv.io/v3/users/${stvUserId}/presences")
+                post(body.toRequestBody())
+            }.build()).execute()
+        }
     }
 
-    suspend fun loadGlobalBttvEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
-        parseBttvEmotes(misc.getGlobalBttvEmotes(), useWebp)
+    suspend fun loadGlobalBttvEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/emotes/global", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<List<BttvResponse>>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://api.betterttv.net/3/cached/emotes/global").build()).execute().use { response ->
+                json.decodeFromString<List<BttvResponse>>(response.body.string())
+            }
+        }
+        parseBttvEmotes(response, useWebp)
     }
 
-    suspend fun loadBttvEmotes(channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+    suspend fun loadBttvEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/users/twitch/${channelId}", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<Map<String, JsonElement>>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://api.betterttv.net/3/cached/users/twitch/${channelId}").build()).execute().use { response ->
+                json.decodeFromString<Map<String, JsonElement>>(response.body.string())
+            }
+        }
         parseBttvEmotes(
-            misc.getBttvEmotes(channelId).entries.filter { it.key != "bots" && it.value is JsonArray }.map { entry ->
+            response.entries.filter { it.key != "bots" && it.value is JsonArray }.map { entry ->
                 (entry.value as JsonArray).map { json.decodeFromJsonElement<BttvResponse>(it) }
             }.flatten(),
             useWebp
@@ -338,15 +441,34 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadGlobalFfzEmotes(useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
-        val response = misc.getGlobalFfzEmotes()
+    suspend fun loadGlobalFfzEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/set/global", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<FfzGlobalResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://api.frankerfacez.com/v1/set/global").build()).execute().use { response ->
+                json.decodeFromString<FfzGlobalResponse>(response.body.string())
+            }
+        }
         response.sets.entries.filter { it.key.toIntOrNull()?.let { set -> response.globalSets.contains(set) } == true }.flatMap {
             it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes, useWebp) } ?: emptyList()
         }
     }
 
-    suspend fun loadFfzEmotes(channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
-        misc.getFfzEmotes(channelId).sets.entries.flatMap {
+    suspend fun loadFfzEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
+        val response = if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/room/id/${channelId}", request.callback, cronetExecutor).build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<FfzChannelResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().url("https://api.frankerfacez.com/v1/room/id/${channelId}").build()).execute().use { response ->
+                json.decodeFromString<FfzChannelResponse>(response.body.string())
+            }
+        }
+        response.sets.entries.flatMap {
             it.value.emoticons?.let { emotes -> parseFfzEmotes(emotes, useWebp) } ?: emptyList()
         }
     }
@@ -376,6 +498,472 @@ class PlayerRepository @Inject constructor(
                         url4x = urls.url4x,
                         format = if (isAnimated && useWebp) "webp" else null,
                         isAnimated = isAnimated
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun loadGlobalBadges(useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, emoteQuality: String, enableIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
+        try {
+            val response = graphQLRepository.loadQueryBadges(useCronet, gqlHeaders,
+                when (emoteQuality) {
+                    "4" -> BadgeImageSize.QUADRUPLE
+                    "3" -> BadgeImageSize.QUADRUPLE
+                    "2" -> BadgeImageSize.DOUBLE
+                    else -> BadgeImageSize.NORMAL
+                }
+            )
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.badges?.mapNotNull {
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
+                        }
+                    }
+                }
+            } ?: emptyList()
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            try {
+                val response = graphQLRepository.loadChatBadges(useCronet, gqlHeaders, "")
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.badges?.mapNotNull {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = it.image1x,
+                                url2x = it.image2x,
+                                url3x = it.image4x,
+                                url4x = it.image4x,
+                                title = it.title,
+                            )
+                        }
+                    }
+                } ?: emptyList()
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") throw e
+                if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                helixRepository.getGlobalBadges(useCronet, helixHeaders).data.mapNotNull { set ->
+                    set.setId?.let { setId ->
+                        set.versions?.mapNotNull {
+                            it.id?.let { version ->
+                                TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url1x = it.url1x,
+                                    url2x = it.url2x,
+                                    url3x = it.url4x,
+                                    url4x = it.url4x
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
+            }
+        }
+    }
+
+    suspend fun loadChannelBadges(useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, emoteQuality: String, enableIntegrity: Boolean): List<TwitchBadge> = withContext(Dispatchers.IO) {
+        try {
+            val response = graphQLRepository.loadQueryUserBadges(useCronet, gqlHeaders, channelId, channelLogin.takeIf { channelId.isNullOrBlank() },
+                when (emoteQuality) {
+                    "4" -> BadgeImageSize.QUADRUPLE
+                    "3" -> BadgeImageSize.QUADRUPLE
+                    "2" -> BadgeImageSize.DOUBLE
+                    else -> BadgeImageSize.NORMAL
+                }
+            )
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.user?.broadcastBadges?.mapNotNull {
+                it?.setID?.let { setId ->
+                    it.version?.let { version ->
+                        it.imageURL?.let { url ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = url,
+                                url2x = url,
+                                url3x = url,
+                                url4x = url,
+                                title = it.title
+                            )
+                        }
+                    }
+                }
+            } ?: emptyList()
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            try {
+                val response = graphQLRepository.loadChatBadges(useCronet, gqlHeaders, channelLogin)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.badges?.mapNotNull {
+                    it.setID?.let { setId ->
+                        it.version?.let { version ->
+                            TwitchBadge(
+                                setId = setId,
+                                version = version,
+                                url1x = it.image1x,
+                                url2x = it.image2x,
+                                url3x = it.image4x,
+                                url4x = it.image4x,
+                                title = it.title,
+                            )
+                        }
+                    }
+                } ?: emptyList()
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") throw e
+                if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                helixRepository.getChannelBadges(useCronet, helixHeaders, channelId).data.mapNotNull { set ->
+                    set.setId?.let { setId ->
+                        set.versions?.mapNotNull {
+                            it.id?.let { version ->
+                                TwitchBadge(
+                                    setId = setId,
+                                    version = version,
+                                    url1x = it.url1x,
+                                    url2x = it.url2x,
+                                    url3x = it.url4x,
+                                    url4x = it.url4x
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
+            }
+        }
+    }
+
+    suspend fun loadCheerEmotes(useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, channelLogin: String?, animateGifs: Boolean, enableIntegrity: Boolean): List<CheerEmote> = withContext(Dispatchers.IO) {
+        try {
+            val emotes = mutableListOf<CheerEmote>()
+            val response = graphQLRepository.loadQueryUserCheerEmotes(useCronet, gqlHeaders, channelId, channelLogin.takeIf { channelId.isNullOrBlank() })
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.cheerConfig?.displayConfig?.let { config ->
+                val background = config.backgrounds?.find { it == "dark" } ?: config.backgrounds?.lastOrNull() ?: ""
+                val format = if (animateGifs) {
+                    config.types?.find { it.animation == "animated" } ?: config.types?.find { it.animation == "static" }
+                } else {
+                    config.types?.find { it.animation == "static" }
+                } ?: config.types?.lastOrNull()
+                val scale1x = config.scales?.find { it.startsWith("1") } ?: config.scales?.lastOrNull() ?: ""
+                val scale2x = config.scales?.find { it.startsWith("2") } ?: scale1x
+                val scale3x = config.scales?.find { it.startsWith("3") } ?: scale2x
+                val scale4x = config.scales?.find { it.startsWith("4") } ?: scale3x
+                response.data!!.cheerConfig?.groups?.mapNotNull { group ->
+                    group.nodes?.mapNotNull { emote ->
+                        emote.tiers?.mapNotNull { tier ->
+                            config.colors?.find { it.bits == tier?.bits }?.let { item ->
+                                val url = group.templateURL!!
+                                    .replaceFirst("PREFIX", emote.prefix!!.lowercase())
+                                    .replaceFirst("TIER", item.bits!!.toString())
+                                    .replaceFirst("BACKGROUND", background)
+                                    .replaceFirst("ANIMATION", format?.animation ?: "")
+                                    .replaceFirst("EXTENSION", format?.extension ?: "")
+                                CheerEmote(
+                                    name = emote.prefix,
+                                    url1x = url.replaceFirst("SCALE", scale1x),
+                                    url2x = url.replaceFirst("SCALE", scale2x),
+                                    url3x = url.replaceFirst("SCALE", scale3x),
+                                    url4x = url.replaceFirst("SCALE", scale4x),
+                                    format = if (format?.animation == "animated") "gif" else null,
+                                    isAnimated = format?.animation == "animated",
+                                    minBits = item.bits,
+                                    color = item.color
+                                )
+                            }
+                        }
+                    }?.flatten()
+                }?.flatten()?.let { emotes.addAll(it) }
+                response.data!!.user?.cheer?.cheerGroups?.mapNotNull { group ->
+                    group.nodes?.mapNotNull { emote ->
+                        emote.tiers?.mapNotNull { tier ->
+                            config.colors?.find { it.bits == tier?.bits }?.let { item ->
+                                val url = group.templateURL!!
+                                    .replaceFirst("PREFIX", emote.prefix!!.lowercase())
+                                    .replaceFirst("TIER", item.bits!!.toString())
+                                    .replaceFirst("BACKGROUND", background)
+                                    .replaceFirst("ANIMATION", format?.animation ?: "")
+                                    .replaceFirst("EXTENSION", format?.extension ?: "")
+                                CheerEmote(
+                                    name = emote.prefix,
+                                    url1x = url.replaceFirst("SCALE", scale1x),
+                                    url2x = url.replaceFirst("SCALE", scale2x),
+                                    url3x = url.replaceFirst("SCALE", scale3x),
+                                    url4x = url.replaceFirst("SCALE", scale4x),
+                                    format = if (format?.animation == "animated") "gif" else null,
+                                    isAnimated = format?.animation == "animated",
+                                    minBits = item.bits,
+                                    color = item.color
+                                )
+                            }
+                        }
+                    }?.flatten()
+                }?.flatten()?.let { emotes.addAll(it) }
+            }
+            emotes
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            try {
+                val emotes = mutableListOf<CheerEmote>()
+                val response = graphQLRepository.loadGlobalCheerEmotes(useCronet, gqlHeaders)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.cheerConfig.displayConfig.let { config ->
+                    val background = config.backgrounds?.find { it == "dark" } ?: config.backgrounds?.lastOrNull() ?: ""
+                    val format = if (animateGifs) {
+                        config.types?.find { it.animation == "animated" } ?: config.types?.find { it.animation == "static" }
+                    } else {
+                        config.types?.find { it.animation == "static" }
+                    } ?: config.types?.lastOrNull()
+                    val scale1x = config.scales?.find { it.startsWith("1") } ?: config.scales?.lastOrNull() ?: ""
+                    val scale2x = config.scales?.find { it.startsWith("2") } ?: scale1x
+                    val scale3x = config.scales?.find { it.startsWith("3") } ?: scale2x
+                    val scale4x = config.scales?.find { it.startsWith("4") } ?: scale3x
+                    response.data.cheerConfig.groups.map { group ->
+                        group.nodes.map { emote ->
+                            emote.tiers.mapNotNull { tier ->
+                                config.colors.find { it.bits == tier.bits }?.let { item ->
+                                    val url = group.templateURL
+                                        .replaceFirst("PREFIX", emote.prefix.lowercase())
+                                        .replaceFirst("TIER", item.bits.toString())
+                                        .replaceFirst("BACKGROUND", background)
+                                        .replaceFirst("ANIMATION", format?.animation ?: "")
+                                        .replaceFirst("EXTENSION", format?.extension ?: "")
+                                    CheerEmote(
+                                        name = emote.prefix,
+                                        url1x = url.replaceFirst("SCALE", scale1x),
+                                        url2x = url.replaceFirst("SCALE", scale2x),
+                                        url3x = url.replaceFirst("SCALE", scale3x),
+                                        url4x = url.replaceFirst("SCALE", scale4x),
+                                        format = if (format?.animation == "animated") "gif" else null,
+                                        isAnimated = format?.animation == "animated",
+                                        minBits = item.bits,
+                                        color = item.color,
+                                    )
+                                }
+                            }
+                        }.flatten()
+                    }.flatten().let { emotes.addAll(it) }
+                    graphQLRepository.loadChannelCheerEmotes(useCronet, gqlHeaders, channelLogin).data?.channel?.cheer?.cheerGroups?.map { group ->
+                        group.nodes.map { emote ->
+                            emote.tiers.mapNotNull { tier ->
+                                config.colors.find { it.bits == tier.bits }?.let { item ->
+                                    val url = group.templateURL
+                                        .replaceFirst("PREFIX", emote.prefix.lowercase())
+                                        .replaceFirst("TIER", item.bits.toString())
+                                        .replaceFirst("BACKGROUND", background)
+                                        .replaceFirst("ANIMATION", format?.animation ?: "")
+                                        .replaceFirst("EXTENSION", format?.extension ?: "")
+                                    CheerEmote(
+                                        name = emote.prefix,
+                                        url1x = url.replaceFirst("SCALE", scale1x),
+                                        url2x = url.replaceFirst("SCALE", scale2x),
+                                        url3x = url.replaceFirst("SCALE", scale3x),
+                                        url4x = url.replaceFirst("SCALE", scale4x),
+                                        format = if (format?.animation == "animated") "gif" else null,
+                                        isAnimated = format?.animation == "animated",
+                                        minBits = item.bits,
+                                        color = item.color,
+                                    )
+                                }
+                            }
+                        }.flatten()
+                    }?.flatten()?.let { emotes.addAll(it) }
+                }
+                emotes
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") throw e
+                if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                helixRepository.getCheerEmotes(useCronet, helixHeaders, channelId).data.map { set ->
+                    set.tiers.mapNotNull { tier ->
+                        tier.images.let { it.dark ?: it.light }?.let { formats ->
+                            if (animateGifs) {
+                                formats.animated ?: formats.static
+                            } else {
+                                formats.static
+                            }?.let { urls ->
+                                CheerEmote(
+                                    name = set.prefix,
+                                    url1x = urls.url1x,
+                                    url2x = urls.url2x,
+                                    url3x = urls.url3x,
+                                    url4x = urls.url4x,
+                                    format = if (urls == formats.animated) "gif" else null,
+                                    isAnimated = urls == formats.animated,
+                                    minBits = tier.minBits,
+                                    color = tier.color
+                                )
+                            }
+                        }
+                    }
+                }.flatten()
+            }
+        }
+    }
+
+    suspend fun loadUserEmotes(useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, channelId: String?, userId: String?, animateGifs: Boolean, enableIntegrity: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
+        try {
+            if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+            val emotes = mutableListOf<TwitchEmote>()
+            var offset: String? = null
+            do {
+                val response = graphQLRepository.loadUserEmotes(useCronet, gqlHeaders, channelId, offset)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                val sets = response.data!!.channel.self.availableEmoteSetsPaginated
+                val items = sets.edges
+                items.map { item ->
+                    item.node.let { set ->
+                        set.emotes.mapNotNull { emote ->
+                            emote.token?.let { token ->
+                                TwitchEmote(
+                                    id = emote.id,
+                                    name = if (emote.type == "SMILIES") {
+                                        token.replace("\\", "").replace("?", "")
+                                            .replace("&lt;", "<").replace("&gt;", ">")
+                                            .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                            .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                    } else token,
+                                    setId = emote.setID,
+                                    ownerId = set.owner?.id
+                                )
+                            }
+                        }
+                    }
+                }.flatten().let { emotes.addAll(it) }
+                offset = items.lastOrNull()?.cursor
+            } while (!items.lastOrNull()?.cursor.isNullOrBlank() && sets.pageInfo?.hasNextPage == true)
+            emotes
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            try {
+                if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                val response = graphQLRepository.loadQueryUserEmotes(useCronet, gqlHeaders)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.user?.emoteSets?.mapNotNull { set ->
+                    set.emotes?.mapNotNull { emote ->
+                        if (emote?.token != null && (!emote.type?.toString().equals("follower", true) || (emote.owner?.id == null || emote.owner.id == channelId))) {
+                            TwitchEmote(
+                                id = emote.id,
+                                name = if (emote.type == EmoteType.SMILIES) {
+                                    emote.token.replace("\\", "").replace("?", "")
+                                        .replace("&lt;", "<").replace("&gt;", ">")
+                                        .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                        .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                } else emote.token,
+                                setId = emote.setID,
+                                ownerId = emote.owner?.id
+                            )
+                        } else null
+                    }
+                }?.flatten() ?: emptyList()
+            } catch (e: Exception) {
+                if (e.message == "failed integrity check") throw e
+                if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                val emotes = mutableListOf<TwitchEmote>()
+                var offset: String? = null
+                do {
+                    val response = helixRepository.getUserEmotes(useCronet, helixHeaders, userId, channelId, offset)
+                    response.data.mapNotNull { emote ->
+                        emote.name?.let { name ->
+                            emote.id?.let { id ->
+                                val format = if (animateGifs) {
+                                    emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                                } else {
+                                    emote.format?.find { it == "static" }
+                                } ?: emote.format?.firstOrNull() ?: ""
+                                val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                                val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                                val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                                val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                                val url = response.template
+                                    .replaceFirst("{{id}}", id)
+                                    .replaceFirst("{{format}}", format)
+                                    .replaceFirst("{{theme_mode}}", theme)
+                                TwitchEmote(
+                                    name = if (emote.type == "smilies") {
+                                        name.replace("\\", "").replace("?", "")
+                                            .replace("&lt;", "<").replace("&gt;", ">")
+                                            .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                            .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                                    } else name,
+                                    url1x = url.replaceFirst("{{scale}}", scale1x),
+                                    url2x = url.replaceFirst("{{scale}}", scale2x),
+                                    url3x = url.replaceFirst("{{scale}}", scale3x),
+                                    url4x = url.replaceFirst("{{scale}}", scale3x),
+                                    format = if (format == "animated") "gif" else null,
+                                    setId = emote.setId,
+                                    ownerId = emote.ownerId
+                                )
+                            }
+                        }
+                    }.let { emotes.addAll(it) }
+                    offset = response.pagination?.cursor
+                } while (!response.pagination?.cursor.isNullOrBlank())
+                emotes
+            }
+        }
+    }
+
+    suspend fun loadEmotesFromSet(useCronet: Boolean, helixHeaders: Map<String, String>, setIds: List<String>, animateGifs: Boolean): List<TwitchEmote> = withContext(Dispatchers.IO) {
+        val response = helixRepository.getEmotesFromSet(useCronet, helixHeaders, setIds)
+        response.data.mapNotNull { emote ->
+            emote.name?.let { name ->
+                emote.id?.let { id ->
+                    val format = if (animateGifs) {
+                        emote.format?.find { it == "animated" } ?: emote.format?.find { it == "static" }
+                    } else {
+                        emote.format?.find { it == "static" }
+                    } ?: emote.format?.firstOrNull() ?: ""
+                    val theme = emote.theme?.find { it == "dark" } ?: emote.theme?.lastOrNull() ?: ""
+                    val scale1x = emote.scale?.find { it.startsWith("1") } ?: emote.scale?.lastOrNull() ?: ""
+                    val scale2x = emote.scale?.find { it.startsWith("2") } ?: scale1x
+                    val scale3x = emote.scale?.find { it.startsWith("3") } ?: scale2x
+                    val url = response.template
+                        .replaceFirst("{{id}}", id)
+                        .replaceFirst("{{format}}", format)
+                        .replaceFirst("{{theme_mode}}", theme)
+                    TwitchEmote(
+                        name = if (emote.type == "smilies") {
+                            name.replace("\\", "").replace("?", "")
+                                .replace("&lt;", "<").replace("&gt;", ">")
+                                .replace(Regex("\\((.)\\|.\\)")) { it.groups[1]?.value ?: "" }
+                                .replace(Regex("\\[(.).*?]")) { it.groups[1]?.value ?: "" }
+                        } else name,
+                        url1x = url.replaceFirst("{{scale}}", scale1x),
+                        url2x = url.replaceFirst("{{scale}}", scale2x),
+                        url3x = url.replaceFirst("{{scale}}", scale3x),
+                        url4x = url.replaceFirst("{{scale}}", scale3x),
+                        format = if (format == "animated") "gif" else null,
+                        setId = emote.setId,
+                        ownerId = emote.ownerId
                     )
                 }
             }

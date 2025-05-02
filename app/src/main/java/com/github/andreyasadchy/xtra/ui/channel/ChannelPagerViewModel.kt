@@ -3,15 +3,14 @@ package com.github.andreyasadchy.xtra.ui.channel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.NotificationUser
 import com.github.andreyasadchy.xtra.model.ShownNotification
 import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.User
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -27,19 +26,25 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.buffer
 import okio.sink
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
+import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class ChannelPagerViewModel @Inject constructor(
-    private val repository: ApiRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
     private val graphQLRepository: GraphQLRepository,
-    private val helixApi: HelixApi,
+    private val helixRepository: HelixRepository,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -60,52 +65,139 @@ class ChannelPagerViewModel @Inject constructor(
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user
 
-    fun loadStream(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadStream(useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (_stream.value == null) {
             viewModelScope.launch {
-                try {
-                    _stream.value = repository.loadUserChannelPage(args.channelId, args.channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
-                } catch (e: Exception) {
-
-                }
-            }
-        }
-    }
-
-    fun loadUser(helixHeaders: Map<String, String>) {
-        if (_user.value == null) {
-            if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                viewModelScope.launch {
-                    try {
-                        _user.value = repository.loadUser(args.channelId, args.channelLogin, helixHeaders)
-                    } catch (e: Exception) {
+                _stream.value = try {
+                    val response = graphQLRepository.loadQueryUserChannelPage(useCronet, gqlHeaders, args.channelId, if (args.channelId.isNullOrBlank()) args.channelLogin else null)
+                    if (enableIntegrity && integrity.value == null) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let {
+                            integrity.value = "refresh"
+                            return@launch
+                        }
                     }
+                    response.data!!.user?.let {
+                        Stream(
+                            id = it.stream?.id,
+                            channelId = it.id,
+                            channelLogin = it.login,
+                            channelName = it.displayName,
+                            gameId = it.stream?.game?.id,
+                            gameSlug = it.stream?.game?.slug,
+                            gameName = it.stream?.game?.displayName,
+                            type = it.stream?.type,
+                            title = it.stream?.title,
+                            viewerCount = it.stream?.viewersCount,
+                            startedAt = it.stream?.createdAt?.toString(),
+                            thumbnailUrl = it.stream?.previewImageURL,
+                            profileImageUrl = it.profileImageURL,
+                            user = User(
+                                channelId = it.id,
+                                channelLogin = it.login,
+                                channelName = it.displayName,
+                                type = when {
+                                    it.roles?.isStaff == true -> "staff"
+                                    else -> null
+                                },
+                                broadcasterType = when {
+                                    it.roles?.isPartner == true -> "partner"
+                                    it.roles?.isAffiliate == true -> "affiliate"
+                                    else -> null
+                                },
+                                profileImageUrl = it.profileImageURL,
+                                createdAt = it.createdAt?.toString(),
+                                followersCount = it.followers?.totalCount,
+                                bannerImageURL = it.bannerImageURL,
+                                lastBroadcast = it.lastBroadcast?.startedAt?.toString()
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        try {
+                            helixRepository.getStreams(
+                                useCronet = useCronet,
+                                headers = helixHeaders,
+                                ids = args.channelId?.let { listOf(it) },
+                                logins = if (args.channelId.isNullOrBlank()) args.channelLogin?.let { listOf(it) } else null
+                            ).data.firstOrNull()?.let {
+                                Stream(
+                                    id = it.id,
+                                    channelId = it.channelId,
+                                    channelLogin = it.channelLogin,
+                                    channelName = it.channelName,
+                                    gameId = it.gameId,
+                                    gameName = it.gameName,
+                                    type = it.type,
+                                    title = it.title,
+                                    viewerCount = it.viewerCount,
+                                    startedAt = it.startedAt,
+                                    thumbnailUrl = it.thumbnailUrl,
+                                    tags = it.tags
+                                )
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
                 }
             }
         }
     }
 
-    fun retry(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadUser(useCronet: Boolean, helixHeaders: Map<String, String>) {
+        if (_user.value == null) {
+            viewModelScope.launch {
+                _user.value = if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                    try {
+                        helixRepository.getUsers(
+                            useCronet = useCronet,
+                            headers = helixHeaders,
+                            ids = args.channelId?.let { listOf(it) },
+                            logins = if (args.channelId.isNullOrBlank()) args.channelLogin?.let { listOf(it) } else null
+                        ).data.firstOrNull()?.let {
+                            User(
+                                channelId = it.channelId,
+                                channelLogin = it.channelLogin,
+                                channelName = it.channelName,
+                                type = it.type,
+                                broadcasterType = it.broadcasterType,
+                                profileImageUrl = it.profileImageUrl,
+                                createdAt = it.createdAt,
+                            )
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
+            }
+        }
+    }
+
+    fun retry(useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (_stream.value == null) {
-            loadStream(helixHeaders, gqlHeaders, checkIntegrity)
+            loadStream(useCronet, gqlHeaders, helixHeaders, enableIntegrity)
         } else {
             if (_stream.value?.user == null && _user.value == null) {
-                loadUser(helixHeaders)
+                loadUser(useCronet, helixHeaders)
             }
         }
     }
 
-    fun enableNotifications(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String, notificationsEnabled: Boolean) {
+    fun enableNotifications(userId: String?, channelId: String, setting: Int, notificationsEnabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && _isFollowing.value == true && userId != channelId) {
-                    val errorMessage = repository.toggleNotifications(gqlHeaders, channelId, false)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "enableNotifications"
-                        } else {
-                            notifications.value = Pair(true, errorMessage)
+                    val errorMessage = graphQLRepository.loadToggleNotificationsUser(useCronet, gqlHeaders, channelId, false).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "enableNotifications"
+                                return@launch
+                            }
                         }
+                    }.errors?.firstOrNull()?.message
+                    if (!errorMessage.isNullOrBlank()) {
+                        notifications.value = Pair(true, errorMessage)
                     } else {
                         _notificationsEnabled.value = true
                         notifications.value = Pair(true, errorMessage)
@@ -131,17 +223,20 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun disableNotifications(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String) {
+    fun disableNotifications(userId: String?, channelId: String, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && _isFollowing.value == true && userId != channelId) {
-                    val errorMessage = repository.toggleNotifications(gqlHeaders, channelId, true)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "disableNotifications"
-                        } else {
-                            notifications.value = Pair(false, errorMessage)
+                    val errorMessage = graphQLRepository.loadToggleNotificationsUser(useCronet, gqlHeaders, channelId, true).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "disableNotifications"
+                                return@launch
+                            }
                         }
+                    }.errors?.firstOrNull()?.message
+                    if (!errorMessage.isNullOrBlank()) {
+                        notifications.value = Pair(false, errorMessage)
                     } else {
                         _notificationsEnabled.value = false
                         notifications.value = Pair(false, errorMessage)
@@ -157,19 +252,31 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun updateNotifications(gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun updateNotifications(useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch {
-            shownNotificationsRepository.getNewStreams(notificationUsersRepository, gqlHeaders, graphQLRepository, helixHeaders, helixApi)
+            shownNotificationsRepository.getNewStreams(notificationUsersRepository, useCronet, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
         }
     }
 
-    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(userId: String?, channelId: String?, channelLogin: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
                     if (!channelId.isNullOrBlank()) {
                         if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                            val response = repository.loadUserFollowing(helixHeaders, channelId, userId, gqlHeaders, channelLogin)
+                            val response = try {
+                                if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || channelLogin == null) throw Exception()
+                                val follower = graphQLRepository.loadFollowingUser(useCronet, gqlHeaders, channelLogin).data?.user?.self?.follower
+                                Pair(follower != null, follower?.disableNotifications == false)
+                            } catch (e: Exception) {
+                                val following = helixRepository.getUserFollows(
+                                    useCronet = useCronet,
+                                    headers = helixHeaders,
+                                    userId = userId,
+                                    targetId = channelId,
+                                ).data.firstOrNull()?.channelId == channelId
+                                Pair(following, null)
+                            }
                             _isFollowing.value = response.first
                             _notificationsEnabled.value = if (response.first && response.second != null) {
                                 response.second
@@ -188,21 +295,24 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?, channelName: String?, notificationsEnabled: Boolean) {
+    fun saveFollowChannel(userId: String?, channelId: String?, channelLogin: String?, channelName: String?, setting: Int, notificationsEnabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (!channelId.isNullOrBlank()) {
                     if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                        val errorMessage = repository.followUser(gqlHeaders, channelId)
-                        if (!errorMessage.isNullOrBlank()) {
-                            if (errorMessage == "failed integrity check" && integrity.value == null) {
-                                integrity.value = "follow"
-                            } else {
-                                follow.value = Pair(true, errorMessage)
+                        val errorMessage = graphQLRepository.loadFollowUser(useCronet, gqlHeaders, channelId).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "follow"
+                                    return@launch
+                                }
                             }
+                        }.errors?.firstOrNull()?.message
+                        if (!errorMessage.isNullOrBlank()) {
+                            follow.value = Pair(true, errorMessage)
                         } else {
                             _isFollowing.value = true
-                            follow.value = Pair(true, errorMessage)
+                            follow.value = Pair(true, null)
                             _notificationsEnabled.value = true
                             if (notificationsEnabled) {
                                 _stream.value?.startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
@@ -229,21 +339,24 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?) {
+    fun deleteFollowChannel(userId: String?, channelId: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (!channelId.isNullOrBlank()) {
                     if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                        val errorMessage = repository.unfollowUser(gqlHeaders, channelId)
-                        if (!errorMessage.isNullOrBlank()) {
-                            if (errorMessage == "failed integrity check" && integrity.value == null) {
-                                integrity.value = "unfollow"
-                            } else {
-                                follow.value = Pair(false, errorMessage)
+                        val errorMessage = graphQLRepository.loadUnfollowUser(useCronet, gqlHeaders, channelId).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "unfollow"
+                                    return@launch
+                                }
                             }
+                        }.errors?.firstOrNull()?.message
+                        if (!errorMessage.isNullOrBlank()) {
+                            follow.value = Pair(false, errorMessage)
                         } else {
                             _isFollowing.value = false
-                            follow.value = Pair(false, errorMessage)
+                            follow.value = Pair(false, null)
                             _notificationsEnabled.value = false
                         }
                     } else {
@@ -260,7 +373,7 @@ class ChannelPagerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalUser(filesDir: String, user: User) {
+    fun updateLocalUser(useCronet: Boolean, filesDir: String, user: User) {
         if (!updatedLocalUser) {
             updatedLocalUser = true
             user.channelId.takeIf { !it.isNullOrBlank() }?.let { userId ->
@@ -270,10 +383,21 @@ class ChannelPagerViewModel @Inject constructor(
                         val path = filesDir + File.separator + "profile_pics" + File.separator + userId
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(path).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(path).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }

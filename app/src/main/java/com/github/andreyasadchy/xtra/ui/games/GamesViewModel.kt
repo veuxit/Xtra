@@ -7,8 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GamesDataSource
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -21,7 +21,7 @@ import javax.inject.Inject
 class GamesViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
+    private val helixRepository: HelixRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -30,13 +30,14 @@ class GamesViewModel @Inject constructor(
         PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
     ) {
         GamesDataSource(
-            helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-            helixApi = helix,
-            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
             tags = args.tags?.toList(),
-            gqlApi = graphQLRepository,
-            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = applicationContext.prefs().getString(C.API_PREFS_GAMES, null)?.split(',') ?: TwitchApiHelper.gamesApiDefaults
+            gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+            graphQLRepository = graphQLRepository,
+            helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+            helixRepository = helixRepository,
+            enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            apiPref = applicationContext.prefs().getString(C.API_PREFS_GAMES, null)?.split(',') ?: TwitchApiHelper.gamesApiDefaults,
+            useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
         )
     }.flow.cachedIn(viewModelScope)
 }

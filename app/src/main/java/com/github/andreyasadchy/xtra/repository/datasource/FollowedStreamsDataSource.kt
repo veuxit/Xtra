@@ -2,152 +2,100 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
 
 class FollowedStreamsDataSource(
-    private val localFollowsChannel: LocalFollowChannelRepository,
     private val userId: String?,
-    private val helixHeaders: Map<String, String>,
-    private val helixApi: HelixApi,
+    private val localFollowsChannel: LocalFollowChannelRepository,
     private val gqlHeaders: Map<String, String>,
-    private val gqlApi: GraphQLRepository,
-    private val checkIntegrity: Boolean,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixHeaders: Map<String, String>,
+    private val helixRepository: HelixRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Stream>() {
     private var api: String? = null
     private var offset: String? = null
-    private var nextPage: Boolean = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Stream> {
-        return try {
-            val response = try {
-                if (!offset.isNullOrBlank()) {
-                    when (api) {
-                        C.HELIX -> helixLoad()
-                        C.GQL -> if (nextPage) gqlQueryLoad() else listOf()
-                        C.GQL_PERSISTED_QUERY -> gqlLoad()
-                        else -> listOf()
-                    }
-                } else {
-                    val list = mutableListOf<Stream>()
-                    localFollowsChannel.loadFollows().mapNotNull { it.userId }.let {
-                        if (it.isNotEmpty()) {
-                            try {
-                                gqlQueryLocal(it)
-                            } catch (e: Exception) {
-                                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                                try {
-                                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLocal(it) else throw Exception()
-                                } catch (e: Exception) {
-                                    listOf()
-                                }
-                            }
-                        } else listOf()
-                    }.let { list.addAll(it) }
-                    try {
-                        when (apiPref.getOrNull(0)) {
-                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                            else -> throw Exception()
-                        }
-                    } catch (e: Exception) {
-                        if (e.message == "failed integrity check") return LoadResult.Error(e)
-                        try {
-                            when (apiPref.getOrNull(1)) {
-                                C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                                C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                                else -> throw Exception()
-                            }
-                        } catch (e: Exception) {
-                            if (e.message == "failed integrity check") return LoadResult.Error(e)
-                            try {
-                                when (apiPref.getOrNull(2)) {
-                                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                                    else -> throw Exception()
-                                }
-                            } catch (e: Exception) {
-                                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                                listOf()
-                            }
-                        }
-                    }.forEach { stream ->
-                        val item = list.find { it.channelId == stream.channelId }
-                        if (item == null) {
-                            list.add(stream)
-                        }
-                    }
-                    list.sortByDescending { it.viewerCount }
-                    list
-                }
+        return if (!offset.isNullOrBlank()) {
+            try {
+                loadFromApi(api, params)
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                listOf()
+                LoadResult.Error(e)
             }
+        } else {
+            val list = mutableListOf<Stream>()
+            localFollowsChannel.loadFollows().mapNotNull { it.userId }.takeIf { it.isNotEmpty() }?.let {
+                try {
+                    gqlQueryLocal(it)
+                } catch (e: Exception) {
+                    try {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLocal(it) else throw Exception()
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }?.let {
+                if (it is LoadResult.Error && it.throwable.message == "failed integrity check") {
+                    return it
+                }
+                (it as? LoadResult.Page)?.data?.let { list.addAll(it) }
+            }
+            val result = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                try {
+                    loadFromApi(apiPref.getOrNull(0), params)
+                } catch (e: Exception) {
+                    try {
+                        loadFromApi(apiPref.getOrNull(1), params)
+                    } catch (e: Exception) {
+                        try {
+                            loadFromApi(apiPref.getOrNull(2), params)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }?.let {
+                    if (it is LoadResult.Error && it.throwable.message == "failed integrity check") {
+                        return it
+                    }
+                    it as? LoadResult.Page
+                }
+            } else null
+            result?.data?.forEach { stream ->
+                val item = list.find { it.channelId == stream.channelId }
+                if (item == null) {
+                    list.add(stream)
+                }
+            }
+            list.sortByDescending { it.viewerCount }
             LoadResult.Page(
-                data = response,
+                data = list,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
-                    nextPage = false
-                    (params.key ?: 1) + 1
-                } else null
+                nextKey = result?.nextKey
             )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(): List<Stream> {
-        val response = helixApi.getFollowedStreams(
-            headers = helixHeaders,
-            userId = userId,
-            limit = 100,
-            offset = offset
-        )
-        val users = response.data.mapNotNull { it.channelId }.let {
-            helixApi.getUsers(
-                headers = helixHeaders,
-                ids = it
-            ).data
+    private suspend fun loadFromApi(apiPref: String?, params: LoadParams<Int>): LoadResult<Int, Stream> {
+        api = apiPref
+        return when (apiPref) {
+            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad(params) else throw Exception()
+            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad(params) else throw Exception()
+            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLoad(params) else throw Exception()
+            else -> throw Exception()
         }
-        val list = response.data.map {
-            Stream(
-                id = it.id,
-                channelId = it.channelId,
-                channelLogin = it.channelLogin,
-                channelName = it.channelName,
-                gameId = it.gameId,
-                gameName = it.gameName,
-                type = it.type,
-                title = it.title,
-                viewerCount = it.viewerCount,
-                startedAt = it.startedAt,
-                thumbnailUrl = it.thumbnailUrl,
-                profileImageUrl = it.channelId?.let { id ->
-                    users.find { user -> user.channelId == id }?.profileImageUrl
-                },
-                tags = it.tags
-            )
-        }
-        offset = response.pagination?.cursor
-        return list
     }
 
-    private suspend fun gqlQueryLoad(): List<Stream> {
-        val response = gqlApi.loadQueryUserFollowedStreams(
-            headers = gqlHeaders,
-            first = 100,
-            after = offset
-        )
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Stream> {
+        val response = graphQLRepository.loadQueryUserFollowedStreams(useCronet, gqlHeaders, 100, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.user!!.followedLiveUsers!!
         val items = data.edges!!
@@ -172,14 +120,20 @@ class FollowedStreamsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlLoad(): List<Stream> {
-        val response = gqlApi.loadFollowedStreams(gqlHeaders, 100, offset)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Stream> {
+        val response = graphQLRepository.loadFollowedStreams(useCronet, gqlHeaders, 100, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.currentUser.followedLiveUsers
         val items = data.edges
@@ -202,17 +156,66 @@ class FollowedStreamsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlQueryLocal(ids: List<String>): List<Stream> {
+    private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, Stream> {
+        val response = helixRepository.getFollowedStreams(
+            useCronet = useCronet,
+            headers = helixHeaders,
+            userId = userId,
+            limit = 100,
+            offset = offset,
+        )
+        val users = response.data.mapNotNull { it.channelId }.let {
+            helixRepository.getUsers(
+                useCronet = useCronet,
+                headers = helixHeaders,
+                ids = it,
+            ).data
+        }
+        val list = response.data.map {
+            Stream(
+                id = it.id,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                gameId = it.gameId,
+                gameName = it.gameName,
+                type = it.type,
+                title = it.title,
+                viewerCount = it.viewerCount,
+                startedAt = it.startedAt,
+                thumbnailUrl = it.thumbnailUrl,
+                profileImageUrl = it.channelId?.let { id ->
+                    users.find { user -> user.channelId == id }?.profileImageUrl
+                },
+                tags = it.tags
+            )
+        }
+        offset = response.pagination?.cursor
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank()) {
+                (params.key ?: 1) + 1
+            } else null
+        )
+    }
+
+    private suspend fun gqlQueryLocal(ids: List<String>): LoadResult<Int, Stream> {
         val items = ids.chunked(100).map { list ->
-            gqlApi.loadQueryUsersStream(
-                headers = gqlHeaders,
-                id = list
-            ).also { response ->
-                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            graphQLRepository.loadQueryUsersStream(useCronet, gqlHeaders, list).also { response ->
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
+                }
             }
         }.flatMap { it.data!!.users!! }
         val list = items.mapNotNull { item ->
@@ -237,20 +240,26 @@ class FollowedStreamsDataSource(
                 } else null
             }
         }
-        return list
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = null
+        )
     }
 
-    private suspend fun helixLocal(ids: List<String>): List<Stream> {
+    private suspend fun helixLocal(ids: List<String>): LoadResult<Int, Stream> {
         val items = ids.chunked(100).map {
-            helixApi.getStreams(
+            helixRepository.getStreams(
+                useCronet = useCronet,
                 headers = helixHeaders,
-                ids = it
+                ids = it,
             )
         }.flatMap { it.data }
         val users = items.mapNotNull { it.channelId }.chunked(100).map {
-            helixApi.getUsers(
+            helixRepository.getUsers(
+                useCronet = useCronet,
                 headers = helixHeaders,
-                ids = it
+                ids = it,
             )
         }.flatMap { it.data }
         val list = items.mapNotNull {
@@ -274,7 +283,11 @@ class FollowedStreamsDataSource(
                 )
             } else null
         }
-        return list
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, Stream>): Int? {

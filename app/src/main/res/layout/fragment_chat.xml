@@ -257,13 +257,11 @@
             android:layout_marginLeft="8dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.0"
-            tools:src="@tools:sample/backgrounds/scenic"
-            tools:visibility="visible" />
+            tools:src="@tools:sample/backgrounds/scenic" />
 
         <TextView
             android:id="@+id/raidText"
@@ -277,13 +275,11 @@
             android:layout_marginRight="4dp"
             android:layout_marginBottom="5dp"
             android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/raidClose"
             app:layout_constraintStart_toEndOf="@id/raidImage"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="@string/raid_text"
-            tools:visibility="visible" />
+            tools:text="@string/raid_text" />
 
         <ImageView
             android:id="@+id/raidClose"
@@ -291,11 +287,9 @@
             android:layout_height="20dp"
             android:layout_margin="4dp"
             android:src="@drawable/baseline_close_black_36"
-            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="?attr/colorControlNormal"
-            tools:visibility="visible" />
+            app:tint="?attr/colorControlNormal" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout

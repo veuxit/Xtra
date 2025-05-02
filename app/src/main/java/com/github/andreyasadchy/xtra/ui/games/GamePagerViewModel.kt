@@ -3,7 +3,8 @@ package com.github.andreyasadchy.xtra.ui.games
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.ui.LocalFollowGame
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -16,13 +17,21 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.buffer
 import okio.sink
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
+import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class GamePagerViewModel @Inject constructor(
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val localFollowsGame: LocalFollowGameRepository,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
 ) : ViewModel() {
 
@@ -33,13 +42,13 @@ class GamePagerViewModel @Inject constructor(
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
     private var updatedLocalGame = false
 
-    fun isFollowingGame(gqlHeaders: Map<String, String>, setting: Int, gameId: String?, gameName: String?) {
+    fun isFollowingGame(gameId: String?, gameName: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
                     val isFollowing = if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                         gameName?.let {
-                            repository.loadGameFollowing(gqlHeaders, gameName)
+                            graphQLRepository.loadFollowingGame(useCronet, gqlHeaders, gameName).data?.game?.self?.follow != null
                         } == true
                     } else {
                         gameId?.let {
@@ -54,20 +63,23 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowGame(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, setting: Int, gameId: String?, gameSlug: String?, gameName: String?) {
+    fun saveFollowGame(gameId: String?, gameSlug: String?, gameName: String?, setting: Int, filesDir: String, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val errorMessage = repository.followGame(gqlHeaders, gameId)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "follow"
-                        } else {
-                            follow.value = Pair(true, errorMessage)
+                    val errorMessage = graphQLRepository.loadFollowGame(useCronet, gqlHeaders, gameId).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "follow"
+                                return@launch
+                            }
                         }
+                    }.errors?.firstOrNull()?.message
+                    if (!errorMessage.isNullOrBlank()) {
+                        follow.value = Pair(true, errorMessage)
                     } else {
                         _isFollowing.value = true
-                        follow.value = Pair(true, errorMessage)
+                        follow.value = Pair(true, null)
                     }
                 } else {
                     if (!gameId.isNullOrBlank()) {
@@ -75,11 +87,32 @@ class GamePagerViewModel @Inject constructor(
                         val path = filesDir + File.separator + "box_art" + File.separator + gameId
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                repository.loadGameBoxArt(gameId, helixHeaders, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
-                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                        if (response.isSuccessful) {
-                                            File(path).sink().buffer().use { sink ->
-                                                sink.writeAll(response.body()!!.source())
+                                try {
+                                    graphQLRepository.loadQueryGameBoxArt(useCronet, gqlHeaders, gameId).data!!.game?.boxArtURL
+                                } catch (e: Exception) {
+                                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                                        helixRepository.getGames(
+                                            useCronet = useCronet,
+                                            headers = helixHeaders,
+                                            ids = listOf(gameId)
+                                        ).data.firstOrNull()?.boxArtUrl
+                                    } else null
+                                }.takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
+                                    if (useCronet && cronetEngine != null) {
+                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                        cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                        val response = request.future.get()
+                                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.responseBody as ByteArray)
+                                            }
+                                        }
+                                    } else {
+                                        okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                            if (response.isSuccessful) {
+                                                File(path).sink().buffer().use { sink ->
+                                                    sink.writeAll(response.body.source())
+                                                }
                                             }
                                         }
                                     }
@@ -99,20 +132,23 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowGame(gqlHeaders: Map<String, String>, setting: Int, gameId: String?) {
+    fun deleteFollowGame(gameId: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val errorMessage = repository.unfollowGame(gqlHeaders, gameId)
-                    if (!errorMessage.isNullOrBlank()) {
-                        if (errorMessage == "failed integrity check" && integrity.value == null) {
-                            integrity.value = "unfollow"
-                        } else {
-                            follow.value = Pair(false, errorMessage)
+                    val errorMessage = graphQLRepository.loadUnfollowGame(useCronet, gqlHeaders, gameId).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "unfollow"
+                                return@launch
+                            }
                         }
+                    }.errors?.firstOrNull()?.message
+                    if (!errorMessage.isNullOrBlank()) {
+                        follow.value = Pair(false, errorMessage)
                     } else {
                         _isFollowing.value = false
-                        follow.value = Pair(false, errorMessage)
+                        follow.value = Pair(false, null)
                     }
                 } else {
                     if (gameId != null) {
@@ -127,7 +163,7 @@ class GamePagerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalGame(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, gameId: String?, gameName: String?) {
+    fun updateLocalGame(filesDir: String, gameId: String?, gameName: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         if (!updatedLocalGame) {
             updatedLocalGame = true
             if (!gameId.isNullOrBlank()) {
@@ -136,11 +172,32 @@ class GamePagerViewModel @Inject constructor(
                     val path = filesDir + File.separator + "box_art" + File.separator + gameId
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            repository.loadGameBoxArt(gameId, helixHeaders, gqlHeaders).takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(path).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                            try {
+                                graphQLRepository.loadQueryGameBoxArt(useCronet, gqlHeaders, gameId).data!!.game?.boxArtURL
+                            } catch (e: Exception) {
+                                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                                    helixRepository.getGames(
+                                        useCronet = useCronet,
+                                        headers = helixHeaders,
+                                        ids = listOf(gameId)
+                                    ).data.firstOrNull()?.boxArtUrl
+                                } else null
+                            }.takeIf { !it.isNullOrBlank() }?.let { TwitchApiHelper.getTemplateUrl(it, "game") }?.let {
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(path).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }

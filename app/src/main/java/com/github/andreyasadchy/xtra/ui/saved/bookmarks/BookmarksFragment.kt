@@ -60,9 +60,11 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
         pagingAdapter = BookmarksAdapter(this, {
             viewModel.updateVideo(
                 requireContext().filesDir.path,
-                TwitchApiHelper.getHelixHeaders(requireContext()),
+                it,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
                 TwitchApiHelper.getGQLHeaders(requireContext()),
-                it
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
             )
         }, {
             if (DownloadUtils.hasStoragePermission(requireActivity())) {
@@ -138,11 +140,16 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                     }
                 }
             }
-            viewModel.updateUsers(TwitchApiHelper.getHelixHeaders(requireContext()), TwitchApiHelper.getGQLHeaders(requireContext()))
+            viewModel.updateUsers(
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            )
         }
         val helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
         if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-            viewModel.updateVideos(requireContext().filesDir.path, helixHeaders)
+            viewModel.updateVideos(requireContext().filesDir.path, requireContext().prefs().getBoolean(C.USE_CRONET, false), helixHeaders)
         }
     }
 
@@ -159,8 +166,10 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     when (callback) {
                         "users" -> viewModel.updateUsers(
-                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
-                            gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext()),
+                            TwitchApiHelper.getHelixHeaders(requireContext()),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                     }
                 }

@@ -7,11 +7,10 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.SortGame
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.SortGameRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GameVideosDataSource
@@ -29,20 +28,23 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import okhttp3.OkHttpClient
+import org.chromium.net.CronetEngine
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class GameVideosViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    repository: ApiRepository,
+    private val sortGameRepository: SortGameRepository,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
+    cronetEngine: CronetEngine?,
+    cronetExecutor: ExecutorService,
     okHttpClient: OkHttpClient,
     savedStateHandle: SavedStateHandle,
-    private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
-    private val sortGameRepository: SortGameRepository,
-) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
+) : BaseVideosViewModel(playerRepository, bookmarksRepository, graphQLRepository, helixRepository, cronetEngine, cronetExecutor, okHttpClient) {
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val filter = MutableStateFlow<Filter?>(null)
@@ -71,29 +73,6 @@ class GameVideosViewModel @Inject constructor(
                 gameId = args.gameId,
                 gameSlug = args.gameSlug,
                 gameName = args.gameName,
-                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                helixPeriod = when (period) {
-                    VideosSortDialog.PERIOD_DAY -> "day"
-                    VideosSortDialog.PERIOD_WEEK -> "week"
-                    VideosSortDialog.PERIOD_MONTH -> "month"
-                    VideosSortDialog.PERIOD_ALL -> "all"
-                    else -> "week"
-                },
-                helixBroadcastTypes = when (type) {
-                    VideosSortDialog.VIDEO_TYPE_ALL -> "all"
-                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> "archive"
-                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> "highlight"
-                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> "upload"
-                    else -> "all"
-                },
-                helixLanguage = language?.lowercase(),
-                helixSort = when (sort) {
-                    VideosSortDialog.SORT_TIME -> "time"
-                    VideosSortDialog.SORT_VIEWS -> "views"
-                    else -> "views"
-                },
-                helixApi = helix,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 gqlQueryLanguages = language?.let { listOf(it) },
                 gqlQueryType = when (type) {
                     VideosSortDialog.VIDEO_TYPE_ALL -> null
@@ -119,9 +98,33 @@ class GameVideosViewModel @Inject constructor(
                     VideosSortDialog.SORT_VIEWS -> "VIEWS"
                     else -> "VIEWS"
                 },
-                gqlApi = graphQLRepository,
-                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_VIDEOS, null)?.split(',') ?: TwitchApiHelper.gameVideosApiDefaults
+                helixPeriod = when (period) {
+                    VideosSortDialog.PERIOD_DAY -> "day"
+                    VideosSortDialog.PERIOD_WEEK -> "week"
+                    VideosSortDialog.PERIOD_MONTH -> "month"
+                    VideosSortDialog.PERIOD_ALL -> "all"
+                    else -> "week"
+                },
+                helixBroadcastTypes = when (type) {
+                    VideosSortDialog.VIDEO_TYPE_ALL -> "all"
+                    VideosSortDialog.VIDEO_TYPE_ARCHIVE -> "archive"
+                    VideosSortDialog.VIDEO_TYPE_HIGHLIGHT -> "highlight"
+                    VideosSortDialog.VIDEO_TYPE_UPLOAD -> "upload"
+                    else -> "all"
+                },
+                helixLanguage = language?.lowercase(),
+                helixSort = when (sort) {
+                    VideosSortDialog.SORT_TIME -> "time"
+                    VideosSortDialog.SORT_VIEWS -> "views"
+                    else -> "views"
+                },
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                graphQLRepository = graphQLRepository,
+                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                helixRepository = helixRepository,
+                enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_VIDEOS, null)?.split(',') ?: TwitchApiHelper.gameVideosApiDefaults,
+                useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
             )
         }.flow
     }.cachedIn(viewModelScope)

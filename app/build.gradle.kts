@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
+    alias(libs.plugins.apollo)
 }
 
 kotlin {
@@ -63,12 +64,14 @@ android {
             "androidx.constraintlayout:constraintlayout:2.1.4",
             "androidx.coordinatorlayout:coordinatorlayout:1.3.0-alpha02",
             "androidx.core:core-ktx:1.13.0-alpha01",
+            "androidx.customview:customview:1.2.0-alpha02",
             "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",
             "androidx.hilt:hilt-work:1.1.0",
             "androidx.lifecycle:lifecycle-viewmodel:2.7.0-alpha03",
             "androidx.media3:media3-exoplayer:1.2.1",
             "androidx.media3:media3-exoplayer-hls:1.2.1",
+            "androidx.media3:media3-datasource-cronet:1.2.1",
             "androidx.media3:media3-session:1.2.1",
             "androidx.media3:media3-ui:1.2.1",
             "androidx.navigation:navigation-fragment:2.7.7",
@@ -86,7 +89,6 @@ android {
             "com.squareup.okhttp3:okhttp:3.12.13",
             "com.squareup.okhttp3:okhttp-tls:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
-            "com.squareup.retrofit2:retrofit:2.6.4",
         ))
     }
 }
@@ -127,13 +129,13 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.serialization)
     implementation(libs.serialization.json)
+    implementation(libs.apollo.api)
     implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.datasource.cronet)
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
 
@@ -152,6 +154,12 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+apollo {
+    service("service") {
+        packageName.set("com.github.andreyasadchy.xtra")
+    }
 }
 
 // Delete large build log files from ~/.gradle/daemon/X.X/daemon-XXX.out.log

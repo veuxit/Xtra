@@ -27,7 +27,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.getValue
 
 @AndroidEntryPoint
 class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.CallbackListener {
@@ -123,7 +122,12 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
                 }
             }
             args.getString(EMOTE_ID)?.let {
-                viewModel.loadEmoteCard(TwitchApiHelper.getGQLHeaders(requireContext()), it)
+                viewModel.loadEmoteCard(
+                    it,
+                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    TwitchApiHelper.getGQLHeaders(requireContext()),
+                    requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                )
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.emoteCard.collectLatest { emoteCard ->
@@ -171,7 +175,12 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
             requireArguments().getString(EMOTE_ID)?.let {
                 viewLifecycleOwner.lifecycleScope.launch {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.loadEmoteCard(TwitchApiHelper.getGQLHeaders(requireContext()), it)
+                        viewModel.loadEmoteCard(
+                            it,
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext()),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                        )
                     }
                 }
             }

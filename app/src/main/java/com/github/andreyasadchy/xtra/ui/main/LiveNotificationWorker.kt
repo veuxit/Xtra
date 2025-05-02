@@ -12,8 +12,8 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
@@ -39,17 +39,18 @@ class LiveNotificationWorker @AssistedInject constructor(
     lateinit var graphQLRepository: GraphQLRepository
 
     @Inject
-    lateinit var helixApi: HelixApi
+    lateinit var helixRepository: HelixRepository
 
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     override suspend fun doWork(): Result {
         val streams = shownNotifications.getNewStreams(
             notificationUsersRepository = notificationUsersRepository,
+            useCronet = context.prefs().getBoolean(C.USE_CRONET, false),
             gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true),
-            gqlApi = graphQLRepository,
+            graphQLRepository = graphQLRepository,
             helixHeaders = TwitchApiHelper.getHelixHeaders(context),
-            helixApi = helixApi
+            helixRepository = helixRepository
         )
         if (streams.isNotEmpty()) {
             val channelId = context.getString(R.string.notification_live_channel_id)

@@ -11,79 +11,72 @@ import com.github.andreyasadchy.xtra.util.C
 class FollowedGamesDataSource(
     private val localFollowsGame: LocalFollowGameRepository,
     private val gqlHeaders: Map<String, String>,
-    private val gqlApi: GraphQLRepository,
-    private val checkIntegrity: Boolean,
+    private val graphQLRepository: GraphQLRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Game>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
-        return try {
-            val response = try {
-                val list = mutableListOf<Game>()
-                localFollowsGame.loadFollows().forEach {
-                    list.add(Game(
-                        gameId = it.gameId,
-                        gameSlug = it.gameSlug,
-                        gameName = it.gameName,
-                        boxArtUrl = it.boxArt,
-                        followLocal = true
-                    ))
-                }
-                try {
-                    when (apiPref.getOrNull(0)) {
-                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                        C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
-                        else -> throw Exception()
-                    }
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check") return LoadResult.Error(e)
-                    try {
-                        when (apiPref.getOrNull(1)) {
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
-                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
-                            else -> throw Exception()
-                        }
-                    } catch (e: Exception) {
-                        if (e.message == "failed integrity check") return LoadResult.Error(e)
-                        listOf()
-                    }
-                }.forEach { game ->
-                    val item = list.find { it.gameId == game.gameId }
-                    if (item == null) {
-                        game.followAccount = true
-                        list.add(game)
-                    } else {
-                        item.followAccount = true
-                        item.viewersCount = game.viewersCount
-                        item.broadcastersCount = game.broadcastersCount
-                        item.tags = game.tags
-                    }
-                }
-                list.sortBy { it.gameName }
-                list
+        val list = mutableListOf<Game>()
+        localFollowsGame.loadFollows().forEach {
+            list.add(Game(
+                gameId = it.gameId,
+                gameSlug = it.gameSlug,
+                gameName = it.gameName,
+                boxArtUrl = it.boxArt,
+                followLocal = true
+            ))
+        }
+        if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+            try {
+                loadFromApi(apiPref.getOrNull(0))
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                listOf()
+                try {
+                    loadFromApi(apiPref.getOrNull(1))
+                } catch (e: Exception) {
+                    null
+                }
+            }?.let {
+                if (it is LoadResult.Error && it.throwable.message == "failed integrity check") {
+                    return it
+                }
+                it as? LoadResult.Page
+            }?.data?.forEach { game ->
+                val item = list.find { it.gameId == game.gameId }
+                if (item == null) {
+                    game.followAccount = true
+                    list.add(game)
+                } else {
+                    item.followAccount = true
+                    item.viewersCount = game.viewersCount
+                    item.broadcastersCount = game.broadcastersCount
+                    item.tags = game.tags
+                }
             }
-            LoadResult.Page(
-                data = response,
-                prevKey = null,
-                nextKey = null
-            )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
+        }
+        list.sortBy { it.gameName }
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = null
+        )
+    }
+
+    private suspend fun loadFromApi(apiPref: String?): LoadResult<Int, Game> {
+        return when (apiPref) {
+            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad() else throw Exception()
+            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad() else throw Exception()
+            else -> throw Exception()
         }
     }
 
-    private suspend fun gqlQueryLoad(): List<Game> {
-        val response = gqlApi.loadQueryUserFollowedGames(
-            headers = gqlHeaders,
-            first = 100
-        )
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlQueryLoad(): LoadResult<Int, Game> {
+        val response = graphQLRepository.loadQueryUserFollowedGames(useCronet, gqlHeaders, 100)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
-        return response.data!!.user!!.followedGames!!.nodes!!.mapNotNull { item ->
+        val list = response.data!!.user!!.followedGames!!.nodes!!.mapNotNull { item ->
             item?.let {
                 Game(
                     gameId = it.id,
@@ -101,14 +94,19 @@ class FollowedGamesDataSource(
                 )
             }
         }
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = null
+        )
     }
 
-    private suspend fun gqlLoad(): List<Game> {
-        val response = gqlApi.loadFollowedGames(gqlHeaders, 100)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(): LoadResult<Int, Game> {
+        val response = graphQLRepository.loadFollowedGames(useCronet, gqlHeaders, 100)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
-        return response.data!!.currentUser.followedGames.nodes.map { item ->
+        val list = response.data!!.currentUser.followedGames.nodes.map { item ->
             item.let {
                 Game(
                     gameId = it.id,
@@ -124,6 +122,11 @@ class FollowedGamesDataSource(
                 )
             }
         }
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, Game>): Int? {

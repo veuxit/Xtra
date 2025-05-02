@@ -7,8 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GameStreamsDataSource
 import com.github.andreyasadchy.xtra.repository.datasource.StreamsDataSource
 import com.github.andreyasadchy.xtra.type.StreamSort
@@ -27,7 +27,7 @@ import javax.inject.Inject
 class StreamsViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
+    private val helixRepository: HelixRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -48,22 +48,20 @@ class StreamsViewModel @Inject constructor(
         ) {
             if (args.gameId == null && args.gameSlug == null && args.gameName == null) {
                 StreamsDataSource(
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                    helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     tags = args.tags?.toList(),
-                    gqlApi = graphQLRepository,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = applicationContext.prefs().getString(C.API_PREFS_STREAMS, null)?.split(',') ?: TwitchApiHelper.streamsApiDefaults
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                    graphQLRepository = graphQLRepository,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    helixRepository = helixRepository,
+                    enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_STREAMS, null)?.split(',') ?: TwitchApiHelper.streamsApiDefaults,
+                    useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
                 )
             } else {
                 GameStreamsDataSource(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                    helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQuerySort = when (sort) {
                         StreamsSortDialog.SORT_VIEWERS -> StreamSort.VIEWER_COUNT
                         StreamsSortDialog.SORT_VIEWERS_ASC -> StreamSort.VIEWER_COUNT_ASC
@@ -75,9 +73,13 @@ class StreamsViewModel @Inject constructor(
                         else -> "VIEWER_COUNT"
                     },
                     tags = args.tags?.toList(),
-                    gqlApi = graphQLRepository,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_STREAMS, null)?.split(',') ?: TwitchApiHelper.gameStreamsApiDefaults
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                    graphQLRepository = graphQLRepository,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    helixRepository = helixRepository,
+                    enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_STREAMS, null)?.split(',') ?: TwitchApiHelper.gameStreamsApiDefaults,
+                    useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
                 )
             }
         }.flow

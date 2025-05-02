@@ -21,6 +21,11 @@ import com.github.andreyasadchy.xtra.R
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import okhttp3.Headers
+import okhttp3.MediaType
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
 
 val Context.isNetworkAvailable
     get() = getConnectivityManager(this).let { connectivityManager ->
@@ -168,4 +173,21 @@ fun Context.toast(text: CharSequence) {
 
 fun Context.shortToast(text: CharSequence) {
     Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+}
+
+val Response.body
+    get() = this.body()!!
+
+val Response.request: Request
+    get() = this.request()
+
+val Response.code
+    get() = this.code()
+
+fun Map<String, String>.toHeaders(): Headers {
+    return Headers.of(this)
+}
+
+fun String.toRequestBody(contentType: MediaType? = null): RequestBody {
+    return RequestBody.create(contentType, toByteArray())
 }

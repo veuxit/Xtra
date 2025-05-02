@@ -8,10 +8,10 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.SortChannel
 import com.github.andreyasadchy.xtra.model.ui.SortGame
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.SortGameRepository
 import com.github.andreyasadchy.xtra.repository.datasource.ChannelClipsDataSource
@@ -33,10 +33,10 @@ import javax.inject.Inject
 @HiltViewModel
 class ClipsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
     private val sortChannelRepository: SortChannelRepository,
     private val sortGameRepository: SortGameRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -89,16 +89,17 @@ class ClipsViewModel @Inject constructor(
                 ChannelClipsDataSource(
                     channelId = args.channelId,
                     channelLogin = args.channelLogin,
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                    startedAt = started,
-                    endedAt = ended,
-                    helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
-                    gqlApi = graphQLRepository,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults
+                    startedAt = started,
+                    endedAt = ended,
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                    graphQLRepository = graphQLRepository,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    helixRepository = helixRepository,
+                    enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults,
+                    useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
                 )
             } else {
                 val langList = mutableListOf<Language>()
@@ -115,17 +116,18 @@ class ClipsViewModel @Inject constructor(
                     gameId = args.gameId,
                     gameSlug = args.gameSlug,
                     gameName = args.gameName,
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                    startedAt = started,
-                    endedAt = ended,
-                    helixApi = helix,
-                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                     gqlQueryLanguages = langList.ifEmpty { null },
                     gqlQueryPeriod = gqlQueryPeriod,
                     gqlPeriod = gqlPeriod,
-                    gqlApi = graphQLRepository,
-                    checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults
+                    startedAt = started,
+                    endedAt = ended,
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                    helixRepository = helixRepository,
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                    graphQLRepository = graphQLRepository,
+                    enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    apiPref = applicationContext.prefs().getString(C.API_PREFS_GAME_CLIPS, null)?.split(',') ?: TwitchApiHelper.gameClipsApiDefaults,
+                    useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
                 )
             }
         }.flow

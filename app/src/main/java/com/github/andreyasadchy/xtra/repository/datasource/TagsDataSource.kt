@@ -6,17 +6,23 @@ import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 
 class TagsDataSource(
-    private val gqlHeaders: Map<String, String>,
     private val getGameTags: Boolean,
     private val query: String,
-    private val api: GraphQLRepository,
+    private val gqlHeaders: Map<String, String>,
+    private val graphQLRepository: GraphQLRepository,
+    private val enableIntegrity: Boolean,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Tag>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Tag> {
         return try {
             val response = query.takeIf { it.isNotBlank() }?.let {
                 if (getGameTags) {
-                    api.loadGameTags(gqlHeaders, query, 100).data?.searchCategoryTags?.map {
+                    val response = graphQLRepository.loadGameTags(useCronet, gqlHeaders, query, 100)
+                    if (enableIntegrity) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
+                    }
+                    response.data?.searchCategoryTags?.map {
                         Tag(
                             id = it.id,
                             name = it.localizedName,
@@ -24,7 +30,11 @@ class TagsDataSource(
                         )
                     }
                 } else {
-                    api.loadFreeformTags(gqlHeaders, query, 100).data?.searchFreeformTags?.edges?.map { edge ->
+                    val response = graphQLRepository.loadFreeformTags(useCronet, gqlHeaders, query, 100)
+                    if (enableIntegrity) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
+                    }
+                    response.data?.searchFreeformTags?.edges?.map { edge ->
                         Tag(
                             name = edge.node.tagName
                         )

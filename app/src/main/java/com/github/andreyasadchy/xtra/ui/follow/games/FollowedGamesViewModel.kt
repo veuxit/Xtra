@@ -19,8 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FollowedGamesViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
-    private val graphQLRepository: GraphQLRepository,
     private val localFollowsGame: LocalFollowGameRepository,
+    private val graphQLRepository: GraphQLRepository,
 ) : ViewModel() {
 
     val flow = Pager(
@@ -29,9 +29,10 @@ class FollowedGamesViewModel @Inject constructor(
         FollowedGamesDataSource(
             localFollowsGame = localFollowsGame,
             gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
-            gqlApi = graphQLRepository,
-            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_GAMES, null)?.split(',') ?: TwitchApiHelper.followedGamesApiDefaults
+            graphQLRepository = graphQLRepository,
+            enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_GAMES, null)?.split(',') ?: TwitchApiHelper.followedGamesApiDefaults,
+            useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
         )
     }.flow.cachedIn(viewModelScope)
 }

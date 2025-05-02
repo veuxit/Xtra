@@ -2,7 +2,7 @@ package com.github.andreyasadchy.xtra.ui.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SearchPagerViewModel @Inject constructor(
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
 ) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
@@ -18,20 +18,48 @@ class SearchPagerViewModel @Inject constructor(
     val userResult = MutableStateFlow<Pair<String?, String?>?>(null)
     private var isLoading = false
 
-    fun loadUserResult(gqlHeaders: Map<String, String>, checkedId: Int, result: String) {
+    fun loadUserResult(checkedId: Int, result: String, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (userResult.value == null && !isLoading) {
             isLoading = true
             viewModelScope.launch {
                 try {
                     userResult.value = if (checkedId == 0) {
-                        repository.loadUserResult(channelId = result, gqlHeaders = gqlHeaders)
+                        val response = graphQLRepository.loadQueryUserResultID(useCronet, gqlHeaders, result)
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "refresh"
+                                isLoading = false
+                                return@launch
+                            }
+                        }
+                        response.data!!.userResultByID?.let {
+                            when {
+                                it.onUser != null -> Pair(null, null)
+                                it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)
+                                it.onUserError != null -> Pair(it.__typename, null)
+                                else -> null
+                            }
+                        }
                     } else {
-                        repository.loadUserResult(channelLogin = result, gqlHeaders = gqlHeaders)
+                        val response = graphQLRepository.loadQueryUserResultLogin(useCronet, gqlHeaders, result)
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "refresh"
+                                isLoading = false
+                                return@launch
+                            }
+                        }
+                        response.data!!.userResultByLogin?.let {
+                            when {
+                                it.onUser != null -> Pair(null, null)
+                                it.onUserDoesNotExist != null -> Pair(it.__typename, it.onUserDoesNotExist.reason)
+                                it.onUserError != null -> Pair(it.__typename, null)
+                                else -> null
+                            }
+                        }
                     }
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
-                    }
+
                 } finally {
                     isLoading = false
                 }

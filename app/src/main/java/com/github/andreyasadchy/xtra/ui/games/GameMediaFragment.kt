@@ -106,21 +106,25 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                                     .setNegativeButton(getString(R.string.no), null)
                                     .setPositiveButton(getString(R.string.yes)) { _, _ ->
                                         viewModel.deleteFollowGame(
-                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            args.gameId,
                                             setting,
-                                            args.gameId
+                                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                         )
                                     }
                                     .show()
                             } else {
                                 viewModel.saveFollowGame(
-                                    requireContext().filesDir.path,
-                                    TwitchApiHelper.getHelixHeaders(requireContext()),
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    setting,
                                     args.gameId,
                                     args.gameSlug,
-                                    args.gameName
+                                    args.gameName,
+                                    setting,
+                                    requireContext().filesDir.path,
+                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    TwitchApiHelper.getHelixHeaders(requireContext()),
+                                    requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
                             }
                         }
@@ -249,19 +253,21 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
         val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
         if (setting < 2) {
             viewModel.isFollowingGame(
-                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                setting,
                 args.gameId,
-                args.gameName
+                args.gameName,
+                setting,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                TwitchApiHelper.getGQLHeaders(requireContext(), true),
             )
         }
         if (args.updateLocal) {
             viewModel.updateLocalGame(
                 requireContext().filesDir.path,
-                TwitchApiHelper.getHelixHeaders(requireContext()),
-                TwitchApiHelper.getGQLHeaders(requireContext()),
                 args.gameId,
-                args.gameName
+                args.gameName,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                TwitchApiHelper.getHelixHeaders(requireContext()),
             )
         }
     }
@@ -297,26 +303,31 @@ class GameMediaFragment : BaseNetworkFragment(), Scrollable, FragmentHost, Integ
                             val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0
                             if (setting < 2) {
                                 viewModel.isFollowingGame(
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    setting,
                                     args.gameId,
-                                    args.gameName
+                                    args.gameName,
+                                    setting,
+                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 )
                             }
                         }
                         "follow" -> viewModel.saveFollowGame(
-                            requireContext().filesDir.path,
-                            TwitchApiHelper.getHelixHeaders(requireContext()),
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             args.gameId,
                             args.gameSlug,
-                            args.gameName
+                            args.gameName,
+                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().filesDir.path,
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            TwitchApiHelper.getHelixHeaders(requireContext()),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                         "unfollow" -> viewModel.deleteFollowGame(
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            args.gameId,
                             requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                            args.gameId
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                     }
                 }

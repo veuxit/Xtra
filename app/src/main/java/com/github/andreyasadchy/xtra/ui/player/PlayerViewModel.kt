@@ -11,8 +11,10 @@ import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
@@ -20,6 +22,7 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,19 +31,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.buffer
 import okio.sink
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
+import java.io.FileOutputStream
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
@@ -57,7 +72,7 @@ class PlayerViewModel @Inject constructor(
     var usingProxy = false
     var stopProxy = false
 
-    val videoResult = MutableStateFlow<Uri?>(null)
+    val videoResult = MutableStateFlow<String?>(null)
     var playbackPosition: Long? = null
     val savedPosition = MutableStateFlow<Long?>(null)
     val isBookmarked = MutableStateFlow<Boolean?>(null)
@@ -81,9 +96,22 @@ class PlayerViewModel @Inject constructor(
     val isFollowing: StateFlow<Boolean?> = _isFollowing
     val follow = MutableStateFlow<Pair<Boolean, String?>?>(null)
 
-    suspend fun checkPlaylist(url: String): Boolean {
-        return try {
-            val playlist = playerRepository.getMediaPlaylist(url)
+    suspend fun checkPlaylist(useCronet: Boolean, url: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val playlist = if (useCronet && cronetEngine != null) {
+                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                val response = request.future.get().responseBody as ByteArray
+                response.inputStream().use {
+                    PlaylistUtils.parseMediaPlaylist(it)
+                }
+            } else {
+                okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    response.body.byteStream().use {
+                        PlaylistUtils.parseMediaPlaylist(it)
+                    }
+                }
+            }
             playlist.segments.lastOrNull()?.let { segment ->
                 segment.title?.let { it.contains("Amazon") || it.contains("Adform") || it.contains("DCM") } == true ||
                         segment.programDateTime?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let { segmentStartTime ->
@@ -105,14 +133,27 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadStreamResult(gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean) {
+    fun loadStreamResult(useCronet: Boolean, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyMultivariantPlaylist: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean) {
         if (streamResult.value == null) {
             viewModelScope.launch {
                 try {
-                    val url = playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
+                    val url = playerRepository.loadStreamPlaylistUrl(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
                     streamResult.value = if (proxyMultivariantPlaylist) {
-                        val response = playerRepository.loadStreamPlaylistResponse(url, true, proxyHost, proxyPort, proxyUser, proxyPassword)
-                        Base64.encodeToString(response.toByteArray(), Base64.DEFAULT)
+                        withContext(Dispatchers.IO) {
+                            val response = okHttpClient.newBuilder().apply {
+                                if (!proxyHost.isNullOrBlank() && proxyPort != null) {
+                                    proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
+                                    if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                                        proxyAuthenticator { _, response ->
+                                            response.request.newBuilder().header("Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)).build()
+                                        }
+                                    }
+                                }
+                            }.build().newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                response.body.string()
+                            }
+                            Base64.encodeToString(response.toByteArray(), Base64.DEFAULT)
+                        }
                     } else {
                         url
                     }
@@ -125,13 +166,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadStream(channelId: String?, channelLogin: String?, viewerCount: Int?, loop: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadStream(channelId: String?, channelLogin: String?, viewerCount: Int?, loop: Boolean, useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (loop) {
             streamJob?.cancel()
             streamJob = viewModelScope.launch {
                 while (isActive) {
                     try {
-                        updateStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
+                        updateStream(channelId, channelLogin, useCronet, helixHeaders, gqlHeaders, enableIntegrity)
                         delay(300000L)
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
@@ -144,7 +185,7 @@ class PlayerViewModel @Inject constructor(
         } else if (viewerCount == null) {
             viewModelScope.launch {
                 try {
-                    updateStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
+                    updateStream(channelId, channelLogin, useCronet, helixHeaders, gqlHeaders, enableIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "stream"
@@ -154,15 +195,80 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateStream(channelId: String?, channelLogin: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
-        stream.value = repository.loadStream(channelId, channelLogin, helixHeaders, gqlHeaders, checkIntegrity)
+    private suspend fun updateStream(channelId: String?, channelLogin: String?, useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
+        stream.value = try {
+            val response = graphQLRepository.loadQueryUsersStream(
+                useCronet = useCronet,
+                headers = gqlHeaders,
+                ids = channelId?.let { listOf(it) },
+                logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null,
+            )
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.users?.firstOrNull()?.let {
+                Stream(
+                    id = it.stream?.id,
+                    channelId = channelId,
+                    channelLogin = it.login,
+                    channelName = it.displayName,
+                    gameId = it.stream?.game?.id,
+                    gameSlug = it.stream?.game?.slug,
+                    gameName = it.stream?.game?.displayName,
+                    type = it.stream?.type,
+                    title = it.stream?.broadcaster?.broadcastSettings?.title,
+                    viewerCount = it.stream?.viewersCount,
+                    startedAt = it.stream?.createdAt?.toString(),
+                    thumbnailUrl = it.stream?.previewImageURL,
+                    profileImageUrl = it.profileImageURL,
+                    tags = it.stream?.freeformTags?.mapNotNull { tag -> tag.name }
+                )
+            }
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+            try {
+                helixRepository.getStreams(
+                    useCronet = useCronet,
+                    headers = helixHeaders,
+                    ids = channelId?.let { listOf(it) },
+                    logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
+                ).data.firstOrNull()?.let {
+                    Stream(
+                        id = it.id,
+                        channelId = it.channelId,
+                        channelLogin = it.channelLogin,
+                        channelName = it.channelName,
+                        gameId = it.gameId,
+                        gameName = it.gameName,
+                        type = it.type,
+                        title = it.title,
+                        viewerCount = it.viewerCount,
+                        startedAt = it.startedAt,
+                        thumbnailUrl = it.thumbnailUrl,
+                        tags = it.tags
+                    )
+                }
+            } catch (e: Exception) {
+                val response = graphQLRepository.loadViewerCount(useCronet, gqlHeaders, channelLogin)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                }
+                response.data!!.user.stream?.let {
+                    Stream(
+                        id = it.id,
+                        viewerCount = it.viewersCount
+                    )
+                }
+            }
+        }
     }
 
-    fun loadVideo(gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
+    fun loadVideo(useCronet: Boolean, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
         if (videoResult.value == null) {
             viewModelScope.launch {
                 try {
-                    videoResult.value = playerRepository.loadVideoPlaylistUrl(gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                    videoResult.value = playerRepository.loadVideoPlaylistUrl(useCronet, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refreshVideo"
@@ -186,15 +292,30 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadGamesList(gqlHeaders: Map<String, String>, videoId: String?) {
+    fun loadGamesList(videoId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (gamesList.value == null) {
             viewModelScope.launch {
                 try {
-                    gamesList.value = repository.loadVideoGames(gqlHeaders, videoId)
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refreshVideo"
+                    val response = graphQLRepository.loadVideoGames(useCronet, gqlHeaders, videoId)
+                    if (enableIntegrity && integrity.value == null) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let {
+                            integrity.value = "refreshVideo"
+                            return@launch
+                        }
                     }
+                    gamesList.value = response.data!!.video.moments.edges.map { item ->
+                        item.node.let {
+                            Game(
+                                gameId = it.details?.game?.id,
+                                gameName = it.details?.game?.displayName,
+                                boxArtUrl = it.details?.game?.boxArtURL,
+                                vodPosition = it.positionMilliseconds,
+                                vodDuration = it.durationMilliseconds,
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+
                 }
             }
         }
@@ -206,7 +327,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveBookmark(filesDir: String, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, videoId: String?, title: String?, uploadDate: String?, duration: String?, type: String?, animatedPreviewUrl: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?) {
+    fun saveBookmark(filesDir: String, useCronet: Boolean, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, videoId: String?, title: String?, uploadDate: String?, duration: String?, type: String?, animatedPreviewUrl: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?) {
         viewModelScope.launch {
             val item = videoId?.let { bookmarksRepository.getBookmarkByVideoId(it) }
             if (item != null) {
@@ -218,10 +339,21 @@ class PlayerViewModel @Inject constructor(
                         val path = filesDir + File.separator + "thumbnails" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(path).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(path).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }
@@ -238,10 +370,21 @@ class PlayerViewModel @Inject constructor(
                         val path = filesDir + File.separator + "profile_pics" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(path).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(path).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(path).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }
@@ -252,10 +395,46 @@ class PlayerViewModel @Inject constructor(
                         path
                     }
                 }
-                val userTypes = try {
-                    channelId?.let { repository.loadUserTypes(listOf(it), helixHeaders, gqlHeaders) }?.firstOrNull()
-                } catch (e: Exception) {
-                    null
+                val userTypes = channelId?.let {
+                    try {
+                        val response = graphQLRepository.loadQueryUsersType(useCronet, gqlHeaders, listOf(channelId))
+                        response.data!!.users?.firstOrNull()?.let {
+                            User(
+                                channelId = it.id,
+                                broadcasterType = when {
+                                    it.roles?.isPartner == true -> "partner"
+                                    it.roles?.isAffiliate == true -> "affiliate"
+                                    else -> null
+                                },
+                                type = when {
+                                    it.roles?.isStaff == true -> "staff"
+                                    else -> null
+                                }
+                            )
+                        }
+                    } catch (e: Exception) {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            try {
+                                helixRepository.getUsers(
+                                    useCronet = useCronet,
+                                    headers = helixHeaders,
+                                    ids = listOf(channelId)
+                                ).data.firstOrNull()?.let {
+                                    User(
+                                        channelId = it.channelId,
+                                        channelLogin = it.channelLogin,
+                                        channelName = it.channelName,
+                                        type = it.type,
+                                        broadcasterType = it.broadcasterType,
+                                        profileImageUrl = it.profileImageUrl,
+                                        createdAt = it.createdAt,
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else null
+                    }
                 }
                 bookmarksRepository.saveBookmark(
                     Bookmark(
@@ -281,11 +460,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun loadClip(gqlHeaders: Map<String, String>, id: String?) {
+    fun loadClip(useCronet: Boolean, gqlHeaders: Map<String, String>, id: String?, enableIntegrity: Boolean) {
         if (clipUrls.value == null) {
             viewModelScope.launch {
                 try {
-                    clipUrls.value = playerRepository.loadClipUrls(gqlHeaders, id) ?: emptyMap()
+                    clipUrls.value = playerRepository.loadClipUrls(useCronet, gqlHeaders, id, enableIntegrity) ?: emptyMap()
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refreshClip"
@@ -311,13 +490,25 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun isFollowingChannel(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?) {
+    fun isFollowingChannel(userId: String?, channelId: String?, channelLogin: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         if (_isFollowing.value == null) {
             viewModelScope.launch {
                 try {
                     if (!channelId.isNullOrBlank()) {
                         if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                            val response = repository.loadUserFollowing(helixHeaders, channelId, userId, gqlHeaders, channelLogin)
+                            val response = try {
+                                if (gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || channelLogin == null) throw Exception()
+                                val follower = graphQLRepository.loadFollowingUser(useCronet, gqlHeaders, channelLogin).data?.user?.self?.follower
+                                Pair(follower != null, follower?.disableNotifications == false)
+                            } catch (e: Exception) {
+                                val following = helixRepository.getUserFollows(
+                                    useCronet = useCronet,
+                                    headers = helixHeaders,
+                                    userId = userId,
+                                    targetId = channelId,
+                                ).data.firstOrNull()?.channelId == channelId
+                                Pair(following, null)
+                            }
                             _isFollowing.value = response.first
                         } else {
                             _isFollowing.value = localFollowsChannel.getFollowByUserId(channelId) != null
@@ -330,21 +521,24 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun saveFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?, channelLogin: String?, channelName: String?, notificationsEnabled: Boolean, startedAt: String?) {
+    fun saveFollowChannel(userId: String?, channelId: String?, channelLogin: String?, channelName: String?, setting: Int, notificationsEnabled: Boolean, startedAt: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (!channelId.isNullOrBlank()) {
                     if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                        val errorMessage = repository.followUser(gqlHeaders, channelId)
-                        if (!errorMessage.isNullOrBlank()) {
-                            if (errorMessage == "failed integrity check" && integrity.value == null) {
-                                integrity.value = "follow"
-                            } else {
-                                follow.value = Pair(true, errorMessage)
+                        val errorMessage = graphQLRepository.loadFollowUser(useCronet, gqlHeaders, channelId).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "follow"
+                                    return@launch
+                                }
                             }
+                        }.errors?.firstOrNull()?.message
+                        if (!errorMessage.isNullOrBlank()) {
+                            follow.value = Pair(true, errorMessage)
                         } else {
                             _isFollowing.value = true
-                            follow.value = Pair(true, errorMessage)
+                            follow.value = Pair(true, null)
                             if (notificationsEnabled) {
                                 startedAt.takeUnless { it.isNullOrBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
                                     shownNotificationsRepository.saveList(listOf(ShownNotification(channelId, it)))
@@ -369,21 +563,24 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFollowChannel(gqlHeaders: Map<String, String>, setting: Int, userId: String?, channelId: String?) {
+    fun deleteFollowChannel(userId: String?, channelId: String?, setting: Int, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         viewModelScope.launch {
             try {
                 if (!channelId.isNullOrBlank()) {
                     if (setting == 0 && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && userId != channelId) {
-                        val errorMessage = repository.unfollowUser(gqlHeaders, channelId)
-                        if (!errorMessage.isNullOrBlank()) {
-                            if (errorMessage == "failed integrity check" && integrity.value == null) {
-                                integrity.value = "unfollow"
-                            } else {
-                                follow.value = Pair(false, errorMessage)
+                        val errorMessage = graphQLRepository.loadUnfollowUser(useCronet, gqlHeaders, channelId).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "unfollow"
+                                    return@launch
+                                }
                             }
+                        }.errors?.firstOrNull()?.message
+                        if (!errorMessage.isNullOrBlank()) {
+                            follow.value = Pair(false, errorMessage)
                         } else {
                             _isFollowing.value = false
-                            follow.value = Pair(false, errorMessage)
+                            follow.value = Pair(false, null)
                         }
                     } else {
                         localFollowsChannel.getFollowByUserId(channelId)?.let { localFollowsChannel.deleteFollow(it) }

@@ -164,10 +164,10 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                                 channelId = selectedMessage.userId,
                                 channelLogin = selectedMessage.userLogin,
                                 targetId = if (selectedMessage.userId != targetId) targetId else null,
-                                helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                                checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
-                                        requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                                enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             viewLifecycleOwner.lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -372,10 +372,10 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                             channelId = userId,
                             channelLogin = userLogin,
                             targetId = if (userId != targetId) targetId else null,
-                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                            useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                            checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
-                                    requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                            helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                            enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                     }
                 }

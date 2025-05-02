@@ -35,7 +35,6 @@ import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.getValue
 
 @AndroidEntryPoint
 class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSortDialog.OnFilter {
@@ -60,9 +59,10 @@ class GameVideosFragment : BaseVideosFragment(), Scrollable, Sortable, VideosSor
             lastSelectedItem = it
             viewModel.saveBookmark(
                 requireContext().filesDir.path,
-                TwitchApiHelper.getHelixHeaders(requireContext()),
+                it,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
                 TwitchApiHelper.getGQLHeaders(requireContext()),
-                it
+                TwitchApiHelper.getHelixHeaders(requireContext()),
             )
         }, true)
         setAdapter(binding.recyclerView, pagingAdapter)

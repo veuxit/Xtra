@@ -2,10 +2,10 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
@@ -14,123 +14,75 @@ class GameVideosDataSource(
     private val gameId: String?,
     private val gameSlug: String?,
     private val gameName: String?,
-    private val helixHeaders: Map<String, String>,
-    private val helixPeriod: String,
-    private val helixBroadcastTypes: String,
-    private val helixLanguage: String?,
-    private val helixSort: String,
-    private val helixApi: HelixApi,
-    private val gqlHeaders: Map<String, String>,
     private val gqlQueryLanguages: List<String>?,
     private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
     private val gqlType: String?,
     private val gqlSort: String?,
-    private val gqlApi: GraphQLRepository,
-    private val checkIntegrity: Boolean,
+    private val helixPeriod: String,
+    private val helixBroadcastTypes: String,
+    private val helixLanguage: String?,
+    private val helixSort: String,
+    private val gqlHeaders: Map<String, String>,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixHeaders: Map<String, String>,
+    private val helixRepository: HelixRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
-    private var nextPage: Boolean = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
-        return try {
-            val response = try {
-                when (apiPref.getOrNull(0)) {
-                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL -> if (helixPeriod == "week") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL_PERSISTED_QUERY -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == "week") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
-                    else -> throw Exception()
-                }
+        return if (!offset.isNullOrBlank()) {
+            try {
+                loadFromApi(api, params)
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
+                LoadResult.Error(e)
+            }
+        } else {
+            try {
+                loadFromApi(apiPref.getOrNull(0), params)
+            } catch (e: Exception) {
                 try {
-                    when (apiPref.getOrNull(1)) {
-                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL -> if (helixPeriod == "week") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL_PERSISTED_QUERY -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == "week") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
-                        else -> throw Exception()
-                    }
+                    loadFromApi(apiPref.getOrNull(1), params)
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check") return LoadResult.Error(e)
                     try {
-                        when (apiPref.getOrNull(2)) {
-                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL -> if (helixPeriod == "week") { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
-                            C.GQL_PERSISTED_QUERY -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == "week") { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
-                            else -> throw Exception()
-                        }
+                        loadFromApi(apiPref.getOrNull(2), params)
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") return LoadResult.Error(e)
-                        listOf()
+                        LoadResult.Error(e)
                     }
                 }
             }
-            LoadResult.Page(
-                data = response,
-                prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
-                    nextPage = false
-                    (params.key ?: 1) + 1
-                } else null
-            )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(params: LoadParams<Int>): List<Video> {
-        val response = helixApi.getVideos(
-            headers = helixHeaders,
-            gameId = gameId,
-            period = helixPeriod,
-            broadcastType = helixBroadcastTypes,
-            language = helixLanguage,
-            sort = helixSort,
-            limit = params.loadSize,
-            offset = offset
-        )
-        val users = response.data.mapNotNull { it.channelId }.let {
-            helixApi.getUsers(
-                headers = helixHeaders,
-                ids = it
-            ).data
+    private suspend fun loadFromApi(apiPref: String?, params: LoadParams<Int>): LoadResult<Int, Video> {
+        api = apiPref
+        return when (apiPref) {
+            C.GQL -> if (helixPeriod == "week") gqlQueryLoad(params) else throw Exception()
+            C.GQL_PERSISTED_QUERY -> if (helixLanguage.isNullOrBlank() && gqlQueryLanguages.isNullOrEmpty() && helixPeriod == "week") gqlLoad(params) else throw Exception()
+            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLoad(params) else throw Exception()
+            else -> throw Exception()
         }
-        val list = response.data.map {
-            Video(
-                id = it.id,
-                channelId = it.channelId,
-                channelLogin = it.channelLogin,
-                channelName = it.channelName,
-                title = it.title,
-                viewCount = it.viewCount,
-                uploadDate = it.uploadDate,
-                duration = it.duration,
-                thumbnailUrl = it.thumbnailUrl,
-                profileImageUrl = it.channelId?.let { id ->
-                    users.find { user -> user.channelId == id }?.profileImageUrl
-                },
-            )
-        }
-        offset = response.pagination?.cursor
-        return list
     }
 
-    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val response = gqlApi.loadQueryGameVideos(
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Video> {
+        val response = graphQLRepository.loadQueryGameVideos(
+            useCronet = useCronet,
             headers = gqlHeaders,
-            id = if (!gameId.isNullOrBlank()) gameId else null,
-            slug = if (gameId.isNullOrBlank() && !gameSlug.isNullOrBlank()) gameSlug else null,
-            name = if (gameId.isNullOrBlank() && gameSlug.isNullOrBlank() && !gameName.isNullOrBlank()) gameName else null,
+            id = gameId,
+            slug = gameSlug.takeIf { gameId.isNullOrBlank() },
+            name = gameName.takeIf { gameId.isNullOrBlank() && gameSlug.isNullOrBlank() },
             languages = gqlQueryLanguages,
-            sort = gqlQuerySort?.toString(),
-            type = gqlQueryType?.let { listOf(it.toString()) },
+            sort = gqlQuerySort,
+            type = gqlQueryType?.let { listOf(it) },
             first = params.loadSize,
             after = offset
         )
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.game!!.videos!!
         val items = data.edges!!
@@ -162,14 +114,20 @@ class GameVideosDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val response = gqlApi.loadGameVideos(gqlHeaders, gameSlug, gqlType, gqlSort, params.loadSize, offset)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Video> {
+        val response = graphQLRepository.loadGameVideos(useCronet, gqlHeaders, gameSlug, gqlType, gqlSort, params.loadSize, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.game.videos
         val items = data.edges
@@ -200,8 +158,59 @@ class GameVideosDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
+    }
+
+    private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, Video> {
+        val response = helixRepository.getVideos(
+            useCronet = useCronet,
+            headers = helixHeaders,
+            gameId = gameId,
+            period = helixPeriod,
+            broadcastType = helixBroadcastTypes,
+            language = helixLanguage,
+            sort = helixSort,
+            limit = params.loadSize,
+            offset = offset,
+        )
+        val users = response.data.mapNotNull { it.channelId }.let {
+            helixRepository.getUsers(
+                useCronet = useCronet,
+                headers = helixHeaders,
+                ids = it,
+            ).data
+        }
+        val list = response.data.map {
+            Video(
+                id = it.id,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                title = it.title,
+                viewCount = it.viewCount,
+                uploadDate = it.uploadDate,
+                duration = it.duration,
+                thumbnailUrl = it.thumbnailUrl,
+                profileImageUrl = it.channelId?.let { id ->
+                    users.find { user -> user.channelId == id }?.profileImageUrl
+                },
+            )
+        }
+        offset = response.pagination?.cursor
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank()) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, Video>): Int? {

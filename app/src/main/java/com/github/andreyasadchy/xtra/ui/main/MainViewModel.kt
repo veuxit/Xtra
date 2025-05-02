@@ -5,9 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
-import android.os.Build
 import androidx.core.content.edit
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.Constraints
@@ -21,8 +19,9 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.AuthRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.ui.download.StreamDownloadWorker
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
@@ -47,17 +46,24 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.buffer
 import okio.sink
-import retrofit2.HttpException
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
+import java.io.FileOutputStream
 import java.util.Timer
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val offlineRepository: OfflineRepository,
     private val authRepository: AuthRepository,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val json: Json,
 ) : ViewModel() {
@@ -100,49 +106,168 @@ class MainViewModel @Inject constructor(
         isPlayerMaximized = false
     }
 
-    fun loadVideo(videoId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadVideo(videoId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (video.value == null) {
             viewModelScope.launch {
-                try {
-                    video.value = repository.loadVideo(videoId, helixHeaders, gqlHeaders, checkIntegrity)
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
+                video.value = try {
+                    val response = graphQLRepository.loadQueryVideo(useCronet, gqlHeaders, videoId)
+                    if (enableIntegrity && integrity.value == null) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let {
+                            integrity.value = "refresh"
+                            return@launch
+                        }
                     }
+                    response.data!!.let { item ->
+                        item.video?.let {
+                            Video(
+                                id = videoId,
+                                channelId = it.owner?.id,
+                                channelLogin = it.owner?.login,
+                                channelName = it.owner?.displayName,
+                                type = it.broadcastType?.toString(),
+                                title = it.title,
+                                uploadDate = it.createdAt?.toString(),
+                                duration = it.lengthSeconds?.toString(),
+                                thumbnailUrl = it.previewThumbnailURL,
+                                profileImageUrl = it.owner?.profileImageURL,
+                                animatedPreviewURL = it.animatedPreviewURL,
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        try {
+                            helixRepository.getVideos(
+                                useCronet = useCronet,
+                                headers = helixHeaders,
+                                ids = videoId?.let { listOf(it) }
+                            ).data.firstOrNull()?.let {
+                                Video(
+                                    id = it.id,
+                                    channelId = it.channelId,
+                                    channelLogin = it.channelLogin,
+                                    channelName = it.channelName,
+                                    title = it.title,
+                                    viewCount = it.viewCount,
+                                    uploadDate = it.uploadDate,
+                                    duration = it.duration,
+                                    thumbnailUrl = it.thumbnailUrl,
+                                )
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
                 }
             }
         }
     }
 
-    fun loadClip(clipId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadClip(clipId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (clip.value == null) {
             viewModelScope.launch {
-                try {
-                    clip.value = repository.loadClip(clipId, helixHeaders, gqlHeaders, checkIntegrity)
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
+                clip.value = try {
+                    val user = try {
+                        graphQLRepository.loadClipData(useCronet, gqlHeaders, clipId).data?.clip
+                    } catch (e: Exception) {
+                        null
                     }
+                    val clip = graphQLRepository.loadClipVideo(useCronet, gqlHeaders, clipId).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "refresh"
+                                return@launch
+                            }
+                        }
+                    }.data?.clip
+                    Clip(
+                        id = clipId,
+                        channelId = user?.broadcaster?.id,
+                        channelLogin = user?.broadcaster?.login,
+                        channelName = user?.broadcaster?.displayName,
+                        profileImageUrl = user?.broadcaster?.profileImageURL,
+                        videoId = clip?.video?.id,
+                        duration = clip?.durationSeconds,
+                        vodOffset = clip?.videoOffsetSeconds ?: user?.videoOffsetSeconds
+                    )
+                } catch (e: Exception) {
+                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        try {
+                            helixRepository.getClips(
+                                useCronet = useCronet,
+                                headers = helixHeaders,
+                                ids = clipId?.let { listOf(it) }
+                            ).data.firstOrNull()?.let {
+                                Clip(
+                                    id = it.id,
+                                    channelId = it.channelId,
+                                    channelName = it.channelName,
+                                    videoId = it.videoId,
+                                    vodOffset = it.vodOffset,
+                                    gameId = it.gameId,
+                                    title = it.title,
+                                    viewCount = it.viewCount,
+                                    uploadDate = it.createdAt,
+                                    duration = it.duration,
+                                    thumbnailUrl = it.thumbnailUrl,
+                                )
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
                 }
             }
         }
     }
 
-    fun loadUser(login: String? = null, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadUser(login: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (user.value == null) {
             viewModelScope.launch {
-                try {
-                    user.value = repository.loadCheckUser(channelLogin = login, helixHeaders = helixHeaders, gqlHeaders = gqlHeaders, checkIntegrity = checkIntegrity)
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
+                user.value = try {
+                    val response = graphQLRepository.loadQueryUser(useCronet, gqlHeaders, login = login)
+                    if (enableIntegrity && integrity.value == null) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let {
+                            integrity.value = "refresh"
+                            return@launch
+                        }
                     }
+                    response.data!!.user?.let {
+                        User(
+                            channelId = it.id,
+                            channelLogin = it.login,
+                            channelName = it.displayName,
+                            profileImageUrl = it.profileImageURL
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        try {
+                            helixRepository.getUsers(
+                                useCronet = useCronet,
+                                headers = helixHeaders,
+                                logins = login?.let { listOf(it) }
+                            ).data.firstOrNull()?.let {
+                                User(
+                                    channelId = it.channelId,
+                                    channelLogin = it.channelLogin,
+                                    channelName = it.channelName,
+                                    type = it.type,
+                                    broadcasterType = it.broadcasterType,
+                                    profileImageUrl = it.profileImageUrl,
+                                    createdAt = it.createdAt,
+                                )
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
                 }
             }
         }
     }
 
-    fun downloadStream(filesDir: String, id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadStream(useCronet: Boolean, filesDir: String, id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         viewModelScope.launch {
             if (!channelLogin.isNullOrBlank()) {
                 val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
@@ -151,10 +276,21 @@ class MainViewModel @Inject constructor(
                         val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(filePath).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(filePath).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(filePath).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }
@@ -171,10 +307,21 @@ class MainViewModel @Inject constructor(
                         val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                    if (response.isSuccessful) {
-                                        File(filePath).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body()!!.source())
+                                if (useCronet && cronetEngine != null) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                    val response = request.future.get()
+                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                        FileOutputStream(filePath).use {
+                                            it.write(response.responseBody as ByteArray)
+                                        }
+                                    }
+                                } else {
+                                    okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                        if (response.isSuccessful) {
+                                            File(filePath).sink().buffer().use { sink ->
+                                                sink.writeAll(response.body.source())
+                                            }
                                         }
                                     }
                                 }
@@ -222,7 +369,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun downloadVideo(filesDir: String, id: String?, title: String?, uploadDate: String?, type: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
+    fun downloadVideo(useCronet: Boolean, filesDir: String, id: String?, title: String?, uploadDate: String?, type: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
         viewModelScope.launch {
             val downloadedThumbnail = id.takeIf { !it.isNullOrBlank() }?.let { id ->
                 thumbnail.takeIf { !it.isNullOrBlank() }?.let {
@@ -230,10 +377,21 @@ class MainViewModel @Inject constructor(
                     val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                if (response.isSuccessful) {
-                                    File(filePath).sink().buffer().use { sink ->
-                                        sink.writeAll(response.body()!!.source())
+                            if (useCronet && cronetEngine != null) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                val response = request.future.get()
+                                if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                    FileOutputStream(filePath).use {
+                                        it.write(response.responseBody as ByteArray)
+                                    }
+                                }
+                            } else {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
                                     }
                                 }
                             }
@@ -250,10 +408,21 @@ class MainViewModel @Inject constructor(
                     val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                if (response.isSuccessful) {
-                                    File(filePath).sink().buffer().use { sink ->
-                                        sink.writeAll(response.body()!!.source())
+                            if (useCronet && cronetEngine != null) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                val response = request.future.get()
+                                if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                    FileOutputStream(filePath).use {
+                                        it.write(response.responseBody as ByteArray)
+                                    }
+                                }
+                            } else {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
                                     }
                                 }
                             }
@@ -306,7 +475,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun downloadClip(filesDir: String, clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
+    fun downloadClip(useCronet: Boolean, filesDir: String, clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
         viewModelScope.launch {
             val downloadedThumbnail = clipId.takeIf { !it.isNullOrBlank() }?.let { id ->
                 thumbnail.takeIf { !it.isNullOrBlank() }?.let {
@@ -314,10 +483,21 @@ class MainViewModel @Inject constructor(
                     val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                if (response.isSuccessful) {
-                                    File(filePath).sink().buffer().use { sink ->
-                                        sink.writeAll(response.body()!!.source())
+                            if (useCronet && cronetEngine != null) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                val response = request.future.get()
+                                if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                    FileOutputStream(filePath).use {
+                                        it.write(response.responseBody as ByteArray)
+                                    }
+                                }
+                            } else {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
                                     }
                                 }
                             }
@@ -334,10 +514,21 @@ class MainViewModel @Inject constructor(
                     val filePath = filesDir + File.separator + "profile_pics" + File.separator + id
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
-                                if (response.isSuccessful) {
-                                    File(filePath).sink().buffer().use { sink ->
-                                        sink.writeAll(response.body()!!.source())
+                            if (useCronet && cronetEngine != null) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                val response = request.future.get()
+                                if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                    FileOutputStream(filePath).use {
+                                        it.write(response.responseBody as ByteArray)
+                                    }
+                                }
+                            } else {
+                                okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
+                                    if (response.isSuccessful) {
+                                        File(filePath).sink().buffer().use { sink ->
+                                            sink.writeAll(response.body.source())
+                                        }
                                     }
                                 }
                             }
@@ -389,12 +580,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun validate(helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, accountId: String?, accountLogin: String?, activity: Activity) {
+    fun validate(useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, accountId: String?, accountLogin: String?, activity: Activity) {
         viewModelScope.launch {
             try {
                 val helixToken = helixHeaders[C.HEADER_TOKEN]
                 if (!helixToken.isNullOrBlank()) {
-                    val response = authRepository.validate(helixToken)
+                    val response = authRepository.validate(useCronet, helixToken)
                     if (response.clientId.isNotBlank() && response.clientId == helixHeaders[C.HEADER_CLIENT_ID]) {
                         if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
                             activity.tokenPrefs().edit {
@@ -408,7 +599,7 @@ class MainViewModel @Inject constructor(
                 }
                 val gqlToken = gqlHeaders[C.HEADER_TOKEN]
                 if (!gqlToken.isNullOrBlank()) {
-                    val response = authRepository.validate(gqlToken)
+                    val response = authRepository.validate(useCronet, gqlToken)
                     if (response.clientId.isNotBlank() && response.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
                         if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
                             activity.tokenPrefs().edit {
@@ -421,7 +612,7 @@ class MainViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                if ((e is IllegalStateException && e.message == "401") || (e is HttpException && e.code() == 401)) {
+                if (e is IllegalStateException && e.message == "401") {
                     activity.toast(R.string.token_expired)
                     (activity as? MainActivity)?.logoutResultLauncher?.launch(Intent(activity, LoginActivity::class.java))
                 }
@@ -430,13 +621,21 @@ class MainViewModel @Inject constructor(
         TwitchApiHelper.checkedValidation = true
     }
 
-    fun checkUpdates(url: String, lastChecked: Long) {
+    fun checkUpdates(useCronet: Boolean, url: String, lastChecked: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             updateUrl.emit(
                 try {
-                    json.decodeFromString<JsonObject>(
-                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { it.body()!!.string() }
-                    )["assets"]?.jsonArray?.find {
+                    val response = if (useCronet && cronetEngine != null) {
+                        val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                        cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                        val response = request.future.get().responseBody as String
+                        json.decodeFromString<JsonObject>(response)
+                    } else {
+                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                            json.decodeFromString<JsonObject>(response.body.string())
+                        }
+                    }
+                    response["assets"]?.jsonArray?.find {
                         it.jsonObject.getValue("content_type").jsonPrimitive.contentOrNull == "application/vnd.android.package-archive"
                     }?.jsonObject?.let { obj ->
                         obj.getValue("updated_at").jsonPrimitive.contentOrNull?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
@@ -453,46 +652,43 @@ class MainViewModel @Inject constructor(
         TwitchApiHelper.checkedUpdates = true
     }
 
-    fun downloadUpdate(url: String) {
+    fun downloadUpdate(useCronet: Boolean, url: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val packageInstaller = applicationContext.packageManager.packageInstaller
-                            val sessionId = packageInstaller.createSession(
-                                PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-                            )
-                            val session = packageInstaller.openSession(sessionId)
-                            session.openWrite("package", 0, -1).sink().buffer().use { sink ->
-                                sink.writeAll(response.body()!!.source())
-                            }
-                            session.commit(
-                                PendingIntent.getActivity(
-                                    applicationContext,
-                                    0,
-                                    Intent(applicationContext, MainActivity::class.java).apply {
-                                        setAction(MainActivity.INTENT_INSTALL_UPDATE)
-                                    },
-                                    PendingIntent.FLAG_MUTABLE
-                                ).intentSender
-                            )
-                            session.close()
-                        }
-                    }
+                val response = if (useCronet && cronetEngine != null) {
+                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                    cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                    val response = request.future.get()
+                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                        response.responseBody as ByteArray
+                    } else null
                 } else {
-                    val path = "${applicationContext.filesDir.path}/update/update.apk"
                     okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                         if (response.isSuccessful) {
-                            File(applicationContext.filesDir.path, "update").mkdir()
-                            File(path).sink().buffer().use {
-                                it.writeAll(response.body()!!.source())
-                            }
-                        }
+                            response.body.bytes()
+                        } else null
                     }
-                    applicationContext.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(path.toUri(), "application/vnd.android.package-archive")
-                    })
+                }
+                if (response != null && response.isNotEmpty()) {
+                    val packageInstaller = applicationContext.packageManager.packageInstaller
+                    val sessionId = packageInstaller.createSession(
+                        PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+                    )
+                    val session = packageInstaller.openSession(sessionId)
+                    session.openWrite("package", 0, response.size.toLong()).use {
+                        it.write(response)
+                    }
+                    session.commit(
+                        PendingIntent.getActivity(
+                            applicationContext,
+                            0,
+                            Intent(applicationContext, MainActivity::class.java).apply {
+                                setAction(MainActivity.INTENT_INSTALL_UPDATE)
+                            },
+                            PendingIntent.FLAG_MUTABLE
+                        ).intentSender
+                    )
+                    session.close()
                 }
             } catch (e: Exception) {
 
