@@ -28,6 +28,7 @@ import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.body
 import com.github.andreyasadchy.xtra.util.toast
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel

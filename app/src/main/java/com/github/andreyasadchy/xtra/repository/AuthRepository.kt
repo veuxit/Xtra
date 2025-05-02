@@ -3,6 +3,8 @@ package com.github.andreyasadchy.xtra.repository
 import com.github.andreyasadchy.xtra.model.id.DeviceCodeResponse
 import com.github.andreyasadchy.xtra.model.id.TokenResponse
 import com.github.andreyasadchy.xtra.model.id.ValidationResponse
+import com.github.andreyasadchy.xtra.util.body
+import com.github.andreyasadchy.xtra.util.code
 import com.github.andreyasadchy.xtra.util.toRequestBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

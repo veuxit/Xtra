@@ -35,10 +35,12 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.body
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
 import com.github.andreyasadchy.xtra.util.chat.ChatUtils
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.request
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.delay

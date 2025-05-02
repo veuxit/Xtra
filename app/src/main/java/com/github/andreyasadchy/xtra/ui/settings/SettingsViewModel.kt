@@ -29,6 +29,7 @@ import com.github.andreyasadchy.xtra.ui.main.LiveNotificationWorker
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.body
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
