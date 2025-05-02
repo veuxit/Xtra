@@ -25,19 +25,19 @@ class ShownNotificationsRepository @Inject constructor(
                     try {
                         helixLocal(useCronet, helixHeaders, it, helixRepository)
                     } catch (e: Exception) {
-                        null
+                        return@withContext emptyList()
                     }
-                } else null
-            }
-        }?.let { list.addAll(it) }
+                } else return@withContext emptyList()
+            }.let { list.addAll(it) }
+        }
         if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             try {
                 gqlQueryLoad(useCronet, gqlHeaders, graphQLRepository)
             } catch (e: Exception) {
-                null
-            }?.mapNotNull { item ->
+                return@withContext emptyList()
+            }.mapNotNull { item ->
                 item.takeIf { list.find { it.channelId == item.channelId } == null }
-            }?.let {
+            }.let {
                 list.addAll(it)
             }
         }
