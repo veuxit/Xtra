@@ -13,10 +13,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.apollographql.apollo.ApolloClient
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
@@ -35,9 +35,11 @@ import okhttp3.OkHttpClient
 import okio.buffer
 import okio.sink
 import okio.source
+import org.chromium.net.CronetEngine
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.max
@@ -50,9 +52,11 @@ class SettingsViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
-    private val apolloClient: ApolloClient,
-    private val helixApi: HelixApi,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val appDatabase: AppDatabase,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val json: Json,
 ) : ViewModel() {
@@ -260,7 +264,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun restoreSettings(list: List<String>, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             list.take(2).forEach { url ->
                 if (url.endsWith(".xml")) {
@@ -270,7 +274,7 @@ class SettingsViewModel @Inject constructor(
                     val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                         it.readText()
                     }
-                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders)
+                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), useCronet, gqlHeaders, helixHeaders)
                 } else {
                     val database = applicationContext.getDatabasePath("database")
                     File(database.parent, "database-shm").delete()
@@ -289,10 +293,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun toggleNotifications(enabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(notificationUsersRepository, gqlHeaders, apolloClient, helixHeaders, helixApi)
+                shownNotificationsRepository.getNewStreams(notificationUsersRepository, useCronet, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,

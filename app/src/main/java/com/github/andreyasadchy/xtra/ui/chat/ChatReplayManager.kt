@@ -4,7 +4,7 @@ import com.github.andreyasadchy.xtra.model.chat.Badge
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,8 +15,10 @@ import javax.inject.Inject
 import kotlin.math.max
 
 class ChatReplayManager @Inject constructor(
+    private val useCronet: Boolean,
     private val gqlHeaders: Map<String, String>,
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val enableIntegrity: Boolean,
     private val videoId: String,
     private val startTime: Long,
     private val getCurrentPosition: () -> Long?,
@@ -60,11 +62,17 @@ class ChatReplayManager @Inject constructor(
         loadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
                 val response = if (position != null) {
-                    repository.loadVideoMessages(gqlHeaders, videoId, offset = position.div(1000).toInt())
+                    graphQLRepository.loadVideoMessages(useCronet, gqlHeaders, videoId, offset = position.div(1000).toInt())
                 } else {
-                    repository.loadVideoMessages(gqlHeaders, videoId, cursor = cursor)
+                    graphQLRepository.loadVideoMessages(useCronet, gqlHeaders, videoId, cursor = cursor)
                 }
-                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let {
+                        getIntegrityToken()
+                        isLoading = false
+                        return@launch
+                    }
+                }
                 val comments = response.data!!.video.comments
                 val messages = comments.edges.mapNotNull { comment ->
                     comment.node.let { item ->
@@ -112,9 +120,7 @@ class ChatReplayManager @Inject constructor(
                 isLoading = false
                 startJob()
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") {
-                    getIntegrityToken()
-                }
+
             }
         }
     }

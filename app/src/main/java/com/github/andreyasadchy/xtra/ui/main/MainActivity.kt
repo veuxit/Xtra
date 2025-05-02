@@ -207,8 +207,9 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                             if (online) {
                                 if (!TwitchApiHelper.checkedValidation && prefs.getBoolean(C.VALIDATE_TOKENS, true)) {
                                     viewModel.validate(
-                                        TwitchApiHelper.getHelixHeaders(this@MainActivity),
+                                        prefs.getBoolean(C.USE_CRONET, false),
                                         TwitchApiHelper.getGQLHeaders(this@MainActivity, true),
+                                        TwitchApiHelper.getHelixHeaders(this@MainActivity),
                                         this@MainActivity.tokenPrefs().getString(C.USER_ID, null),
                                         this@MainActivity.tokenPrefs().getString(C.USERNAME, null),
                                         this@MainActivity
@@ -351,9 +352,10 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         if (!id.isNullOrBlank()) {
                             viewModel.loadVideo(
                                 id,
-                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.USE_CRONET, false),
                                 TwitchApiHelper.getGQLHeaders(this),
-                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -374,9 +376,10 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         if (!id.isNullOrBlank()) {
                             viewModel.loadClip(
                                 id,
-                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.USE_CRONET, false),
                                 TwitchApiHelper.getGQLHeaders(this),
-                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -397,9 +400,10 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         if (!id.isNullOrBlank()) {
                             viewModel.loadClip(
                                 id,
+                                prefs.getBoolean(C.USE_CRONET, false),
                                 TwitchApiHelper.getHelixHeaders(this),
                                 TwitchApiHelper.getGQLHeaders(this),
-                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -454,9 +458,10 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         if (!login.isNullOrBlank()) {
                             viewModel.loadUser(
                                 login,
-                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.USE_CRONET, false),
                                 TwitchApiHelper.getGQLHeaders(this),
-                                prefs.getBoolean(C.ENABLE_INTEGRITY, false) && prefs.getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                TwitchApiHelper.getHelixHeaders(this),
+                                prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             lifecycleScope.launch {
                                 repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -628,15 +633,15 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     }
 
     fun downloadStream(filesDir: String, id: String?, title: String?, startedAt: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadStream(filesDir, id, title, startedAt, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
+        viewModel.downloadStream(prefs.getBoolean(C.USE_CRONET, false), filesDir, id, title, startedAt, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
     }
 
     fun downloadVideo(filesDir: String, id: String?, title: String?, uploadDate: String?, type: String?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, from: Long, to: Long, downloadChat: Boolean, downloadChatEmotes: Boolean, playlistToFile: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadVideo(filesDir, id, title, uploadDate, type, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, from, to, downloadChat, downloadChatEmotes, playlistToFile, wifiOnly)
+        viewModel.downloadVideo(prefs.getBoolean(C.USE_CRONET, false), filesDir, id, title, uploadDate, type, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, from, to, downloadChat, downloadChatEmotes, playlistToFile, wifiOnly)
     }
 
     fun downloadClip(filesDir: String, clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, url: String, path: String, quality: String, downloadChat: Boolean, downloadChatEmotes: Boolean, wifiOnly: Boolean) {
-        viewModel.downloadClip(filesDir, clipId, title, uploadDate, duration, videoId, vodOffset, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
+        viewModel.downloadClip(prefs.getBoolean(C.USE_CRONET, false), filesDir, clipId, title, uploadDate, duration, videoId, vodOffset, channelId, channelLogin, channelName, channelLogo, thumbnail, gameId, gameSlug, gameName, url, path, quality, downloadChat, downloadChatEmotes, wifiOnly)
     }
 
     fun popFragment() {

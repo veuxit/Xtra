@@ -212,6 +212,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     viewModel.restoreSettings(
                         list = list,
+                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                         helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                     )
@@ -277,6 +278,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 viewModel.toggleNotifications(
                     enabled = newValue as Boolean,
+                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                     helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                 )
@@ -871,9 +873,6 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.download_preferences, rootKey)
-            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
-                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
-            }
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
                 viewModel.importDownloads()
                 true
@@ -931,6 +930,10 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
                 IntegrityDialog.show(childFragmentManager)
                 true
+            }
+            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
+                findPreference<SwitchPreferenceCompat>(C.USE_CRONET)?.isVisible = false
+                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
             }
         }
 

@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.apollographql.apollo.ApolloClient
-import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.datasource.SearchStreamsDataSource
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -23,8 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class StreamSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
-    private val helix: HelixApi,
-    private val apolloClient: ApolloClient,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -42,11 +42,12 @@ class StreamSearchViewModel @Inject constructor(
             SearchStreamsDataSource(
                 query = query,
                 helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                helixApi = helix,
+                helixRepository = helixRepository,
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
-                apolloClient = apolloClient,
-                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = applicationContext.prefs().getString(C.API_PREFS_SEARCH_STREAMS, null)?.split(',') ?: TwitchApiHelper.searchStreamsApiDefaults
+                graphQLRepository = graphQLRepository,
+                enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_SEARCH_STREAMS, null)?.split(',') ?: TwitchApiHelper.searchStreamsApiDefaults,
+                useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
             )
         }.flow
     }.cachedIn(viewModelScope)

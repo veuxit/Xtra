@@ -6,11 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.apollographql.apollo.ApolloClient
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.SortChannel
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
@@ -29,13 +28,12 @@ import javax.inject.Inject
 @HiltViewModel
 class FollowedChannelsViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
-    private val graphQLRepository: GraphQLRepository,
-    private val helix: HelixApi,
-    private val apolloClient: ApolloClient,
     private val sortChannelRepository: SortChannelRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
 ) : ViewModel() {
 
     val filter = MutableStateFlow<Filter?>(null)
@@ -52,17 +50,7 @@ class FollowedChannelsViewModel @Inject constructor(
             PagingConfig(pageSize = 15, prefetchDistance = 5, initialLoadSize = 15)
         ) {
             FollowedChannelsDataSource(
-                localFollowsChannel = localFollowsChannel,
-                offlineRepository = offlineRepository,
-                bookmarksRepository = bookmarksRepository,
                 userId = applicationContext.tokenPrefs().getString(C.USER_ID, null),
-                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
-                helixApi = helix,
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
-                gqlApi = graphQLRepository,
-                apolloClient = apolloClient,
-                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_CHANNELS, null)?.split(',') ?: TwitchApiHelper.followedChannelsApiDefaults,
                 sort = when (sort) {
                     FollowedChannelsSortDialog.SORT_FOLLOWED_AT -> "created_at"
                     FollowedChannelsSortDialog.SORT_ALPHABETICALLY -> "login"
@@ -73,7 +61,17 @@ class FollowedChannelsViewModel @Inject constructor(
                     FollowedChannelsSortDialog.ORDER_DESC -> "desc"
                     FollowedChannelsSortDialog.ORDER_ASC -> "asc"
                     else -> "desc"
-                }
+                },
+                localFollowsChannel = localFollowsChannel,
+                offlineRepository = offlineRepository,
+                bookmarksRepository = bookmarksRepository,
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
+                graphQLRepository = graphQLRepository,
+                helixHeaders = TwitchApiHelper.getHelixHeaders(applicationContext),
+                helixRepository = helixRepository,
+                enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_CHANNELS, null)?.split(',') ?: TwitchApiHelper.followedChannelsApiDefaults,
+                useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
             )
         }.flow
     }.cachedIn(viewModelScope)

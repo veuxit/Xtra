@@ -48,9 +48,10 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
             lastSelectedItem = it
             viewModel.saveBookmark(
                 requireContext().filesDir.path,
-                TwitchApiHelper.getHelixHeaders(requireContext()),
+                it,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
                 TwitchApiHelper.getGQLHeaders(requireContext()),
-                it
+                TwitchApiHelper.getHelixHeaders(requireContext()),
             )
         })
         setAdapter(binding.recyclerView, pagingAdapter)

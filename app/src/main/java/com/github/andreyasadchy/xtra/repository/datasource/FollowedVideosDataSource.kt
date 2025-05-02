@@ -2,9 +2,6 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.apollographql.apollo.ApolloClient
-import com.apollographql.apollo.api.Optional
-import com.github.andreyasadchy.xtra.UserFollowedVideosQuery
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -13,63 +10,50 @@ import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
 
 class FollowedVideosDataSource(
-    private val gqlHeaders: Map<String, String>,
     private val gqlQueryType: BroadcastType?,
     private val gqlQuerySort: VideoSort?,
-    private val gqlApi: GraphQLRepository,
-    private val apolloClient: ApolloClient,
-    private val checkIntegrity: Boolean,
+    private val gqlHeaders: Map<String, String>,
+    private val graphQLRepository: GraphQLRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
-    private var nextPage: Boolean = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
-        return try {
-            val response = try {
-                when (apiPref.getOrNull(0)) {
-                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
-                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
-                    else -> throw Exception()
-                }
+        return if (!offset.isNullOrBlank()) {
+            try {
+                loadFromApi(api, params)
             } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
+                LoadResult.Error(e)
+            }
+        } else {
+            try {
+                loadFromApi(apiPref.getOrNull(0), params)
+            } catch (e: Exception) {
                 try {
-                    when (apiPref.getOrNull(1)) {
-                        C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad(params) } else throw Exception()
-                        C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) { api = C.GQL_PERSISTED_QUERY; gqlLoad(params) } else throw Exception()
-                        else -> throw Exception()
-                    }
+                    loadFromApi(apiPref.getOrNull(1), params)
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check") return LoadResult.Error(e)
-                    listOf()
+                    LoadResult.Error(e)
                 }
             }
-            LoadResult.Page(
-                data = response,
-                prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
-                    nextPage = false
-                    (params.key ?: 1) + 1
-                } else null
-            )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
         }
     }
 
-    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
-        val response = apolloClient.newBuilder().apply {
-            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-        }.build().query(UserFollowedVideosQuery(
-            sort = Optional.Present(gqlQuerySort),
-            type = Optional.Present(gqlQueryType?.let { listOf(it) }),
-            first = Optional.Present(params.loadSize),
-            after = Optional.Present(offset)
-        )).execute()
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun loadFromApi(apiPref: String?, params: LoadParams<Int>): LoadResult<Int, Video> {
+        api = apiPref
+        return when (apiPref) {
+            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad(params) else throw Exception()
+            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() && gqlQueryType == BroadcastType.ARCHIVE && gqlQuerySort == VideoSort.TIME) gqlLoad(params) else throw Exception()
+            else -> throw Exception()
+        }
+    }
+
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Video> {
+        val response = graphQLRepository.loadQueryUserFollowedVideos(useCronet, gqlHeaders, gqlQuerySort, gqlQueryType?.let { listOf(it) }, params.loadSize, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.user!!.followedVideos!!
         val items = data.edges!!
@@ -101,14 +85,20 @@ class FollowedVideosDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
-        val response = gqlApi.loadFollowedVideos(gqlHeaders, params.loadSize, offset)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Video> {
+        val response = graphQLRepository.loadFollowedVideos(useCronet, gqlHeaders, params.loadSize, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.currentUser.followedVideos
         val items = data.edges
@@ -138,8 +128,14 @@ class FollowedVideosDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, Video>): Int? {

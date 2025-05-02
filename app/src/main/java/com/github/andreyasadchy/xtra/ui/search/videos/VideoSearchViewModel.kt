@@ -5,10 +5,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.apollographql.apollo.ApolloClient
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.datasource.SearchVideosDataSource
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosViewModel
@@ -22,18 +21,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import okhttp3.OkHttpClient
+import org.chromium.net.CronetEngine
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoSearchViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
-    repository: ApiRepository,
     playerRepository: PlayerRepository,
     bookmarksRepository: BookmarksRepository,
-    okHttpClient: OkHttpClient,
     private val graphQLRepository: GraphQLRepository,
-    private val apolloClient: ApolloClient,
-) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository, okHttpClient) {
+    helixRepository: HelixRepository,
+    cronetEngine: CronetEngine?,
+    cronetExecutor: ExecutorService,
+    okHttpClient: OkHttpClient,
+) : BaseVideosViewModel(playerRepository, bookmarksRepository, graphQLRepository, helixRepository, cronetEngine, cronetExecutor, okHttpClient) {
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query
@@ -46,10 +48,10 @@ class VideoSearchViewModel @Inject constructor(
             SearchVideosDataSource(
                 query = query,
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
-                gqlApi = graphQLRepository,
-                apolloClient = apolloClient,
-                checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-                apiPref = applicationContext.prefs().getString(C.API_PREFS_SEARCH_VIDEOS, null)?.split(',') ?: TwitchApiHelper.searchVideosApiDefaults
+                graphQLRepository = graphQLRepository,
+                enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                apiPref = applicationContext.prefs().getString(C.API_PREFS_SEARCH_VIDEOS, null)?.split(',') ?: TwitchApiHelper.searchVideosApiDefaults,
+                useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
             )
         }.flow
     }.cachedIn(viewModelScope)

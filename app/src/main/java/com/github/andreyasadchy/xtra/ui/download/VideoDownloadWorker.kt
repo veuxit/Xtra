@@ -30,7 +30,6 @@ import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.chat.VideoChatMessage
 import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesResponse
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
-import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
@@ -70,7 +69,6 @@ import okio.sink
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileFilter
 import java.io.FileInputStream
@@ -85,8 +83,17 @@ class VideoDownloadWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
 ) : CoroutineWorker(context, parameters) {
 
+    @set:Inject
+    private var cronetEngine: CronetEngine? = null
+
     @Inject
-    lateinit var repository: ApiRepository
+    lateinit var cronetExecutor: ExecutorService
+
+    @Inject
+    lateinit var okHttpClient: OkHttpClient
+
+    @Inject
+    lateinit var json: Json
 
     @Inject
     lateinit var playerRepository: PlayerRepository
@@ -97,18 +104,6 @@ class VideoDownloadWorker @AssistedInject constructor(
     @Inject
     lateinit var offlineRepository: OfflineRepository
 
-    @Inject
-    lateinit var okHttpClient: OkHttpClient
-
-    @set:Inject
-    private var cronetEngine: CronetEngine? = null
-
-    @Inject
-    lateinit var cronetExecutor: ExecutorService
-
-    @Inject
-    lateinit var json: Json
-
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var offlineVideo: OfflineVideo
 
@@ -116,17 +111,18 @@ class VideoDownloadWorker @AssistedInject constructor(
         offlineVideo = offlineRepository.getVideoById(inputData.getInt(KEY_VIDEO_ID, 0)) ?: return Result.failure()
         offlineRepository.updateVideo(offlineVideo.apply { status = OfflineVideo.STATUS_DOWNLOADING })
         setForeground(createForegroundInfo())
+        val useCronet = context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false)
         val sourceUrl = offlineVideo.sourceUrl!!
         if (sourceUrl.endsWith(".m3u8")) {
             val path = offlineVideo.downloadPath!!
             val from = offlineVideo.fromTime!!
             val to = offlineVideo.toTime!!
             val isShared = path.toUri().scheme == ContentResolver.SCHEME_CONTENT
-            val playlist = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+            val playlist = if (useCronet && cronetEngine != null) {
                 val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                 cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
                 val response = request.future.get().responseBody as ByteArray
-                ByteArrayInputStream(response).use {
+                response.inputStream().use {
                     PlaylistUtils.parseMediaPlaylist(it)
                 }
             } else {
@@ -209,7 +205,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                     }
                     val startPosition = relativeStartTimes[fromIndex]
                     val initSegmentBytes = if (playlist.initSegmentUri != null) {
-                        if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                        if (useCronet && cronetEngine != null) {
                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                             cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
                             val response = request.future.get().responseBody as ByteArray
@@ -249,7 +245,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                     segments.map {
                         launch {
                             requestSemaphore.withPermit {
-                                if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                if (useCronet && cronetEngine != null) {
                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                     cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
                                     val response = request.future.get().responseBody as ByteArray
@@ -332,7 +328,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                         val playlistUri = playlistFile.uri.toString()
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
-                            if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                            if (useCronet && cronetEngine != null) {
                                 val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                 cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
                                 val response = request.future.get().responseBody as ByteArray
@@ -370,7 +366,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                             launch {
                                 requestSemaphore.withPermit {
                                     if (videoDirectory.findFile(it.uri) == null || !downloadedTracks.contains(it.uri)) {
-                                        if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
                                             val response = request.future.get().responseBody as ByteArray
@@ -415,7 +411,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                         }
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
-                            if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                            if (useCronet && cronetEngine != null) {
                                 val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                 cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
                                 val response = request.future.get().responseBody as ByteArray
@@ -449,7 +445,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                             launch {
                                 requestSemaphore.withPermit {
                                     if (!File(directory + it.uri).exists() || !downloadedTracks.contains(it.uri)) {
-                                        if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
                                             val response = request.future.get().responseBody as ByteArray
@@ -514,7 +510,7 @@ class VideoDownloadWorker @AssistedInject constructor(
             val jobs = runBlocking {
                 launch {
                     if (offlineVideo.progress < offlineVideo.maxProgress) {
-                        if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                        if (useCronet && cronetEngine != null) {
                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                             cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
                             val response = request.future.get().responseBody as ByteArray
@@ -744,6 +740,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                     fileUri
                 }
                 val downloadEmotes = offlineVideo.downloadChatEmotes
+                val useCronet = context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false)
                 val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
                 val helixHeaders = TwitchApiHelper.getGQLHeaders(context)
                 val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
@@ -752,15 +749,15 @@ class VideoDownloadWorker @AssistedInject constructor(
                 val channelLogin = offlineVideo.channelLogin
                 val badgeList = mutableListOf<TwitchBadge>().apply {
                     if (downloadEmotes) {
-                        val channelBadges = try { repository.loadChannelBadges(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                        val channelBadges = try { playerRepository.loadChannelBadges(useCronet, helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
                         addAll(channelBadges)
-                        val globalBadges = try { repository.loadGlobalBadges(helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                        val globalBadges = try { playerRepository.loadGlobalBadges(useCronet, helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
                         addAll(globalBadges.filter { badge -> badge.setId !in channelBadges.map { it.setId } })
                     }
                 }
                 val cheerEmoteList = if (downloadEmotes) {
                     try {
-                        repository.loadCheerEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
+                        playerRepository.loadCheerEmotes(useCronet, helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, enableIntegrity = false)
                     } catch (e: Exception) {
                         emptyList()
                     }
@@ -768,13 +765,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                 val emoteList = mutableListOf<Emote>().apply {
                     if (downloadEmotes) {
                         if (channelId != null) {
-                            try { addAll(playerRepository.loadStvEmotes(channelId, useWebp).second) } catch (e: Exception) {}
-                            try { addAll(playerRepository.loadBttvEmotes(channelId, useWebp)) } catch (e: Exception) {}
-                            try { addAll(playerRepository.loadFfzEmotes(channelId, useWebp)) } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadStvEmotes(useCronet, channelId, useWebp).second) } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadBttvEmotes(useCronet, channelId, useWebp)) } catch (e: Exception) {}
+                            try { addAll(playerRepository.loadFfzEmotes(useCronet, channelId, useWebp)) } catch (e: Exception) {}
                         }
-                        try { addAll(playerRepository.loadGlobalStvEmotes(useWebp)) } catch (e: Exception) {}
-                        try { addAll(playerRepository.loadGlobalBttvEmotes(useWebp)) } catch (e: Exception) {}
-                        try { addAll(playerRepository.loadGlobalFfzEmotes(useWebp)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadGlobalStvEmotes(useCronet, useWebp)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadGlobalBttvEmotes(useCronet, useWebp)) } catch (e: Exception) {}
+                        try { addAll(playerRepository.loadGlobalFfzEmotes(useCronet, useWebp)) } catch (e: Exception) {}
                     }
                 }
                 if (isShared) {
@@ -803,9 +800,9 @@ class VideoDownloadWorker @AssistedInject constructor(
                         var cursor: String? = null
                         do {
                             val response = if (cursor == null) {
-                                graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, offset = if (resumed) savedOffset else startTimeSeconds)
+                                graphQLRepository.loadVideoMessagesDownload(useCronet, gqlHeaders, videoId, offset = if (resumed) savedOffset else startTimeSeconds)
                             } else {
-                                graphQLRepository.loadVideoMessagesDownload(gqlHeaders, videoId, cursor = cursor)
+                                graphQLRepository.loadVideoMessagesDownload(useCronet, gqlHeaders, videoId, cursor = cursor)
                             }
                             val messageObjects = response.jsonObject["data"]?.jsonObject?.get("video")?.jsonObject?.get("comments")?.jsonObject?.get("edges")?.jsonArray?.mapNotNull {
                                 it.jsonObject["node"]?.jsonObject
@@ -924,7 +921,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             "2" -> emote.url2x ?: emote.url1x
                                             else -> emote.url1x
                                         }!!
-                                        val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        val response = if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                             request.future.get().responseBody as ByteArray
@@ -954,7 +951,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             "2" -> badge.url2x ?: badge.url1x
                                             else -> badge.url1x
                                         }!!
-                                        val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        val response = if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                             request.future.get().responseBody as ByteArray
@@ -985,7 +982,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             "2" -> cheerEmote.url2x ?: cheerEmote.url1x
                                             else -> cheerEmote.url1x
                                         }!!
-                                        val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        val response = if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                             request.future.get().responseBody as ByteArray
@@ -1017,7 +1014,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             "2" -> emote.url2x ?: emote.url1x
                                             else -> emote.url1x
                                         }!!
-                                        val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                        val response = if (useCronet && cronetEngine != null) {
                                             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                             cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                             request.future.get().responseBody as ByteArray

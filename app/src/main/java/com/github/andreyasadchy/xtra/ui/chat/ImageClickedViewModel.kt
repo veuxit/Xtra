@@ -18,11 +18,18 @@ class ImageClickedViewModel @Inject constructor(
 
     val emoteCard = MutableStateFlow<EmoteCard?>(null)
 
-    fun loadEmoteCard(gqlHeaders: Map<String, String>, emoteId: String?) {
+    fun loadEmoteCard(emoteId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (emoteCard.value == null) {
             viewModelScope.launch {
                 try {
-                    val response = graphQLRepository.loadEmoteCard(gqlHeaders, emoteId).data?.emote
+                    val response = graphQLRepository.loadEmoteCard(useCronet, gqlHeaders, emoteId).also { response ->
+                        if (enableIntegrity && integrity.value == null) {
+                            response.errors?.find { it.message == "failed integrity check" }?.let {
+                                integrity.value = "refresh"
+                                return@launch
+                            }
+                        }
+                    }.data?.emote
                     emoteCard.value = EmoteCard(
                         type = response?.type,
                         subTier = response?.subscriptionTier,
@@ -31,9 +38,7 @@ class ImageClickedViewModel @Inject constructor(
                         channelName = response?.owner?.displayName,
                     )
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
-                    }
+
                 }
             }
         }

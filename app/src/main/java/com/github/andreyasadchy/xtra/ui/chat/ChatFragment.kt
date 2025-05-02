@@ -1037,7 +1037,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
             val channelId = args.getString(KEY_CHANNEL_ID)
             val channelLogin = args.getString(KEY_CHANNEL_LOGIN)
             if (args.getBoolean(KEY_IS_LIVE)) {
-                viewModel.startLive(channelId, channelLogin, args.getString(KEY_CHANNEL_NAME), args.getString(KEY_STREAM_ID))
+                viewModel.startLive(requireContext().prefs().getBoolean(C.USE_CRONET, false), channelId, channelLogin, args.getString(KEY_CHANNEL_NAME), args.getString(KEY_STREAM_ID))
             } else {
                 val videoId = args.getString(KEY_VIDEO_ID)
                 val startTime = args.getInt(KEY_START_TIME)
@@ -1088,7 +1088,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         if (channelLogin != null) {
             viewModel.startLiveChat(requireArguments().getString(KEY_CHANNEL_ID), channelLogin)
             if (requireContext().prefs().getBoolean(C.CHAT_RECENT, true)) {
-                viewModel.loadRecentMessages(channelLogin)
+                viewModel.loadRecentMessages(requireContext().prefs().getBoolean(C.USE_CRONET, false), channelLogin)
             }
         }
         viewModel.autoReconnect = true
@@ -1160,15 +1160,15 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                 viewModel.send(
                     message = text,
                     replyId = replyId,
-                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
+                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                    helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                     accountId = requireContext().tokenPrefs().getString(C.USER_ID, null),
                     channelId = requireArguments().getString(KEY_CHANNEL_ID),
                     channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
                     useApiCommands = requireContext().prefs().getBoolean(C.DEBUG_API_COMMANDS, true),
                     useApiChatMessages = requireContext().prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false),
-                    checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
-                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                 )
                 adapter.messages?.let { recyclerView.scrollToPosition(it.lastIndex) }
                 true

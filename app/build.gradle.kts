@@ -88,10 +88,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.serialization)
     implementation(libs.serialization.json)
-    implementation(libs.apollo.runtime)
+    implementation(libs.apollo.api)
     implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)
