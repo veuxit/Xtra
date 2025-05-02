@@ -219,6 +219,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     viewModel.restoreSettings(
                         list = list,
+                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                         helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                     )
@@ -284,6 +285,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 viewModel.toggleNotifications(
                     enabled = newValue as Boolean,
+                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                     helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                 )
@@ -344,6 +346,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
                 viewModel.checkUpdates(
+                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
                     requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/latest",
                     requireContext().tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
                 )
@@ -431,7 +434,7 @@ class SettingsActivity : AppCompatActivity() {
                                             requireContext().toast(R.string.no_browser_found)
                                         }
                                     } else {
-                                        viewModel.downloadUpdate(it)
+                                        viewModel.downloadUpdate(requireContext().prefs().getBoolean(C.USE_CRONET, false), it)
                                     }
                                 }
                                 .setNegativeButton(getString(R.string.no), null)
@@ -932,9 +935,6 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.download_preferences, rootKey)
-            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
-                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
-            }
             findPreference<Preference>("import_app_downloads")?.setOnPreferenceClickListener {
                 viewModel.importDownloads()
                 true
@@ -1066,6 +1066,10 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
                 IntegrityDialog.show(childFragmentManager)
                 true
+            }
+            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
+                findPreference<SwitchPreferenceCompat>(C.USE_CRONET)?.isVisible = false
+                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
             }
         }
 

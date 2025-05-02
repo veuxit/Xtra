@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.apollographql.apollo.ApolloClient
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
 import com.github.andreyasadchy.xtra.repository.datasource.FollowedGamesDataSource
@@ -20,9 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FollowedGamesViewModel @Inject constructor(
     @ApplicationContext applicationContext: Context,
-    private val graphQLRepository: GraphQLRepository,
-    private val apolloClient: ApolloClient,
     private val localFollowsGame: LocalFollowGameRepository,
+    private val graphQLRepository: GraphQLRepository,
 ) : ViewModel() {
 
     val flow = Pager(
@@ -31,10 +29,10 @@ class FollowedGamesViewModel @Inject constructor(
         FollowedGamesDataSource(
             localFollowsGame = localFollowsGame,
             gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
-            gqlApi = graphQLRepository,
-            apolloClient = apolloClient,
-            checkIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false) && applicationContext.prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true),
-            apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_GAMES, null)?.split(',') ?: TwitchApiHelper.followedGamesApiDefaults
+            graphQLRepository = graphQLRepository,
+            enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            apiPref = applicationContext.prefs().getString(C.API_PREFS_FOLLOWED_GAMES, null)?.split(',') ?: TwitchApiHelper.followedGamesApiDefaults,
+            useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
         )
     }.flow.cachedIn(viewModelScope)
 }

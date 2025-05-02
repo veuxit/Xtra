@@ -175,18 +175,18 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         viewModel.notificationsEnabled.value?.let {
                             if (it) {
                                 args.channelId?.let {
-                                    viewModel.disableNotifications(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), it)
+                                    viewModel.disableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
                                 }
                             } else {
                                 args.channelId?.let {
                                     val notificationsEnabled = requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
-                                    viewModel.enableNotifications(TwitchApiHelper.getGQLHeaders(requireContext(), true), setting, requireContext().tokenPrefs().getString(C.USER_ID, null), it, notificationsEnabled)
+                                    viewModel.enableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, notificationsEnabled, requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
                                     if (!notificationsEnabled) {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                             ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                                             ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
                                         }
-                                        viewModel.updateNotifications(TwitchApiHelper.getGQLHeaders(requireContext(), true), TwitchApiHelper.getHelixHeaders(requireContext()))
+                                        viewModel.updateNotifications(requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), TwitchApiHelper.getHelixHeaders(requireContext()))
                                         WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork(
                                             "live_notifications",
                                             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
@@ -224,22 +224,26 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                     .setNegativeButton(getString(R.string.no), null)
                                     .setPositiveButton(getString(R.string.yes)) { _, _ ->
                                         viewModel.deleteFollowChannel(
-                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                            setting,
                                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                            args.channelId
+                                            args.channelId,
+                                            setting,
+                                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                         )
                                     }
                                     .show()
                             } else {
                                 viewModel.saveFollowChannel(
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    setting,
                                     requireContext().tokenPrefs().getString(C.USER_ID, null),
                                     args.channelId,
                                     args.channelLogin,
                                     args.channelName,
-                                    requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
+                                    setting,
+                                    requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
                             }
                         }
@@ -459,9 +463,10 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
 
     override fun initialize() {
         viewModel.loadStream(
-            TwitchApiHelper.getHelixHeaders(requireContext()),
+            requireContext().prefs().getBoolean(C.USE_CRONET, false),
             TwitchApiHelper.getGQLHeaders(requireContext()),
-            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+            TwitchApiHelper.getHelixHeaders(requireContext()),
+            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
         )
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -471,7 +476,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         if (stream.user != null) {
                             updateUserLayout(stream.user)
                         } else {
-                            viewModel.loadUser(TwitchApiHelper.getHelixHeaders(requireContext()))
+                            viewModel.loadUser(requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getHelixHeaders(requireContext()))
                         }
                     }
                 }
@@ -487,12 +492,13 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
             }
         }
         viewModel.isFollowingChannel(
-            TwitchApiHelper.getHelixHeaders(requireContext()),
-            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
             requireContext().tokenPrefs().getString(C.USER_ID, null),
             args.channelId,
-            args.channelLogin
+            args.channelLogin,
+            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+            TwitchApiHelper.getHelixHeaders(requireContext()),
         )
     }
 
@@ -692,16 +698,17 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 userType.gone()
             }
             if (args.updateLocal) {
-                viewModel.updateLocalUser(requireContext().filesDir.path, user)
+                viewModel.updateLocalUser(requireContext().prefs().getBoolean(C.USE_CRONET, false), requireContext().filesDir.path, user)
             }
         }
     }
 
     override fun onNetworkRestored() {
         viewModel.retry(
-            TwitchApiHelper.getHelixHeaders(requireContext()),
+            requireContext().prefs().getBoolean(C.USE_CRONET, false),
             TwitchApiHelper.getGQLHeaders(requireContext()),
-            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+            TwitchApiHelper.getHelixHeaders(requireContext()),
+            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
         )
     }
 
@@ -712,49 +719,59 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                     when (callback) {
                         "refresh" -> {
                             viewModel.retry(
-                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
                                 TwitchApiHelper.getGQLHeaders(requireContext()),
-                                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) && requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
+                                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             viewModel.isFollowingChannel(
-                                TwitchApiHelper.getHelixHeaders(requireContext()),
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 args.channelId,
-                                args.channelLogin
+                                args.channelLogin,
+                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
                         }
                         "follow" -> viewModel.saveFollowChannel(
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             args.channelId,
                             args.channelLogin,
                             args.channelName,
-                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
+                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                         "unfollow" -> viewModel.deleteFollowChannel(
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                            args.channelId
+                            args.channelId,
+                            requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                         "enableNotifications" -> args.channelId?.let {
                             viewModel.enableNotifications(
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 it,
-                                requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
+                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                         }
                         "disableNotifications" -> args.channelId?.let {
                             viewModel.disableNotifications(
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                it
+                                it,
+                                requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                         }
                     }

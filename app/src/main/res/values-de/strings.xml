@@ -682,4 +682,5 @@
     <string name="use_webp_images">Verwende WEBP-Bilder</string>
     <string name="use_background_audio">Audio im Hintergrund abspielen</string>
     <string name="use_cronet_downloads">Use Cronet for downloads</string>
+    <string name="use_cronet">Use Cronet network library</string>
 </resources>

@@ -137,7 +137,13 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                                 val checkedId = if (binding.radioButton.isChecked) 0 else 1
                                 if (!result.isNullOrBlank()) {
                                     userResult = Pair(checkedId, result)
-                                    viewModel.loadUserResult(TwitchApiHelper.getGQLHeaders(requireContext()), checkedId, result)
+                                    viewModel.loadUserResult(
+                                        checkedId = checkedId,
+                                        result = result,
+                                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                                        enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                                    )
                                     viewLifecycleOwner.lifecycleScope.launch {
                                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                                             viewModel.userResult.collectLatest {

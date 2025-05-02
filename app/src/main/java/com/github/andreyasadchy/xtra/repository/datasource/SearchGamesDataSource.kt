@@ -2,103 +2,71 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.apollographql.apollo.ApolloClient
-import com.apollographql.apollo.api.Optional
-import com.github.andreyasadchy.xtra.SearchGamesQuery
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.util.C
 
 class SearchGamesDataSource(
     private val query: String,
-    private val helixHeaders: Map<String, String>,
-    private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
-    private val gqlApi: GraphQLRepository,
-    private val apolloClient: ApolloClient,
-    private val checkIntegrity: Boolean,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixHeaders: Map<String, String>,
+    private val helixRepository: HelixRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, Game>() {
     private var api: String? = null
     private var offset: String? = null
-    private var nextPage: Boolean = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Game> {
-        return try {
-            val response = if (query.isBlank()) listOf() else try {
-                when (apiPref.getOrNull(0)) {
-                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                    C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
-                    C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
-                    else -> throw Exception()
-                }
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
+        return if (query.isBlank()) {
+            LoadResult.Page(
+                data = emptyList(),
+                prevKey = null,
+                nextKey = null
+            )
+        } else {
+            if (!offset.isNullOrBlank()) {
                 try {
-                    when (apiPref.getOrNull(1)) {
-                        C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                        C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
-                        C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
-                        else -> throw Exception()
-                    }
+                    loadFromApi(api, params)
                 } catch (e: Exception) {
-                    if (e.message == "failed integrity check") return LoadResult.Error(e)
+                    LoadResult.Error(e)
+                }
+            } else {
+                try {
+                    loadFromApi(apiPref.getOrNull(0), params)
+                } catch (e: Exception) {
                     try {
-                        when (apiPref.getOrNull(2)) {
-                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
-                            C.GQL -> { api = C.GQL; gqlQueryLoad(params) }
-                            C.GQL_PERSISTED_QUERY -> { api = C.GQL_PERSISTED_QUERY; gqlLoad() }
-                            else -> throw Exception()
-                        }
+                        loadFromApi(apiPref.getOrNull(1), params)
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") return LoadResult.Error(e)
-                        listOf()
+                        try {
+                            loadFromApi(apiPref.getOrNull(2), params)
+                        } catch (e: Exception) {
+                            LoadResult.Error(e)
+                        }
                     }
                 }
             }
-            LoadResult.Page(
-                data = response,
-                prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api != C.GQL || nextPage)) {
-                    nextPage = false
-                    (params.key ?: 1) + 1
-                } else null
-            )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(params: LoadParams<Int>): List<Game> {
-        val response = helixApi.getSearchGames(
-            headers = helixHeaders,
-            query = query,
-            limit = params.loadSize,
-            offset = offset
-        )
-        val list = response.data.map {
-            Game(
-                gameId = it.id,
-                gameName = it.name,
-                boxArtUrl = it.boxArtUrl,
-            )
+    private suspend fun loadFromApi(apiPref: String?, params: LoadParams<Int>): LoadResult<Int, Game> {
+        api = apiPref
+        return when (apiPref) {
+            C.GQL -> gqlQueryLoad(params)
+            C.GQL_PERSISTED_QUERY -> gqlLoad(params)
+            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLoad(params) else throw Exception()
+            else -> throw Exception()
         }
-        offset = response.pagination?.cursor
-        return list
     }
 
-    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Game> {
-        val response = apolloClient.newBuilder().apply {
-            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-        }.build().query(SearchGamesQuery(
-            query = query,
-            first = Optional.Present(params.loadSize),
-            after = Optional.Present(offset)
-        )).execute()
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Game> {
+        val response = graphQLRepository.loadQuerySearchGames(useCronet, gqlHeaders, query, params.loadSize, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.searchCategories!!
         val list = data.edges!!.mapNotNull { item ->
@@ -120,14 +88,20 @@ class SearchGamesDataSource(
             }
         }
         offset = data.edges.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlLoad(): List<Game> {
-        val response = gqlApi.loadSearchGames(gqlHeaders, query, offset)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Game> {
+        val response = graphQLRepository.loadSearchGames(useCronet, gqlHeaders, query, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.searchFor.games
         val list = data.edges.map { item ->
@@ -148,7 +122,38 @@ class SearchGamesDataSource(
             }
         }
         offset = data.cursor
-        return list
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank()) {
+                (params.key ?: 1) + 1
+            } else null
+        )
+    }
+
+    private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, Game> {
+        val response = helixRepository.getSearchGames(
+            useCronet = useCronet,
+            headers = helixHeaders,
+            query = query,
+            limit = params.loadSize,
+            offset = offset,
+        )
+        val list = response.data.map {
+            Game(
+                gameId = it.id,
+                gameName = it.name,
+                boxArtUrl = it.boxArtUrl,
+            )
+        }
+        offset = response.pagination?.cursor
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank()) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, Game>): Int? {

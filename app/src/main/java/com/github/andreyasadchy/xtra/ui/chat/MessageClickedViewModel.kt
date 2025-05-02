@@ -3,7 +3,9 @@ package com.github.andreyasadchy.xtra.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.model.ui.User
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
+import com.github.andreyasadchy.xtra.util.C
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -11,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MessageClickedViewModel @Inject constructor(
-    private val repository: ApiRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
 ) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
@@ -19,22 +22,56 @@ class MessageClickedViewModel @Inject constructor(
     val user = MutableStateFlow<Pair<User?, Boolean?>?>(null)
     private var isLoading = false
 
-    fun loadUser(channelId: String?, channelLogin: String?, targetId: String?, helixHeaders: Map<String, String>, gqlHeaders: Map<String, String>, checkIntegrity: Boolean) {
+    fun loadUser(channelId: String?, channelLogin: String?, targetId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (user.value == null && !isLoading) {
             isLoading = true
             viewModelScope.launch {
-                try {
-                    val u = repository.loadUserMessageClicked(channelId, channelLogin, targetId, helixHeaders, gqlHeaders, checkIntegrity)
-                    user.value = Pair(u, u == null)
-                } catch (e: Exception) {
-                    if (e.message == "failed integrity check" && integrity.value == null) {
-                        integrity.value = "refresh"
-                    } else {
-                        user.value = Pair(null, true)
+                val response = try {
+                    val response = graphQLRepository.loadQueryUserMessageClicked(useCronet, gqlHeaders, channelId, channelLogin.takeIf { channelId.isNullOrBlank() }, targetId)
+                    if (enableIntegrity && integrity.value == null) {
+                        response.errors?.find { it.message == "failed integrity check" }?.let {
+                            integrity.value = "refresh"
+                            isLoading = false
+                            return@launch
+                        }
                     }
-                } finally {
-                    isLoading = false
+                    response.data!!.user?.let {
+                        User(
+                            channelId = it.id,
+                            channelLogin = it.login,
+                            channelName = it.displayName,
+                            profileImageUrl = it.profileImageURL,
+                            bannerImageURL = it.bannerImageURL,
+                            createdAt = it.createdAt?.toString(),
+                            followedAt = it.follow?.followedAt?.toString()
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        try {
+                            helixRepository.getUsers(
+                                useCronet = useCronet,
+                                headers = helixHeaders,
+                                ids = channelId?.let { listOf(it) },
+                                logins = if (channelId.isNullOrBlank()) channelLogin?.let { listOf(it) } else null
+                            ).data.firstOrNull()?.let {
+                                User(
+                                    channelId = it.channelId,
+                                    channelLogin = it.channelLogin,
+                                    channelName = it.channelName,
+                                    type = it.type,
+                                    broadcasterType = it.broadcasterType,
+                                    profileImageUrl = it.profileImageUrl,
+                                    createdAt = it.createdAt,
+                                )
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
                 }
+                user.value = Pair(response, response == null)
+                isLoading = false
             }
         }
     }

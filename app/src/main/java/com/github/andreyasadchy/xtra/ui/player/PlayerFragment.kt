@@ -524,7 +524,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                 player?.sendCustomCommand(
                                     SessionCommand(
                                         PlaybackService.START_VIDEO, bundleOf(
-                                            PlaybackService.URI to it.toString(),
+                                            PlaybackService.URI to it,
                                             PlaybackService.PLAYBACK_POSITION to viewModel.playbackPosition,
                                             PlaybackService.VIDEO_ID to videoId?.toLongOrNull(),
                                             PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
@@ -736,23 +736,27 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                     .setNegativeButton(getString(R.string.no), null)
                                     .setPositiveButton(getString(R.string.yes)) { _, _ ->
                                         viewModel.deleteFollowChannel(
-                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                            setting,
                                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                                            requireArguments().getString(KEY_CHANNEL_ID)
+                                            requireArguments().getString(KEY_CHANNEL_ID),
+                                            setting,
+                                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                         )
                                     }
                                     .show()
                             } else {
                                 viewModel.saveFollowChannel(
-                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                    setting,
                                     requireContext().tokenPrefs().getString(C.USER_ID, null),
                                     requireArguments().getString(KEY_CHANNEL_ID),
                                     requireArguments().getString(KEY_CHANNEL_LOGIN),
                                     requireArguments().getString(KEY_CHANNEL_NAME),
+                                    setting,
                                     requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                                    requireArguments().getString(KEY_STARTED_AT)
+                                    requireArguments().getString(KEY_STARTED_AT),
+                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                    requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
                             }
                         }
@@ -1219,6 +1223,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
     fun saveBookmark() {
         viewModel.saveBookmark(
             filesDir = requireContext().filesDir.path,
+            useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
             helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
             videoId = requireArguments().getString(KEY_VIDEO_ID),
@@ -1585,7 +1590,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                                         viewLifecycleOwner.lifecycleScope.launch {
                                                             for (i in 0 until 10) {
                                                                 delay(10000)
-                                                                if (!viewModel.checkPlaylist(playlist)) {
+                                                                if (!viewModel.checkPlaylist(prefs.getBoolean(C.USE_CRONET, false), playlist)) {
                                                                     break
                                                                 }
                                                             }
@@ -1848,17 +1853,23 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         }
         if (requireArguments().getString(KEY_TYPE) != OFFLINE_VIDEO) {
             viewModel.isFollowingChannel(
-                TwitchApiHelper.getHelixHeaders(requireContext()),
-                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                 requireArguments().getString(KEY_CHANNEL_ID),
                 requireArguments().getString(KEY_CHANNEL_LOGIN),
+                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                TwitchApiHelper.getHelixHeaders(requireContext()),
             )
             if (videoType == VIDEO) {
                 val videoId = requireArguments().getString(KEY_VIDEO_ID)
                 if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
-                    viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), videoId)
+                    viewModel.loadGamesList(
+                        videoId,
+                        prefs.getBoolean(C.USE_CRONET, false),
+                        TwitchApiHelper.getGQLHeaders(requireContext()),
+                        prefs.getBoolean(C.ENABLE_INTEGRITY, false),
+                    )
                 }
             }
         }
@@ -1879,10 +1890,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                             (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) &&
                                     !requireContext().tokenPrefs().getString(C.USER_ID, null).isNullOrBlank() &&
                                     !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
+                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                     helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                    checkIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false) &&
-                            requireContext().prefs().getBoolean(C.USE_WEBVIEW_INTEGRITY, true)
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                 )
             }
             VIDEO -> {
@@ -1907,7 +1918,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
                 val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
                 if (skipAccessToken >= 2 || thumbnailUrl.isNullOrBlank()) {
-                    viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(KEY_CLIP_ID))
+                    viewModel.loadClip(
+                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                        id = requireArguments().getString(KEY_CLIP_ID),
+                        enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    )
                 } else {
                     viewModel.clipUrls.value = TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
                 }
@@ -1946,6 +1962,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                 val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                 val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                 viewModel.loadStreamResult(
+                    useCronet = prefs.getBoolean(C.USE_CRONET, false),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                     channelLogin = channelLogin,
                     randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
@@ -2003,11 +2020,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         } else {
             viewModel.playbackPosition = playbackPosition
             viewModel.loadVideo(
+                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                 videoId = requireArguments().getString(KEY_VIDEO_ID),
                 playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                 supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
-                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
+                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false),
             )
         }
     }
@@ -2400,6 +2418,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                 val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                                 val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                 viewModel.loadStreamResult(
+                                    useCronet = prefs.getBoolean(C.USE_CRONET, false),
                                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                                     channelLogin = channelLogin,
                                     randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
@@ -2416,61 +2435,79 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
                                 )
                             }
                             viewModel.isFollowingChannel(
-                                TwitchApiHelper.getHelixHeaders(requireContext()),
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 requireArguments().getString(KEY_CHANNEL_ID),
-                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                                requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
                         }
                         "refreshVideo" -> {
                             val videoId = requireArguments().getString(KEY_VIDEO_ID)
                             viewModel.loadVideo(
+                                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                                 videoId = videoId,
                                 playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
                                 supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
-                                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
+                                enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                             )
                             viewModel.isFollowingChannel(
-                                TwitchApiHelper.getHelixHeaders(requireContext()),
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 requireArguments().getString(KEY_CHANNEL_ID),
-                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                                requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
                             if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
-                                viewModel.loadGamesList(TwitchApiHelper.getGQLHeaders(requireContext()), videoId)
+                                viewModel.loadGamesList(
+                                    videoId,
+                                    prefs.getBoolean(C.USE_CRONET, false),
+                                    TwitchApiHelper.getGQLHeaders(requireContext()),
+                                    prefs.getBoolean(C.ENABLE_INTEGRITY, false),
+                                )
                             }
                         }
                         "refreshClip" -> {
-                            viewModel.loadClip(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(KEY_CLIP_ID))
+                            viewModel.loadClip(
+                                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                                id = requireArguments().getString(KEY_CLIP_ID),
+                                enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                            )
                             viewModel.isFollowingChannel(
-                                TwitchApiHelper.getHelixHeaders(requireContext()),
-                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 requireArguments().getString(KEY_CHANNEL_ID),
-                                requireArguments().getString(KEY_CHANNEL_LOGIN)
+                                requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                                TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
                         }
                         "follow" -> viewModel.saveFollowChannel(
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             requireArguments().getString(KEY_CHANNEL_ID),
                             requireArguments().getString(KEY_CHANNEL_LOGIN),
                             requireArguments().getString(KEY_CHANNEL_NAME),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                            requireArguments().getString(KEY_STARTED_AT)
+                            requireArguments().getString(KEY_STARTED_AT),
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                         "unfollow" -> viewModel.deleteFollowChannel(
-                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
-                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
-                            requireArguments().getString(KEY_CHANNEL_ID)
+                            requireArguments().getString(KEY_CHANNEL_ID),
+                            prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
+                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            TwitchApiHelper.getGQLHeaders(requireContext(), true),
+                            requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
                     }
                 }

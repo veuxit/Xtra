@@ -27,7 +27,9 @@ import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
 import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
-import com.github.andreyasadchy.xtra.repository.ApiRepository
+import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -49,6 +51,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -61,10 +64,11 @@ import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.BufferedWriter
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.util.Random
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
@@ -76,23 +80,26 @@ class StreamDownloadWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
 ) : CoroutineWorker(context, parameters) {
 
+    @set:Inject
+    private var cronetEngine: CronetEngine? = null
+
     @Inject
-    lateinit var repository: ApiRepository
+    lateinit var cronetExecutor: ExecutorService
+
+    @Inject
+    lateinit var okHttpClient: OkHttpClient
+
+    @Inject
+    lateinit var graphQLRepository: GraphQLRepository
+
+    @Inject
+    lateinit var helixRepository: HelixRepository
 
     @Inject
     lateinit var playerRepository: PlayerRepository
 
     @Inject
     lateinit var offlineRepository: OfflineRepository
-
-    @Inject
-    lateinit var okHttpClient: OkHttpClient
-
-    @set:Inject
-    private var cronetEngine: CronetEngine? = null
-
-    @Inject
-    lateinit var cronetExecutor: ExecutorService
 
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var offlineVideo: OfflineVideo
@@ -114,6 +121,7 @@ class StreamDownloadWorker @AssistedInject constructor(
         val proxyHost = context.prefs().getString(C.PROXY_HOST, null)
         val proxyPort = context.prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
         val proxyMultivariantPlaylist = context.prefs().getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false)
+        val useCronet = context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false)
         val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true))
         val randomDeviceId = context.prefs().getBoolean(C.TOKEN_RANDOM_DEVICEID, true)
         val xDeviceId = context.prefs().getString(C.TOKEN_XDEVICEID, "twitch-web-wall-mason")
@@ -122,13 +130,12 @@ class StreamDownloadWorker @AssistedInject constructor(
         val proxyPlaybackAccessToken = context.prefs().getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false)
         val proxyUser = context.prefs().getString(C.PROXY_USER, null)
         val proxyPassword = context.prefs().getString(C.PROXY_PASSWORD, null)
-        val enableIntegrity = context.prefs().getBoolean(C.ENABLE_INTEGRITY, false)
-        var playlistUrl = playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, false, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
+        var playlistUrl = playerRepository.loadStreamPlaylistUrl(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, false, proxyHost, proxyPort, proxyUser, proxyPassword, false)
         var loop = true
         var startTime = System.currentTimeMillis()
         var endTime = startWait?.let { System.currentTimeMillis() + it }
         while (loop) {
-            val playlist = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+            val playlist = if (useCronet && cronetEngine != null) {
                 val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
                 cronetEngine!!.newUrlRequestBuilder(playlistUrl, request.callback, cronetExecutor).build().start()
                 val response = request.future.get()
@@ -166,11 +173,28 @@ class StreamDownloadWorker @AssistedInject constructor(
                     }
                     val url = if ((proxyPlaybackAccessToken || proxyMultivariantPlaylist) && !proxyHost.isNullOrBlank() && proxyPort != null) {
                         val url = if (proxyPlaybackAccessToken) {
-                            playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, true, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
+                            playerRepository.loadStreamPlaylistUrl(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, true, proxyHost, proxyPort, proxyUser, proxyPassword, false)
                         } else {
                             playlistUrl
                         }
-                        val newPlaylist = playerRepository.loadStreamPlaylistResponse(url, proxyMultivariantPlaylist, proxyHost, proxyPort, proxyUser, proxyPassword)
+                        val newPlaylist = if (useCronet && cronetEngine != null && !proxyMultivariantPlaylist) {
+                            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                            cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                            request.future.get().responseBody as String
+                        } else {
+                            okHttpClient.newBuilder().apply {
+                                if (proxyMultivariantPlaylist) {
+                                    proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
+                                    if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                                        proxyAuthenticator { _, response ->
+                                            response.request.newBuilder().header("Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)).build()
+                                        }
+                                    }
+                                }
+                            }.build().newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                response.body.string()
+                            }
+                        }
                         val newNames = "NAME=\"(.*)\"".toRegex().findAll(newPlaylist).map { it.groupValues[1] }.toMutableList()
                         val newUrls = "https://.*\\.m3u8".toRegex().findAll(newPlaylist).map(MatchResult::value).toMutableList()
                         val newMap = newNames.zip(newUrls).toMap(mutableMapOf())
@@ -250,7 +274,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                     setForeground(createForegroundInfo(false, firstVideo))
                     endTime = endWait?.let { System.currentTimeMillis() + it }
                     if (endWait == null || endWait > 0) {
-                        playlistUrl = playerRepository.loadStreamPlaylistUrl(gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, false, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
+                        playlistUrl = playerRepository.loadStreamPlaylistUrl(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, false, proxyHost, proxyPort, proxyUser, proxyPassword, false)
                     }
                 }
             }
@@ -275,13 +299,14 @@ class StreamDownloadWorker @AssistedInject constructor(
         var startTime = System.currentTimeMillis()
         var lastUrl = offlineVideo.lastSegmentUrl
         var initSegmentUri: String? = null
-        val playlist = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+        val useCronet = context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false)
+        val playlist = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
             cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
             val response = request.future.get()
             if (response.urlResponseInfo.httpStatusCode in 200..299) {
                 try {
-                    ByteArrayInputStream(response.responseBody as ByteArray).use {
+                    (response.responseBody as ByteArray).inputStream().use {
                         PlaylistUtils.parseMediaPlaylist(it)
                     }
                 } catch (e: Exception) {
@@ -344,7 +369,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                 "$path${File.separator}$fileName"
             }
             val initSegmentBytes = initSegmentUri?.let {
-                if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                if (useCronet && cronetEngine != null) {
                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                     cronetEngine!!.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
                     val response = request.future.get().responseBody as ByteArray
@@ -381,16 +406,73 @@ class StreamDownloadWorker @AssistedInject constructor(
                         var attempt = 1
                         while (attempt <= 10) {
                             delay(10000L)
+                            val channelId = offlineVideo.channelId
                             val stream = try {
-                                repository.loadStream(
-                                    channelId = offlineVideo.channelId,
-                                    channelLogin = channelLogin,
-                                    helixHeaders = TwitchApiHelper.getHelixHeaders(context),
-                                    gqlHeaders = TwitchApiHelper.getGQLHeaders(context),
-                                    checkIntegrity = false
-                                )
+                                graphQLRepository.loadQueryUsersStream(
+                                    useCronet = useCronet,
+                                    headers = TwitchApiHelper.getGQLHeaders(context),
+                                    ids = channelId?.let { listOf(it) },
+                                    logins = if (channelId.isNullOrBlank()) listOf(channelLogin) else null,
+                                ).data!!.users?.firstOrNull()?.let {
+                                    Stream(
+                                        id = it.stream?.id,
+                                        channelId = channelId,
+                                        channelLogin = it.login,
+                                        channelName = it.displayName,
+                                        gameId = it.stream?.game?.id,
+                                        gameSlug = it.stream?.game?.slug,
+                                        gameName = it.stream?.game?.displayName,
+                                        type = it.stream?.type,
+                                        title = it.stream?.broadcaster?.broadcastSettings?.title,
+                                        viewerCount = it.stream?.viewersCount,
+                                        startedAt = it.stream?.createdAt?.toString(),
+                                        thumbnailUrl = it.stream?.previewImageURL,
+                                        profileImageUrl = it.profileImageURL,
+                                        tags = it.stream?.freeformTags?.mapNotNull { tag -> tag.name }
+                                    )
+                                }
                             } catch (e: Exception) {
-                                null
+                                val helixHeaders = TwitchApiHelper.getHelixHeaders(context)
+                                if (helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) throw Exception()
+                                try {
+                                    helixRepository.getStreams(
+                                        useCronet = useCronet,
+                                        headers = helixHeaders,
+                                        ids = channelId?.let { listOf(it) },
+                                        logins = if (channelId.isNullOrBlank()) listOf(channelLogin) else null
+                                    ).data.firstOrNull()?.let {
+                                        Stream(
+                                            id = it.id,
+                                            channelId = it.channelId,
+                                            channelLogin = it.channelLogin,
+                                            channelName = it.channelName,
+                                            gameId = it.gameId,
+                                            gameName = it.gameName,
+                                            type = it.type,
+                                            title = it.title,
+                                            viewerCount = it.viewerCount,
+                                            startedAt = it.startedAt,
+                                            thumbnailUrl = it.thumbnailUrl,
+                                            tags = it.tags
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    try {
+                                        val response = graphQLRepository.loadViewerCount(
+                                            useCronet,
+                                            TwitchApiHelper.getGQLHeaders(context),
+                                            channelLogin
+                                        )
+                                        response.data!!.user.stream?.let {
+                                            Stream(
+                                                id = it.id,
+                                                viewerCount = it.viewersCount
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                }
                             }
                             if (stream != null) {
                                 val downloadedThumbnail = stream.id.takeIf { !it.isNullOrBlank() }?.let { id ->
@@ -400,7 +482,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                         val filePath = filesDir + File.separator + "thumbnails" + File.separator + id
                                         launch {
                                             try {
-                                                if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                                if (useCronet && cronetEngine != null) {
                                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                                     cronetEngine!!.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
                                                     val response = request.future.get()
@@ -454,7 +536,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                 firstUrls.map {
                     launch {
                         requestSemaphore.withPermit {
-                            if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                            if (useCronet && cronetEngine != null) {
                                 val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                 cronetEngine!!.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
                                 val response = request.future.get().responseBody as ByteArray
@@ -498,13 +580,13 @@ class StreamDownloadWorker @AssistedInject constructor(
             }
             firstJobs.joinAll()
             while (true) {
-                val playlist = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                val playlist = if (useCronet && cronetEngine != null) {
                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                     cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
                     val response = request.future.get()
                     if (response.urlResponseInfo.httpStatusCode in 200..299) {
                         try {
-                            ByteArrayInputStream(response.responseBody as ByteArray).use {
+                            (response.responseBody as ByteArray).inputStream().use {
                                 PlaylistUtils.parseMediaPlaylist(it)
                             }
                         } catch (e: Exception) {
@@ -537,7 +619,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                         urls.map {
                             launch {
                                 requestSemaphore.withPermit {
-                                    if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                    if (useCronet && cronetEngine != null) {
                                         val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                         cronetEngine!!.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
                                         val response = request.future.get().responseBody as ByteArray
@@ -742,6 +824,7 @@ class StreamDownloadWorker @AssistedInject constructor(
             fileUri
         }
         val downloadEmotes = offlineVideo.downloadChatEmotes
+        val useCronet = context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false)
         val gqlHeaders = TwitchApiHelper.getGQLHeaders(context, true)
         val helixHeaders = TwitchApiHelper.getHelixHeaders(context)
         val emoteQuality = context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
@@ -749,15 +832,15 @@ class StreamDownloadWorker @AssistedInject constructor(
         val channelId = offlineVideo.channelId
         val badgeList = mutableListOf<TwitchBadge>().apply {
             if (downloadEmotes) {
-                val channelBadges = try { repository.loadChannelBadges(helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                val channelBadges = try { playerRepository.loadChannelBadges(useCronet, helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false) } catch (e: Exception) { emptyList() }
                 addAll(channelBadges)
-                val globalBadges = try { repository.loadGlobalBadges(helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
+                val globalBadges = try { playerRepository.loadGlobalBadges(useCronet, helixHeaders, gqlHeaders, emoteQuality, false) } catch (e: Exception) { emptyList() }
                 addAll(globalBadges.filter { badge -> badge.setId !in channelBadges.map { it.setId } })
             }
         }
         val cheerEmoteList = if (downloadEmotes) {
             try {
-                repository.loadCheerEmotes(helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, checkIntegrity = false)
+                playerRepository.loadCheerEmotes(useCronet, helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, enableIntegrity = false)
             } catch (e: Exception) {
                 emptyList()
             }
@@ -765,13 +848,13 @@ class StreamDownloadWorker @AssistedInject constructor(
         val emoteList = mutableListOf<Emote>().apply {
             if (downloadEmotes) {
                 if (channelId != null) {
-                    try { addAll(playerRepository.loadStvEmotes(channelId, useWebp).second) } catch (e: Exception) {}
-                    try { addAll(playerRepository.loadBttvEmotes(channelId, useWebp)) } catch (e: Exception) {}
-                    try { addAll(playerRepository.loadFfzEmotes(channelId, useWebp)) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadStvEmotes(useCronet, channelId, useWebp).second) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadBttvEmotes(useCronet, channelId, useWebp)) } catch (e: Exception) {}
+                    try { addAll(playerRepository.loadFfzEmotes(useCronet, channelId, useWebp)) } catch (e: Exception) {}
                 }
-                try { addAll(playerRepository.loadGlobalStvEmotes(useWebp)) } catch (e: Exception) {}
-                try { addAll(playerRepository.loadGlobalBttvEmotes(useWebp)) } catch (e: Exception) {}
-                try { addAll(playerRepository.loadGlobalFfzEmotes(useWebp)) } catch (e: Exception) {}
+                try { addAll(playerRepository.loadGlobalStvEmotes(useCronet, useWebp)) } catch (e: Exception) {}
+                try { addAll(playerRepository.loadGlobalBttvEmotes(useCronet, useWebp)) } catch (e: Exception) {}
+                try { addAll(playerRepository.loadGlobalFfzEmotes(useCronet, useWebp)) } catch (e: Exception) {}
             }
         }
         chatFileWriter = if (isShared) {
@@ -908,7 +991,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     "2" -> emote.url2x ?: emote.url1x
                                                     else -> emote.url1x
                                                 }!!
-                                                val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                                val response = if (useCronet && cronetEngine != null) {
                                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                                     cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                                     request.future.get().responseBody as ByteArray
@@ -938,7 +1021,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     "2" -> badge.url2x ?: badge.url1x
                                                     else -> badge.url1x
                                                 }!!
-                                                val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                                val response = if (useCronet && cronetEngine != null) {
                                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                                     cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                                     request.future.get().responseBody as ByteArray
@@ -969,7 +1052,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     "2" -> cheerEmote.url2x ?: cheerEmote.url1x
                                                     else -> cheerEmote.url1x
                                                 }!!
-                                                val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                                val response = if (useCronet && cronetEngine != null) {
                                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                                     cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                                     request.future.get().responseBody as ByteArray
@@ -1001,7 +1084,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     "2" -> emote.url2x ?: emote.url1x
                                                     else -> emote.url1x
                                                 }!!
-                                                val response = if (context.prefs().getBoolean(C.DOWNLOAD_USE_CRONET, false) && cronetEngine != null) {
+                                                val response = if (useCronet && cronetEngine != null) {
                                                     val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
                                                     cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
                                                     request.future.get().responseBody as ByteArray

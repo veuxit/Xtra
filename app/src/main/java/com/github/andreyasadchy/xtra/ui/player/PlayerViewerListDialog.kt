@@ -78,7 +78,12 @@ class PlayerViewerListDialog : BottomSheetDialogFragment(), IntegrityDialog.Call
                     }
                 }
             }
-            viewModel.loadViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
+            viewModel.loadViewerList(
+                requireArguments().getString(LOGIN),
+                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            )
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.viewerList.collectLatest { fullList ->
@@ -183,7 +188,12 @@ class PlayerViewerListDialog : BottomSheetDialogFragment(), IntegrityDialog.Call
         if (callback == "refresh") {
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    viewModel.loadViewerList(TwitchApiHelper.getGQLHeaders(requireContext()), requireArguments().getString(LOGIN))
+                    viewModel.loadViewerList(
+                        requireArguments().getString(LOGIN),
+                        requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                        TwitchApiHelper.getGQLHeaders(requireContext()),
+                        requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                    )
                 }
             }
         }

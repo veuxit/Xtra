@@ -9,7 +9,9 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.datasource.TagsDataSource
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,10 +37,12 @@ class TagSearchViewModel @Inject constructor(
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
             TagsDataSource(
-                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
                 getGameTags = args.getGameTags,
                 query = query,
-                api = graphQLRepository
+                gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext),
+                graphQLRepository = graphQLRepository,
+                enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                useCronet = applicationContext.prefs().getBoolean(C.USE_CRONET, false),
             )
         }.flow
     }.cachedIn(viewModelScope)

@@ -2,253 +2,217 @@ package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.apollographql.apollo.ApolloClient
-import com.apollographql.apollo.api.Optional
-import com.github.andreyasadchy.xtra.UserFollowedUsersQuery
-import com.github.andreyasadchy.xtra.UsersLastBroadcastQuery
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.util.C
 
 class FollowedChannelsDataSource(
+    private val sort: String,
+    private val order: String,
+    private val userId: String?,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,
     private val bookmarksRepository: BookmarksRepository,
-    private val userId: String?,
-    private val helixHeaders: Map<String, String>,
-    private val helixApi: HelixApi,
     private val gqlHeaders: Map<String, String>,
-    private val gqlApi: GraphQLRepository,
-    private val apolloClient: ApolloClient,
-    private val checkIntegrity: Boolean,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixHeaders: Map<String, String>,
+    private val helixRepository: HelixRepository,
+    private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
-    private val sort: String,
-    private val order: String,
+    private val useCronet: Boolean,
 ) : PagingSource<Int, User>() {
     private var api: String? = null
     private var offset: String? = null
-    private var nextPage: Boolean = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, User> {
-        return try {
-            val response = try {
-                if (!offset.isNullOrBlank()) {
-                    val list = when (api) {
-                        C.HELIX -> helixLoad()
-                        C.GQL -> if (nextPage) gqlQueryLoad() else listOf()
-                        C.GQL_PERSISTED_QUERY -> if (nextPage) gqlLoad() else listOf()
-                        else -> listOf()
-                    }
-                    list.filter { it.lastBroadcast == null || it.profileImageUrl == null }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
-                        val response = apolloClient.newBuilder().apply {
-                            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-                        }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute()
-                        if (checkIntegrity) {
-                            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+        return if (!offset.isNullOrBlank()) {
+            val list = mutableListOf<User>()
+            val result = try {
+                loadFromApi(api, params)
+            } catch (e: Exception) {
+                null
+            }?.let {
+                if (it is LoadResult.Error && it.throwable.message == "failed integrity check") {
+                    return it
+                }
+                it as? LoadResult.Page
+            }
+            list.filter { it.lastBroadcast == null || it.profileImageUrl == null }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
+                val response = graphQLRepository.loadQueryUsersLastBroadcast(useCronet, gqlHeaders, ids)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
+                }
+                response.data?.users?.forEach { user ->
+                    list.find { it.channelId == user?.id }?.let { item ->
+                        if (item.profileImageUrl == null) {
+                            item.profileImageUrl = user?.profileImageURL
                         }
-                        response.data?.users?.forEach { user ->
-                            list.find { it.channelId == user?.id }?.let { item ->
-                                if (item.profileImageUrl == null) {
-                                    item.profileImageUrl = user?.profileImageURL
-                                }
-                                item.lastBroadcast = user?.lastBroadcast?.startedAt?.toString()
-                            }
-                        }
+                        item.lastBroadcast = user?.lastBroadcast?.startedAt?.toString()
                     }
-                    list
-                } else {
-                    val list = mutableListOf<User>()
-                    (localFollowsChannel.loadFollows().let { if (order == "asc") it.asReversed() else it }).forEach {
-                        list.add(User(
-                            channelId = it.userId,
-                            channelLogin = it.userLogin,
-                            channelName = it.userName,
-                            followLocal = true
-                        ))
-                    }
+                }
+            }
+            LoadResult.Page(
+                data = list,
+                prevKey = null,
+                nextKey = result?.nextKey
+            )
+        } else {
+            val list = mutableListOf<User>()
+            localFollowsChannel.loadFollows().let { if (order == "asc") it.asReversed() else it }.forEach {
+                list.add(User(
+                    channelId = it.userId,
+                    channelLogin = it.userLogin,
+                    channelName = it.userName,
+                    followLocal = true
+                ))
+            }
+            val result = if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                try {
+                    loadFromApi(apiPref.getOrNull(0), params)
+                } catch (e: Exception) {
                     try {
-                        when (apiPref.getOrNull(0)) {
-                            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                            else -> throw Exception()
-                        }
+                        loadFromApi(apiPref.getOrNull(1), params)
                     } catch (e: Exception) {
-                        if (e.message == "failed integrity check") return LoadResult.Error(e)
                         try {
-                            when (apiPref.getOrNull(1)) {
-                                C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                                C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                                else -> throw Exception()
-                            }
+                            loadFromApi(apiPref.getOrNull(2), params)
                         } catch (e: Exception) {
-                            if (e.message == "failed integrity check") return LoadResult.Error(e)
-                            try {
-                                when (apiPref.getOrNull(2)) {
-                                    C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.HELIX; helixLoad() } else throw Exception()
-                                    C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL; gqlQueryLoad() } else throw Exception()
-                                    C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) { api = C.GQL_PERSISTED_QUERY; gqlLoad() } else throw Exception()
-                                    else -> throw Exception()
-                                }
-                            } catch (e: Exception) {
-                                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                                listOf()
-                            }
-                        }
-                    }.forEach { user ->
-                        val item = list.find { it.channelId == user.channelId }
-                        if (item == null) {
-                            user.followAccount = true
-                            list.add(user)
-                        } else {
-                            list.remove(item)
-                            list.add(
-                                User(
-                                    channelId = item.channelId,
-                                    channelLogin = user.channelLogin ?: item.channelLogin,
-                                    channelName = user.channelName ?: item.channelName,
-                                    profileImageUrl = user.profileImageUrl,
-                                    followedAt = user.followedAt,
-                                    lastBroadcast = user.lastBroadcast,
-                                    followAccount = true,
-                                    followLocal = item.followLocal,
-                                )
-                            )
-                            if (item.followLocal && item.channelId != null && user.channelLogin != null && user.channelName != null
-                                && (item.channelLogin != user.channelLogin || item.channelName != user.channelName)) {
-                                localFollowsChannel.getFollowByUserId(item.channelId)?.let {
-                                    localFollowsChannel.updateFollow(it.apply {
-                                        userLogin = user.channelLogin
-                                        userName = user.channelName
-                                    })
-                                }
-                                offlineRepository.getVideosByUserId(item.channelId).forEach {
-                                    offlineRepository.updateVideo(it.apply {
-                                        channelLogin = user.channelLogin
-                                        channelName = user.channelName
-                                    })
-                                }
-                                bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
-                                    bookmarksRepository.updateBookmark(it.apply {
-                                        userLogin = user.channelLogin
-                                        userName = user.channelName
-                                    })
-                                }
-                            }
+                            null
                         }
                     }
-                    list.filter {
-                        it.lastBroadcast == null || it.profileImageUrl == null
-                    }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
-                        val response = apolloClient.newBuilder().apply {
-                            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-                        }.build().query(UsersLastBroadcastQuery(Optional.Present(ids))).execute()
-                        if (checkIntegrity) {
-                            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-                        }
-                        response.data?.users?.forEach { user ->
-                            list.find { it.channelId == user?.id }?.let { item ->
-                                list.remove(item)
-                                list.add(
-                                    User(
-                                        channelId = item.channelId,
-                                        channelLogin = user?.login ?: item.channelLogin,
-                                        channelName = user?.displayName ?: item.channelName,
-                                        profileImageUrl = user?.profileImageURL,
-                                        followedAt = item.followedAt,
-                                        lastBroadcast = user?.lastBroadcast?.startedAt?.toString(),
-                                        followAccount = item.followAccount,
-                                        followLocal = item.followLocal,
-                                    )
-                                )
-                                if (item.followLocal && item.channelId != null && user?.login != null && user.displayName != null
-                                    && (item.channelLogin != user.login || item.channelName != user.displayName)) {
-                                    localFollowsChannel.getFollowByUserId(item.channelId)?.let {
-                                        localFollowsChannel.updateFollow(it.apply {
-                                            userLogin = user.login
-                                            userName = user.displayName
-                                        })
-                                    }
-                                    offlineRepository.getVideosByUserId(item.channelId).forEach {
-                                        offlineRepository.updateVideo(it.apply {
-                                            channelLogin = user.login
-                                            channelName = user.displayName
-                                        })
-                                    }
-                                    bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
-                                        bookmarksRepository.updateBookmark(it.apply {
-                                            userLogin = user.login
-                                            userName = user.displayName
-                                        })
-                                    }
-                                }
-                            }
-                        }
+                }?.let {
+                    if (it is LoadResult.Error && it.throwable.message == "failed integrity check") {
+                        return it
                     }
-                    if (order == "asc") {
-                        when (sort) {
-                            "created_at" -> list.sortedWith(compareBy(nullsLast()) { it.followedAt })
-                            "login" -> list.sortedWith(compareBy(nullsLast()) { it.channelLogin })
-                            else -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
+                    it as? LoadResult.Page
+                }
+            } else null
+            result?.data?.forEach { user ->
+                val item = list.find { it.channelId == user.channelId }
+                if (item == null) {
+                    user.followAccount = true
+                    list.add(user)
+                } else {
+                    list.remove(item)
+                    list.add(
+                        User(
+                            channelId = item.channelId,
+                            channelLogin = user.channelLogin ?: item.channelLogin,
+                            channelName = user.channelName ?: item.channelName,
+                            profileImageUrl = user.profileImageUrl,
+                            followedAt = user.followedAt,
+                            lastBroadcast = user.lastBroadcast,
+                            followAccount = true,
+                            followLocal = item.followLocal,
+                        )
+                    )
+                    if (item.followLocal && item.channelId != null && user.channelLogin != null && user.channelName != null
+                        && (item.channelLogin != user.channelLogin || item.channelName != user.channelName)) {
+                        localFollowsChannel.getFollowByUserId(item.channelId)?.let {
+                            localFollowsChannel.updateFollow(it.apply {
+                                userLogin = user.channelLogin
+                                userName = user.channelName
+                            })
                         }
-                    } else {
-                        when (sort) {
-                            "created_at" -> list.sortedWith(compareByDescending(nullsFirst()) { it.followedAt })
-                            "login" -> list.sortedWith(compareByDescending(nullsFirst()) { it.channelLogin })
-                            else -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
+                        offlineRepository.getVideosByUserId(item.channelId).forEach {
+                            offlineRepository.updateVideo(it.apply {
+                                channelLogin = user.channelLogin
+                                channelName = user.channelName
+                            })
+                        }
+                        bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
+                            bookmarksRepository.updateBookmark(it.apply {
+                                userLogin = user.channelLogin
+                                userName = user.channelName
+                            })
                         }
                     }
                 }
-            } catch (e: Exception) {
-                if (e.message == "failed integrity check") return LoadResult.Error(e)
-                listOf()
+            }
+            list.filter {
+                it.lastBroadcast == null || it.profileImageUrl == null
+            }.mapNotNull { it.channelId }.chunked(100).forEach { ids ->
+                val response = graphQLRepository.loadQueryUsersLastBroadcast(useCronet, gqlHeaders, ids)
+                if (enableIntegrity) {
+                    response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
+                }
+                response.data?.users?.forEach { user ->
+                    list.find { it.channelId == user?.id }?.let { item ->
+                        list.remove(item)
+                        list.add(
+                            User(
+                                channelId = item.channelId,
+                                channelLogin = user?.login ?: item.channelLogin,
+                                channelName = user?.displayName ?: item.channelName,
+                                profileImageUrl = user?.profileImageURL,
+                                followedAt = item.followedAt,
+                                lastBroadcast = user?.lastBroadcast?.startedAt?.toString(),
+                                followAccount = item.followAccount,
+                                followLocal = item.followLocal,
+                            )
+                        )
+                        if (item.followLocal && item.channelId != null && user?.login != null && user.displayName != null
+                            && (item.channelLogin != user.login || item.channelName != user.displayName)) {
+                            localFollowsChannel.getFollowByUserId(item.channelId)?.let {
+                                localFollowsChannel.updateFollow(it.apply {
+                                    userLogin = user.login
+                                    userName = user.displayName
+                                })
+                            }
+                            offlineRepository.getVideosByUserId(item.channelId).forEach {
+                                offlineRepository.updateVideo(it.apply {
+                                    channelLogin = user.login
+                                    channelName = user.displayName
+                                })
+                            }
+                            bookmarksRepository.getBookmarksByUserId(item.channelId).forEach {
+                                bookmarksRepository.updateBookmark(it.apply {
+                                    userLogin = user.login
+                                    userName = user.displayName
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+            val sorted = if (order == "asc") {
+                when (sort) {
+                    "created_at" -> list.sortedWith(compareBy(nullsLast()) { it.followedAt })
+                    "login" -> list.sortedWith(compareBy(nullsLast()) { it.channelLogin })
+                    else -> list.sortedWith(compareBy(nullsLast()) { it.lastBroadcast })
+                }
+            } else {
+                when (sort) {
+                    "created_at" -> list.sortedWith(compareByDescending(nullsFirst()) { it.followedAt })
+                    "login" -> list.sortedWith(compareByDescending(nullsFirst()) { it.channelLogin })
+                    else -> list.sortedWith(compareByDescending(nullsFirst()) { it.lastBroadcast })
+                }
             }
             LoadResult.Page(
-                data = response,
+                data = sorted,
                 prevKey = null,
-                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) {
-                    nextPage = false
-                    (params.key ?: 1) + 1
-                } else null
+                nextKey = result?.nextKey
             )
-        } catch (e: Exception) {
-            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(): List<User> {
-        val response = helixApi.getUserFollows(
-            headers = helixHeaders,
-            userId = userId,
-            limit = 100,
-            offset = offset
-        )
-        val list = response.data.map {
-            User(
-                channelId = it.channelId,
-                channelLogin = it.channelLogin,
-                channelName = it.channelName,
-                followedAt = it.followedAt,
-            )
+    private suspend fun loadFromApi(apiPref: String?, params: LoadParams<Int>): LoadResult<Int, User> {
+        api = apiPref
+        return when (apiPref) {
+            C.GQL -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlQueryLoad(params) else throw Exception()
+            C.GQL_PERSISTED_QUERY -> if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) gqlLoad(params) else throw Exception()
+            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) helixLoad(params) else throw Exception()
+            else -> throw Exception()
         }
-        offset = response.pagination?.cursor
-        return list
     }
 
-    private suspend fun gqlQueryLoad(): List<User> {
-        val response = apolloClient.newBuilder().apply {
-            gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-        }.build().query(UserFollowedUsersQuery(
-            first = Optional.Present(100),
-            after = Optional.Present(offset)
-        )).execute()
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, User> {
+        val response = graphQLRepository.loadQueryUserFollowedUsers(useCronet, gqlHeaders, 100, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.user!!.follows!!
         val items = data.edges!!
@@ -265,14 +229,20 @@ class FollowedChannelsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor?.toString()
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
-    private suspend fun gqlLoad(): List<User> {
-        val response = gqlApi.loadFollowedChannels(gqlHeaders, 100, offset)
-        if (checkIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, User> {
+        val response = graphQLRepository.loadFollowedChannels(useCronet, gqlHeaders, 100, offset)
+        if (enableIntegrity) {
+            response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
         val data = response.data!!.user.follows
         val items = data.edges
@@ -288,8 +258,40 @@ class FollowedChannelsDataSource(
             }
         }
         offset = items.lastOrNull()?.cursor
-        nextPage = data.pageInfo?.hasNextPage != false
-        return list
+        val nextPage = data.pageInfo?.hasNextPage != false
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank() && nextPage) {
+                (params.key ?: 1) + 1
+            } else null
+        )
+    }
+
+    private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, User> {
+        val response = helixRepository.getUserFollows(
+            useCronet = useCronet,
+            headers = helixHeaders,
+            userId = userId,
+            limit = 100,
+            offset = offset,
+        )
+        val list = response.data.map {
+            User(
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                followedAt = it.followedAt,
+            )
+        }
+        offset = response.pagination?.cursor
+        return LoadResult.Page(
+            data = list,
+            prevKey = null,
+            nextKey = if (!offset.isNullOrBlank()) {
+                (params.key ?: 1) + 1
+            } else null
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Int, User>): Int? {

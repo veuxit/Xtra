@@ -21,6 +21,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.cronet.CronetDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
@@ -30,6 +31,7 @@ import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist
 import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist
 import androidx.media3.exoplayer.hls.playlist.HlsPlaylist
 import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.ParsingLoadable
 import androidx.media3.session.MediaSession
@@ -49,6 +51,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
+import org.chromium.net.CronetEngine
 import org.json.JSONObject
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -57,6 +60,7 @@ import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
 import java.util.Timer
+import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 import kotlin.concurrent.schedule
 
@@ -64,6 +68,12 @@ import kotlin.concurrent.schedule
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
+
+    @set:Inject
+    private var cronetEngine: CronetEngine? = null
+
+    @Inject
+    lateinit var cronetExecutor: ExecutorService
 
     @Inject
     lateinit var okHttpClient: OkHttpClient
@@ -197,7 +207,11 @@ class PlaybackService : MediaSessionService() {
                                     HlsMediaSource.Factory(
                                         DefaultDataSource.Factory(
                                             this@PlaybackService,
-                                            OkHttpDataSource.Factory(okHttpClient).apply {
+                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
+                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
+                                            } else {
+                                                OkHttpDataSource.Factory(okHttpClient)
+                                            }.apply {
                                                 prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
                                                     try {
                                                         val json = JSONObject(it)
@@ -263,7 +277,11 @@ class PlaybackService : MediaSessionService() {
                                     HlsMediaSource.Factory(
                                         DefaultDataSource.Factory(
                                             this@PlaybackService,
-                                            OkHttpDataSource.Factory(okHttpClient)
+                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
+                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
+                                            } else {
+                                                OkHttpDataSource.Factory(okHttpClient)
+                                            }
                                         )
                                     ).apply {
                                         setPlaylistParserFactory(CustomHlsPlaylistParserFactory())
@@ -294,17 +312,28 @@ class PlaybackService : MediaSessionService() {
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
                                 videoId = null
                                 offlineVideoId = null
-                                session.player.setMediaItem(
-                                    MediaItem.Builder().apply {
-                                        setUri(uri?.toUri())
-                                        setMediaMetadata(
-                                            MediaMetadata.Builder().apply {
-                                                setTitle(title)
-                                                setArtist(channelName)
-                                                setArtworkUri(channelLogo?.toUri())
-                                            }.build()
+                                player.setMediaSource(
+                                    ProgressiveMediaSource.Factory(
+                                        DefaultDataSource.Factory(
+                                            this@PlaybackService,
+                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
+                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
+                                            } else {
+                                                OkHttpDataSource.Factory(okHttpClient)
+                                            }
                                         )
-                                    }.build()
+                                    ).createMediaSource(
+                                        MediaItem.Builder().apply {
+                                            setUri(uri?.toUri())
+                                            setMediaMetadata(
+                                                MediaMetadata.Builder().apply {
+                                                    setTitle(title)
+                                                    setArtist(channelName)
+                                                    setArtworkUri(channelLogo?.toUri())
+                                                }.build()
+                                            )
+                                        }.build()
+                                    )
                                 )
                                 session.player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                                 session.player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
@@ -371,8 +400,8 @@ class PlaybackService : MediaSessionService() {
                                         HlsMediaSource.Factory(
                                             DefaultDataSource.Factory(
                                                 this@PlaybackService,
-                                                OkHttpDataSource.Factory(
-                                                    if (enable && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                                                if (enable && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                                                    OkHttpDataSource.Factory(
                                                         okHttpClient.newBuilder().apply {
                                                             proxySelector(
                                                                 object : ProxySelector() {
@@ -395,10 +424,14 @@ class PlaybackService : MediaSessionService() {
                                                                 }
                                                             }
                                                         }.build()
+                                                    )
+                                                } else {
+                                                    if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
+                                                        CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
                                                     } else {
-                                                        okHttpClient
+                                                        OkHttpDataSource.Factory(okHttpClient)
                                                     }
-                                                ).apply {
+                                                }.apply {
                                                     prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
                                                         try {
                                                             val json = JSONObject(it)

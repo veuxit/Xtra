@@ -15,10 +15,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.apollographql.apollo.ApolloClient
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.AppDatabase
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
@@ -45,9 +45,13 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import okio.source
+import org.chromium.net.CronetEngine
+import org.chromium.net.apihelpers.RedirectHandlers
+import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.max
@@ -60,9 +64,11 @@ class SettingsViewModel @Inject constructor(
     private val offlineRepository: OfflineRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
-    private val apolloClient: ApolloClient,
-    private val helixApi: HelixApi,
+    private val graphQLRepository: GraphQLRepository,
+    private val helixRepository: HelixRepository,
     private val appDatabase: AppDatabase,
+    private val cronetEngine: CronetEngine?,
+    private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val json: Json,
 ) : ViewModel() {
@@ -249,13 +255,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun checkUpdates(url: String, lastChecked: Long) {
+    fun checkUpdates(useCronet: Boolean, url: String, lastChecked: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             updateUrl.emit(
                 try {
-                    json.decodeFromString<JsonObject>(
-                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { it.body.string() }
-                    )["assets"]?.jsonArray?.find {
+                    val response = if (useCronet && cronetEngine != null) {
+                        val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                        cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                        val response = request.future.get().responseBody as String
+                        json.decodeFromString<JsonObject>(response)
+                    } else {
+                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                            json.decodeFromString<JsonObject>(response.body.string())
+                        }
+                    }
+                    response["assets"]?.jsonArray?.find {
                         it.jsonObject.getValue("content_type").jsonPrimitive.contentOrNull == "application/vnd.android.package-archive"
                     }?.jsonObject?.let { obj ->
                         obj.getValue("updated_at").jsonPrimitive.contentOrNull?.let { TwitchApiHelper.parseIso8601DateUTC(it) }?.let {
@@ -271,17 +285,31 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun downloadUpdate(url: String) {
+    fun downloadUpdate(useCronet: Boolean, url: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                if (response.isSuccessful) {
+            try {
+                val response = if (useCronet && cronetEngine != null) {
+                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                    cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                    val response = request.future.get()
+                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                        response.responseBody as ByteArray
+                    } else null
+                } else {
+                    okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                        if (response.isSuccessful) {
+                            response.body.bytes()
+                        } else null
+                    }
+                }
+                if (response != null && response.isNotEmpty()) {
                     val packageInstaller = applicationContext.packageManager.packageInstaller
                     val sessionId = packageInstaller.createSession(
                         PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
                     )
                     val session = packageInstaller.openSession(sessionId)
-                    session.openWrite("package", 0, -1).sink().buffer().use { sink ->
-                        sink.writeAll(response.body.source())
+                    session.openWrite("package", 0, response.size.toLong()).use {
+                        it.write(response)
                     }
                     session.commit(
                         PendingIntent.getActivity(
@@ -295,6 +323,8 @@ class SettingsViewModel @Inject constructor(
                     )
                     session.close()
                 }
+            } catch (e: Exception) {
+
             }
         }
     }
@@ -322,7 +352,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun restoreSettings(list: List<String>, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             list.take(2).forEach { url ->
                 if (url.endsWith(".xml")) {
@@ -332,7 +362,7 @@ class SettingsViewModel @Inject constructor(
                     val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                         it.readText()
                     }
-                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), gqlHeaders, helixHeaders)
+                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), useCronet, gqlHeaders, helixHeaders)
                 } else {
                     val database = applicationContext.getDatabasePath("database")
                     File(database.parent, "database-shm").delete()
@@ -351,10 +381,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications(enabled: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun toggleNotifications(enabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(notificationUsersRepository, gqlHeaders, apolloClient, helixHeaders, helixApi)
+                shownNotificationsRepository.getNewStreams(notificationUsersRepository, useCronet, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,

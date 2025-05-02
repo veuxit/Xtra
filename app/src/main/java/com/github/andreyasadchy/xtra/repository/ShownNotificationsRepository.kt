@@ -1,10 +1,5 @@
 package com.github.andreyasadchy.xtra.repository
 
-import com.apollographql.apollo.ApolloClient
-import com.apollographql.apollo.api.Optional
-import com.github.andreyasadchy.xtra.UserFollowedStreamsQuery
-import com.github.andreyasadchy.xtra.UsersStreamQuery
-import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.db.ShownNotificationsDao
 import com.github.andreyasadchy.xtra.model.ShownNotification
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -20,15 +15,15 @@ class ShownNotificationsRepository @Inject constructor(
     private val shownNotificationsDao: ShownNotificationsDao,
 ) {
 
-    suspend fun getNewStreams(notificationUsersRepository: NotificationUsersRepository, gqlHeaders: Map<String, String>, apolloClient: ApolloClient, helixHeaders: Map<String, String>, helixApi: HelixApi): List<Stream> = withContext(Dispatchers.IO) {
+    suspend fun getNewStreams(notificationUsersRepository: NotificationUsersRepository, useCronet: Boolean, gqlHeaders: Map<String, String>, graphQLRepository: GraphQLRepository, helixHeaders: Map<String, String>, helixRepository: HelixRepository): List<Stream> = withContext(Dispatchers.IO) {
         val list = mutableListOf<Stream>()
         notificationUsersRepository.loadUsers().map { it.channelId }.takeIf { it.isNotEmpty() }?.let {
             try {
-                gqlQueryLocal(gqlHeaders, it, apolloClient)
+                gqlQueryLocal(useCronet, gqlHeaders, it, graphQLRepository)
             } catch (e: Exception) {
                 if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                     try {
-                        helixLocal(helixHeaders, it, helixApi)
+                        helixLocal(useCronet, helixHeaders, it, helixRepository)
                     } catch (e: Exception) {
                         null
                     }
@@ -37,7 +32,7 @@ class ShownNotificationsRepository @Inject constructor(
         }?.let { list.addAll(it) }
         if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             try {
-                gqlQueryLoad(gqlHeaders, apolloClient)
+                gqlQueryLoad(useCronet, gqlHeaders, graphQLRepository)
             } catch (e: Exception) {
                 null
             }?.mapNotNull { item ->
@@ -64,17 +59,11 @@ class ShownNotificationsRepository @Inject constructor(
         list.filter { it.channelId in newStreams }
     }
 
-    private suspend fun gqlQueryLoad(gqlHeaders: Map<String, String>, apolloClient: ApolloClient): List<Stream> {
+    private suspend fun gqlQueryLoad(useCronet: Boolean, gqlHeaders: Map<String, String>, graphQLRepository: GraphQLRepository): List<Stream> {
         val list = mutableListOf<Stream>()
         var offset: String? = null
         do {
-            val response = apolloClient.newBuilder().apply {
-                gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-            }.build().query(UserFollowedStreamsQuery(
-                first = Optional.Present(100),
-                after = Optional.Present(offset)
-            )).execute()
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            val response = graphQLRepository.loadQueryUserFollowedStreams(useCronet, gqlHeaders, 100, offset)
             val data = response.data!!.user!!.followedLiveUsers!!
             val items = data.edges!!
             items.mapNotNull { item ->
@@ -104,13 +93,9 @@ class ShownNotificationsRepository @Inject constructor(
         return list
     }
 
-    private suspend fun gqlQueryLocal(gqlHeaders: Map<String, String>, ids: List<String>, apolloClient: ApolloClient): List<Stream> {
+    private suspend fun gqlQueryLocal(useCronet: Boolean, gqlHeaders: Map<String, String>, ids: List<String>, graphQLRepository: GraphQLRepository): List<Stream> {
         val items = ids.chunked(100).map { list ->
-            apolloClient.newBuilder().apply {
-                gqlHeaders.entries.forEach { addHttpHeader(it.key, it.value) }
-            }.build().query(UsersStreamQuery(Optional.Present(list))).execute().also { response ->
-                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
-            }
+            graphQLRepository.loadQueryUsersStream(useCronet, gqlHeaders, list)
         }.flatMap { it.data!!.users!! }
         val list = items.mapNotNull { item ->
             item?.let {
@@ -137,15 +122,17 @@ class ShownNotificationsRepository @Inject constructor(
         return list
     }
 
-    private suspend fun helixLocal(helixHeaders: Map<String, String>, ids: List<String>, helixApi: HelixApi): List<Stream> {
+    private suspend fun helixLocal(useCronet: Boolean, helixHeaders: Map<String, String>, ids: List<String>, helixRepository: HelixRepository): List<Stream> {
         val items = ids.chunked(100).map {
-            helixApi.getStreams(
+            helixRepository.getStreams(
+                useCronet = useCronet,
                 headers = helixHeaders,
                 ids = it
             )
         }.flatMap { it.data }
         val users = items.mapNotNull { it.channelId }.chunked(100).map {
-            helixApi.getUsers(
+            helixRepository.getUsers(
+                useCronet = useCronet,
                 headers = helixHeaders,
                 ids = it
             )
