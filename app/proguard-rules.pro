@@ -26,5 +26,3 @@
     public static *** d(...);
     public static *** v(...);
 }
-
--keep class com.woxthebox.draglistview.** { *; }
