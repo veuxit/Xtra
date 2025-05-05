@@ -501,6 +501,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/eventsub/subscriptions")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -536,6 +537,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/chat/messages")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -575,6 +577,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/chat/announcements${query}")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -617,6 +620,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/moderation/bans${query}")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -785,6 +789,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/channels/commercial")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -830,6 +835,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/chat/settings${query}")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 method("PATCH", body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -863,6 +869,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/streams/markers")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {
@@ -1098,6 +1105,7 @@ class HelixRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://api.twitch.tv/helix/whispers${query}")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 if (response.isSuccessful) {

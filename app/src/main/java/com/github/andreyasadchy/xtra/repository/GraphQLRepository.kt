@@ -138,6 +138,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -179,6 +180,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -225,6 +227,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -271,6 +274,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -318,6 +322,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -360,6 +365,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -402,6 +408,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -444,6 +451,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -486,6 +494,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -528,6 +537,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -570,6 +580,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -611,6 +622,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -653,6 +665,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -694,6 +707,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -735,6 +749,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -779,6 +794,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -817,6 +833,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -857,6 +874,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -898,6 +916,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -939,6 +958,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -982,6 +1002,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1024,6 +1045,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1062,6 +1084,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1100,6 +1123,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1145,6 +1169,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1186,6 +1211,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1227,6 +1253,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1268,6 +1295,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1306,6 +1334,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 response.body.byteStream().source().buffer().jsonReader().use {
@@ -1350,6 +1379,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<PlaybackAccessTokenResponse>(response.body.string())
@@ -1384,6 +1414,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ClipUrlsResponse>(response.body.string())
@@ -1417,6 +1448,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ClipDataResponse>(response.body.string())
@@ -1450,6 +1482,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ClipVideoResponse>(response.body.string())
@@ -1492,6 +1525,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<GamesResponse>(response.body.string())
@@ -1537,6 +1571,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<StreamsResponse>(response.body.string())
@@ -1582,6 +1617,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<GameStreamsResponse>(response.body.string())
@@ -1621,6 +1657,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<GameVideosResponse>(response.body.string())
@@ -1659,6 +1696,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<GameClipsResponse>(response.body.string())
@@ -1696,6 +1734,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ChannelVideosResponse>(response.body.string())
@@ -1734,6 +1773,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ChannelClipsResponse>(response.body.string())
@@ -1776,6 +1816,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<SearchChannelsResponse>(response.body.string())
@@ -1818,6 +1859,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<SearchGamesResponse>(response.body.string())
@@ -1860,6 +1902,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<SearchVideosResponse>(response.body.string())
@@ -1894,6 +1937,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<SearchStreamTagsResponse>(response.body.string())
@@ -1928,6 +1972,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<SearchGameTagsResponse>(response.body.string())
@@ -1961,6 +2006,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<BadgesResponse>(response.body.string())
@@ -1991,6 +2037,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<GlobalCheerEmotesResponse>(response.body.string())
@@ -2024,6 +2071,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ChannelCheerEmotesResponse>(response.body.string())
@@ -2063,6 +2111,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<VideoMessagesResponse>(response.body.string())
@@ -2085,6 +2134,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<JsonElement>(response.body.string())
@@ -2118,6 +2168,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<VideoGamesResponse>(response.body.string())
@@ -2151,6 +2202,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ChannelViewerListResponse>(response.body.string())
@@ -2184,6 +2236,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ViewerCountResponse>(response.body.string())
@@ -2219,6 +2272,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<EmoteCardResponse>(response.body.string())
@@ -2254,6 +2308,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowedStreamsResponse>(response.body.string())
@@ -2288,6 +2343,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowedVideosResponse>(response.body.string())
@@ -2323,6 +2379,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowedChannelsResponse>(response.body.string())
@@ -2357,6 +2414,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowedGamesResponse>(response.body.string())
@@ -2393,6 +2451,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2428,6 +2487,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2464,6 +2524,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2499,6 +2560,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2534,6 +2596,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2567,6 +2630,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowingUserResponse>(response.body.string())
@@ -2600,6 +2664,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<FollowingGameResponse>(response.body.string())
@@ -2633,6 +2698,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ChannelPointContextResponse>(response.body.string())
@@ -2669,6 +2735,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2704,6 +2771,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2740,6 +2808,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<UserEmotesResponse>(response.body.string())
@@ -2777,6 +2846,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2815,6 +2885,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2851,6 +2922,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2886,6 +2958,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2919,6 +2992,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -2952,6 +3026,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ModeratorsResponse>(response.body.string())
@@ -2988,6 +3063,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -3024,6 +3100,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -3060,6 +3137,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -3095,6 +3173,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -3128,6 +3207,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<VipsResponse>(response.body.string())
@@ -3164,6 +3244,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
@@ -3200,6 +3281,7 @@ class GraphQLRepository @Inject constructor(
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://gql.twitch.tv/gql/")
                 headers(headers.toHeaders())
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<ErrorResponse>(response.body.string())
