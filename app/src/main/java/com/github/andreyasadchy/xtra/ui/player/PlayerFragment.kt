@@ -70,12 +70,11 @@ import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
+import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
-import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.game.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
@@ -105,7 +104,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
-class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloadDialog, PlayerGamesDialog.PlayerSeekListener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener, IntegrityDialog.CallbackListener {
+class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGamesDialog.PlayerSeekListener, SleepTimerDialog.OnSleepTimerStartedListener, RadioButtonDialogFragment.OnSortOptionChanged, PlayerVolumeDialog.PlayerVolumeListener, IntegrityDialog.CallbackListener {
 
     private var _binding: FragmentPlayerBinding? = null
     private val binding get() = _binding!!
@@ -2264,7 +2263,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, HasDownloa
         releaseController()
     }
 
-    override fun showDownloadDialog() {
+    fun showDownloadDialog() {
         if (viewModel.loaded.value) {
             when (videoType) {
                 STREAM -> {
