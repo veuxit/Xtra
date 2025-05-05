@@ -60,7 +60,6 @@ android {
 
 dependencies {
     implementation(libs.material)
-    implementation(libs.draglistview)
 
     implementation(libs.activity)
     implementation(libs.appcompat)

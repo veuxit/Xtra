@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -44,11 +45,15 @@ import androidx.preference.PreferenceManager
 import androidx.preference.SeekBarPreference
 import androidx.preference.SwitchPreferenceCompat
 import androidx.preference.forEach
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.SettingsNavGraphDirections
 import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
+import com.github.andreyasadchy.xtra.databinding.DragListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.SettingsSearchItem
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.AdminReceiver
@@ -63,13 +68,12 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.appbar.AppBarLayout
-import com.woxthebox.draglistview.DragItemAdapter
-import com.woxthebox.draglistview.DragListView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.chromium.net.CronetProvider
+import java.util.Collections
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -1014,49 +1018,83 @@ class SettingsActivity : AppCompatActivity() {
                         }, it
                     )
                 }
-                view.addView((inflater.inflate(R.layout.drag_list_layout, container, false) as DragListView).apply {
-                    id = newId
-                    setLayoutManager(LinearLayoutManager(context))
-                    setAdapter(DragListAdapter(list), true)
-                    setCanDragHorizontally(false)
-                    setCanDragVertically(true)
-                    setDragListListener(object : DragListView.DragListListenerAdapter() {
-                        override fun onItemDragStarted(position: Int) {}
+                val listAdapter = DragListAdapter()
+                val itemTouchHelper = ItemTouchHelper(
+                    object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
+                        override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                            Collections.swap(list, viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
+                            listAdapter.notifyItemMoved(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
+                            return true
+                        }
 
-                        override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
-                            if (fromPosition != toPosition) {
+                        override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                            super.onSelectedChanged(viewHolder, actionState)
+                            if (actionState == ItemTouchHelper.ACTION_STATE_IDLE) {
                                 requireContext().prefs().edit {
-                                    putString(entry.value.first, adapter.itemList.map { (it as Pair<*, *>).second }.joinToString(","))
+                                    putString(entry.value.first, listAdapter.currentList.joinToString(",") { it.second })
                                 }
                             }
                         }
-                    })
-                })
+
+                        override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+
+                        override fun isLongPressDragEnabled(): Boolean {
+                            return false
+                        }
+                    }
+                )
+                listAdapter.itemTouchHelper = itemTouchHelper
+                val recyclerView = RecyclerView(requireContext()).apply {
+                    id = newId
+                    layoutManager = LinearLayoutManager(requireContext())
+                    adapter = listAdapter
+                }
+                itemTouchHelper.attachToRecyclerView(recyclerView)
+                listAdapter.submitList(list)
+                view.addView(recyclerView)
             }
             return NestedScrollView(requireContext()).apply {
                 addView(view)
             }
         }
 
-        class DragListAdapter(list: List<Pair<String, String>>) : DragItemAdapter<Pair<String, String>, DragListAdapter.ViewHolder>() {
+        class DragListAdapter() : ListAdapter<Pair<String, String>, DragListAdapter.ViewHolder>(
+            object : DiffUtil.ItemCallback<Pair<String, String>>() {
+                override fun areItemsTheSame(oldItem: Pair<String, String>, newItem: Pair<String, String>): Boolean {
+                    return oldItem.second == newItem.second
+                }
+
+                override fun areContentsTheSame(oldItem: Pair<String, String>, newItem: Pair<String, String>): Boolean {
+                    return true
+                }
+            }
+        ) {
+            var itemTouchHelper: ItemTouchHelper? = null
+
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.drag_list_item, parent, false)
-                return ViewHolder(view)
+                val binding = DragListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                return ViewHolder(binding)
             }
 
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-                super.onBindViewHolder(holder, position)
-                holder.mText.text = mItemList[position].first
+                holder.bind(getItem(position))
             }
 
-            override fun getUniqueItemId(position: Int): Long = mItemList[position].second.hashCode().toLong()
-
-            class ViewHolder(itemView: View) : DragItemAdapter.ViewHolder(itemView, R.id.image, false) {
-                val mText: TextView = itemView.findViewById(R.id.text)
-            }
-
-            init {
-                itemList = list
+            inner class ViewHolder(private val binding: DragListItemBinding) : RecyclerView.ViewHolder(binding.root) {
+                @SuppressLint("ClickableViewAccessibility")
+                fun bind(item: Pair<String, String>) {
+                    with(binding) {
+                        image.setOnTouchListener(object : View.OnTouchListener {
+                            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                                if (event.action == MotionEvent.ACTION_DOWN) {
+                                    itemTouchHelper?.startDrag(this@ViewHolder)
+                                }
+                                return false
+                            }
+                        })
+                        text.text = item.first
+                    }
+                }
             }
         }
 
