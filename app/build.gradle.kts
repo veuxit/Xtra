@@ -101,7 +101,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-cronet:18.0.1")
 
     implementation(libs.material)
-    implementation(libs.draglistview)
 
     implementation(libs.activity)
     implementation(libs.appcompat)
