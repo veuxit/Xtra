@@ -267,6 +267,7 @@ class PlayerRepository @Inject constructor(
                     } else {
                         okHttpClient.newCall(Request.Builder().apply {
                             url(spadeUrl)
+                            header("Content-Type", "application/x-www-form-urlencoded")
                             post(spadeRequest.toRequestBody())
                         }.build()).execute()
                     }
@@ -383,6 +384,7 @@ class PlayerRepository @Inject constructor(
         } else {
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://7tv.io/v3/users/${stvUserId}/presences")
+                header("Content-Type", "application/json")
                 post(body.toRequestBody())
             }.build()).execute()
         }
