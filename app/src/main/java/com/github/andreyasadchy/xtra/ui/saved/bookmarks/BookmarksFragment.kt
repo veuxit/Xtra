@@ -14,12 +14,11 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.model.ui.Bookmark
+import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
-import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
@@ -67,24 +66,22 @@ class BookmarksFragment : PagedListFragment(), Scrollable {
                 requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
             )
         }, {
-            if (DownloadUtils.hasStoragePermission(requireActivity())) {
-                DownloadDialog.newInstance(
-                    id = it.id,
-                    title = it.title,
-                    uploadDate = it.uploadDate,
-                    duration = it.duration,
-                    videoType = it.type,
-                    animatedPreviewUrl = it.animatedPreviewURL,
-                    channelId = it.channelId,
-                    channelLogin = it.channelLogin,
-                    channelName = it.channelName,
-                    channelLogo = it.channelLogo,
-                    thumbnail = it.thumbnail,
-                    gameId = it.gameId,
-                    gameSlug = it.gameSlug,
-                    gameName = it.gameName,
-                ).show(childFragmentManager, null)
-            }
+            DownloadDialog.newInstance(
+                id = it.id,
+                title = it.title,
+                uploadDate = it.uploadDate,
+                duration = it.duration,
+                videoType = it.type,
+                animatedPreviewUrl = it.animatedPreviewURL,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                channelLogo = it.channelLogo,
+                thumbnail = it.thumbnail,
+                gameId = it.gameId,
+                gameSlug = it.gameSlug,
+                gameName = it.gameName,
+            ).show(childFragmentManager, null)
         }, {
             viewModel.vodIgnoreUser(it)
         }, {

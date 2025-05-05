@@ -28,7 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogVideoDownloadBinding
-import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.DownloadUtils
@@ -172,6 +172,9 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         _binding = DialogVideoDownloadBinding.inflate(layoutInflater)
         val builder = requireContext().getAlertDialogBuilder()
             .setView(binding.root)
+        if (!DownloadUtils.hasStoragePermission(requireActivity())) {
+            dismiss()
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.integrity.collectLatest {

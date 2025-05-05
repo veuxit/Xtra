@@ -14,11 +14,11 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
-import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.common.StreamsAdapter
+import com.github.andreyasadchy.xtra.ui.common.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.ui.streams.StreamsAdapter
-import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs

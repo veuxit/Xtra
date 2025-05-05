@@ -20,8 +20,8 @@ import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentDownloadsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.game.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
