@@ -72,6 +72,7 @@ class AuthRepository @Inject constructor(
         } else {
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://id.twitch.tv/oauth2/device")
+                header("Content-Type", "application/x-www-form-urlencoded")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<DeviceCodeResponse>(response.body.string())
@@ -91,6 +92,7 @@ class AuthRepository @Inject constructor(
         } else {
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://id.twitch.tv/oauth2/token")
+                header("Content-Type", "application/x-www-form-urlencoded")
                 post(body.toRequestBody())
             }.build()).execute().use { response ->
                 json.decodeFromString<TokenResponse>(response.body.string())
