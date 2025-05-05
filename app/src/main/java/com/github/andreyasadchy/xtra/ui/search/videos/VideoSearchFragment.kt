@@ -14,11 +14,11 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.model.ui.Video
-import com.github.andreyasadchy.xtra.ui.main.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
+import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
+import com.github.andreyasadchy.xtra.ui.common.VideosAdapter
+import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
-import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
-import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class VideoSearchFragment : BaseVideosFragment(), Searchable {
+class VideoSearchFragment : PagedListFragment(), Searchable {
 
     private var _binding: CommonRecyclerViewLayoutBinding? = null
     private val binding get() = _binding!!
@@ -42,10 +42,23 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         pagingAdapter = VideosAdapter(this, {
-            lastSelectedItem = it
-            showDownloadDialog()
+            DownloadDialog.newInstance(
+                id = it.id,
+                title = it.title,
+                uploadDate = it.uploadDate,
+                duration = it.duration,
+                videoType = it.type,
+                animatedPreviewUrl = it.animatedPreviewURL,
+                channelId = it.channelId,
+                channelLogin = it.channelLogin,
+                channelName = it.channelName,
+                channelLogo = it.channelLogo,
+                thumbnail = it.thumbnail,
+                gameId = it.gameId,
+                gameSlug = it.gameSlug,
+                gameName = it.gameName,
+            ).show(childFragmentManager, null)
         }, {
-            lastSelectedItem = it
             viewModel.saveBookmark(
                 requireContext().filesDir.path,
                 it,
@@ -89,7 +102,22 @@ class VideoSearchFragment : BaseVideosFragment(), Searchable {
         ) {
             IntegrityDialog.show(childFragmentManager, "refresh")
         }
-        initializeVideoAdapter(viewModel, pagingAdapter as BaseVideosAdapter)
+        if (requireContext().prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.positions.collectLatest {
+                        (pagingAdapter as VideosAdapter).setVideoPositions(it)
+                    }
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.bookmarks.collectLatest {
+                    (pagingAdapter as VideosAdapter).setBookmarksList(it)
+                }
+            }
+        }
     }
 
     override fun search(query: String) {

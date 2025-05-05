@@ -24,7 +24,6 @@ import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
 import com.github.andreyasadchy.xtra.util.chat.ChatAdapterUtils
 import java.util.Random
-import kotlin.collections.toMutableList
 
 class ChatAdapter(
     private val enableTimestamps: Boolean,

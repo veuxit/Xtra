@@ -2,9 +2,9 @@ package com.github.andreyasadchy.xtra.ui.channel
 
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.github.andreyasadchy.xtra.ui.channel.clips.ChannelClipsFragment
+import com.github.andreyasadchy.xtra.ui.channel.videos.ChannelVideosFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
-import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
-import com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosFragment
 
 class ChannelPagerAdapter(
     private val fragment: Fragment,
@@ -14,7 +14,7 @@ class ChannelPagerAdapter(
     override fun createFragment(position: Int): Fragment {
         return when (position) {
             0 -> ChannelVideosFragment().apply { arguments = fragment.arguments }
-            1 -> ClipsFragment().apply { arguments = fragment.arguments }
+            1 -> ChannelClipsFragment().apply { arguments = fragment.arguments }
             else -> ChatFragment.newInstance(
                 channelId = args.channelId,
                 channelLogin = args.channelLogin,

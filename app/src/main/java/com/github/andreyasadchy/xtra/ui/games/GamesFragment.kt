@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentGamesBinding
 import com.github.andreyasadchy.xtra.model.ui.Game
+import com.github.andreyasadchy.xtra.ui.common.GamesAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
@@ -31,13 +32,13 @@ import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
+import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.text.isNullOrBlank
 
 @AndroidEntryPoint
 class GamesFragment : PagedListFragment(), Scrollable {
@@ -126,7 +127,14 @@ class GamesFragment : PagedListFragment(), Scrollable {
                 }
             }
         }
-        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, enableScrollTopButton = !args.tags.isNullOrEmpty())
+        val enableScrollTopButton = !args.tags.isNullOrEmpty()
+        initializeAdapter(binding.recyclerViewLayout, pagingAdapter, enableScrollTopButton = enableScrollTopButton)
+        if (enableScrollTopButton && requireContext().prefs().getBoolean(C.UI_SCROLLTOP, true)) {
+            binding.recyclerViewLayout.scrollTop.setOnClickListener {
+                scrollToTop()
+                it.gone()
+            }
+        }
         with(binding) {
             sortBar.root.visible()
             sortBar.root.setOnClickListener {

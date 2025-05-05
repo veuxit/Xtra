@@ -9,10 +9,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.databinding.FragmentSearchChannelsListItemBinding
 import com.github.andreyasadchy.xtra.model.ui.Tag
-import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.game.GameMediaFragmentDirections
+import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamesFragmentDirections
-import com.github.andreyasadchy.xtra.ui.top.TopFragmentDirections
+import com.github.andreyasadchy.xtra.ui.top.TopStreamsFragmentDirections
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
@@ -88,7 +88,7 @@ class TagSearchAdapter(
                             } else {
                                 root.setOnClickListener {
                                     fragment.findNavController().navigate(
-                                        TopFragmentDirections.actionGlobalTopFragment(
+                                        TopStreamsFragmentDirections.actionGlobalTopFragment(
                                             tags = arrayOf(item.name)
                                         )
                                     )
