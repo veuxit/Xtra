@@ -29,7 +29,7 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="debug_api_chat_messages"
         android:title="@string/use_api_chat_messages"
         app:iconSpaceReserved="false"

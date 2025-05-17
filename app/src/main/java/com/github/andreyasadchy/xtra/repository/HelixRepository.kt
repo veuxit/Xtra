@@ -800,7 +800,7 @@ class HelixRepository @Inject constructor(
         }
     }
 
-    suspend fun updateChatSettings(useCronet: Boolean, headers: Map<String, String>, channelId: String?, userId: String?, emote: Boolean? = null, followers: Boolean? = null, followersDuration: String? = null, slow: Boolean? = null, slowDuration: Int? = null, subs: Boolean? = null, unique: Boolean? = null): String? = withContext(Dispatchers.IO) {
+    suspend fun updateChatSettings(useCronet: Boolean, headers: Map<String, String>, channelId: String?, userId: String?, emote: Boolean? = null, followers: Boolean? = null, followersDuration: Int? = null, slow: Boolean? = null, slowDuration: Int? = null, subs: Boolean? = null, unique: Boolean? = null): String? = withContext(Dispatchers.IO) {
         val query = mutableMapOf<String, String>().apply {
             channelId?.let { put("broadcaster_id", it) }
             userId?.let { put("moderator_id", it) }
@@ -810,7 +810,7 @@ class HelixRepository @Inject constructor(
         val body = buildJsonObject {
             emote?.let { put("emote_mode", it) }
             followers?.let { put("follower_mode", it) }
-            followersDuration?.toIntOrNull()?.let { put("follower_mode_duration", it) }
+            followersDuration?.let { put("follower_mode_duration", it) }
             slow?.let { put("slow_mode", it) }
             slowDuration?.let { put("slow_mode_wait_time", it) }
             subs?.let { put("subscriber_mode", it) }
