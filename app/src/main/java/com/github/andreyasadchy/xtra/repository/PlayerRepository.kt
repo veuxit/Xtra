@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.repository
 
 import android.net.Uri
 import android.util.Base64
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.model.VideoPosition
@@ -281,11 +282,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadRecentMessages(useCronet: Boolean, channelLogin: String, limit: String): RecentMessagesResponse = withContext(Dispatchers.IO) {
         if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<RecentMessagesResponse>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://recent-messages.robotty.de/api/v2/recent-messages/${channelLogin}?limit=${limit}")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<RecentMessagesResponse>(response.body.string())
             }
         }
@@ -294,11 +300,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadGlobalStvEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/emote-sets/global", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/emote-sets/global", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<StvGlobalResponse>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/emote-sets/global").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://7tv.io/v3/emote-sets/global")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<StvGlobalResponse>(response.body.string())
             }
         }
@@ -308,11 +319,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadStvEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): Pair<String?, List<Emote>> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${channelId}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${channelId}", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<StvChannelResponse>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/users/twitch/${channelId}").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://7tv.io/v3/users/twitch/${channelId}")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<StvChannelResponse>(response.body.string())
             }
         }
@@ -357,10 +373,15 @@ class PlayerRepository @Inject constructor(
     suspend fun getStvUser(useCronet: Boolean, userId: String): String? = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${userId}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/twitch/${userId}", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             request.future.get().responseBody as String
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://7tv.io/v3/users/twitch/${userId}").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://7tv.io/v3/users/twitch/${userId}")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 response.body.string()
             }
         }
@@ -381,12 +402,14 @@ class PlayerRepository @Inject constructor(
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
             cronetEngine.newUrlRequestBuilder("https://7tv.io/v3/users/${stvUserId}/presences", request.callback, cronetExecutor).apply {
                 addHeader("Content-Type", "application/json")
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
                 setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
             }.build().start()
         } else {
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://7tv.io/v3/users/${stvUserId}/presences")
                 header("Content-Type", "application/json")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
                 post(body.toRequestBody())
             }.build()).execute()
         }
@@ -395,11 +418,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadGlobalBttvEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/emotes/global", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/emotes/global", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<List<BttvResponse>>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://api.betterttv.net/3/cached/emotes/global").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://api.betterttv.net/3/cached/emotes/global")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<List<BttvResponse>>(response.body.string())
             }
         }
@@ -409,11 +437,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadBttvEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/users/twitch/${channelId}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://api.betterttv.net/3/cached/users/twitch/${channelId}", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<Map<String, JsonElement>>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://api.betterttv.net/3/cached/users/twitch/${channelId}").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://api.betterttv.net/3/cached/users/twitch/${channelId}")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<Map<String, JsonElement>>(response.body.string())
             }
         }
@@ -448,11 +481,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadGlobalFfzEmotes(useCronet: Boolean, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/set/global", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/set/global", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<FfzGlobalResponse>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://api.frankerfacez.com/v1/set/global").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://api.frankerfacez.com/v1/set/global")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<FfzGlobalResponse>(response.body.string())
             }
         }
@@ -464,11 +502,16 @@ class PlayerRepository @Inject constructor(
     suspend fun loadFfzEmotes(useCronet: Boolean, channelId: String, useWebp: Boolean): List<Emote> = withContext(Dispatchers.IO) {
         val response = if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/room/id/${channelId}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://api.frankerfacez.com/v1/room/id/${channelId}", request.callback, cronetExecutor).apply {
+                addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build().start()
             val response = request.future.get().responseBody as String
             json.decodeFromString<FfzChannelResponse>(response)
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://api.frankerfacez.com/v1/room/id/${channelId}").build()).execute().use { response ->
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://api.frankerfacez.com/v1/room/id/${channelId}")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build()).execute().use { response ->
                 json.decodeFromString<FfzChannelResponse>(response.body.string())
             }
         }
