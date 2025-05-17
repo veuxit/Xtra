@@ -51,12 +51,20 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun revoke(useCronet: Boolean, clientId: String, token: String) = withContext(Dispatchers.IO) {
+    suspend fun revoke(useCronet: Boolean, body: String) = withContext(Dispatchers.IO) {
         if (useCronet && cronetEngine != null) {
             val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-            cronetEngine.newUrlRequestBuilder("https://id.twitch.tv/oauth2/revoke?client_id=${clientId}&token=${token}", request.callback, cronetExecutor).build().start()
+            cronetEngine.newUrlRequestBuilder("https://id.twitch.tv/oauth2/revoke", request.callback, cronetExecutor).apply {
+                addHeader("Content-Type", "application/x-www-form-urlencoded")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+            request.future.get().responseBody as String
         } else {
-            okHttpClient.newCall(Request.Builder().url("https://id.twitch.tv/oauth2/revoke?client_id=${clientId}&token=${token}").build()).execute()
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://id.twitch.tv/oauth2/revoke")
+                header("Content-Type", "application/x-www-form-urlencoded")
+                post(body.toRequestBody())
+            }.build()).execute()
         }
     }
 

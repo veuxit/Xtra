@@ -403,6 +403,7 @@ class PlayerRepository @Inject constructor(
                 addHeader("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
                 setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
             }.build().start()
+            request.future.get().responseBody as String
         } else {
             okHttpClient.newCall(Request.Builder().apply {
                 url("https://7tv.io/v3/users/${stvUserId}/presences")

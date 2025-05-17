@@ -41,7 +41,6 @@ import com.google.android.material.slider.Slider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.IOException
 import java.net.URLEncoder
 import java.util.regex.Pattern
 import javax.inject.Inject
@@ -59,11 +58,14 @@ class LoginActivity : AppCompatActivity() {
     private var userLogin: String? = null
     private var helixToken: String? = null
     private var gqlToken: String? = null
+    private var webGQLToken: String? = null
     private var deviceCode: String? = null
     private var readHeaders = false
+    private var checkUrl = false
 
     private lateinit var binding: ActivityLoginBinding
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyTheme()
@@ -79,78 +81,84 @@ class LoginActivity : AppCompatActivity() {
             }
             windowInsets
         }
-        val useCronet = prefs().getBoolean(C.USE_CRONET, false)
-        val helixHeaders = TwitchApiHelper.getHelixHeaders(this)
-        val helixClientId = helixHeaders[C.HEADER_CLIENT_ID]
-        val helixToken = helixHeaders[C.HEADER_TOKEN]?.removePrefix("Bearer ")
-        val gqlHeaders = TwitchApiHelper.getGQLHeaders(this, true)
-        val gqlClientId = gqlHeaders[C.HEADER_CLIENT_ID]
-        val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
-        if (!gqlToken.isNullOrBlank() || !helixToken.isNullOrBlank()) {
-            TwitchApiHelper.checkedValidation = false
-            tokenPrefs().edit {
-                putString(C.TOKEN, null)
-                putString(C.GQL_HEADERS, null)
-                putLong(C.INTEGRITY_EXPIRATION, 0)
-                putString(C.GQL_TOKEN2, null)
-                putString(C.USER_ID, null)
-                putString(C.USERNAME, null)
-            }
-            lifecycleScope.launch {
-                if (!helixClientId.isNullOrBlank() && !helixToken.isNullOrBlank()) {
-                    try {
-                        authRepository.revoke(useCronet, helixClientId, helixToken)
-                    } catch (e: Exception) {
-
-                    }
-                }
-                if (!gqlClientId.isNullOrBlank() && !gqlToken.isNullOrBlank()) {
-                    try {
-                        authRepository.revoke(useCronet, gqlClientId, gqlToken)
-                    } catch (e: Exception) {
-
-                    }
-                }
-            }
-        }
-        if (prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") == "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") {
-            prefs().edit {
-                putString(C.GQL_CLIENT_ID2, "ue6666qo983tsx6so1t0vnawi233wa")
-                putString(C.GQL_REDIRECT2, "https://www.twitch.tv/settings/connections")
-            }
-        }
-        initWebView(useCronet, helixClientId, prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"))
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun initWebView(useCronet: Boolean, helixClientId: String?, gqlClientId: String?) {
-        val apiSetting = prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0
-        val helixRedirect = prefs().getString(C.HELIX_REDIRECT, "https://localhost")
-        val helixScopes = listOf(
-            "channel:edit:commercial", // channels/commercial
-            "channel:manage:broadcast", // streams/markers
-            "channel:manage:moderators", // moderation/moderators
-            "channel:manage:raids", // raids
-            "channel:manage:vips", // channels/vips
-            "channel:moderate",
-            "chat:edit", // irc
-            "chat:read", // irc
-            "moderator:manage:announcements", // chat/announcements
-            "moderator:manage:banned_users", // moderation/bans
-            "moderator:manage:chat_messages", // moderation/chat
-            "moderator:manage:chat_settings", // chat/settings
-            "moderator:read:chatters", // chat/chatters
-            "moderator:read:followers", // channels/followers
-            "user:manage:chat_color", // chat/color
-            "user:manage:whispers", // whispers
-            "user:read:chat",
-            "user:read:emotes", // chat/emotes/user
-            "user:read:follows", // streams/followed, channels/followed
-            "user:write:chat", // chat/messages
-        )
-        val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
-        val gqlRedirect = prefs().getString(C.GQL_REDIRECT2, "https://www.twitch.tv/")
         with(binding) {
+            val useCronet = prefs().getBoolean(C.USE_CRONET, false)
+            val helixHeaders = TwitchApiHelper.getHelixHeaders(this@LoginActivity)
+            val helixClientId = helixHeaders[C.HEADER_CLIENT_ID]
+            val oldHelixToken = helixHeaders[C.HEADER_TOKEN]?.removePrefix("Bearer ")
+            val gqlHeaders = TwitchApiHelper.getGQLHeaders(this@LoginActivity, true)
+            val oldGQLToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+            if (!oldGQLToken.isNullOrBlank() || !oldHelixToken.isNullOrBlank()) {
+                TwitchApiHelper.checkedValidation = false
+                tokenPrefs().edit {
+                    putString(C.TOKEN, null)
+                    putString(C.GQL_HEADERS, null)
+                    putLong(C.INTEGRITY_EXPIRATION, 0)
+                    putString(C.GQL_TOKEN2, null)
+                    putString(C.GQL_TOKEN_WEB, null)
+                    putString(C.USER_ID, null)
+                    putString(C.USERNAME, null)
+                }
+                lifecycleScope.launch {
+                    if (!helixClientId.isNullOrBlank() && !oldHelixToken.isNullOrBlank()) {
+                        try {
+                            authRepository.revoke(useCronet, "client_id=${helixClientId}&token=${oldHelixToken}")
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                    val gqlClientId = gqlHeaders[C.HEADER_CLIENT_ID]
+                    if (!gqlClientId.isNullOrBlank() && !oldGQLToken.isNullOrBlank()) {
+                        try {
+                            authRepository.revoke(useCronet, "client_id=${gqlClientId}&token=${oldGQLToken}")
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                    val webGQLToken = tokenPrefs().getString(C.GQL_TOKEN_WEB, null)
+                    if (!webGQLToken.isNullOrBlank()) {
+                        try {
+                            authRepository.revoke(useCronet, "client_id=kimne78kx3ncx6brgo4mv6wki5h1ko&token=${webGQLToken}")
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
+            }
+            if (prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") == "kd1unb4b3q4t58fwlpcbzcbnm76a8fp") {
+                prefs().edit {
+                    putString(C.GQL_CLIENT_ID2, "ue6666qo983tsx6so1t0vnawi233wa")
+                    putString(C.GQL_REDIRECT2, "https://www.twitch.tv/settings/connections")
+                }
+            }
+            val apiSetting = prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0
+            val gqlClientId = prefs().getString(C.GQL_CLIENT_ID2, "kd1unb4b3q4t58fwlpcbzcbnm76a8fp")
+            val gqlRedirect = prefs().getString(C.GQL_REDIRECT2, "https://www.twitch.tv/")
+            val helixRedirect = prefs().getString(C.HELIX_REDIRECT, "https://localhost")
+            val helixScopes = listOf(
+                "channel:edit:commercial", // channels/commercial
+                "channel:manage:broadcast", // streams/markers
+                "channel:manage:moderators", // moderation/moderators
+                "channel:manage:raids", // raids
+                "channel:manage:vips", // channels/vips
+                "channel:moderate",
+                "chat:edit", // irc
+                "chat:read", // irc
+                "moderator:manage:announcements", // chat/announcements
+                "moderator:manage:banned_users", // moderation/bans
+                "moderator:manage:chat_messages", // moderation/chat
+                "moderator:manage:chat_settings", // chat/settings
+                "moderator:read:chatters", // chat/chatters
+                "moderator:read:followers", // channels/followers
+                "user:manage:chat_color", // chat/color
+                "user:manage:whispers", // whispers
+                "user:read:chat",
+                "user:read:emotes", // chat/emotes/user
+                "user:read:follows", // streams/followed, channels/followed
+                "user:write:chat", // chat/messages
+            )
+            val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}" +
+                    "&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
             webViewContainer.visible()
             textZoom.visible()
             havingTrouble.setOnClickListener {
@@ -182,7 +190,23 @@ class LoginActivity : AppCompatActivity() {
                             .setPositiveButton(R.string.log_in) { _, _ ->
                                 val text = editText.text
                                 if (text.isNotEmpty()) {
-                                    if (!loginIfValidUrl(text.toString(), useCronet, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, 2)) {
+                                    val matcher = tokenPattern.matcher(text)
+                                    if (matcher.find()) {
+                                        val token = matcher.group(1)
+                                        if (!token.isNullOrBlank()) {
+                                            lifecycleScope.launch {
+                                                val valid = validateHelixToken(useCronet, helixClientId, token)
+                                                if (valid) {
+                                                    helixToken = token
+                                                    done()
+                                                } else {
+                                                    shortToast(R.string.invalid_url)
+                                                }
+                                            }
+                                        } else {
+                                            shortToast(R.string.invalid_url)
+                                        }
+                                    } else {
                                         shortToast(R.string.invalid_url)
                                     }
                                 }
@@ -210,24 +234,24 @@ class LoginActivity : AppCompatActivity() {
                     .setNegativeButton(getString(android.R.string.cancel), null)
                     .show()
             }
-            clearCookies()
-        }
-        with(binding.webView) {
+            CookieManager.getInstance().removeAllCookies(null)
             @Suppress("DEPRECATION")
             if (!isLightTheme) {
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                    WebSettingsCompat.setForceDark(this.settings, WebSettingsCompat.FORCE_DARK_ON)
+                    WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_ON)
                 }
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)) {
-                    WebSettingsCompat.setForceDarkStrategy(this.settings, WebSettingsCompat.DARK_STRATEGY_WEB_THEME_DARKENING_ONLY)
+                    WebSettingsCompat.setForceDarkStrategy(webView.settings, WebSettingsCompat.DARK_STRATEGY_WEB_THEME_DARKENING_ONLY)
                 }
             }
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.builtInZoomControls = true
-            settings.displayZoomControls = false
-            webChromeClient = WebChromeClient()
-            webViewClient = object : WebViewClientCompat() {
+            webView.settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                builtInZoomControls = true
+                displayZoomControls = false
+            }
+            webView.webChromeClient = WebChromeClient()
+            webView.webViewClient = object : WebViewClientCompat() {
 
                 override fun shouldInterceptRequest(view: WebView, webViewRequest: WebResourceRequest): WebResourceResponse? {
                     if (readHeaders) {
@@ -235,16 +259,65 @@ class LoginActivity : AppCompatActivity() {
                             it.key.equals(C.HEADER_TOKEN, true) && !it.value.equals("undefined", true)
                         }?.value?.removePrefix("OAuth ")
                         if (!token.isNullOrBlank()) {
+                            readHeaders = false
                             val clientId = webViewRequest.requestHeaders.entries.firstOrNull { it.key.equals(C.HEADER_CLIENT_ID, true) }?.value
-                            loginIfValidUrl("token=${token}&", useCronet, "", null, null, clientId, 1)
+                            lifecycleScope.launch {
+                                val valid = validateGQLToken(useCronet, clientId, token)
+                                if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
+                                    if (apiSetting == 0) {
+                                        if (valid || !helixToken.isNullOrBlank()) {
+                                            TwitchApiHelper.checkedValidation = true
+                                            tokenPrefs().edit {
+                                                if (valid) {
+                                                    putLong(C.INTEGRITY_EXPIRATION, 0)
+                                                    putString(C.GQL_HEADERS, JSONObject(mapOf(
+                                                        C.HEADER_CLIENT_ID to clientId,
+                                                        C.HEADER_TOKEN to "OAuth $token"
+                                                    )).toString())
+                                                }
+                                                if (!helixToken.isNullOrBlank()) {
+                                                    putString(C.TOKEN, helixToken)
+                                                }
+                                                putString(C.USER_ID, userId)
+                                                putString(C.USERNAME, userLogin)
+                                            }
+                                        }
+                                        setResult(RESULT_OK)
+                                        finish()
+                                    } else {
+                                        if (valid) {
+                                            TwitchApiHelper.checkedValidation = true
+                                            tokenPrefs().edit {
+                                                putLong(C.INTEGRITY_EXPIRATION, 0)
+                                                putString(C.GQL_HEADERS, JSONObject(mapOf(
+                                                    C.HEADER_CLIENT_ID to clientId,
+                                                    C.HEADER_TOKEN to "OAuth $token"
+                                                )).toString())
+                                                putString(C.USER_ID, userId)
+                                                putString(C.USERNAME, userLogin)
+                                            }
+                                            setResult(RESULT_OK)
+                                            finish()
+                                        } else {
+                                            error()
+                                            view.loadUrl("https://www.twitch.tv/login")
+                                        }
+                                    }
+                                } else {
+                                    if (valid) {
+                                        webGQLToken = token
+                                    }
+                                    done()
+                                }
+                            }
                         }
                     }
                     return super.shouldInterceptRequest(view, webViewRequest)
                 }
 
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    if (!readHeaders) {
-                        loginIfValidUrl(request.url.toString(), useCronet, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                    if (checkUrl) {
+                        loginIfValidUrl(request.url.toString(), useCronet, gqlClientId, gqlRedirect, helixClientId, helixAuthUrl, apiSetting)
                     }
                     return super.shouldOverrideUrlLoading(view, request)
                 }
@@ -252,8 +325,8 @@ class LoginActivity : AppCompatActivity() {
                 @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                     if (!WebViewFeature.isFeatureSupported(WebViewFeature.SHOULD_OVERRIDE_WITH_REDIRECTS)) {
-                        if (!readHeaders && url != null) {
-                            loginIfValidUrl(url, useCronet, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
+                        if (checkUrl && url != null) {
+                            loginIfValidUrl(url, useCronet, gqlClientId, gqlRedirect, helixClientId, helixAuthUrl, apiSetting)
                         }
                     }
                     return super.shouldOverrideUrlLoading(view, url)
@@ -275,8 +348,8 @@ class LoginActivity : AppCompatActivity() {
                             }")
                         }
                         val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
-                        loadUrl("about:blank")
-                        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                        view.loadUrl("about:blank")
+                        view.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     }
                 }
 
@@ -290,178 +363,178 @@ class LoginActivity : AppCompatActivity() {
                             getString(R.string.error, "$errorCode $description")
                         }
                         val html = "<html><body><div align=\"center\">$errorMessage</div></body>"
-                        loadUrl("about:blank")
-                        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                        view?.loadUrl("about:blank")
+                        view?.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     }
                 }
             }
             if (apiSetting == 1) {
                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                     readHeaders = true
-                    loadUrl("https://www.twitch.tv/login")
-                } else getGqlAuthUrl(useCronet, gqlClientId, gqlRedirect)
-            } else loadUrl(helixAuthUrl)
+                    webView.loadUrl("https://www.twitch.tv/login")
+                } else {
+                    checkUrl = true
+                    lifecycleScope.launch {
+                        loadGQLAuthUrl(useCronet, gqlClientId, gqlRedirect)
+                    }
+                }
+            } else {
+                checkUrl = true
+                webView.loadUrl(helixAuthUrl)
+            }
         }
     }
 
-    private fun getGqlAuthUrl(useCronet: Boolean, gqlClientId: String?, gqlRedirect: String?) {
-        lifecycleScope.launch {
-            try {
+    private suspend fun loadGQLAuthUrl(useCronet: Boolean, gqlClientId: String?, gqlRedirect: String?): Boolean {
+        with(binding) {
+            return try {
                 val response = authRepository.getDeviceCode(useCronet, "client_id=${gqlClientId}&scopes=channel_read+chat%3Aread+user_blocks_edit+user_blocks_read+user_follows_edit+user_read")
                 deviceCode = response.deviceCode
                 val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?client_id=${gqlClientId}&device_code=${deviceCode}&force_verify=true&redirect_uri=${gqlRedirect}&response_type=device_grant_trigger&scope=channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read"
-                binding.webView.loadUrl(gqlAuthUrl)
-                binding.webViewContainer.visible()
-                binding.textZoom.visible()
-                binding.progressBar.gone()
+                webView.loadUrl(gqlAuthUrl)
+                true
             } catch (e: Exception) {
-                if (!helixToken.isNullOrBlank()) {
-                    TwitchApiHelper.checkedValidation = true
-                    tokenPrefs().edit {
-                        putString(C.TOKEN, helixToken)
-                        putString(C.USER_ID, userId)
-                        putString(C.USERNAME, userLogin)
-                    }
-                }
-                setResult(RESULT_OK)
-                finish()
+                false
             }
         }
     }
 
-/*    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BACK) {
-            if (webView.canGoBack()) {
-                webView.goBack()
-                return true
-            }
-        }
-        return super.onKeyDown(keyCode, event)
-    }*/
-
-    private fun loginIfValidUrl(url: String, useCronet: Boolean, helixAuthUrl: String, helixClientId: String?, gqlRedirect: String?, gqlClientId: String?, apiSetting: Int): Boolean {
+    private fun loginIfValidUrl(url: String, useCronet: Boolean, gqlClientId: String?, gqlRedirect: String?, helixClientId: String?, helixAuthUrl: String, apiSetting: Int) {
         with(binding) {
-            return if (((apiSetting == 0 && tokens.count() == 1) || apiSetting == 1) && url == gqlRedirect && !prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
+            if (url == gqlRedirect) {
                 lifecycleScope.launch {
-                    try {
-                        val response = authRepository.getToken(useCronet, "client_id=${gqlClientId}&device_code=${deviceCode}&grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code")
-                        loginIfValidUrl("token=${response.token}&", useCronet, helixAuthUrl, helixClientId, gqlRedirect, gqlClientId, apiSetting)
-                    } catch (e: Exception) {
-                        if (!helixToken.isNullOrBlank()) {
-                            TwitchApiHelper.checkedValidation = true
-                            tokenPrefs().edit {
-                                putString(C.TOKEN, helixToken)
-                                putString(C.USER_ID, userId)
-                                putString(C.USERNAME, userLogin)
-                            }
+                    val response = authRepository.getToken(useCronet, "client_id=${gqlClientId}&device_code=${deviceCode}&grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code")
+                    val token = response.token
+                    val valid = validateGQLToken(useCronet, gqlClientId, token)
+                    if (apiSetting == 0) {
+                        if (valid) {
+                            gqlToken = token
                         }
-                        setResult(RESULT_OK)
-                        finish()
+                        readHeaders = true
+                        checkUrl = false
+                        webView.loadUrl("https://www.twitch.tv/login")
+                    } else {
+                        if (valid) {
+                            gqlToken = token
+                            readHeaders = true
+                            checkUrl = false
+                            webView.loadUrl("https://www.twitch.tv/login")
+                        } else {
+                            error()
+                            loadGQLAuthUrl(useCronet, gqlClientId, gqlRedirect)
+                        }
                     }
                 }
-                true
             } else {
                 val matcher = tokenPattern.matcher(url)
                 if (matcher.find()) {
-                    webViewContainer.gone()
-                    textZoom.gone()
-                    progressBar.visible()
                     val token = matcher.group(1)
                     if (!token.isNullOrBlank() && !tokens.contains(token)) {
                         tokens.add(token)
+                        webViewContainer.gone()
+                        textZoom.gone()
+                        progressBar.visible()
                         lifecycleScope.launch {
-                            try {
-                                val api = when {
-                                    (apiSetting == 0 && tokens.count() == 1) || (apiSetting == 2) -> C.HELIX
-                                    else -> C.GQL
+                            val valid = validateHelixToken(useCronet, helixClientId, token)
+                            if (apiSetting == 0) {
+                                if (valid) {
+                                    helixToken = token
                                 }
-                                val response = authRepository.validate(
-                                    useCronet,
-                                    when (api) {
-                                        C.HELIX -> TwitchApiHelper.addTokenPrefixHelix(token)
-                                        else -> TwitchApiHelper.addTokenPrefixGQL(token)
-                                    }
-                                )
-                                if (response.clientId.isNotBlank() &&
-                                    response.clientId == when (api) {
-                                        C.HELIX -> helixClientId
-                                        else -> gqlClientId
-                                    }
-                                ) {
-                                    response.userId?.let { userId = it }
-                                    response.login?.let { userLogin = it }
-                                    when (api) {
-                                        C.HELIX -> helixToken = token
-                                        C.GQL -> gqlToken = token
-                                    }
-                                    if ((apiSetting == 0 && tokens.count() == 2) || (apiSetting == 1) || (apiSetting == 2)) {
-                                        TwitchApiHelper.checkedValidation = true
-                                        tokenPrefs().edit {
-                                            if (!gqlToken.isNullOrBlank()) {
-                                                if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                                    putLong(C.INTEGRITY_EXPIRATION, 0)
-                                                    putString(C.GQL_HEADERS, JSONObject(mapOf(
-                                                        C.HEADER_CLIENT_ID to gqlClientId,
-                                                        C.HEADER_TOKEN to "OAuth $gqlToken"
-                                                    )).toString())
-                                                } else {
-                                                    putString(C.GQL_TOKEN2, gqlToken)
-                                                }
-                                            }
-                                            if (!helixToken.isNullOrBlank()) {
-                                                putString(C.TOKEN, helixToken)
-                                            }
-                                            putString(C.USER_ID, userId)
-                                            putString(C.USERNAME, userLogin)
-                                        }
-                                        setResult(RESULT_OK)
-                                        finish()
-                                    }
-                                } else {
-                                    throw IOException()
-                                }
-                            } catch (e: Exception) {
-                                toast(R.string.connection_error)
-                                if ((apiSetting == 0 && tokens.count() == 2) || (apiSetting == 1) || (apiSetting == 2)) {
-                                    clearCookies()
-                                    tokens = mutableListOf()
-                                    userId = null
-                                    userLogin = null
-                                    helixToken = null
-                                    gqlToken = null
-                                    webViewContainer.visible()
-                                    textZoom.visible()
-                                    progressBar.gone()
-                                    if ((prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0) == 1) {
-                                        if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
-                                            readHeaders = true
-                                            webView.loadUrl("https://www.twitch.tv/login")
-                                        } else getGqlAuthUrl(useCronet, gqlClientId, gqlRedirect)
-                                    } else webView.loadUrl(helixAuthUrl)
-                                }
-                            }
-                            if (apiSetting == 0 && tokens.count() == 1) {
                                 if (prefs().getBoolean(C.ENABLE_INTEGRITY, false)) {
                                     readHeaders = true
+                                    checkUrl = false
                                     webView.loadUrl("https://www.twitch.tv/login")
-                                } else getGqlAuthUrl(useCronet, gqlClientId, gqlRedirect)
+                                } else {
+                                    val loaded = loadGQLAuthUrl(useCronet, gqlClientId, gqlRedirect)
+                                    if (loaded) {
+                                        webViewContainer.visible()
+                                        textZoom.visible()
+                                        progressBar.gone()
+                                    } else {
+                                        done()
+                                    }
+                                }
+                            } else {
+                                if (valid) {
+                                    helixToken = token
+                                    done()
+                                } else {
+                                    error()
+                                    webView.loadUrl(helixAuthUrl)
+                                }
                             }
                         }
                     }
-                    true
-                } else {
-                    false
                 }
             }
         }
+    }
+
+    private suspend fun validateGQLToken(useCronet: Boolean, gqlClientId: String?, token: String): Boolean {
+        return try {
+            val response = authRepository.validate(useCronet, TwitchApiHelper.addTokenPrefixGQL(token))
+            if (response.clientId.isNotBlank() && response.clientId == gqlClientId) {
+                response.userId?.let { userId = it }
+                response.login?.let { userLogin = it }
+                true
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private suspend fun validateHelixToken(useCronet: Boolean, helixClientId: String?, token: String): Boolean {
+        return try {
+            val response = authRepository.validate(useCronet, TwitchApiHelper.addTokenPrefixHelix(token))
+            if (response.clientId.isNotBlank() && response.clientId == helixClientId) {
+                response.userId?.let { userId = it }
+                response.login?.let { userLogin = it }
+                true
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun error() {
+        with(binding) {
+            toast(R.string.connection_error)
+            CookieManager.getInstance().removeAllCookies(null)
+            tokens = mutableListOf()
+            userId = null
+            userLogin = null
+            helixToken = null
+            gqlToken = null
+            webGQLToken = null
+            webViewContainer.visible()
+            textZoom.visible()
+            progressBar.gone()
+        }
+    }
+
+    private fun done() {
+        if (!gqlToken.isNullOrBlank() || !helixToken.isNullOrBlank()) {
+            TwitchApiHelper.checkedValidation = true
+            tokenPrefs().edit {
+                if (!gqlToken.isNullOrBlank()) {
+                    putString(C.GQL_TOKEN2, gqlToken)
+                }
+                if (!webGQLToken.isNullOrBlank()) {
+                    putString(C.GQL_TOKEN_WEB, webGQLToken)
+                }
+                if (!helixToken.isNullOrBlank()) {
+                    putString(C.TOKEN, helixToken)
+                }
+                putString(C.USER_ID, userId)
+                putString(C.USERNAME, userLogin)
+            }
+        }
+        setResult(RESULT_OK)
+        finish()
     }
 
     override fun onDestroy() {
         binding.webView.loadUrl("about:blank")
         super.onDestroy()
-    }
-
-    private fun clearCookies() {
-        CookieManager.getInstance().removeAllCookies(null)
     }
 }

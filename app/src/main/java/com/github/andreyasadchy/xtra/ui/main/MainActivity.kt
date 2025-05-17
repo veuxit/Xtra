@@ -210,6 +210,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                                     viewModel.validate(
                                         prefs.getBoolean(C.USE_CRONET, false),
                                         TwitchApiHelper.getGQLHeaders(this@MainActivity, true),
+                                        tokenPrefs().getString(C.GQL_TOKEN_WEB, null)?.takeIf { it.isNotBlank() }?.let { TwitchApiHelper.addTokenPrefixGQL(it) },
                                         TwitchApiHelper.getHelixHeaders(this@MainActivity),
                                         this@MainActivity.tokenPrefs().getString(C.USER_ID, null),
                                         this@MainActivity.tokenPrefs().getString(C.USERNAME, null),

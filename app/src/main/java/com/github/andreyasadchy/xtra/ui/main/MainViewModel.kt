@@ -570,7 +570,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun validate(useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, accountId: String?, accountLogin: String?, activity: Activity) {
+    fun validate(useCronet: Boolean, gqlHeaders: Map<String, String>, webGQLToken: String?, helixHeaders: Map<String, String>, accountId: String?, accountLogin: String?, activity: Activity) {
         viewModelScope.launch {
             try {
                 val helixToken = helixHeaders[C.HEADER_TOKEN]
@@ -591,6 +591,19 @@ class MainViewModel @Inject constructor(
                 if (!gqlToken.isNullOrBlank()) {
                     val response = authRepository.validate(useCronet, gqlToken)
                     if (response.clientId.isNotBlank() && response.clientId == gqlHeaders[C.HEADER_CLIENT_ID]) {
+                        if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
+                            activity.tokenPrefs().edit {
+                                putString(C.USER_ID, response.userId?.takeIf { it.isNotBlank() } ?: accountId)
+                                putString(C.USERNAME, response.login?.takeIf { it.isNotBlank() } ?: accountLogin)
+                            }
+                        }
+                    } else {
+                        throw IllegalStateException("401")
+                    }
+                }
+                if (!webGQLToken.isNullOrBlank()) {
+                    val response = authRepository.validate(useCronet, webGQLToken)
+                    if (response.clientId.isNotBlank() && response.clientId == "kimne78kx3ncx6brgo4mv6wki5h1ko") {
                         if ((!response.userId.isNullOrBlank() && response.userId != accountId) || (!response.login.isNullOrBlank() && response.login != accountLogin)) {
                             activity.tokenPrefs().edit {
                                 putString(C.USER_ID, response.userId?.takeIf { it.isNotBlank() } ?: accountId)
