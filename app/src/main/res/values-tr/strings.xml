@@ -683,4 +683,5 @@
     <string name="use_background_audio">Arka planda ses çal</string>
     <string name="use_cronet_downloads">Use Cronet for downloads</string>
     <string name="use_cronet">Use Cronet network library</string>
+    <string name="avoid_rounded_corners">Avoid rounded screen corners</string>
 </resources>

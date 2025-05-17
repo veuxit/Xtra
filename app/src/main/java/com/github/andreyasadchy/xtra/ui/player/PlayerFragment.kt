@@ -18,6 +18,7 @@ import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.RoundedCorner
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -101,6 +102,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
@@ -171,6 +173,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         with(binding) {
             slidingLayout.updateBackgroundColor(isPortrait)
             val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
+            val cornerPadding = prefs.getBoolean(C.PLAYER_ROUNDED_CORNER_PADDING, false)
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
                 val insets = if (!isPortrait && ignoreCutouts) {
                     windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
@@ -181,10 +184,32 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     view.updatePadding(left = 0, top = insets.top, right = 0)
                 } else {
                     if (ignoreCutouts) {
-                        view.updatePadding(left = 0, top = 0, right = 0)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && cornerPadding) {
+                            val rootWindowInsets = view.rootView.rootWindowInsets
+                            val topLeft = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)
+                            val topRight = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)
+                            val bottomLeft = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)
+                            val bottomRight = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)
+                            val leftRadius = max(topLeft?.radius ?: 0, bottomLeft?.radius ?: 0)
+                            val rightRadius = max(topRight?.radius ?: 0, bottomRight?.radius ?: 0)
+                            view.updatePadding(left = leftRadius, top = 0, right = rightRadius)
+                        } else {
+                            view.updatePadding(left = 0, top = 0, right = 0)
+                        }
                     } else {
                         val cutoutInsets = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
-                        view.updatePadding(left = cutoutInsets.left, top = 0, right = cutoutInsets.right)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && cornerPadding) {
+                            val rootWindowInsets = view.rootView.rootWindowInsets
+                            val topLeft = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)
+                            val topRight = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)
+                            val bottomLeft = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)
+                            val bottomRight = rootWindowInsets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)
+                            val leftRadius = max(topLeft?.radius ?: 0, bottomLeft?.radius ?: 0)
+                            val rightRadius = max(topRight?.radius ?: 0, bottomRight?.radius ?: 0)
+                            view.updatePadding(left = max(cutoutInsets.left, leftRadius), top = 0, right = max(cutoutInsets.right, rightRadius))
+                        } else {
+                            view.updatePadding(left = cutoutInsets.left, top = 0, right = cutoutInsets.right)
+                        }
                     }
                 }
                 slidingLayout.apply {
