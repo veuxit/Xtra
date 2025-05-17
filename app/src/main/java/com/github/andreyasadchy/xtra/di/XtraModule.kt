@@ -6,16 +6,12 @@ import android.util.Log
 import androidx.annotation.OptIn
 import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
-import okhttp3.CipherSuite
-import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
-import okhttp3.TlsVersion
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.tls.HandshakeCertificates
 import org.chromium.net.CronetEngine
@@ -28,7 +24,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
-import javax.net.ssl.SSLContext
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -46,6 +41,7 @@ class XtraModule {
                 addQuicHint("gql.twitch.tv", 443, 443)
                 addQuicHint("www.twitch.tv", 443, 443)
                 addQuicHint("7tv.io", 443, 443)
+                addQuicHint("cdn.7tv.app", 443, 443)
                 addQuicHint("api.betterttv.net", 443, 443)
             }.build().also {
                 if (BuildConfig.DEBUG) {
@@ -79,34 +75,15 @@ class XtraModule {
             if (BuildConfig.DEBUG) {
                 addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
             }
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) {
                 try {
-                    val input = application.resources.openRawResource(R.raw.isrgrootx1)
-                    val certificate = CertificateFactory.getInstance("X.509").generateCertificates(input).single() as X509Certificate
+                    val certificateFactory = CertificateFactory.getInstance("X.509")
                     val certificates = HandshakeCertificates.Builder()
-                        .addTrustedCertificate(certificate)
-                        .addPlatformTrustedCertificates()
-                        .build()
-                    val trustManager = certificates.trustManager()
-                    val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
-                    sslContext.init(null, arrayOf(trustManager), null)
-                    sslSocketFactory(TlsSocketFactory(sslContext.socketFactory), trustManager)
-                    val cipherSuites = ConnectionSpec.MODERN_TLS.cipherSuites()!!.toMutableList().apply {
-                        add(CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA)
-                    }.toTypedArray()
-                    val cs = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-                        .cipherSuites(*cipherSuites)
-                        .build()
-                    connectionSpecs(arrayListOf(cs))
-                } catch (e: Exception) {
-                    Log.e("OkHttpTLSCompat", "Error while setting TLS 1.2 compatibility", e)
-                }
-            } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) {
-                try {
-                    val input = application.resources.openRawResource(R.raw.isrgrootx1)
-                    val certificate = CertificateFactory.getInstance("X.509").generateCertificates(input).single() as X509Certificate
-                    val certificates = HandshakeCertificates.Builder()
-                        .addTrustedCertificate(certificate)
+                        .addTrustedCertificate(
+                            application.resources.openRawResource(R.raw.isrgrootx1).use {
+                                certificateFactory.generateCertificates(it).single() as X509Certificate
+                            }
+                        )
                         .addPlatformTrustedCertificates()
                         .build()
                     sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager())

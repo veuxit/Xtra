@@ -1,22 +1,19 @@
 package com.github.andreyasadchy.xtra.util.chat
 
+import android.os.Build
 import android.util.Log
-import com.github.andreyasadchy.xtra.util.TlsSocketFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.TlsVersion
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.Socket
-import java.security.KeyStore
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
+import javax.net.ssl.SSLSocketFactory
 
 private const val TAG = "ChatWriteIRC"
 
@@ -75,13 +72,16 @@ class ChatWriteIRC(
     private fun connect() {
         Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
-                init(null as KeyStore?)
-                trustManagers.first { it is X509TrustManager } as X509TrustManager
-            }
-            val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_2.javaName())
-            sslContext.init(null, arrayOf(trustManager), null)
-            socketOut = (if (useSSL) TlsSocketFactory(sslContext.socketFactory).createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667))?.apply {
+            socketOut = if (useSSL) {
+                val socketFactory = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
+                    SSLContext.getDefault().socketFactory
+                } else {
+                    SSLSocketFactory.getDefault()
+                }
+                socketFactory.createSocket("irc.twitch.tv", 6697)
+            } else {
+                Socket("irc.twitch.tv", 6667)
+            }.apply {
                 readerOut = BufferedReader(InputStreamReader(getInputStream()))
                 writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
                 write("PASS oauth:$userToken", writerOut)
