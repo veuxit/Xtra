@@ -624,7 +624,7 @@ class ChatViewModel @Inject constructor(
         val showClearMsg = applicationContext.prefs().getBoolean(C.CHAT_SHOW_CLEARMSG, true)
         val showClearChat = applicationContext.prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
         val nameDisplay = applicationContext.prefs().getString(C.UI_NAME_DISPLAY, "0")
-        val useApiChatMessages = applicationContext.prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, false)
+        val useApiChatMessages = applicationContext.prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, true)
         if (applicationContext.prefs().getBoolean(C.DEBUG_EVENTSUB_CHAT, false) && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
             eventSub = EventSubWebSocket(
                 client = okHttpClient,
@@ -1238,7 +1238,7 @@ class ChatViewModel @Inject constructor(
 
     fun send(message: CharSequence, replyId: String?, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, accountId: String?, channelId: String?, channelLogin: String?, useApiCommands: Boolean, useApiChatMessages: Boolean, enableIntegrity: Boolean) {
         if (replyId != null) {
-            sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages, replyId)
+            sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity, replyId)
         } else {
             if (useApiCommands) {
                 if (message.toString().startsWith("/")) {
@@ -1248,23 +1248,36 @@ class ChatViewModel @Inject constructor(
 
                     }
                 } else {
-                    sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                    sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                 }
             } else {
                 if (message.toString() == "/dc" || message.toString() == "/disconnect") {
                     disconnect()
                 } else {
-                    sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                    sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                 }
             }
         }
     }
 
-    private fun sendMessage(message: CharSequence, useCronet: Boolean, helixHeaders: Map<String, String>, accountId: String?, channelId: String?, useApiChatMessages: Boolean, replyId: String? = null) {
-        if (useApiChatMessages && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+    private fun sendMessage(message: CharSequence, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, accountId: String?, channelId: String?, useApiChatMessages: Boolean, enableIntegrity: Boolean, replyId: String? = null) {
+        if (useApiChatMessages) {
             viewModelScope.launch {
                 try {
-                    helixRepository.sendMessage(useCronet, helixHeaders, accountId, channelId, message.toString(), replyId)?.let {
+                    if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                        graphQLRepository.sendMessage(useCronet, gqlHeaders, channelId, message.toString(), replyId).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.sendMessage(useCronet, helixHeaders, accountId, channelId, message.toString(), replyId)
+                        } else null
+                    }?.let {
                         onMessage(ChatMessage(systemMsg = it))
                     }
                 } catch (e: Exception) {
@@ -1381,7 +1394,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1424,7 +1437,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1440,64 +1453,93 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
             command.equals("/disconnect", true) -> disconnect()
             command.equals("/emoteonly", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, emote = true)?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.updateChatSettings(useCronet, gqlHeaders, channelId, emote = true).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, emote = true)
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
             command.equals("/emoteonlyoff", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, emote = false)?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.updateChatSettings(useCronet, gqlHeaders, channelId, emote = false).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, emote = false)
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
             command.equals("/followers", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val splits = message.split(" ")
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId,
-                            followers = true,
-                            followersDuration = if (splits.size >= 2) splits[1] else null
-                        )?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                val splits = message.split(" ")
+                val duration = if (splits.size >= 2) splits[1].toIntOrNull() else null
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.setFollowersOnlyMode(useCronet, gqlHeaders, channelId, duration ?: 0).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId,
+                                followers = true,
+                                followersDuration = duration
+                            )
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
             command.equals("/followersoff", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, followers = false)?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.setFollowersOnlyMode(useCronet, gqlHeaders, channelId, -1).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, followers = false)
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
@@ -1657,32 +1699,47 @@ class ChatViewModel @Inject constructor(
                 }
             }
             command.equals("/slow", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    val splits = message.split(" ")
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId,
-                            slow = true,
-                            slowDuration = if (splits.size >= 2) splits[1].toIntOrNull() else null
-                        )?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                val splits = message.split(" ")
+                val duration = if (splits.size >= 2) splits[1].toIntOrNull() else null
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.setSlowMode(useCronet, gqlHeaders, channelId, duration ?: 30).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId,
+                                slow = true,
+                                slowDuration = duration
+                            )
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
             command.equals("/slowoff", true) -> {
-                if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                    viewModelScope.launch {
-                        helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, slow = false)?.let {
-                            onMessage(ChatMessage(systemMsg = it))
-                        }
-                    }
-                } else {
+                viewModelScope.launch {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        graphQLRepository.setSlowMode(useCronet, gqlHeaders, channelId, 0).also { response ->
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                        }.takeIf { !it.errors.isNullOrEmpty() }?.toString()
+                    } else {
+                        if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            helixRepository.updateChatSettings(useCronet, helixHeaders, channelId, accountId, slow = false)
+                        } else null
+                    }?.let {
+                        onMessage(ChatMessage(systemMsg = it))
                     }
                 }
             }
@@ -1695,7 +1752,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1708,7 +1765,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1718,7 +1775,7 @@ class ChatViewModel @Inject constructor(
                     viewModelScope.launch {
                         if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
                             graphQLRepository.banUser(useCronet, gqlHeaders, channelId, splits[1],
-                                duration = if (splits.size >= 3) splits[2] else null ?: "10m",
+                                duration = if (splits.size >= 3) splits[2] else "10m",
                                 reason = if (splits.size >= 4) splits[3] else null
                             ).also { response ->
                                 if (enableIntegrity && integrity.value == null) {
@@ -1736,7 +1793,7 @@ class ChatViewModel @Inject constructor(
                                     logins = listOf(splits[1])
                                 ).data.firstOrNull()?.channelId
                                 helixRepository.banUser(useCronet, helixHeaders, channelId, accountId, targetId,
-                                    duration = if (splits.size >= 3) splits[2] else null ?: "600",
+                                    duration = if (splits.size >= 3) splits[2] else "600",
                                     reason = if (splits.size >= 4) splits[3] else null
                                 )
                             } else null
@@ -1783,7 +1840,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1796,7 +1853,7 @@ class ChatViewModel @Inject constructor(
                     }
                 } else {
                     if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+                        sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
                     }
                 }
             }
@@ -1887,7 +1944,7 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             }
-            else -> sendMessage(message, useCronet, helixHeaders, accountId, channelId, useApiChatMessages)
+            else -> sendMessage(message, useCronet, gqlHeaders, helixHeaders, accountId, channelId, useApiChatMessages, enableIntegrity)
         }
     }
 
