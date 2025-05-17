@@ -2815,6 +2815,44 @@ class GraphQLRepository @Inject constructor(
         }
     }
 
+    suspend fun sendMessage(useCronet: Boolean, headers: Map<String, String>, channelId: String?, message: String?, replyId: String?): ErrorResponse = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
+            putJsonObject("extensions") {
+                putJsonObject("persistedQuery") {
+                    put("sha256Hash", "0435464292cf380ed4b3d905e4edcb73078362e82c06367a5b2181c76c822fa2")
+                    put("version", 1)
+                }
+            }
+            put("operationName", "sendChatMessage")
+            putJsonObject("variables") {
+                putJsonObject("input") {
+                    put("channelID", channelId)
+                    put("message", message)
+                    put("replyParentMessageID", replyId)
+                }
+            }
+        }.toString()
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://gql.twitch.tv/gql/", request.callback, cronetExecutor).apply {
+                headers.forEach { addHeader(it.key, it.value) }
+                addHeader("Content-Type", "application/json")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<ErrorResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://gql.twitch.tv/gql/")
+                headers(headers.toHeaders())
+                header("Content-Type", "application/json")
+                post(body.toRequestBody())
+            }.build()).execute().use { response ->
+                json.decodeFromString<ErrorResponse>(response.body.string())
+            }
+        }
+    }
+
     suspend fun sendAnnouncement(useCronet: Boolean, headers: Map<String, String>, channelId: String?, message: String?, color: String?): ErrorResponse = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             putJsonObject("extensions") {
@@ -2941,6 +2979,117 @@ class GraphQLRepository @Inject constructor(
             putJsonObject("variables") {
                 putJsonObject("input") {
                     put("color", color)
+                }
+            }
+        }.toString()
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://gql.twitch.tv/gql/", request.callback, cronetExecutor).apply {
+                headers.forEach { addHeader(it.key, it.value) }
+                addHeader("Content-Type", "application/json")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<ErrorResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://gql.twitch.tv/gql/")
+                headers(headers.toHeaders())
+                header("Content-Type", "application/json")
+                post(body.toRequestBody())
+            }.build()).execute().use { response ->
+                json.decodeFromString<ErrorResponse>(response.body.string())
+            }
+        }
+    }
+
+    suspend fun updateChatSettings(useCronet: Boolean, headers: Map<String, String>, channelId: String?, emote: Boolean? = null): ErrorResponse = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
+            putJsonObject("extensions") {
+                putJsonObject("persistedQuery") {
+                    put("sha256Hash", "6d8b11f4e29f87be5e2397dd54b2df669e9a5aacd831252d88b7b7a6616dc170")
+                    put("version", 1)
+                }
+            }
+            put("operationName", "UpdateChatSettings")
+            putJsonObject("variables") {
+                putJsonObject("input") {
+                    put("channelID", channelId)
+                    emote?.let { put("isEmoteOnlyModeEnabled", it) }
+                }
+            }
+        }.toString()
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://gql.twitch.tv/gql/", request.callback, cronetExecutor).apply {
+                headers.forEach { addHeader(it.key, it.value) }
+                addHeader("Content-Type", "application/json")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<ErrorResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://gql.twitch.tv/gql/")
+                headers(headers.toHeaders())
+                header("Content-Type", "application/json")
+                post(body.toRequestBody())
+            }.build()).execute().use { response ->
+                json.decodeFromString<ErrorResponse>(response.body.string())
+            }
+        }
+    }
+
+    suspend fun setFollowersOnlyMode(useCronet: Boolean, headers: Map<String, String>, channelId: String?, duration: Int?): ErrorResponse = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
+            putJsonObject("extensions") {
+                putJsonObject("persistedQuery") {
+                    put("sha256Hash", "0ee2e448691c84b4be72bcd1ae6c51fcf512414fe372e502fe67d3c7eaf8da31")
+                    put("version", 1)
+                }
+            }
+            put("operationName", "SetFollowersOnlyModeSetting")
+            putJsonObject("variables") {
+                putJsonObject("input") {
+                    put("channelID", channelId)
+                    put("followersOnlyDurationMinutes", duration)
+                }
+            }
+        }.toString()
+        if (useCronet && cronetEngine != null) {
+            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+            cronetEngine.newUrlRequestBuilder("https://gql.twitch.tv/gql/", request.callback, cronetExecutor).apply {
+                headers.forEach { addHeader(it.key, it.value) }
+                addHeader("Content-Type", "application/json")
+                setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor)
+            }.build().start()
+            val response = request.future.get().responseBody as String
+            json.decodeFromString<ErrorResponse>(response)
+        } else {
+            okHttpClient.newCall(Request.Builder().apply {
+                url("https://gql.twitch.tv/gql/")
+                headers(headers.toHeaders())
+                header("Content-Type", "application/json")
+                post(body.toRequestBody())
+            }.build()).execute().use { response ->
+                json.decodeFromString<ErrorResponse>(response.body.string())
+            }
+        }
+    }
+
+    suspend fun setSlowMode(useCronet: Boolean, headers: Map<String, String>, channelId: String?, duration: Int?): ErrorResponse = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
+            putJsonObject("extensions") {
+                putJsonObject("persistedQuery") {
+                    put("sha256Hash", "8cf824c7fbe97e1fbde96125bffabd5b315b7f370c2ddae317f058a7b9b1c57d")
+                    put("version", 1)
+                }
+            }
+            put("operationName", "SetSlowModeSetting")
+            putJsonObject("variables") {
+                putJsonObject("input") {
+                    put("channelID", channelId)
+                    put("slowModeDurationSeconds", duration)
                 }
             }
         }.toString()
