@@ -987,6 +987,16 @@ class SettingsActivity : AppCompatActivity() {
                     true
                 }
             }
+            findPreference<EditTextPreference>("gql_token_web")?.apply {
+                isPersistent = false
+                text = requireContext().tokenPrefs().getString(C.GQL_TOKEN_WEB, null)
+                setOnPreferenceChangeListener { _, newValue ->
+                    requireContext().tokenPrefs().edit {
+                        putString(C.GQL_TOKEN_WEB, newValue.toString())
+                    }
+                    true
+                }
+            }
         }
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

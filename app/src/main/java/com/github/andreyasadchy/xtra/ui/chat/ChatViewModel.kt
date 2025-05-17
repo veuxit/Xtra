@@ -38,6 +38,7 @@ import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
 import com.github.andreyasadchy.xtra.util.chat.EventSubUtils
 import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocket
+import com.github.andreyasadchy.xtra.util.chat.HermesWebSocket
 import com.github.andreyasadchy.xtra.util.chat.PubSubUtils
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.RecentMessageUtils
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.util.Collections
@@ -78,6 +80,7 @@ class ChatViewModel @Inject constructor(
     private var chatReadWebSocket: ChatReadWebSocket? = null
     private var chatWriteWebSocket: ChatWriteWebSocket? = null
     private var eventSub: EventSubWebSocket? = null
+    private var hermesWebSocket: HermesWebSocket? = null
     private var pubSub: PubSubWebSocket? = null
     private var stvEventApi: StvEventApiWebSocket? = null
     private var stvUserId: String? = null
@@ -724,174 +727,212 @@ class ChatViewModel @Inject constructor(
         }
         if (usePubSub && !channelId.isNullOrBlank()) {
             val collectPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_COLLECT, true)
-            pubSub = PubSubWebSocket(
-                channelId = channelId,
-                userId = accountId,
-                gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "),
-                collectPoints = collectPoints,
-                notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
-                showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
-                showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
-                showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
-                client = okHttpClient,
-                onPlaybackMessage = { message ->
-                    val playbackMessage = PubSubUtils.parsePlaybackMessage(message)
-                    if (playbackMessage != null) {
-                        playbackMessage.live?.let {
-                            if (it) {
-                                onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_live).format(channelLogin)))
-                            } else {
-                                onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_offline).format(channelLogin)))
-                            }
+            val onPlaybackMessage: (JSONObject) -> Unit = { message ->
+                val playbackMessage = PubSubUtils.parsePlaybackMessage(message)
+                if (playbackMessage != null) {
+                    playbackMessage.live?.let {
+                        if (it) {
+                            onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_live).format(channelLogin)))
+                        } else {
+                            onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.stream_offline).format(channelLogin)))
                         }
-                        _playbackMessage.value = playbackMessage
                     }
-                },
-                onStreamInfo = { message ->
-                    _streamInfo.value = PubSubUtils.parseStreamInfo(message)
-                },
-                onRewardMessage = { message ->
-                    val chatMessage = PubSubUtils.parseRewardMessage(message)
-                    if (!chatMessage.message.isNullOrBlank()) {
-                        onRewardMessage(chatMessage, useCronet, isLoggedIn, accountId, channelId)
-                    } else {
-                        onChatMessage(chatMessage, useCronet, isLoggedIn, accountId, channelId)
-                    }
-                },
-                onPointsEarned = { message ->
-                    val points = PubSubUtils.parsePointsEarned(message)
-                    onMessage(ChatMessage(
-                        systemMsg = ContextCompat.getString(applicationContext, R.string.points_earned).format(points.pointsGained),
-                        timestamp = points.timestamp,
-                        fullMsg = points.fullMsg
-                    ))
-                },
-                onClaimAvailable = {
-                    if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                        viewModelScope.launch {
-                            try {
-                                val response = graphQLRepository.loadChannelPointsContext(useCronet, gqlHeaders, channelLogin)
+                    _playbackMessage.value = playbackMessage
+                }
+            }
+            val onStreamInfo: (JSONObject) -> Unit = { message ->
+                _streamInfo.value = PubSubUtils.parseStreamInfo(message)
+            }
+            val onRewardMessage: (JSONObject) -> Unit = { message ->
+                val chatMessage = PubSubUtils.parseRewardMessage(message)
+                if (!chatMessage.message.isNullOrBlank()) {
+                    onRewardMessage(chatMessage, useCronet, isLoggedIn, accountId, channelId)
+                } else {
+                    onChatMessage(chatMessage, useCronet, isLoggedIn, accountId, channelId)
+                }
+            }
+            val onPointsEarned: (JSONObject) -> Unit = { message ->
+                val points = PubSubUtils.parsePointsEarned(message)
+                onMessage(ChatMessage(
+                    systemMsg = ContextCompat.getString(applicationContext, R.string.points_earned).format(points.pointsGained),
+                    timestamp = points.timestamp,
+                    fullMsg = points.fullMsg
+                ))
+            }
+            val onClaimAvailable: () -> Unit = {
+                if (!gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                    viewModelScope.launch {
+                        try {
+                            val response = graphQLRepository.loadChannelPointsContext(useCronet, gqlHeaders, channelLogin)
+                            if (enableIntegrity && integrity.value == null) {
+                                response.errors?.find { it.message == "failed integrity check" }?.let {
+                                    integrity.value = "refresh"
+                                    return@launch
+                                }
+                            }
+                            response.data?.community?.channel?.self?.communityPoints?.availableClaim?.id?.let { claimId ->
+                                val response = graphQLRepository.loadClaimPoints(useCronet, gqlHeaders, channelId, claimId)
                                 if (enableIntegrity && integrity.value == null) {
                                     response.errors?.find { it.message == "failed integrity check" }?.let {
                                         integrity.value = "refresh"
                                         return@launch
                                     }
                                 }
-                                response.data?.community?.channel?.self?.communityPoints?.availableClaim?.id?.let { claimId ->
-                                    val response = graphQLRepository.loadClaimPoints(useCronet, gqlHeaders, channelId, claimId)
+                            }
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
+            }
+            val onMinuteWatched: () -> Unit = {
+                if (!streamId.isNullOrBlank()) {
+                    viewModelScope.launch {
+                        try {
+                            playerRepository.sendMinuteWatched(useCronet, accountId, streamId, channelId, channelLogin)
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
+            }
+            val onRaidUpdate: (JSONObject, Boolean) -> Unit = { message, openStream ->
+                PubSubUtils.onRaidUpdate(message, openStream)?.let {
+                    if (it.raidId != usedRaidId) {
+                        usedRaidId = it.raidId
+                        raidClosed = false
+                        if (collectPoints && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                            viewModelScope.launch {
+                                try {
+                                    val response = graphQLRepository.loadJoinRaid(useCronet, gqlHeaders, it.raidId)
                                     if (enableIntegrity && integrity.value == null) {
                                         response.errors?.find { it.message == "failed integrity check" }?.let {
                                             integrity.value = "refresh"
                                             return@launch
                                         }
                                     }
-                                }
-                            } catch (e: Exception) {
+                                } catch (e: Exception) {
 
-                            }
-                        }
-                    }
-                },
-                onMinuteWatched = {
-                    if (!streamId.isNullOrBlank()) {
-                        viewModelScope.launch {
-                            try {
-                                playerRepository.sendMinuteWatched(useCronet, accountId, streamId, channelId, channelLogin)
-                            } catch (e: Exception) {
-
-                            }
-                        }
-                    }
-                },
-                onRaidUpdate = { message, openStream ->
-                    PubSubUtils.onRaidUpdate(message, openStream)?.let {
-                        if (it.raidId != usedRaidId) {
-                            usedRaidId = it.raidId
-                            raidClosed = false
-                            if (collectPoints && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                                viewModelScope.launch {
-                                    try {
-                                        val response = graphQLRepository.loadJoinRaid(useCronet, gqlHeaders, it.raidId)
-                                        if (enableIntegrity && integrity.value == null) {
-                                            response.errors?.find { it.message == "failed integrity check" }?.let {
-                                                integrity.value = "refresh"
-                                                return@launch
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-
-                                    }
                                 }
                             }
                         }
-                        raid.value = it
                     }
-                },
-                onPollUpdate = { message ->
-                    PubSubUtils.onPollUpdate(message)?.let {
-                        if (it.id != usedPollId) {
-                            usedPollId = it.id
-                            pollClosed = false
-                            pollTimeoutJob?.cancel()
-                            if (it.remainingMilliseconds != null) {
-                                val secondsLeft = it.remainingMilliseconds / 1000
-                                if (secondsLeft > 0) {
-                                    pollSecondsLeft.value = secondsLeft
-                                    pollTimer?.cancel()
-                                    pollTimer = Timer().apply {
-                                        scheduleAtFixedRate(1000, 1000) {
-                                            val seconds = pollSecondsLeft.value
-                                            if (seconds != null) {
-                                                pollSecondsLeft.value = seconds - 1
-                                                if (seconds <= 1) {
-                                                    this@apply.cancel()
-                                                }
-                                            } else {
+                    raid.value = it
+                }
+            }
+            val onPollUpdate: (JSONObject) -> Unit = { message ->
+                PubSubUtils.onPollUpdate(message)?.let {
+                    if (it.id != usedPollId) {
+                        usedPollId = it.id
+                        pollClosed = false
+                        pollTimeoutJob?.cancel()
+                        if (it.remainingMilliseconds != null) {
+                            val secondsLeft = it.remainingMilliseconds / 1000
+                            if (secondsLeft > 0) {
+                                pollSecondsLeft.value = secondsLeft
+                                pollTimer?.cancel()
+                                pollTimer = Timer().apply {
+                                    scheduleAtFixedRate(1000, 1000) {
+                                        val seconds = pollSecondsLeft.value
+                                        if (seconds != null) {
+                                            pollSecondsLeft.value = seconds - 1
+                                            if (seconds <= 1) {
                                                 this@apply.cancel()
                                             }
+                                        } else {
+                                            this@apply.cancel()
                                         }
                                     }
                                 }
                             }
-                        } else if (it.status == "COMPLETED" || it.status == "TERMINATED") {
-                            pollClosed = false
                         }
-                        poll.value = it
+                    } else if (it.status == "COMPLETED" || it.status == "TERMINATED") {
+                        pollClosed = false
                     }
-                },
-                onPredictionUpdate = { message ->
-                    PubSubUtils.onPredictionUpdate(message)?.let {
-                        if (it.id != usedPredictionId) {
-                            usedPredictionId = it.id
-                            predictionClosed = false
-                            predictionTimeoutJob?.cancel()
-                            if (it.createdAt != null && it.predictionWindowSeconds != null) {
-                                val secondsLeft = ((((it.createdAt + (it.predictionWindowSeconds * 1000)) - System.currentTimeMillis())) / 1000).toInt()
-                                if (secondsLeft > 0) {
-                                    predictionSecondsLeft.value = secondsLeft
-                                    predictionTimer?.cancel()
-                                    predictionTimer = Timer().apply {
-                                        scheduleAtFixedRate(1000, 1000) {
-                                            val seconds = predictionSecondsLeft.value
-                                            if (seconds != null) {
-                                                predictionSecondsLeft.value = seconds - 1
-                                                if (seconds <= 1) {
-                                                    this@apply.cancel()
-                                                }
-                                            } else {
+                    poll.value = it
+                }
+            }
+            val onPredictionUpdate: (JSONObject) -> Unit = { message ->
+                PubSubUtils.onPredictionUpdate(message)?.let {
+                    if (it.id != usedPredictionId) {
+                        usedPredictionId = it.id
+                        predictionClosed = false
+                        predictionTimeoutJob?.cancel()
+                        if (it.createdAt != null && it.predictionWindowSeconds != null) {
+                            val secondsLeft = ((((it.createdAt + (it.predictionWindowSeconds * 1000)) - System.currentTimeMillis())) / 1000).toInt()
+                            if (secondsLeft > 0) {
+                                predictionSecondsLeft.value = secondsLeft
+                                predictionTimer?.cancel()
+                                predictionTimer = Timer().apply {
+                                    scheduleAtFixedRate(1000, 1000) {
+                                        val seconds = predictionSecondsLeft.value
+                                        if (seconds != null) {
+                                            predictionSecondsLeft.value = seconds - 1
+                                            if (seconds <= 1) {
                                                 this@apply.cancel()
                                             }
+                                        } else {
+                                            this@apply.cancel()
                                         }
                                     }
                                 }
                             }
-                        } else if (it.status == "LOCKED" || it.status == "CANCEL_PENDING" || it.status == "RESOLVE_PENDING") {
-                            predictionClosed = false
                         }
-                        prediction.value = it
+                    } else if (it.status == "LOCKED" || it.status == "CANCEL_PENDING" || it.status == "RESOLVE_PENDING") {
+                        predictionClosed = false
                     }
-                },
-            ).apply { connect() }
+                    prediction.value = it
+                }
+            }
+            val useNewPubSub = applicationContext.prefs().getBoolean(C.DEBUG_USE_NEW_PUBSUB, true)
+            val webGQLToken = applicationContext.tokenPrefs().getString(C.GQL_TOKEN_WEB, null)
+            if (useNewPubSub && (accountId.isNullOrBlank() || !collectPoints || !webGQLToken.isNullOrBlank() || enableIntegrity)) {
+                hermesWebSocket = HermesWebSocket(
+                    channelId = channelId,
+                    userId = accountId,
+                    gqlToken = if (enableIntegrity) {
+                        gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+                    } else {
+                        webGQLToken
+                    },
+                    collectPoints = collectPoints,
+                    notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
+                    showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
+                    showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
+                    showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
+                    client = okHttpClient,
+                    onPlaybackMessage = onPlaybackMessage,
+                    onStreamInfo = onStreamInfo,
+                    onRewardMessage = onRewardMessage,
+                    onPointsEarned = onPointsEarned,
+                    onClaimAvailable = onClaimAvailable,
+                    onMinuteWatched = onMinuteWatched,
+                    onRaidUpdate = onRaidUpdate,
+                    onPollUpdate = onPollUpdate,
+                    onPredictionUpdate = onPredictionUpdate,
+                ).apply { connect() }
+            } else {
+                pubSub = PubSubWebSocket(
+                    channelId = channelId,
+                    userId = accountId,
+                    gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth "),
+                    collectPoints = collectPoints,
+                    notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
+                    showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
+                    showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
+                    showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
+                    client = okHttpClient,
+                    onPlaybackMessage = onPlaybackMessage,
+                    onStreamInfo = onStreamInfo,
+                    onRewardMessage = onRewardMessage,
+                    onPointsEarned = onPointsEarned,
+                    onClaimAvailable = onClaimAvailable,
+                    onMinuteWatched = onMinuteWatched,
+                    onRaidUpdate = onRaidUpdate,
+                    onPollUpdate = onPollUpdate,
+                    onPredictionUpdate = onPredictionUpdate,
+                ).apply { connect() }
+            }
         }
         val showNamePaints = applicationContext.prefs().getBoolean(C.CHAT_SHOW_PAINTS, true)
         val showStvBadges = applicationContext.prefs().getBoolean(C.CHAT_SHOW_STV_BADGES, true)
@@ -1003,7 +1044,7 @@ class ChatViewModel @Inject constructor(
                 it.disconnect()
             }
         } ?: chatWriteWebSocket?.disconnect()
-        pubSub?.disconnect()
+        hermesWebSocket?.disconnect() ?: pubSub?.disconnect()
         stvEventApi?.disconnect()
     }
 
