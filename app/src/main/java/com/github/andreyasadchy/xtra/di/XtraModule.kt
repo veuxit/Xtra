@@ -40,6 +40,7 @@ class XtraModule {
                 addQuicHint("gql.twitch.tv", 443, 443)
                 addQuicHint("www.twitch.tv", 443, 443)
                 addQuicHint("7tv.io", 443, 443)
+                addQuicHint("cdn.7tv.app", 443, 443)
                 addQuicHint("api.betterttv.net", 443, 443)
             }.build().also {
                 if (BuildConfig.DEBUG) {
@@ -75,11 +76,12 @@ class XtraModule {
             }
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) {
                 try {
-                    val certificate = application.resources.openRawResource(R.raw.isrgrootx1).bufferedReader().use {
-                        it.readText()
-                    }.decodeCertificatePem()
                     val certificates = HandshakeCertificates.Builder()
-                        .addTrustedCertificate(certificate)
+                        .addTrustedCertificate(
+                            application.resources.openRawResource(R.raw.isrgrootx1).bufferedReader().use {
+                                it.readText()
+                            }.decodeCertificatePem()
+                        )
                         .addPlatformTrustedCertificates()
                         .build()
                     sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
