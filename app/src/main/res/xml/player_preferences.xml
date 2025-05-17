@@ -47,6 +47,13 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="player_rounded_corner_padding"
+        android:title="@string/avoid_rounded_corners"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="player_use_videopositions"
         android:title="@string/save_video_positions"

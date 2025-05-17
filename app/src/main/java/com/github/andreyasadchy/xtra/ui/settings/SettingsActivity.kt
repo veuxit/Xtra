@@ -558,6 +558,9 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.player_preferences, rootKey)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                findPreference<SwitchPreferenceCompat>(C.PLAYER_ROUNDED_CORNER_PADDING)?.isVisible = false
+            }
             findPreference<Preference>("delete_video_positions")?.setOnPreferenceClickListener {
                 requireActivity().getAlertDialogBuilder()
                     .setMessage(getString(R.string.delete_video_positions_message))
