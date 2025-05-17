@@ -26,7 +26,6 @@ import com.github.andreyasadchy.xtra.util.coil.internal.CacheControl
 import com.github.andreyasadchy.xtra.util.coil.internal.toNonNegativeInt
 import okhttp3.internal.http.toHttpDateOrNull
 import java.util.Date
-import kotlin.jvm.JvmOverloads
 
 /**
  * A [CacheStrategy] that uses the 'Cache-Control' response header and associated headers to
@@ -76,18 +75,31 @@ class CacheControlCacheStrategy @JvmOverloads constructor(
         private val requestCaching = CacheControl.parse(networkRequest.headers)
 
         /** The server's time when the cached response was served, if known. */
-        private var servedDate: Date? = null
         private var servedDateString: String? = null
+        private var servedDate: Date? = null
+            get() = field ?: servedDateString?.let { servedDateString ->
+                servedDateString.toHttpDateOrNull()
+                    .also { field = it }
+            }
 
         /** The last modified date of the cached response, if known. */
-        private var lastModified: Date? = null
         private var lastModifiedString: String? = null
+        private var lastModified: Date? = null
+            get() = field ?: lastModifiedString?.let { lastModifiedString ->
+                lastModifiedString.toHttpDateOrNull()
+                    .also { field = it }
+            }
 
         /**
          * The expiration date of the cached response, if known. If both this field and the max age
          * are set, the max age is preferred.
          */
+        private var expiresString: String? = null
         private var expires: Date? = null
+            get() = field ?: expiresString?.let { expiresString ->
+                expiresString.toHttpDateOrNull()
+                    .also { field = it }
+            }
 
         /**
          * The timestamp when the cached HTTP request was first initiated.
@@ -113,14 +125,12 @@ class CacheControlCacheStrategy @JvmOverloads constructor(
                 val value = values.firstOrNull() ?: continue
                 when {
                     name.equals("Date", ignoreCase = true) -> {
-                        servedDate = value.toHttpDateOrNull()
                         servedDateString = value
                     }
                     name.equals("Expires", ignoreCase = true) -> {
-                        expires = value.toHttpDateOrNull()
+                        expiresString = value
                     }
                     name.equals("Last-Modified", ignoreCase = true) -> {
-                        lastModified = value.toHttpDateOrNull()
                         lastModifiedString = value
                     }
                     name.equals("ETag", ignoreCase = true) -> {

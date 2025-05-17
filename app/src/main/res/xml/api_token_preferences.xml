@@ -71,6 +71,12 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <EditTextPreference
+        android:key="gql_token_web"
+        android:title="@string/api_web_gql_token"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="validate_tokens"

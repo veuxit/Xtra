@@ -36,6 +36,13 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="debug_use_new_pubsub"
+        android:title="@string/use_new_pubsub"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="debug_eventsub_chat"
         android:title="@string/use_eventsub_chat"
