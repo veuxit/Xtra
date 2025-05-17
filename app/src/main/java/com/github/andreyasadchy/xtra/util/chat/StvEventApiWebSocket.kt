@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.graphics.Color
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.StvBadge
@@ -27,7 +28,10 @@ class StvEventApiWebSocket(
 
     fun connect() {
         socket = client.newWebSocket(
-            Request.Builder().url("wss://events.7tv.io/v3").build(),
+            Request.Builder().apply {
+                url("wss://events.7tv.io/v3")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build(),
             STVEventApiWebSocketListener()
         )
     }
