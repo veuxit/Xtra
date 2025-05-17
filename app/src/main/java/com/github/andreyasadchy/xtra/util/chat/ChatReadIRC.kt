@@ -77,7 +77,11 @@ class ChatReadIRC(
     private fun connect() {
         Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketIn = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            socketIn = if (useSSL) {
+                SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697)
+            } else {
+                Socket("irc.twitch.tv", 6667)
+            }.apply {
                 readerIn = BufferedReader(InputStreamReader(getInputStream()))
                 writerIn = BufferedWriter(OutputStreamWriter(getOutputStream()))
             }

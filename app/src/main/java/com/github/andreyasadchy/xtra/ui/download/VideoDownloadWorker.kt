@@ -83,8 +83,9 @@ class VideoDownloadWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
 ) : CoroutineWorker(context, parameters) {
 
-    @set:Inject
-    private var cronetEngine: CronetEngine? = null
+    @Inject
+    @JvmField
+    var cronetEngine: CronetEngine? = null
 
     @Inject
     lateinit var cronetExecutor: ExecutorService

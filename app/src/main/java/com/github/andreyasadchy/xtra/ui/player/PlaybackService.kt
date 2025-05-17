@@ -69,8 +69,9 @@ import kotlin.concurrent.schedule
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 
-    @set:Inject
-    private var cronetEngine: CronetEngine? = null
+    @Inject
+    @JvmField
+    var cronetEngine: CronetEngine? = null
 
     @Inject
     lateinit var cronetExecutor: ExecutorService
