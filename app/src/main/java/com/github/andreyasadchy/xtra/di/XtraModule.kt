@@ -12,6 +12,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import okhttp3.TlsVersion
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
@@ -19,10 +20,13 @@ import org.chromium.net.CronetEngine
 import org.chromium.net.CronetProvider
 import org.chromium.net.QuicOptions
 import org.chromium.net.RequestFinishedInfo
+import org.conscrypt.Conscrypt
+import java.security.Security
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import javax.net.ssl.SSLContext
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -74,8 +78,15 @@ class XtraModule {
             if (BuildConfig.DEBUG) {
                 addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
             }
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) {
-                try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val conscrypt = Conscrypt.newProvider()
+                Security.insertProviderAt(conscrypt, 1)
+                val trustManager = Conscrypt.getDefaultX509TrustManager()
+                val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_3.javaName, conscrypt)
+                sslContext.init(null, arrayOf(trustManager), null)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    sslSocketFactory(sslContext.socketFactory, trustManager)
+                } else {
                     val certificates = HandshakeCertificates.Builder()
                         .addTrustedCertificate(
                             application.resources.openRawResource(R.raw.isrgrootx1).bufferedReader().use {
@@ -85,8 +96,6 @@ class XtraModule {
                         .addPlatformTrustedCertificates()
                         .build()
                     sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
-                } catch (e: Exception) {
-
                 }
             }
             connectTimeout(5, TimeUnit.MINUTES)
