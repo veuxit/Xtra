@@ -21,6 +21,13 @@ import com.github.andreyasadchy.xtra.R
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.chromium.net.CronetException
+import org.chromium.net.UrlResponseInfo
+import org.chromium.net.apihelpers.ByteArrayCronetCallback
+import org.chromium.net.apihelpers.CronetRequestCompletionListener
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 val Context.isNetworkAvailable
     get() = getConnectivityManager(this).let { connectivityManager ->
@@ -165,4 +172,26 @@ fun Context.toast(text: CharSequence) {
 
 fun Context.shortToast(text: CharSequence) {
     Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+}
+
+fun getByteArrayCronetCallback(continuation: Continuation<Pair<UrlResponseInfo, ByteArray>>): ByteArrayCronetCallback {
+    return object : ByteArrayCronetCallback() {
+        override fun shouldFollowRedirect(info: UrlResponseInfo?, newLocationUrl: String?): Boolean {
+            return true
+        }
+    }.also {
+        it.addCompletionListener(object : CronetRequestCompletionListener<ByteArray> {
+            override fun onFailed(info: UrlResponseInfo?, exception: CronetException) {
+                continuation.resumeWithException(exception)
+            }
+
+            override fun onCanceled(info: UrlResponseInfo?) {
+                continuation.resumeWithException(Exception())
+            }
+
+            override fun onSucceeded(info: UrlResponseInfo, body: ByteArray) {
+                continuation.resume(Pair(info, body))
+            }
+        })
+    }
 }
