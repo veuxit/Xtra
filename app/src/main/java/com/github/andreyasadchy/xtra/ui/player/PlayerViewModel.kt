@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.player
 
 import android.net.Uri
+import android.os.Build
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,6 +23,7 @@ import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +40,7 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import org.chromium.net.CronetEngine
+import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
@@ -46,6 +49,7 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -99,11 +103,20 @@ class PlayerViewModel @Inject constructor(
     suspend fun checkPlaylist(useCronet: Boolean, url: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val playlist = if (useCronet && cronetEngine != null) {
-                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                val response = request.future.get().responseBody as ByteArray
-                response.inputStream().use {
-                    PlaylistUtils.parseMediaPlaylist(it)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                    cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                    val response = request.future.get().responseBody as ByteArray
+                    response.inputStream().use {
+                        PlaylistUtils.parseMediaPlaylist(it)
+                    }
+                } else {
+                    val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                        cronetEngine.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                    }
+                    response.second.inputStream().use {
+                        PlaylistUtils.parseMediaPlaylist(it)
+                    }
                 }
             } else {
                 okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
@@ -340,12 +353,23 @@ class PlayerViewModel @Inject constructor(
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
                                 if (useCronet && cronetEngine != null) {
-                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
-                                    val response = request.future.get()
-                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
-                                        FileOutputStream(path).use {
-                                            it.write(response.responseBody as ByteArray)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                        cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                        val response = request.future.get()
+                                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.responseBody as ByteArray)
+                                            }
+                                        }
+                                    } else {
+                                        val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                            cronetEngine.newUrlRequestBuilder(it, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                        }
+                                        if (response.first.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.second)
+                                            }
                                         }
                                     }
                                 } else {
@@ -371,12 +395,23 @@ class PlayerViewModel @Inject constructor(
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
                                 if (useCronet && cronetEngine != null) {
-                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
-                                    val response = request.future.get()
-                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
-                                        FileOutputStream(path).use {
-                                            it.write(response.responseBody as ByteArray)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                        cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                        val response = request.future.get()
+                                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.responseBody as ByteArray)
+                                            }
+                                        }
+                                    } else {
+                                        val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                            cronetEngine.newUrlRequestBuilder(it, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                        }
+                                        if (response.first.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.second)
+                                            }
                                         }
                                     }
                                 } else {
