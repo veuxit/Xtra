@@ -398,7 +398,7 @@ class StreamDownloadWorker @AssistedInject constructor(
             }
             fileUri
         } else {
-            val fileName = "${offlineVideo.channelLogin ?: ""}${offlineVideo.quality ?: ""}${downloadDate}.${firstUrls.first().substringAfterLast(".")}"
+            val fileName = "${offlineVideo.channelLogin ?: ""}${offlineVideo.quality ?: ""}${downloadDate}.${firstUrls.first().substringAfterLast(".").substringBefore("?")}"
             val fileUri = if (isShared) {
                 val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
                 (directory.findFile(fileName) ?: directory.createFile("", fileName))!!.uri.toString()
