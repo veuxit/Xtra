@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.channel
 
+import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,7 @@ import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.body
+import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,12 +30,14 @@ import okhttp3.Request
 import okio.buffer
 import okio.sink
 import org.chromium.net.CronetEngine
+import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class ChannelPagerViewModel @Inject constructor(
@@ -385,12 +389,23 @@ class ChannelPagerViewModel @Inject constructor(
                         viewModelScope.launch(Dispatchers.IO) {
                             try {
                                 if (useCronet && cronetEngine != null) {
-                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                    cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
-                                    val response = request.future.get()
-                                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
-                                        FileOutputStream(path).use {
-                                            it.write(response.responseBody as ByteArray)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                        cronetEngine.newUrlRequestBuilder(it, request.callback, cronetExecutor).build().start()
+                                        val response = request.future.get()
+                                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.responseBody as ByteArray)
+                                            }
+                                        }
+                                    } else {
+                                        val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                            cronetEngine.newUrlRequestBuilder(it, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                        }
+                                        if (response.first.httpStatusCode in 200..299) {
+                                            FileOutputStream(path).use {
+                                                it.write(response.second)
+                                            }
                                         }
                                     }
                                 } else {

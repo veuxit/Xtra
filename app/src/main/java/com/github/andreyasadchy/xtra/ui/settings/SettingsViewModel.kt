@@ -30,6 +30,7 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.body
+import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,7 @@ import okio.buffer
 import okio.sink
 import okio.source
 import org.chromium.net.CronetEngine
+import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
@@ -57,6 +59,7 @@ import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.max
 import kotlin.system.exitProcess
 
@@ -263,10 +266,17 @@ class SettingsViewModel @Inject constructor(
             updateUrl.emit(
                 try {
                     val response = if (useCronet && cronetEngine != null) {
-                        val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-                        cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                        val response = request.future.get().responseBody as String
-                        json.decodeFromString<JsonObject>(response)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                            cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                            val response = request.future.get().responseBody as String
+                            json.decodeFromString<JsonObject>(response)
+                        } else {
+                            val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                cronetEngine.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                            }
+                            json.decodeFromString<JsonObject>(String(response.second))
+                        }
                     } else {
                         okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                             json.decodeFromString<JsonObject>(response.body.string())
@@ -292,12 +302,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val response = if (useCronet && cronetEngine != null) {
-                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                    cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                    val response = request.future.get()
-                    if (response.urlResponseInfo.httpStatusCode in 200..299) {
-                        response.responseBody as ByteArray
-                    } else null
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                        cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                        val response = request.future.get()
+                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                            response.responseBody as ByteArray
+                        } else null
+                    } else {
+                        val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                            cronetEngine.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                        }
+                        if (response.first.httpStatusCode in 200..299) {
+                            response.second
+                        } else null
+                    }
                 } else {
                     okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                         if (response.isSuccessful) {

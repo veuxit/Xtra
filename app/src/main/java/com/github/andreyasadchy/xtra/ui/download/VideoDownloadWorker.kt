@@ -37,6 +37,7 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.body
+import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
 import com.github.andreyasadchy.xtra.util.prefs
@@ -68,6 +69,7 @@ import okio.appendingSink
 import okio.buffer
 import okio.sink
 import org.chromium.net.CronetEngine
+import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
@@ -77,6 +79,7 @@ import java.io.FileOutputStream
 import java.io.StringReader
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
 
 @HiltWorker
 class VideoDownloadWorker @AssistedInject constructor(
@@ -121,11 +124,20 @@ class VideoDownloadWorker @AssistedInject constructor(
             val to = offlineVideo.toTime!!
             val isShared = path.toUri().scheme == ContentResolver.SCHEME_CONTENT
             val playlist = if (useCronet && cronetEngine != null) {
-                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
-                val response = request.future.get().responseBody as ByteArray
-                response.inputStream().use {
-                    PlaylistUtils.parseMediaPlaylist(it)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                    cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
+                    val response = request.future.get().responseBody as ByteArray
+                    response.inputStream().use {
+                        PlaylistUtils.parseMediaPlaylist(it)
+                    }
+                } else {
+                    val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                        cronetEngine!!.newUrlRequestBuilder(sourceUrl, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                    }
+                    response.second.inputStream().use {
+                        PlaylistUtils.parseMediaPlaylist(it)
+                    }
                 }
             } else {
                 okHttpClient.newCall(Request.Builder().url(sourceUrl).build()).execute().use { response ->
@@ -208,9 +220,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                     val startPosition = relativeStartTimes[fromIndex]
                     val initSegmentBytes = if (playlist.initSegmentUri != null) {
                         if (useCronet && cronetEngine != null) {
-                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                            cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
-                            val response = request.future.get().responseBody as ByteArray
+                            val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
+                                request.future.get().responseBody as ByteArray
+                            } else {
+                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                    cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                }
+                                response.second
+                            }
                             if (isShared) {
                                 context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.use {
                                     it.write(response)
@@ -248,9 +267,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                         launch {
                             requestSemaphore.withPermit {
                                 if (useCronet && cronetEngine != null) {
-                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                    cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
-                                    val response = request.future.get().responseBody as ByteArray
+                                    val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                        cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
+                                        request.future.get().responseBody as ByteArray
+                                    } else {
+                                        val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                            cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                        }
+                                        response.second
+                                    }
                                     val mutex = Mutex()
                                     val id = segments.indexOf(it)
                                     if (count.value != id) {
@@ -331,9 +357,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
                             if (useCronet && cronetEngine != null) {
-                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
-                                val response = request.future.get().responseBody as ByteArray
+                                val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
+                                    request.future.get().responseBody as ByteArray
+                                } else {
+                                    val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                        cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                    }
+                                    response.second
+                                }
                                 val file = videoDirectory.findFile(playlist.initSegmentUri) ?: videoDirectory.createFile("", playlist.initSegmentUri)!!
                                 context.contentResolver.openOutputStream(file.uri)!!.use {
                                     it.write(response)
@@ -369,9 +402,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                 requestSemaphore.withPermit {
                                     if (videoDirectory.findFile(it.uri) == null || !downloadedTracks.contains(it.uri)) {
                                         if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
-                                            val response = request.future.get().responseBody as ByteArray
+                                            val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                             val file = videoDirectory.findFile(it.uri) ?: videoDirectory.createFile("", it.uri)!!
                                             context.contentResolver.openOutputStream(file.uri)!!.use {
                                                 it.write(response)
@@ -414,9 +454,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
                             if (useCronet && cronetEngine != null) {
-                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
-                                val response = request.future.get().responseBody as ByteArray
+                                val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                    cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, request.callback, cronetExecutor).build().start()
+                                    request.future.get().responseBody as ByteArray
+                                } else {
+                                    val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                        cronetEngine!!.newUrlRequestBuilder(urlPath + playlist.initSegmentUri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                    }
+                                    response.second
+                                }
                                 FileOutputStream(directory + playlist.initSegmentUri).use {
                                     it.write(response)
                                 }
@@ -448,9 +495,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                 requestSemaphore.withPermit {
                                     if (!File(directory + it.uri).exists() || !downloadedTracks.contains(it.uri)) {
                                         if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
-                                            val response = request.future.get().responseBody as ByteArray
+                                            val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(urlPath + it.uri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                             FileOutputStream(directory + it.uri).use {
                                                 it.write(response)
                                             }
@@ -513,9 +567,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                 launch {
                     if (offlineVideo.progress < offlineVideo.maxProgress) {
                         if (useCronet && cronetEngine != null) {
-                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                            cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
-                            val response = request.future.get().responseBody as ByteArray
+                            val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine!!.newUrlRequestBuilder(sourceUrl, request.callback, cronetExecutor).build().start()
+                                request.future.get().responseBody as ByteArray
+                            } else {
+                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                    cronetEngine!!.newUrlRequestBuilder(sourceUrl, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                }
+                                response.second
+                            }
                             if (isShared) {
                                 context.contentResolver.openOutputStream(videoFileUri.toUri())!!.use {
                                     it.write(response)
@@ -924,9 +985,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             else -> emote.url1x
                                         }!!
                                         val response = if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                                            request.future.get().responseBody as ByteArray
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                         } else {
                                             okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                                                 response.body.source().readByteArray()
@@ -954,9 +1022,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             else -> badge.url1x
                                         }!!
                                         val response = if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                                            request.future.get().responseBody as ByteArray
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                         } else {
                                             okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                                                 response.body.source().readByteArray()
@@ -985,9 +1060,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             else -> cheerEmote.url1x
                                         }!!
                                         val response = if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                                            request.future.get().responseBody as ByteArray
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                         } else {
                                             okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                                                 response.body.source().readByteArray()
@@ -1017,9 +1099,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             else -> emote.url1x
                                         }!!
                                         val response = if (useCronet && cronetEngine != null) {
-                                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                            cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                                            request.future.get().responseBody as ByteArray
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                cronetEngine!!.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                                                request.future.get().responseBody as ByteArray
+                                            } else {
+                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                    cronetEngine!!.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                }
+                                                response.second
+                                            }
                                         } else {
                                             okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                                                 response.body.source().readByteArray()
