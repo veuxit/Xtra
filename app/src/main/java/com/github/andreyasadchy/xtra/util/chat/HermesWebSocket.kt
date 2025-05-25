@@ -222,6 +222,12 @@ class HermesWebSocket(
                         pongTimer?.cancel()
                         startPongTimer()
                     }
+                    "reconnect" -> {
+                        //val reconnect = json.optJSONObject("reconnect")
+                        //val reconnectUrl = if (reconnect?.isNull("url") == false) reconnect.optString("url").takeIf { it.isNotBlank() } else null
+                        pongTimer?.cancel()
+                        reconnect()
+                    }
                     "welcome" -> {
                         val welcome = json.optJSONObject("welcome")
                         if (welcome?.isNull("keepaliveSec") == false) {
