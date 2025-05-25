@@ -6,8 +6,6 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.multidex.MultiDex
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
-import org.conscrypt.Conscrypt
-import java.security.Security
 import javax.inject.Inject
 
 
@@ -20,12 +18,6 @@ class XtraApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        try {
-            Security.insertProviderAt(Conscrypt.newProvider(), 1)
-        } catch (e: Exception) {
-
-        }
-
         INSTANCE = this
     }
 

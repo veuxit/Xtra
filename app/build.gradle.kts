@@ -30,7 +30,7 @@ android {
         minSdk = 16
         targetSdk = 35
         versionCode = 121
-        versionName = "2.44.2"
+        versionName = "2.44.3"
     }
 
     buildTypes {
@@ -95,7 +95,6 @@ android {
 }
 
 dependencies {
-    implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation("com.google.guava:guava:33.2.1-android")
@@ -129,6 +128,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.tls)
+    implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)
     implementation(libs.okio)
