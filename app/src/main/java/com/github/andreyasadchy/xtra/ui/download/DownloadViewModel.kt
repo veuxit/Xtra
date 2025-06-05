@@ -45,7 +45,12 @@ class DownloadViewModel @Inject constructor(
                         }
                     }
                 }
-                _qualities.value = map
+                _qualities.value = map.toSortedMap(
+                    compareByDescending<String> { it == "source" }
+                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it == "audio_only" }
+                )
             } else {
                 viewModelScope.launch {
                     val default = mutableMapOf("source" to "", "1080p60" to "", "1080p30" to "", "720p60" to "", "720p30" to "", "480p30" to "", "360p30" to "", "160p30" to "", "audio_only" to "")
@@ -73,7 +78,12 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         }
-                        _qualities.value = map
+                        _qualities.value = map.toSortedMap(
+                            compareByDescending<String> { it == "source" }
+                                .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it == "audio_only" }
+                        )
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check") {
                             if (integrity.value == null) {
@@ -95,7 +105,12 @@ class DownloadViewModel @Inject constructor(
                                     }
                                 }
                             }
-                            _qualities.value = map
+                            _qualities.value = map.toSortedMap(
+                                compareByDescending<String> { it == "source" }
+                                    .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                    .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                    .thenByDescending { it == "audio_only" }
+                            )
                         }
                     }
                 }
@@ -121,7 +136,12 @@ class DownloadViewModel @Inject constructor(
                         }
                     }
                 }
-                _qualities.value = map
+                _qualities.value = map.toSortedMap(
+                    compareByDescending<String> { it == "source" }
+                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it == "audio_only" }
+                )
             } else {
                 viewModelScope.launch {
                     try {
@@ -203,7 +223,12 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         }
-                        _qualities.value = map
+                        _qualities.value = map.toSortedMap(
+                            compareByDescending<String> { it == "source" }
+                                .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it == "audio_only" }
+                        )
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
                             integrity.value = "refresh"
@@ -236,7 +261,12 @@ class DownloadViewModel @Inject constructor(
                         }
                     }
                 }
-                _qualities.value = map
+                _qualities.value = map.toSortedMap(
+                    compareByDescending<String> { it == "source" }
+                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it == "audio_only" }
+                )
             } else {
                 viewModelScope.launch {
                     try {
@@ -263,7 +293,12 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         }
-                        _qualities.value = map
+                        _qualities.value = map.toSortedMap(
+                            compareByDescending<String> { it == "source" }
+                                .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                .thenByDescending { it == "audio_only" }
+                        )
                     } catch (e: Exception) {
                         if (e.message == "failed integrity check" && integrity.value == null) {
                             integrity.value = "refresh"
