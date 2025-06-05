@@ -624,7 +624,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     }
                                 }
                                 map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
-                                viewModel.qualities = map
+                                viewModel.qualities = map.toSortedMap(
+                                    compareByDescending<String> { it == "source" }
+                                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                        .thenByDescending { it == "audio_only" }
+                                )
                                 setQualityIndex()
                                 player?.let { player ->
                                     val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
@@ -1388,8 +1393,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
                                     if (!player.currentTracks.isEmpty) {
                                         player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO }?.let {
-                                            val trackIndex = index - 1
-                                            if (trackIndex <= it.length - 1) {
+                                            val trackIndex = viewModel.qualityOrder.indexOf(quality.key)
+                                            if (trackIndex != -1 && trackIndex <= it.length - 1) {
                                                 setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, trackIndex))
                                             }
                                         }
@@ -1561,7 +1566,15 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         if (videoType == STREAM) {
                                             map[CHAT_ONLY_QUALITY] = Pair(requireContext().getString(R.string.chat_only), null)
                                         }
-                                        viewModel.qualities = map
+                                        viewModel.qualityOrder = names.filter { !it.startsWith("audio", true) }
+                                        viewModel.qualities = map.toSortedMap(
+                                            compareByDescending<String> { it == "auto" }
+                                                .thenByDescending { it == "source" }
+                                                .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                                .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                                                .thenByDescending { it == "audio_only" }
+                                                .thenByDescending { it == "chat_only" }
+                                        )
                                         setQualityIndex()
                                         if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
                                             changeQuality(viewModel.qualityIndex)

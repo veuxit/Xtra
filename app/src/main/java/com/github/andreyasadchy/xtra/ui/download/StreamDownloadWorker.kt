@@ -165,7 +165,12 @@ class StreamDownloadWorker @AssistedInject constructor(
             if (!playlist.isNullOrBlank()) {
                 val names = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
                 val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
-                val map = names.zip(urls).toMap(mutableMapOf())
+                val map = names.zip(urls).toMap(mutableMapOf()).toSortedMap(
+                    compareByDescending<String> { it == "source" }
+                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
+                        .thenByDescending { it == "audio_only" }
+                )
                 if (map.isNotEmpty()) {
                     val mediaPlaylistUrl = if (!quality.isNullOrBlank()) {
                         quality.split("p").let { targetQuality ->
