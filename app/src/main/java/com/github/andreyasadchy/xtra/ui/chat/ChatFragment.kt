@@ -173,7 +173,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         badgeSize = requireContext().convertDpToPixels((requireContext().prefs().getString(C.CHAT_BADGE_SIZE, "18.5")?.toFloatOrNull() ?: 18.5f) * sizeModifier),
                         emoteQuality = requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
                         animateGifs = requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true),
-                        enableZeroWidth = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
+                        enableOverlayEmotes = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
                         channelId = channelId,
                     )
                     recyclerView.let {

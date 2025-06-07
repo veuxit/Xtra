@@ -2385,7 +2385,7 @@ class ChatViewModel @Inject constructor(
                                                             reader.beginObject().also { position += 1 }
                                                             var data: Pair<Long, Int>? = null
                                                             var name: String? = null
-                                                            var isZeroWidth = false
+                                                            var isOverlayEmote = false
                                                             while (reader.hasNext()) {
                                                                 when (reader.nextName().also { position += it.length + 3 }) {
                                                                     "data" -> {
@@ -2395,7 +2395,7 @@ class ChatViewModel @Inject constructor(
                                                                         position += length + 1
                                                                     }
                                                                     "name" -> name = reader.nextString().also { position += it.length + 2 }
-                                                                    "isZeroWidth" -> isZeroWidth = reader.nextBoolean().also { position += it.toString().length }
+                                                                    "isZeroWidth" -> isOverlayEmote = reader.nextBoolean().also { position += it.toString().length }
                                                                     else -> position += skipJsonValue(reader)
                                                                 }
                                                                 if (reader.peek() != JsonToken.END_OBJECT) {
@@ -2406,7 +2406,7 @@ class ChatViewModel @Inject constructor(
                                                                 emotes.add(Emote(
                                                                     name = name,
                                                                     localData = data,
-                                                                    isZeroWidth = isZeroWidth
+                                                                    isOverlayEmote = isOverlayEmote
                                                                 ))
                                                             }
                                                             reader.endObject().also { position += 1 }

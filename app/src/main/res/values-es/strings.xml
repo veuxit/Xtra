@@ -136,7 +136,6 @@
     <string name="show_scrolltop">Mostrar el botón de desplazamiento hacia arriba</string>
     <string name="bold_usernames">Nombres de usuario en negritas</string>
     <string name="randomcolor">Color aleatorio para usuarios sin color</string>
-    <string name="zerowidth">Emotes sin ancho</string>
     <string name="message_limit">Límite de mensajes</string>
     <string name="player_defaultquality">Calidad por defecto del reproductor</string>
     <string name="player_doubletap">Doble toque para alternar el chat</string>
@@ -689,4 +688,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>
