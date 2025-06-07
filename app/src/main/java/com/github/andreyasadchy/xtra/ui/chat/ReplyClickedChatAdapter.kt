@@ -83,7 +83,7 @@ class ReplyClickedChatAdapter(
 
     val threadParentId = selectedMessage?.reply?.threadParentId
     var messages: MutableList<ChatMessage>? =
-        messages?.filter { it.reply?.threadParentId == threadParentId || it.id == threadParentId }?.toMutableList()
+        messages?.filter { (it.reply?.threadParentId == threadParentId || it.id == threadParentId) && !it.isReply }?.toMutableList()
             ?: selectedMessage?.let { mutableListOf(it) }
         set(value) {
             val oldSize = field?.size ?: 0
@@ -108,8 +108,7 @@ class ReplyClickedChatAdapter(
         val chatMessage = messages?.get(position) ?: return
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
-            rewardChatMsg, false, replyMessage, null,
-            { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
+            rewardChatMsg, replyMessage, { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers,
             showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes,
             loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes,

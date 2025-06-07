@@ -1101,6 +1101,13 @@ class ChatViewModel @Inject constructor(
     private fun onChatMessage(message: String, userNotice: Boolean, showUserNotice: Boolean, usePubSub: Boolean, useCronet: Boolean, isLoggedIn: Boolean, accountId: String?, channelId: String?) {
         if (!userNotice || showUserNotice) {
             val chatMessage = ChatUtils.parseChatMessage(message, userNotice)
+            if (chatMessage.reply?.message != null) {
+                onMessage(ChatMessage(
+                    reply = chatMessage.reply,
+                    isReply = true,
+                    replyParent = chatMessage,
+                ))
+            }
             if (usePubSub && chatMessage.reward != null && !chatMessage.reward.id.isNullOrBlank()) {
                 onRewardMessage(chatMessage, useCronet, isLoggedIn, accountId, channelId)
             } else {
@@ -2071,8 +2078,28 @@ class ChatViewModel @Inject constructor(
                                                         while (reader.hasNext()) {
                                                             val message = reader.nextString().also { position += it.length + 2 + it.count { c -> c == '"' || c == '\\' } }
                                                             when {
-                                                                message.contains("PRIVMSG") -> messages.add(ChatUtils.parseChatMessage(message, false))
-                                                                message.contains("USERNOTICE") -> messages.add(ChatUtils.parseChatMessage(message, true))
+                                                                message.contains("PRIVMSG") -> {
+                                                                    val chatMessage = ChatUtils.parseChatMessage(message, false)
+                                                                    if (chatMessage.reply?.message != null) {
+                                                                        messages.add(ChatMessage(
+                                                                            reply = chatMessage.reply,
+                                                                            isReply = true,
+                                                                            replyParent = chatMessage,
+                                                                        ))
+                                                                    }
+                                                                    messages.add(chatMessage)
+                                                                }
+                                                                message.contains("USERNOTICE") -> {
+                                                                    val chatMessage = ChatUtils.parseChatMessage(message, true)
+                                                                    if (chatMessage.reply?.message != null) {
+                                                                        messages.add(ChatMessage(
+                                                                            reply = chatMessage.reply,
+                                                                            isReply = true,
+                                                                            replyParent = chatMessage,
+                                                                        ))
+                                                                    }
+                                                                    messages.add(chatMessage)
+                                                                }
                                                                 message.contains("CLEARMSG") -> {
                                                                     val pair = ChatUtils.parseClearMessage(message)
                                                                     val deletedMessage = pair.second?.let { targetId -> messages.find { it.id == targetId } }
