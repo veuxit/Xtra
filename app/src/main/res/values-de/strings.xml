@@ -449,7 +449,6 @@
     <string name="dark_theme_on">Dunkles Theme einschalten</string>
     <string name="dark_theme_off">Dunkles Theme ausschalten</string>
     <string name="follow_system_theme">Basierend auf Geräte-Theme ändern</string>
-    <string name="pixels">%d Pixel</string>
     <string name="image_quality">Bildqualität</string>
     <string name="lang_auto">Systemstandard</string>
     <string name="save_default">Als Standard speichern</string>
@@ -687,4 +686,7 @@
     <string name="api_web_gql_token">Web-GQL-Token</string>
     <string name="use_new_pubsub">Neue PubSub-URL verwenden</string>
     <string name="default_page">Default page</string>
+    <string name="chat_size_modifier">Size modifier</string>
+    <string name="chat_emote_size">Emote size</string>
+    <string name="chat_badge_size">Badge size</string>
 </resources>

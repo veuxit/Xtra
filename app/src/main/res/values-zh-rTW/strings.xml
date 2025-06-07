@@ -449,7 +449,6 @@
     <string name="dark_theme_on">深色主題開啟</string>
     <string name="dark_theme_off">深色主題關閉</string>
     <string name="follow_system_theme">根據裝置主題變更</string>
-    <string name="pixels">%d 像素</string>
     <string name="image_quality">圖片品質</string>
     <string name="lang_auto">系統預設</string>
     <string name="save_default">儲存為預設</string>
@@ -687,4 +686,7 @@
     <string name="api_web_gql_token">Web GQL token</string>
     <string name="use_new_pubsub">Use new PubSub url</string>
     <string name="default_page">Default page</string>
+    <string name="chat_size_modifier">Size modifier</string>
+    <string name="chat_emote_size">Emote size</string>
+    <string name="chat_badge_size">Badge size</string>
 </resources>

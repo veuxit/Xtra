@@ -55,6 +55,7 @@ class ChatAdapter(
     private val backgroundColor: Int,
     private val dialogBackgroundColor: Int,
     private val imageLibrary: String?,
+    private val messageTextSize: Float,
     private val emoteSize: Int,
     private val badgeSize: Int,
     private val emoteQuality: String,
@@ -129,9 +130,9 @@ class ChatAdapter(
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
             stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
-            fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors,
-            savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
-            channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
+            fragment, dialogBackgroundColor, imageLibrary, messageTextSize, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth,
+            messages, userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes,
+            globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
 
@@ -141,9 +142,9 @@ class ChatAdapter(
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
             stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
-            fragment, dialogBackgroundColor, imageLibrary, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth, messages, userColors,
-            savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
-            channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
+            fragment, dialogBackgroundColor, imageLibrary, messageTextSize, emoteSize, badgeSize, emoteQuality, animateGifs, enableZeroWidth,
+            messages, userColors, savedColors, loggedInUser, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes,
+            globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, selectedMessage
         )
     }
 
@@ -201,6 +202,7 @@ class ChatAdapter(
         fun bind(chatMessage: ChatMessage, formattedMessage: SpannableStringBuilder) {
             textView.apply {
                 text = formattedMessage
+                textSize = messageTextSize
                 movementMethod = LinkMovementMethod.getInstance()
                 TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
                 setOnClickListener {
