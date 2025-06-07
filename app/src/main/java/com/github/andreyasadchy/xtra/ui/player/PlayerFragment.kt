@@ -884,7 +884,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             } else {
                 requireActivity().window.decorView.setOnSystemUiVisibilityChangeListener {
-                    if (!isKeyboardShown && slidingLayout.isMaximized) {
+                    if (!isKeyboardShown && slidingLayout.isMaximized && activity != null) {
                         hideStatusBar()
                     }
                 }
