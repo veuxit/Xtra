@@ -130,6 +130,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                                 !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
                 val chatUrl = args.getString(KEY_CHAT_URL)
                 if (isLive || (args.getString(KEY_VIDEO_ID) != null && args.getInt(KEY_START_TIME) != -1) || chatUrl != null) {
+                    val sizeModifier = (requireContext().prefs().getInt(C.CHAT_SIZE_MODIFIER, 100).toFloat() / 100f)
                     adapter = ChatAdapter(
                         enableTimestamps = requireContext().prefs().getBoolean(C.CHAT_TIMESTAMPS, false),
                         timestampFormat = requireContext().prefs().getString(C.CHAT_TIMESTAMP_FORMAT, "0"),
@@ -167,8 +168,9 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                             }
                         ),
                         imageLibrary = requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
-                        emoteSize = requireContext().convertDpToPixels(29.5f),
-                        badgeSize = requireContext().convertDpToPixels(18.5f),
+                        messageTextSize = (requireContext().prefs().getString(C.CHAT_TEXT_SIZE, "14")?.toFloatOrNull() ?: 14f) * sizeModifier,
+                        emoteSize = requireContext().convertDpToPixels((requireContext().prefs().getString(C.CHAT_EMOTE_SIZE, "29.5")?.toFloatOrNull() ?: 29.5f) * sizeModifier),
+                        badgeSize = requireContext().convertDpToPixels((requireContext().prefs().getString(C.CHAT_BADGE_SIZE, "18.5")?.toFloatOrNull() ?: 18.5f) * sizeModifier),
                         emoteQuality = requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
                         animateGifs = requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true),
                         enableZeroWidth = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),

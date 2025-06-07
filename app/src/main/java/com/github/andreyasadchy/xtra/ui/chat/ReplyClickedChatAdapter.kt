@@ -58,6 +58,7 @@ class ReplyClickedChatAdapter(
     private val fragment: Fragment,
     private val backgroundColor: Int,
     private val imageLibrary: String?,
+    private val messageTextSize: Float,
     private val emoteSize: Int,
     private val badgeSize: Int,
     private val emoteQuality: String,
@@ -205,6 +206,7 @@ class ReplyClickedChatAdapter(
         fun bind(chatMessage: ChatMessage, formattedMessage: SpannableStringBuilder) {
             textView.apply {
                 text = formattedMessage
+                textSize = messageTextSize
                 movementMethod = LinkMovementMethod.getInstance()
                 TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
                 setOnClickListener {

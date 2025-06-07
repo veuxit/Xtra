@@ -449,7 +449,6 @@
     <string name="dark_theme_on">ダークテーマ オン</string>
     <string name="dark_theme_off">ダークテーマ オフ</string>
     <string name="follow_system_theme">デバイスのテーマに応じて変更</string>
-    <string name="pixels">%d ピクセル</string>
     <string name="image_quality">画像品質</string>
     <string name="lang_auto">システムのデフォルト</string>
     <string name="save_default">デフォルトとして保存</string>
@@ -687,4 +686,7 @@
     <string name="api_web_gql_token">Web GQL token</string>
     <string name="use_new_pubsub">Use new PubSub url</string>
     <string name="default_page">Default page</string>
+    <string name="chat_size_modifier">Size modifier</string>
+    <string name="chat_emote_size">Emote size</string>
+    <string name="chat_badge_size">Badge size</string>
 </resources>
