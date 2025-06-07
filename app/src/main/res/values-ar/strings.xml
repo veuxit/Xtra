@@ -449,7 +449,6 @@
     <string name="dark_theme_on">Dark theme on</string>
     <string name="dark_theme_off">Dark theme off</string>
     <string name="follow_system_theme">Change based on device theme</string>
-    <string name="pixels">%d pixels</string>
     <string name="image_quality">Image quality</string>
     <string name="lang_auto">System default</string>
     <string name="save_default">Save as default</string>
@@ -687,4 +686,7 @@
     <string name="api_web_gql_token">Web GQL token</string>
     <string name="use_new_pubsub">Use new PubSub url</string>
     <string name="default_page">Default page</string>
+    <string name="chat_size_modifier">Size modifier</string>
+    <string name="chat_emote_size">Emote size</string>
+    <string name="chat_badge_size">Badge size</string>
 </resources>

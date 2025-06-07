@@ -35,12 +35,8 @@ import com.github.andreyasadchy.xtra.ui.view.NamePaintImageSpan
 import com.github.andreyasadchy.xtra.ui.view.NamePaintSpan
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import java.util.Random
-import kotlin.collections.forEach
-import kotlin.collections.get
-import kotlin.collections.set
 import kotlin.math.floor
 import kotlin.math.pow
-import kotlin.text.toInt
 
 object ChatAdapterUtils {
 
@@ -662,11 +658,7 @@ object ChatAdapterUtils {
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    val size = if (image.isEmote) {
-                        calculateEmoteSize(resource, emoteSize)
-                    } else {
-                        Pair(badgeSize, badgeSize)
-                    }
+                    val size = calculateImageSize(resource, if (image.isEmote) emoteSize else badgeSize)
                     if (image.isZeroWidth && enableZeroWidth) {
                         resource.setBounds(-90, 0, size.first - 90, size.second)
                     } else {
@@ -700,23 +692,18 @@ object ChatAdapterUtils {
             })
     }
 
-    private fun calculateEmoteSize(resource: Drawable, emoteSize: Int): Pair<Int, Int> {
+    private fun calculateImageSize(resource: Drawable, imageSize: Int): Pair<Int, Int> {
         val widthRatio = resource.intrinsicWidth.toFloat() / resource.intrinsicHeight.toFloat()
         val width: Int
         val height: Int
         when {
             widthRatio == 1f -> {
-                width = emoteSize
-                height = emoteSize
-            }
-            widthRatio <= 1.2f -> {
-                width = (emoteSize * widthRatio).toInt()
-                height = emoteSize
+                width = imageSize
+                height = imageSize
             }
             else -> {
-                val scaledEmoteSize = (emoteSize * 0.78f).toInt()
-                width = (scaledEmoteSize * widthRatio).toInt()
-                height = scaledEmoteSize
+                width = (imageSize * widthRatio).toInt()
+                height = imageSize
             }
         }
         return width to height

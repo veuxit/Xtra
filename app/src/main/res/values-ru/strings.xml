@@ -449,7 +449,6 @@
     <string name="dark_theme_on">Если тёмная тема включена</string>
     <string name="dark_theme_off">Если тёмная тема отключена</string>
     <string name="follow_system_theme">Следовать теме устройства</string>
-    <string name="pixels">%d пкс</string>
     <string name="image_quality">Качество изображений</string>
     <string name="lang_auto">Системный</string>
     <string name="save_default">Сохранить по умолчанию</string>
@@ -687,4 +686,7 @@
     <string name="api_web_gql_token">Токен веб GQL</string>
     <string name="use_new_pubsub">Использовать новый адрес PubSub</string>
     <string name="default_page">Default page</string>
+    <string name="chat_size_modifier">Size modifier</string>
+    <string name="chat_emote_size">Emote size</string>
+    <string name="chat_badge_size">Badge size</string>
 </resources>

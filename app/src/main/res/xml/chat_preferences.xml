@@ -57,6 +57,40 @@
         app:singleLineTitle="false" />
 
     <SeekBarPreference
+        android:defaultValue="100"
+        android:key="chat_size_modifier"
+        android:max="200"
+        android:title="@string/chat_size_modifier"
+        app:iconSpaceReserved="false"
+        app:min="1"
+        app:showSeekBarValue="true"
+        app:singleLineTitle="false" />
+
+    <EditTextPreference
+        android:defaultValue="14"
+        android:key="chat_text_size"
+        android:title="@string/text_size"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:defaultValue="29.5"
+        android:key="chat_emote_size"
+        android:title="@string/chat_emote_size"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:defaultValue="18.5"
+        android:key="chat_badge_size"
+        android:title="@string/chat_badge_size"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <SeekBarPreference
         android:defaultValue="30"
         android:key="chatWidth"
         android:max="100"
