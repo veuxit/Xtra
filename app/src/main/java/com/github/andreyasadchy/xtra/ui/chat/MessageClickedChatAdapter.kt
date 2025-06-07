@@ -5,6 +5,7 @@ import android.graphics.drawable.ColorDrawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+import android.text.TextUtils
 import android.text.method.LinkMovementMethod
 import android.text.style.ImageSpan
 import android.util.Patterns
@@ -87,7 +88,8 @@ class MessageClickedChatAdapter(
     var messages: MutableList<ChatMessage>? =
         if (!userId.isNullOrBlank() || !userLogin.isNullOrBlank()) {
             messages?.filter {
-                (!userId.isNullOrBlank() && it.userId == userId) || (!userLogin.isNullOrBlank() && it.userLogin == userLogin)
+                (!userId.isNullOrBlank() && (it.userId == userId || it.replyParent?.userId == userId)) ||
+                        (!userLogin.isNullOrBlank() && (it.userLogin == userLogin || it.replyParent?.userLogin == userLogin))
             }?.toMutableList()
         } else {
             null
@@ -115,8 +117,7 @@ class MessageClickedChatAdapter(
         val chatMessage = messages?.get(position) ?: return
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
-            rewardChatMsg, true, replyMessage, { replyClick(chatMessage) },
-            { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
+            rewardChatMsg, replyMessage, { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers,
             showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes,
             loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes,
@@ -214,17 +215,29 @@ class MessageClickedChatAdapter(
             textView.apply {
                 text = formattedMessage
                 textSize = messageTextSize
-                movementMethod = LinkMovementMethod.getInstance()
-                TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
-                setOnClickListener {
-                    if (selectionStart == -1 && selectionEnd == -1 && chatMessage != selectedMessage) {
-                        messageClickListener?.invoke(chatMessage, selectedMessage)
-                        selectedMessage = chatMessage
-                        setBackgroundResource(R.color.chatMessageSelected)
-                        (text as? Spannable)?.let { view ->
-                            view.getSpans<NamePaintImageSpan>().forEach {
-                                it.backgroundColor = (background as? ColorDrawable)?.color
-                                view.setSpan(it, view.getSpanStart(it), view.getSpanEnd(it), SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (chatMessage.isReply) {
+                    movementMethod = null
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                    TooltipCompat.setTooltipText(this, chatMessage.replyParent?.message ?: chatMessage.replyParent?.systemMsg)
+                    setOnClickListener {
+                        chatMessage.replyParent?.let { replyClick(it) }
+                    }
+                } else {
+                    movementMethod = LinkMovementMethod.getInstance()
+                    maxLines = Int.MAX_VALUE
+                    ellipsize = null
+                    TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
+                    setOnClickListener {
+                        if (selectionStart == -1 && selectionEnd == -1 && chatMessage != selectedMessage) {
+                            messageClickListener?.invoke(chatMessage, selectedMessage)
+                            selectedMessage = chatMessage
+                            setBackgroundResource(R.color.chatMessageSelected)
+                            (text as? Spannable)?.let { view ->
+                                view.getSpans<NamePaintImageSpan>().forEach {
+                                    it.backgroundColor = (background as? ColorDrawable)?.color
+                                    view.setSpan(it, view.getSpanStart(it), view.getSpanEnd(it), SPAN_EXCLUSIVE_EXCLUSIVE)
+                                }
                             }
                         }
                     }

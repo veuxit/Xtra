@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.chat
 import android.graphics.drawable.Animatable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
+import android.text.TextUtils
 import android.text.method.LinkMovementMethod
 import android.text.style.ImageSpan
 import android.view.LayoutInflater
@@ -110,7 +111,7 @@ class ChatAdapter(
         val chatMessage = messages?.get(position) ?: return
         val pair = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
-            rewardChatMsg, true, replyMessage, null, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
+            rewardChatMsg, replyMessage, null, useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames,
             showNamePaints, namePaints, paintUsers, showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers,
             showSystemMessageEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes,
             channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes,
@@ -203,12 +204,27 @@ class ChatAdapter(
             textView.apply {
                 text = formattedMessage
                 textSize = messageTextSize
-                movementMethod = LinkMovementMethod.getInstance()
-                TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
-                setOnClickListener {
-                    if (selectionStart == -1 && selectionEnd == -1) {
-                        selectedMessage = chatMessage
-                        messageClickListener?.invoke(channelId)
+                if (chatMessage.isReply) {
+                    movementMethod = null
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                    TooltipCompat.setTooltipText(this, chatMessage.replyParent?.message ?: chatMessage.replyParent?.systemMsg)
+                    setOnClickListener {
+                        if (selectionStart == -1 && selectionEnd == -1) {
+                            selectedMessage = chatMessage.replyParent
+                            messageClickListener?.invoke(channelId)
+                        }
+                    }
+                } else {
+                    movementMethod = LinkMovementMethod.getInstance()
+                    maxLines = Int.MAX_VALUE
+                    ellipsize = null
+                    TooltipCompat.setTooltipText(this, chatMessage.message ?: chatMessage.systemMsg)
+                    setOnClickListener {
+                        if (selectionStart == -1 && selectionEnd == -1) {
+                            selectedMessage = chatMessage
+                            messageClickListener?.invoke(channelId)
+                        }
                     }
                 }
             }
