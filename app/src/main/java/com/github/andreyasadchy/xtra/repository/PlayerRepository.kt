@@ -434,7 +434,7 @@ class PlayerRepository @Inject constructor(
                                 url4x = urls?.getOrNull(3) ?: if (urls.isNullOrEmpty()) "https:${template}/4x.webp" else null,
                                 format = urls?.getOrNull(0)?.substringAfterLast(".") ?: "webp",
                                 isAnimated = data.animated != false,
-                                isZeroWidth = emote.flags == 1
+                                isOverlayEmote = emote.flags == 1
                             )
                         }
                     }
@@ -582,7 +582,7 @@ class PlayerRepository @Inject constructor(
                         url4x = if (useWebp) "https://cdn.betterttv.net/emote/$id/3x.webp" else "https://cdn.betterttv.net/emote/$id/3x",
                         format = if (useWebp) "webp" else null,
                         isAnimated = emote.animated != false,
-                        isZeroWidth = list.contains(name)
+                        isOverlayEmote = list.contains(name)
                     )
                 }
             }

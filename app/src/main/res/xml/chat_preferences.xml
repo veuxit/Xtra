@@ -286,7 +286,7 @@
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="chat_zerowidth"
-        android:title="@string/zerowidth"
+        android:title="@string/overlay_emotes"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

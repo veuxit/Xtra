@@ -136,7 +136,6 @@
     <string name="show_scrolltop">Кнопка прокрутки до верха</string>
     <string name="bold_usernames">Жирный шрифт имён участников</string>
     <string name="randomcolor">Случайная окраска участников без цвета</string>
-    <string name="zerowidth">Смайлы нулевой ширины</string>
     <string name="message_limit">Ограничение сообщений</string>
     <string name="player_defaultquality">Качество видео по умолчанию</string>
     <string name="player_doubletap">Вызывать чат двойным касанием</string>
@@ -689,4 +688,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>

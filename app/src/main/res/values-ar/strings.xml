@@ -136,7 +136,6 @@
     <string name="show_scrolltop">Show scroll to top button</string>
     <string name="bold_usernames">Bold usernames</string>
     <string name="randomcolor">Random color for users without color</string>
-    <string name="zerowidth">Zero width emotes</string>
     <string name="message_limit">Message limit</string>
     <string name="player_defaultquality">Default player quality</string>
     <string name="player_doubletap">Double tap to toggle chat</string>
@@ -689,4 +688,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>

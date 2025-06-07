@@ -136,7 +136,6 @@
     <string name="show_scrolltop">顯示捲動到頂部按鈕</string>
     <string name="bold_usernames">粗體使用者名稱</string>
     <string name="randomcolor">對於沒有顏色的使用者隨機顏色</string>
-    <string name="zerowidth">Zero width emotes</string>
     <string name="message_limit">訊息限制</string>
     <string name="player_defaultquality">預設播放器品質</string>
     <string name="player_doubletap">雙輕觸以開關聊天室</string>
@@ -689,4 +688,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>

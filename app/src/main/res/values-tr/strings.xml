@@ -136,7 +136,6 @@
     <string name="show_scrolltop">Yukarı kaydırma butonunu göster</string>
     <string name="bold_usernames">Kalın kullanıcı adları</string>
     <string name="randomcolor">Rengi olmayan kullanıcılar için rastgele renk</string>
-    <string name="zerowidth">Sıfır genişlikte ifadeler</string>
     <string name="message_limit">Mesaj sınırı</string>
     <string name="player_defaultquality">Varsayılan oynatıcı kalitesi</string>
     <string name="player_doubletap">Sohbeti açıp kapatmak için çift dokunma</string>
@@ -689,4 +688,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>

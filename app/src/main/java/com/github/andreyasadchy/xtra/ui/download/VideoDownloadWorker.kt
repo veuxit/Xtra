@@ -1117,7 +1117,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         writer.beginObject().also { position += 1 }
                                         writer.name("data".also { position += it.length + 3 }).value(Base64.encodeToString(response, Base64.NO_WRAP or Base64.NO_PADDING).also { position += it.toByteArray().size + 2 })
                                         writer.name("name".also { position += it.length + 4 }).value(emote.name.also { position += it.toString().toByteArray().size + it.toString().count { c -> c == '"' || c == '\\' } + 2 })
-                                        writer.name("isZeroWidth".also { position += it.length + 4 }).value(emote.isZeroWidth.also { position += it.toString().length })
+                                        writer.name("isZeroWidth".also { position += it.length + 4 }).value(emote.isOverlayEmote.also { position += it.toString().length })
                                         writer.endObject().also { position += 1 }
                                         if (emote != last) {
                                             position += 1

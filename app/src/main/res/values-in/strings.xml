@@ -135,7 +135,6 @@
     <string name="show_scrolltop">Tampilkan tombol gulir ke atas</string>
     <string name="bold_usernames">Tebali nama pengguna</string>
     <string name="randomcolor">Warna acak untuk user tanpa warna</string>
-    <string name="zerowidth">Zero width emotes</string>
     <string name="message_limit">Batasi pesan</string>
     <string name="player_defaultquality">Kualitas pemutar default</string>
     <string name="player_doubletap">Ketuk dua kali untuk toggle chat</string>
@@ -690,4 +689,5 @@
     <string name="chat_size_modifier">Size modifier</string>
     <string name="chat_emote_size">Emote size</string>
     <string name="chat_badge_size">Badge size</string>
+    <string name="overlay_emotes">Overlay emotes</string>
 </resources>
