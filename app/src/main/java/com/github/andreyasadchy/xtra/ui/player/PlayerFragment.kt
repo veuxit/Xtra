@@ -1568,7 +1568,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 }
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                    if (viewModel.qualities.isEmpty()) {
+                    if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED && !timeline.isEmpty) {
+                        viewModel.updateQualities = true
+                    }
+                    if (viewModel.qualities.isEmpty() || viewModel.updateQualities) {
                         player?.sendCustomCommand(
                             SessionCommand(PlaybackService.GET_QUALITIES, Bundle.EMPTY),
                             Bundle.EMPTY
@@ -1580,7 +1583,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         codec.substringBefore('.').let {
                                             when (it) {
                                                 "av01" -> "AV1"
-                                                "hvc1" -> "H.265"
+                                                "hev1" -> "H.265"
                                                 "avc1" -> "H.264"
                                                 else -> it
                                             }
@@ -1588,6 +1591,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     }?.takeUnless { it.all { it == "H.264" || it == "mp4a" } }
                                     val urls = result.get().extras.getStringArray(PlaybackService.URLS)
                                     if (!names.isNullOrEmpty() && !urls.isNullOrEmpty()) {
+                                        viewModel.updateQualities = false
                                         val map = mutableMapOf<String, Pair<String, String?>>()
                                         map[AUTO_QUALITY] = Pair(requireContext().getString(R.string.auto), null)
                                         names.forEachIndexed { index, quality ->
