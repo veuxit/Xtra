@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.saved
 
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.util.JsonReader
 import androidx.core.net.toUri
@@ -104,7 +105,7 @@ class SavedPagerViewModel @Inject constructor(
                                 }
                                 offlineRepository.saveVideo(OfflineVideo(
                                     url = playlistFile.uri.toString(),
-                                    name = if (!title.isNullOrBlank()) title else null ?: videoDirectory.name,
+                                    name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(videoDirectory.name),
                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
@@ -199,7 +200,7 @@ class SavedPagerViewModel @Inject constructor(
                                 }
                                 offlineRepository.saveVideo(OfflineVideo(
                                     url = playlistFile.path,
-                                    name = if (!title.isNullOrBlank()) title else null ?: videoDirectory.name,
+                                    name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(videoDirectory.name),
                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
@@ -285,7 +286,7 @@ class SavedPagerViewModel @Inject constructor(
                     offlineRepository.saveVideo(
                         OfflineVideo(
                             url = url,
-                            name = if (!title.isNullOrBlank()) title else null ?: fileName,
+                            name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(fileName),
                             channelId = if (!channelId.isNullOrBlank()) channelId else null,
                             channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                             channelName = if (!channelName.isNullOrBlank()) channelName else null,
