@@ -837,7 +837,7 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         segmentByteRangeLength = C.LENGTH_UNSET;
       } else if (line.startsWith(TAG_TARGET_DURATION)) {
         long target = parseIntAttr(line, REGEX_TARGET_DURATION) * C.MICROS_PER_SECOND;
-        if (target <= 10) {
+        if (target < 10) {
           targetDurationUs = 2 * C.MICROS_PER_SECOND; // xtra: low latency
         } else {
           targetDurationUs = target;
