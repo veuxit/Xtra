@@ -1479,7 +1479,13 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     fun secondViewIsHidden() = binding.slidingLayout.secondView?.isVisible == false
 
     fun enterPictureInPicture(): Boolean {
-        val quality = viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex)
+        val quality = viewModel.qualities.keys.elementAtOrNull(
+            if (viewModel.restoreQuality) {
+                viewModel.previousIndex
+            } else {
+                viewModel.qualityIndex
+            }
+        )
         return quality != AUDIO_ONLY_QUALITY && quality != CHAT_ONLY_QUALITY
     }
 
