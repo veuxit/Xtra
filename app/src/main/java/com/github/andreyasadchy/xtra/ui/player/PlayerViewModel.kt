@@ -92,6 +92,7 @@ class PlayerViewModel @Inject constructor(
     var qualityIndex: Int = 0
     var previousIndex: Int = 0
     var playlistUrl: Uri? = null
+    var updateQualities = false
     var started = false
     var restoreQuality = false
     var resume = false
