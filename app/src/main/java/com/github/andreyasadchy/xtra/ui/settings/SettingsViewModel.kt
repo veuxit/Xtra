@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.JsonReader
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -145,7 +146,7 @@ class SettingsViewModel @Inject constructor(
                                             offlineRepository.saveVideo(
                                                 OfflineVideo(
                                                     url = playlistFile.path,
-                                                    name = if (!title.isNullOrBlank()) title else null ?: file.name,
+                                                    name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(file.name),
                                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
@@ -216,7 +217,7 @@ class SettingsViewModel @Inject constructor(
                                     offlineRepository.saveVideo(
                                         OfflineVideo(
                                             url = file.path,
-                                            name = if (!title.isNullOrBlank()) title else null ?: fileName,
+                                            name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(fileName),
                                             channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                             channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                             channelName = if (!channelName.isNullOrBlank()) channelName else null,
