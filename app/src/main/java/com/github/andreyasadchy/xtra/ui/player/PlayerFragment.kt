@@ -102,6 +102,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.floor
 import kotlin.math.max
 
 @OptIn(UnstableApi::class)
@@ -1393,9 +1394,24 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
                                     if (!player.currentTracks.isEmpty) {
                                         player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO }?.let {
-                                            val trackIndex = viewModel.qualityOrder.indexOf(quality.key)
-                                            if (trackIndex != -1 && trackIndex <= it.length - 1) {
-                                                setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, trackIndex))
+                                            val selectedQuality = quality.key.split("p")
+                                            val height = selectedQuality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
+                                            val fps = selectedQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                            if (it.mediaTrackGroup.length > 0) {
+                                                if (height != null) {
+                                                    val formats = mutableListOf<Triple<Int, Int, Float>>()
+                                                    for (i in 0 until it.mediaTrackGroup.length) {
+                                                        val format = it.mediaTrackGroup.getFormat(i)
+                                                        formats.add(Triple(i, format.height, format.frameRate))
+                                                    }
+                                                    formats.sortedWith(
+                                                        compareByDescending<Triple<Int, Int, Float>> { it.third }.thenByDescending { it.second }
+                                                    ).find { it.second <= height && floor(it.third) <= fps }?.first?.let { index ->
+                                                        setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, index))
+                                                    }
+                                                } else {
+                                                    setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, 0))
+                                                }
                                             }
                                         }
                                     }
@@ -1536,8 +1552,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 }
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                    if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED && !timeline.isEmpty) {
-                        viewModel.updateQualities = true
+                    if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED && !timeline.isEmpty && viewModel.qualities.containsKey(AUTO_QUALITY)) {
+                        viewModel.updateQualities = viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
                     }
                     if (viewModel.qualities.isEmpty() || viewModel.updateQualities) {
                         player?.sendCustomCommand(
@@ -1559,7 +1575,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     }?.takeUnless { it.all { it == "H.264" || it == "mp4a" } }
                                     val urls = result.get().extras.getStringArray(PlaybackService.URLS)
                                     if (!names.isNullOrEmpty() && !urls.isNullOrEmpty()) {
-                                        viewModel.updateQualities = false
                                         val map = mutableMapOf<String, Pair<String, String?>>()
                                         map[AUTO_QUALITY] = Pair(requireContext().getString(R.string.auto), null)
                                         names.forEachIndexed { index, quality ->
@@ -1576,7 +1591,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         if (videoType == STREAM) {
                                             map[CHAT_ONLY_QUALITY] = Pair(requireContext().getString(R.string.chat_only), null)
                                         }
-                                        viewModel.qualityOrder = names.filter { !it.startsWith("audio", true) }
                                         viewModel.qualities = map.toSortedMap(
                                             compareByDescending<String> { it == "auto" }
                                                 .thenByDescending { it == "source" }
@@ -1589,6 +1603,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
                                             changeQuality(viewModel.qualityIndex)
                                         }
+                                    }
+                                    if (reason == Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE) {
+                                        viewModel.updateQualities = false
                                     }
                                 }
                             }, MoreExecutors.directExecutor())
