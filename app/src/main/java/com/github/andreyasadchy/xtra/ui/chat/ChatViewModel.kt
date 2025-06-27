@@ -561,7 +561,16 @@ class ChatViewModel @Inject constructor(
                         }
                         message.contains("NOTICE") -> RecentMessageUtils.parseNotice(applicationContext, message)
                         else -> null
-                    }?.let { list.add(it) }
+                    }?.let {
+                        if (it.reply?.message != null) {
+                            list.add(ChatMessage(
+                                reply = it.reply,
+                                isReply = true,
+                                replyParent = it,
+                            ))
+                        }
+                        list.add(it)
+                    }
                 }
                 if (list.isNotEmpty()) {
                     _chatMessages.value = arrayListOf<ChatMessage>().apply {
