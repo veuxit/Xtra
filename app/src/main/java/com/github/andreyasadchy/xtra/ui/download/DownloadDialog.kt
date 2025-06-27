@@ -218,7 +218,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     }
                 }
                 viewModel.setStream(
-                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                     channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
                     qualities = requireArguments().getStringArray(KEY_URLS_KEYS)?.let { keys ->
@@ -259,7 +259,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     }
                 }
                 viewModel.setVideo(
-                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), requireContext().prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                     videoId = requireArguments().getString(KEY_VIDEO_ID),
                     animatedPreviewUrl = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW),
@@ -286,7 +286,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     }
                 }
                 viewModel.setClip(
-                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                     clipId = requireArguments().getString(KEY_CLIP_ID),
                     thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL),
@@ -393,7 +393,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                         gameId = requireArguments().getString(KEY_GAME_ID),
                         gameSlug = requireArguments().getString(KEY_GAME_SLUG),
                         gameName = requireArguments().getString(KEY_GAME_NAME),
-                        path = path,
+                        downloadPath = path,
                         quality = quality.first,
                         downloadChat = downloadChat,
                         downloadChatEmotes = downloadChatEmotes,
@@ -458,7 +458,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                                 gameSlug = requireArguments().getString(KEY_GAME_SLUG),
                                 gameName = requireArguments().getString(KEY_GAME_NAME),
                                 url = quality.second,
-                                path = path,
+                                downloadPath = path,
                                 quality = quality.first,
                                 from = from,
                                 to = to,
@@ -529,7 +529,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                         gameSlug = requireArguments().getString(KEY_GAME_SLUG),
                         gameName = requireArguments().getString(KEY_GAME_NAME),
                         url = quality.second,
-                        path = path,
+                        downloadPath = path,
                         quality = quality.first,
                         downloadChat = downloadChat,
                         downloadChatEmotes = downloadChatEmotes,

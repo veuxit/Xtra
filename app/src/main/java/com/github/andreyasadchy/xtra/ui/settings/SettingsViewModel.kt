@@ -5,7 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.net.Uri
+import android.net.http.HttpEngine
+import android.net.http.UrlResponseInfo
 import android.os.Build
+import android.os.ext.SdkExtensions
 import android.util.JsonReader
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -28,10 +31,12 @@ import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.ui.main.LiveNotificationWorker
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.HttpEngineUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +54,6 @@ import okio.buffer
 import okio.sink
 import okio.source
 import org.chromium.net.CronetEngine
-import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
@@ -72,7 +76,8 @@ class SettingsViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
     private val appDatabase: AppDatabase,
-    private val cronetEngine: CronetEngine?,
+    private val httpEngine: Lazy<HttpEngine>?,
+    private val cronetEngine: Lazy<CronetEngine>?,
     private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val json: Json,
@@ -260,25 +265,34 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun checkUpdates(useCronet: Boolean, url: String, lastChecked: Long) {
+    fun checkUpdates(networkLibrary: String?, url: String, lastChecked: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             updateUrl.emit(
                 try {
-                    val response = if (useCronet && cronetEngine != null) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
-                            cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                            val response = request.future.get().responseBody as String
-                            json.decodeFromString<JsonObject>(response)
-                        } else {
+                    val response = when {
+                        networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
                             val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
-                                cronetEngine.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                httpEngine.get().newUrlRequestBuilder(url, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
                             }
                             json.decodeFromString<JsonObject>(String(response.second))
                         }
-                    } else {
-                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                            json.decodeFromString<JsonObject>(response.body.string())
+                        networkLibrary == "Cronet" && cronetEngine != null -> {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                val request = UrlRequestCallbacks.forStringBody(RedirectHandlers.alwaysFollow())
+                                cronetEngine.get().newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                                val response = request.future.get().responseBody as String
+                                json.decodeFromString<JsonObject>(response)
+                            } else {
+                                val response = suspendCoroutine<Pair<org.chromium.net.UrlResponseInfo, ByteArray>> { continuation ->
+                                    cronetEngine.get().newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                }
+                                json.decodeFromString<JsonObject>(String(response.second))
+                            }
+                        }
+                        else -> {
+                            okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                json.decodeFromString<JsonObject>(response.body.string())
+                            }
                         }
                     }
                     response["assets"]?.jsonArray?.find {
@@ -297,30 +311,41 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun downloadUpdate(useCronet: Boolean, url: String) {
+    fun downloadUpdate(networkLibrary: String?, url: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val response = if (useCronet && cronetEngine != null) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                        cronetEngine.newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
-                        val response = request.future.get()
-                        if (response.urlResponseInfo.httpStatusCode in 200..299) {
-                            response.responseBody as ByteArray
-                        } else null
-                    } else {
+                val response = when {
+                    networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
                         val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
-                            cronetEngine.newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                            httpEngine.get().newUrlRequestBuilder(url, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
                         }
                         if (response.first.httpStatusCode in 200..299) {
                             response.second
                         } else null
                     }
-                } else {
-                    okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                        if (response.isSuccessful) {
-                            response.body.bytes()
-                        } else null
+                    networkLibrary == "Cronet" && cronetEngine != null -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                            cronetEngine.get().newUrlRequestBuilder(url, request.callback, cronetExecutor).build().start()
+                            val response = request.future.get()
+                            if (response.urlResponseInfo.httpStatusCode in 200..299) {
+                                response.responseBody as ByteArray
+                            } else null
+                        } else {
+                            val response = suspendCoroutine<Pair<org.chromium.net.UrlResponseInfo, ByteArray>> { continuation ->
+                                cronetEngine.get().newUrlRequestBuilder(url, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                            }
+                            if (response.first.httpStatusCode in 200..299) {
+                                response.second
+                            } else null
+                        }
+                    }
+                    else -> {
+                        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                            if (response.isSuccessful) {
+                                response.body.bytes()
+                            } else null
+                        }
                     }
                 }
                 if (response != null && response.isNotEmpty()) {
@@ -373,7 +398,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun restoreSettings(list: List<String>, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             list.take(2).forEach { url ->
                 if (url.endsWith(".xml")) {
@@ -383,7 +408,7 @@ class SettingsViewModel @Inject constructor(
                     val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                         it.readText()
                     }
-                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), useCronet, gqlHeaders, helixHeaders)
+                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), networkLibrary, gqlHeaders, helixHeaders)
                 } else {
                     val database = applicationContext.getDatabasePath("database")
                     File(database.parent, "database-shm").delete()
@@ -402,10 +427,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications(enabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun toggleNotifications(enabled: Boolean, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(notificationUsersRepository, useCronet, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
+                shownNotificationsRepository.getNewStreams(notificationUsersRepository, networkLibrary, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
