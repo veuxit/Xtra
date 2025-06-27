@@ -23,7 +23,6 @@ object C {
     const val USER_ID = "user_id"
     const val DOWNLOAD_PLAYLIST_TO_FILE = "download_playlist_to_file"
     const val DOWNLOAD_WIFI_ONLY = "download_wifi_only"
-    const val DOWNLOAD_USE_CRONET = "download_use_cronet"
     const val DOWNLOAD_CONCURRENT_LIMIT = "download_concurrent_limit"
     const val DOWNLOAD_STREAM_LIVE_CHECK = "download_stream_live_check"
     const val DOWNLOAD_STREAM_OFFLINE_CHECK = "download_stream_offline_check"
@@ -250,6 +249,7 @@ object C {
     const val UPDATE_CHECK_FREQUENCY = "update_check_frequency"
     const val UPDATE_USE_BROWSER = "update_use_browser"
     const val LIVE_NOTIFICATIONS_ENABLED = "live_notifications_enabled"
+    const val NETWORK_LIBRARY = "network_library"
     const val DEBUG_CHAT_FULLMSG = "debug_chat_fullmsg"
     const val DEBUG_SECONDVIEW = "debug_secondview"
     const val DEBUG_API_COMMANDS = "debug_api_commands"
@@ -260,5 +260,4 @@ object C {
     const val ENABLE_INTEGRITY = "enable_integrity"
     const val USE_WEBVIEW_INTEGRITY = "use_webview_integrity"
     const val GET_ALL_GQL_HEADERS = "get_all_gql_headers"
-    const val USE_CRONET = "use_cronet"
 }

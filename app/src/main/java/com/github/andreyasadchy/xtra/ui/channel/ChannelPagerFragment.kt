@@ -173,18 +173,18 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         viewModel.notificationsEnabled.value?.let {
                             if (it) {
                                 args.channelId?.let {
-                                    viewModel.disableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
+                                    viewModel.disableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
                                 }
                             } else {
                                 args.channelId?.let {
                                     val notificationsEnabled = requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false)
-                                    viewModel.enableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, notificationsEnabled, requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
+                                    viewModel.enableNotifications(requireContext().tokenPrefs().getString(C.USER_ID, null), it, setting, notificationsEnabled, requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"), TwitchApiHelper.getGQLHeaders(requireContext(), true), requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false))
                                     if (!notificationsEnabled) {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                             ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                                             ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
                                         }
-                                        viewModel.updateNotifications(requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getGQLHeaders(requireContext(), true), TwitchApiHelper.getHelixHeaders(requireContext()))
+                                        viewModel.updateNotifications(requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"), TwitchApiHelper.getGQLHeaders(requireContext(), true), TwitchApiHelper.getHelixHeaders(requireContext()))
                                         WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork(
                                             "live_notifications",
                                             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
@@ -225,7 +225,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                                             args.channelId,
                                             setting,
-                                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                         )
@@ -239,7 +239,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                     args.channelName,
                                     setting,
                                     requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                     TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                     requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
@@ -461,7 +461,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
 
     override fun initialize() {
         viewModel.loadStream(
-            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
             TwitchApiHelper.getGQLHeaders(requireContext()),
             TwitchApiHelper.getHelixHeaders(requireContext()),
             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -474,7 +474,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         if (stream.user != null) {
                             updateUserLayout(stream.user)
                         } else {
-                            viewModel.loadUser(requireContext().prefs().getBoolean(C.USE_CRONET, false), TwitchApiHelper.getHelixHeaders(requireContext()))
+                            viewModel.loadUser(requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"), TwitchApiHelper.getHelixHeaders(requireContext()))
                         }
                     }
                 }
@@ -494,7 +494,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
             args.channelId,
             args.channelLogin,
             requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
             TwitchApiHelper.getGQLHeaders(requireContext(), true),
             TwitchApiHelper.getHelixHeaders(requireContext()),
         )
@@ -680,14 +680,14 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 userType.gone()
             }
             if (args.updateLocal) {
-                viewModel.updateLocalUser(requireContext().prefs().getBoolean(C.USE_CRONET, false), requireContext().filesDir.path, user)
+                viewModel.updateLocalUser(requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"), requireContext().filesDir.path, user)
             }
         }
     }
 
     override fun onNetworkRestored() {
         viewModel.retry(
-            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
             TwitchApiHelper.getGQLHeaders(requireContext()),
             TwitchApiHelper.getHelixHeaders(requireContext()),
             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -701,7 +701,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                     when (callback) {
                         "refresh" -> {
                             viewModel.retry(
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext()),
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                                 requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -711,7 +711,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                 args.channelId,
                                 args.channelLogin,
                                 requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
@@ -723,7 +723,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                             args.channelName,
                             requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
@@ -731,7 +731,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             args.channelId,
                             requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
@@ -741,7 +741,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                 it,
                                 requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                                 requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )
@@ -751,7 +751,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                                 requireContext().tokenPrefs().getString(C.USER_ID, null),
                                 it,
                                 requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                             )

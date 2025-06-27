@@ -30,6 +30,7 @@ import org.chromium.net.CronetException
 import org.chromium.net.UrlResponseInfo
 import org.chromium.net.apihelpers.ByteArrayCronetCallback
 import org.chromium.net.apihelpers.CronetRequestCompletionListener
+import java.io.IOException
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -194,7 +195,7 @@ fun getByteArrayCronetCallback(continuation: Continuation<Pair<UrlResponseInfo, 
             }
 
             override fun onCanceled(info: UrlResponseInfo?) {
-                continuation.resumeWithException(Exception())
+                continuation.resumeWithException(IOException("The request was canceled!"))
             }
 
             override fun onSucceeded(info: UrlResponseInfo, body: ByteArray) {

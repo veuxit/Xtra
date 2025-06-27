@@ -783,7 +783,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                                             requireArguments().getString(KEY_CHANNEL_ID),
                                             setting,
-                                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                         )
@@ -798,7 +798,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     setting,
                                     requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
                                     requireArguments().getString(KEY_STARTED_AT),
-                                    requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                    requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                     TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                     requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
@@ -1267,7 +1267,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     fun saveBookmark() {
         viewModel.saveBookmark(
             filesDir = requireContext().filesDir.path,
-            useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+            networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
             helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
             gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
             videoId = requireArguments().getString(KEY_VIDEO_ID),
@@ -1686,7 +1686,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                                         viewLifecycleOwner.lifecycleScope.launch {
                                                             for (i in 0 until 10) {
                                                                 delay(10000)
-                                                                if (!viewModel.checkPlaylist(prefs.getBoolean(C.USE_CRONET, false), playlist)) {
+                                                                if (!viewModel.checkPlaylist(prefs.getString(C.NETWORK_LIBRARY, "OkHttp"), playlist)) {
                                                                     break
                                                                 }
                                                             }
@@ -1932,7 +1932,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 requireArguments().getString(KEY_CHANNEL_ID),
                 requireArguments().getString(KEY_CHANNEL_LOGIN),
                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                 TwitchApiHelper.getHelixHeaders(requireContext()),
             )
@@ -1941,7 +1941,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
                     viewModel.loadGamesList(
                         videoId,
-                        prefs.getBoolean(C.USE_CRONET, false),
+                        prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                         TwitchApiHelper.getGQLHeaders(requireContext()),
                         prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                     )
@@ -1965,7 +1965,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                             (requireContext().prefs().getBoolean(C.CHAT_POINTS_COLLECT, true) &&
                                     !requireContext().tokenPrefs().getString(C.USER_ID, null).isNullOrBlank() &&
                                     !TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank()),
-                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                     enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -1994,7 +1994,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
                 if (skipAccessToken >= 2 || thumbnailUrl.isNullOrBlank()) {
                     viewModel.loadClip(
-                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                        networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                         id = requireArguments().getString(KEY_CLIP_ID),
                         enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -2037,7 +2037,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                 val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                 viewModel.loadStreamResult(
-                    useCronet = prefs.getBoolean(C.USE_CRONET, false),
+                    networkLibrary = prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                     channelLogin = channelLogin,
                     randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
@@ -2095,7 +2095,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         } else {
             viewModel.playbackPosition = playbackPosition
             viewModel.loadVideo(
-                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                 videoId = requireArguments().getString(KEY_VIDEO_ID),
                 playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
@@ -2499,7 +2499,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                 val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
                                 val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                 viewModel.loadStreamResult(
-                                    useCronet = prefs.getBoolean(C.USE_CRONET, false),
+                                    networkLibrary = prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
                                     channelLogin = channelLogin,
                                     randomDeviceId = prefs.getBoolean(C.TOKEN_RANDOM_DEVICEID, true),
@@ -2520,7 +2520,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                 requireArguments().getString(KEY_CHANNEL_ID),
                                 requireArguments().getString(KEY_CHANNEL_LOGIN),
                                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
@@ -2528,7 +2528,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         "refreshVideo" -> {
                             val videoId = requireArguments().getString(KEY_VIDEO_ID)
                             viewModel.loadVideo(
-                                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)),
                                 videoId = videoId,
                                 playerType = prefs.getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live"),
@@ -2540,14 +2540,14 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                 requireArguments().getString(KEY_CHANNEL_ID),
                                 requireArguments().getString(KEY_CHANNEL_LOGIN),
                                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
                             if (!videoId.isNullOrBlank() && (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false))) {
                                 viewModel.loadGamesList(
                                     videoId,
-                                    prefs.getBoolean(C.USE_CRONET, false),
+                                    prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                                     TwitchApiHelper.getGQLHeaders(requireContext()),
                                     prefs.getBoolean(C.ENABLE_INTEGRITY, false),
                                 )
@@ -2555,7 +2555,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         }
                         "refreshClip" -> {
                             viewModel.loadClip(
-                                useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                                 id = requireArguments().getString(KEY_CLIP_ID),
                                 enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
@@ -2565,7 +2565,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                 requireArguments().getString(KEY_CHANNEL_ID),
                                 requireArguments().getString(KEY_CHANNEL_LOGIN),
                                 prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                                requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                                requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(requireContext(), true),
                                 TwitchApiHelper.getHelixHeaders(requireContext()),
                             )
@@ -2578,7 +2578,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
                             requireContext().prefs().getBoolean(C.LIVE_NOTIFICATIONS_ENABLED, false),
                             requireArguments().getString(KEY_STARTED_AT),
-                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )
@@ -2586,7 +2586,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                             requireContext().tokenPrefs().getString(C.USER_ID, null),
                             requireArguments().getString(KEY_CHANNEL_ID),
                             prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toIntOrNull() ?: 0,
-                            requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                            requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                             TwitchApiHelper.getGQLHeaders(requireContext(), true),
                             requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                         )

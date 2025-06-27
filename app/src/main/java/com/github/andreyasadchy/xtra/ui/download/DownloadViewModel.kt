@@ -27,7 +27,7 @@ class DownloadViewModel @Inject constructor(
     val qualities: StateFlow<Map<String, Pair<String, String>>?> = _qualities
     val dismiss = MutableStateFlow(false)
 
-    fun setStream(useCronet: Boolean, gqlHeaders: Map<String, String>, channelLogin: String?, qualities: Map<String, String>?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
+    fun setStream(networkLibrary: String?, gqlHeaders: Map<String, String>, channelLogin: String?, qualities: Map<String, String>?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
             if (!qualities.isNullOrEmpty()) {
                 val map = mutableMapOf<String, Pair<String, String>>()
@@ -56,7 +56,7 @@ class DownloadViewModel @Inject constructor(
                     val default = mutableMapOf("source" to "", "1080p60" to "", "1080p30" to "", "720p60" to "", "720p30" to "", "480p30" to "", "360p30" to "", "160p30" to "", "audio_only" to "")
                     try {
                         val urls = if (!channelLogin.isNullOrBlank()) {
-                            val playlist = playerRepository.loadStreamPlaylist(useCronet, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, enableIntegrity)
+                            val playlist = playerRepository.loadStreamPlaylist(networkLibrary, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, supportedCodecs, enableIntegrity)
                             if (!playlist.isNullOrBlank()) {
                                 val names = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
                                 val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
@@ -118,7 +118,7 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun setVideo(useCronet: Boolean, gqlHeaders: Map<String, String>, videoId: String?, animatedPreviewUrl: String?, videoType: String?, qualities: Map<String, String>?, playerType: String?, supportedCodecs: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
+    fun setVideo(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, animatedPreviewUrl: String?, videoType: String?, qualities: Map<String, String>?, playerType: String?, supportedCodecs: String?, skipAccessToken: Int, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
             if (!qualities.isNullOrEmpty()) {
                 val map = mutableMapOf<String, Pair<String, String>>()
@@ -163,7 +163,7 @@ class DownloadViewModel @Inject constructor(
                                 }
                             }
                         } else {
-                            val playlist = playerRepository.loadVideoPlaylist(useCronet, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                            val playlist = playerRepository.loadVideoPlaylist(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
                             if (!playlist.isNullOrBlank()) {
                                 val qualities = "NAME=\"(.+?)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
                                 val codecs = "CODECS=\"(.+?)\\.".toRegex().findAll(playlist).map {
@@ -243,7 +243,7 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun setClip(useCronet: Boolean, gqlHeaders: Map<String, String>, clipId: String?, thumbnailUrl: String?, qualities: Map<String, String>?, skipAccessToken: Int, enableIntegrity: Boolean) {
+    fun setClip(networkLibrary: String?, gqlHeaders: Map<String, String>, clipId: String?, thumbnailUrl: String?, qualities: Map<String, String>?, skipAccessToken: Int, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
             if (!qualities.isNullOrEmpty()) {
                 val map = mutableMapOf<String, Pair<String, String>>()
@@ -273,7 +273,7 @@ class DownloadViewModel @Inject constructor(
                         val urls = if (skipAccessToken <= 1 && !thumbnailUrl.isNullOrBlank()) {
                             TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
                         } else {
-                            playerRepository.loadClipUrls(useCronet, gqlHeaders, clipId, enableIntegrity) ?:
+                            playerRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId, enableIntegrity) ?:
                             if (skipAccessToken == 2 && !thumbnailUrl.isNullOrBlank()) {
                                 TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
                             } else null

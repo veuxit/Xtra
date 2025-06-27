@@ -3,10 +3,12 @@ package com.github.andreyasadchy.xtra.ui.player
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.audiofx.DynamicsProcessing
+import android.net.http.HttpEngine
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.ext.SdkExtensions
 import androidx.annotation.OptIn
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -39,6 +41,7 @@ import androidx.media3.session.SessionResult
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistTracker
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsPlaylistParser
+import com.github.andreyasadchy.xtra.player.lowlatency.HttpEngineDataSource
 import com.github.andreyasadchy.xtra.player.lowlatency.OkHttpDataSource
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
@@ -48,6 +51,7 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.request
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
 import okhttp3.Credentials
@@ -72,7 +76,11 @@ class PlaybackService : MediaSessionService() {
 
     @Inject
     @JvmField
-    var cronetEngine: CronetEngine? = null
+    var httpEngine: Lazy<HttpEngine>? = null
+
+    @Inject
+    @JvmField
+    var cronetEngine: Lazy<CronetEngine>? = null
 
     @Inject
     lateinit var cronetExecutor: ExecutorService
@@ -185,14 +193,21 @@ class PlaybackService : MediaSessionService() {
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
                                 videoId = null
                                 offlineVideoId = null
+                                val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
                                 player.setMediaSource(
                                     HlsMediaSource.Factory(
                                         DefaultDataSource.Factory(
                                             this@PlaybackService,
-                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
-                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
-                                            } else {
-                                                OkHttpDataSource.Factory(okHttpClient)
+                                            when {
+                                                networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                }
+                                                networkLibrary == "Cronet" && cronetEngine != null -> {
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                }
+                                                else -> {
+                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                }
                                             }.apply {
                                                 prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
                                                     try {
@@ -256,14 +271,21 @@ class PlaybackService : MediaSessionService() {
                                 }
                                 videoId = newId
                                 offlineVideoId = null
+                                val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
                                 player.setMediaSource(
                                     HlsMediaSource.Factory(
                                         DefaultDataSource.Factory(
                                             this@PlaybackService,
-                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
-                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
-                                            } else {
-                                                OkHttpDataSource.Factory(okHttpClient)
+                                            when {
+                                                networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                }
+                                                networkLibrary == "Cronet" && cronetEngine != null -> {
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                }
+                                                else -> {
+                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                }
                                             }
                                         )
                                     ).apply {
@@ -295,14 +317,21 @@ class PlaybackService : MediaSessionService() {
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
                                 videoId = null
                                 offlineVideoId = null
+                                val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
                                 player.setMediaSource(
                                     ProgressiveMediaSource.Factory(
                                         DefaultDataSource.Factory(
                                             this@PlaybackService,
-                                            if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
-                                                CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
-                                            } else {
-                                                OkHttpDataSource.Factory(okHttpClient)
+                                            when {
+                                                networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                }
+                                                networkLibrary == "Cronet" && cronetEngine != null -> {
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                }
+                                                else -> {
+                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                }
                                             }
                                         )
                                     ).createMediaSource(
@@ -409,10 +438,17 @@ class PlaybackService : MediaSessionService() {
                                                         }.build()
                                                     )
                                                 } else {
-                                                    if (prefs().getBoolean(C.USE_CRONET, false) && cronetEngine != null) {
-                                                        CronetDataSource.Factory(cronetEngine!!, cronetExecutor)
-                                                    } else {
-                                                        OkHttpDataSource.Factory(okHttpClient)
+                                                    val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
+                                                    when {
+                                                        networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
+                                                            HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                        }
+                                                        networkLibrary == "Cronet" && cronetEngine != null -> {
+                                                            CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                        }
+                                                        else -> {
+                                                            OkHttpDataSource.Factory(okHttpClient)
+                                                        }
                                                     }
                                                 }.apply {
                                                     prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
