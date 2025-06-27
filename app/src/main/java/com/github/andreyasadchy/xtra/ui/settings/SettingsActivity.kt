@@ -28,6 +28,7 @@ import androidx.core.content.res.use
 import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
@@ -1406,7 +1407,8 @@ class SettingsActivity : AppCompatActivity() {
             }
             requireActivity().findViewById<SearchView>(R.id.searchView)?.let {
                 savedQuery?.let { query -> it.setQuery(query, true) }
-                it.isIconified = false
+                it.requestFocus()
+                WindowCompat.getInsetsController(requireActivity().window, it).show(WindowInsetsCompat.Type.ime())
             }
         }
 
