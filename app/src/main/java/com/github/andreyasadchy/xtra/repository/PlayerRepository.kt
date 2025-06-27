@@ -186,6 +186,7 @@ class PlayerRepository @Inject constructor(
         val query = mutableMapOf<String, String>().apply {
             put("allow_source", "true")
             put("allow_audio_only", "true")
+            put("include_unavailable", "true")
             put("p", Random.nextInt(9999999).toString())
             if (supportedCodecs?.contains("av1", true) == true) {
                 put("platform", "web")
