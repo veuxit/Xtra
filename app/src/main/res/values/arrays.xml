@@ -208,7 +208,7 @@
 
     <string-array name="playerQualityValues">
         <item>saved</item>
-        <item>Auto</item>
+        <item>auto</item>
         <item>Source</item>
         <item>1080p60</item>
         <item>1080</item>
