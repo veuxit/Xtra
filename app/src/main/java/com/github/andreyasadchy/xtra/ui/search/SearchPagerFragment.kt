@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
@@ -179,9 +180,8 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                     else -> false
                 }
             }
-            searchView.post {
-                searchView.isIconified = false
-            }
+            searchView.requestFocus()
+            WindowCompat.getInsetsController(requireActivity().window, searchView).show(WindowInsetsCompat.Type.ime())
             ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
                 toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
