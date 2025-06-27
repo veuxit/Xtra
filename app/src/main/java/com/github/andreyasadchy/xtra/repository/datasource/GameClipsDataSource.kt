@@ -24,7 +24,7 @@ class GameClipsDataSource(
     private val helixRepository: HelixRepository,
     private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
-    private val useCronet: Boolean,
+    private val networkLibrary: String?,
 ) : PagingSource<Int, Clip>() {
     private var api: String? = null
     private var offset: String? = null
@@ -65,7 +65,7 @@ class GameClipsDataSource(
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
         val response = graphQLRepository.loadQueryGameClips(
-            useCronet = useCronet,
+            networkLibrary = networkLibrary,
             headers = gqlHeaders,
             id = gameId,
             slug = gameSlug.takeIf { gameId.isNullOrBlank() },
@@ -114,7 +114,7 @@ class GameClipsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
-        val response = graphQLRepository.loadGameClips(useCronet, gqlHeaders, gameSlug, gqlPeriod, params.loadSize, offset)
+        val response = graphQLRepository.loadGameClips(networkLibrary, gqlHeaders, gameSlug, gqlPeriod, params.loadSize, offset)
         if (enableIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
@@ -152,7 +152,7 @@ class GameClipsDataSource(
 
     private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
         val response = helixRepository.getClips(
-            useCronet = useCronet,
+            networkLibrary = networkLibrary,
             headers = helixHeaders,
             gameId = gameId,
             startedAt = startedAt,
@@ -162,7 +162,7 @@ class GameClipsDataSource(
         )
         val users = response.data.mapNotNull { it.channelId }.let {
             helixRepository.getUsers(
-                useCronet = useCronet,
+                networkLibrary = networkLibrary,
                 headers = helixHeaders,
                 ids = it,
             ).data

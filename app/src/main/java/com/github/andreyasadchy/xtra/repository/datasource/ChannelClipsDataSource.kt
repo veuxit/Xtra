@@ -21,7 +21,7 @@ class ChannelClipsDataSource(
     private val helixRepository: HelixRepository,
     private val enableIntegrity: Boolean,
     private val apiPref: List<String>,
-    private val useCronet: Boolean,
+    private val networkLibrary: String?,
 ) : PagingSource<Int, Clip>() {
     private var api: String? = null
     private var offset: String? = null
@@ -61,7 +61,7 @@ class ChannelClipsDataSource(
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
-        val response = graphQLRepository.loadQueryUserClips(useCronet, gqlHeaders, channelId, channelLogin.takeIf { channelId.isNullOrBlank() }, gqlQueryPeriod, params.loadSize, offset)
+        val response = graphQLRepository.loadQueryUserClips(networkLibrary, gqlHeaders, channelId, channelLogin.takeIf { channelId.isNullOrBlank() }, gqlQueryPeriod, params.loadSize, offset)
         if (enableIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
@@ -101,7 +101,7 @@ class ChannelClipsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
-        val response = graphQLRepository.loadChannelClips(useCronet, gqlHeaders, channelLogin, gqlPeriod, params.loadSize, offset)
+        val response = graphQLRepository.loadChannelClips(networkLibrary, gqlHeaders, channelLogin, gqlPeriod, params.loadSize, offset)
         if (enableIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
@@ -138,7 +138,7 @@ class ChannelClipsDataSource(
 
     private suspend fun helixLoad(params: LoadParams<Int>): LoadResult<Int, Clip> {
         val response = helixRepository.getClips(
-            useCronet = useCronet,
+            networkLibrary = networkLibrary,
             headers = helixHeaders,
             channelId = channelId,
             startedAt = startedAt,
@@ -148,7 +148,7 @@ class ChannelClipsDataSource(
         )
         val games = response.data.mapNotNull { it.gameId }.let {
             helixRepository.getGames(
-                useCronet = useCronet,
+                networkLibrary = networkLibrary,
                 headers = helixHeaders,
                 ids = it,
             ).data

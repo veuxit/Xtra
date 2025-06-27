@@ -3,6 +3,7 @@ package com.github.andreyasadchy.xtra.ui.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.net.http.HttpEngine
 import android.util.JsonReader
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -27,6 +28,7 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +58,8 @@ class SettingsViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
     private val appDatabase: AppDatabase,
-    private val cronetEngine: CronetEngine?,
+    private val httpEngine: Lazy<HttpEngine>?,
+    private val cronetEngine: Lazy<CronetEngine>?,
     private val cronetExecutor: ExecutorService,
     private val okHttpClient: OkHttpClient,
     private val json: Json,
@@ -265,7 +268,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreSettings(list: List<String>, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun restoreSettings(list: List<String>, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             list.take(2).forEach { url ->
                 if (url.endsWith(".xml")) {
@@ -275,7 +278,7 @@ class SettingsViewModel @Inject constructor(
                     val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                         it.readText()
                     }
-                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), useCronet, gqlHeaders, helixHeaders)
+                    toggleNotifications(prefs.contains("name=\"${C.LIVE_NOTIFICATIONS_ENABLED}\" value=\"true\""), networkLibrary, gqlHeaders, helixHeaders)
                 } else {
                     val database = applicationContext.getDatabasePath("database")
                     File(database.parent, "database-shm").delete()
@@ -294,10 +297,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications(enabled: Boolean, useCronet: Boolean, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
+    fun toggleNotifications(enabled: Boolean, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             if (enabled) {
-                shownNotificationsRepository.getNewStreams(notificationUsersRepository, useCronet, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
+                shownNotificationsRepository.getNewStreams(notificationUsersRepository, networkLibrary, gqlHeaders, graphQLRepository, helixHeaders, helixRepository)
                 WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
                     "live_notifications",
                     ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,

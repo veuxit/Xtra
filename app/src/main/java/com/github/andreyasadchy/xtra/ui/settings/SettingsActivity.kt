@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.ext.SdkExtensions
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -216,7 +217,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     viewModel.restoreSettings(
                         list = list,
-                        useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                        networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                         gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                         helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                     )
@@ -282,7 +283,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 viewModel.toggleNotifications(
                     enabled = newValue as Boolean,
-                    useCronet = requireContext().prefs().getBoolean(C.USE_CRONET, false),
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), true),
                     helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext())
                 )
@@ -946,9 +947,24 @@ class SettingsActivity : AppCompatActivity() {
                 IntegrityDialog.show(childFragmentManager)
                 true
             }
-            if (!CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }) {
-                findPreference<SwitchPreferenceCompat>(C.USE_CRONET)?.isVisible = false
-                findPreference<SwitchPreferenceCompat>(C.DOWNLOAD_USE_CRONET)?.isVisible = false
+            val httpEngine = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7
+            val cronet = CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }
+            if (!httpEngine || !cronet) {
+                findPreference<ListPreference>(C.NETWORK_LIBRARY)?.apply {
+                    when {
+                        !httpEngine && !cronet -> {
+                            isVisible = false
+                        }
+                        !cronet -> {
+                            setEntries(R.array.networkLibraryEntriesNoCronet)
+                            setEntryValues(R.array.networkLibraryEntriesNoCronet)
+                        }
+                        else -> {
+                            setEntries(R.array.networkLibraryEntriesNoHttpEngine)
+                            setEntryValues(R.array.networkLibraryEntriesNoHttpEngine)
+                        }
+                    }
+                }
             }
         }
 
