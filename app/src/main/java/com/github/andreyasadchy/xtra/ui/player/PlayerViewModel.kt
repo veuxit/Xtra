@@ -95,8 +95,8 @@ class PlayerViewModel @Inject constructor(
     val savedOfflineVideoPosition = MutableStateFlow<Long?>(null)
 
     var qualities: Map<String, Pair<String, String?>> = emptyMap()
-    var qualityIndex: Int = 0
-    var previousIndex: Int = 0
+    var quality: String? = null
+    var previousQuality: String? = null
     var playlistUrl: Uri? = null
     var updateQualities = false
     var started = false

@@ -371,10 +371,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 view.findViewById<ImageButton>(R.id.playerMode)?.apply {
                     visible()
                     setOnClickListener {
-                        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
-                            changeQuality(viewModel.previousIndex)
+                        if (viewModel.quality == AUDIO_ONLY_QUALITY) {
+                            changeQuality(viewModel.previousQuality)
                         } else {
-                            changeQuality(viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY))
+                            changeQuality(AUDIO_ONLY_QUALITY)
                         }
                         changePlayerMode()
                     }
@@ -645,9 +645,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
                                         .thenByDescending { it == "audio_only" }
                                 )
-                                setQualityIndex()
+                                setDefaultQuality()
                                 player?.let { player ->
-                                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                                    val quality = viewModel.qualities.entries.find { it.key == viewModel.quality }
                                     if (quality?.key == AUDIO_ONLY_QUALITY) {
                                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
                                             setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
@@ -713,9 +713,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     "source" to Pair(requireContext().getString(R.string.source), url),
                                     AUDIO_ONLY_QUALITY to Pair(requireContext().getString(R.string.audio_only), null)
                                 )
-                                setQualityIndex()
+                                setDefaultQuality()
                                 player?.let { player ->
-                                    val quality = viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)
+                                    val quality = viewModel.qualities.entries.find { it.key == viewModel.quality }
                                     if (quality?.key == AUDIO_ONLY_QUALITY) {
                                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
                                             setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
@@ -992,7 +992,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
 
     fun showQualityDialog() {
         if (viewModel.qualities.isNotEmpty()) {
-            RadioButtonDialogFragment.newInstance(REQUEST_CODE_QUALITY, viewModel.qualities.values.map { it.first }, null, viewModel.qualityIndex).show(childFragmentManager, "closeOnPip")
+            RadioButtonDialogFragment.newInstance(REQUEST_CODE_QUALITY, viewModel.qualities.values.map { it.first }, null, viewModel.qualities.keys.indexOf(viewModel.quality)).show(childFragmentManager, "closeOnPip")
         }
     }
 
@@ -1117,7 +1117,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
 
     fun setQualityText() {
         (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQuality(
-            viewModel.qualities.values.elementAtOrNull(viewModel.qualityIndex)?.first
+            viewModel.qualities[viewModel.quality]?.first
         )
     }
 
@@ -1206,7 +1206,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     }
 
     fun restartPlayer() {
-        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != CHAT_ONLY_QUALITY) {
+        if (viewModel.quality != CHAT_ONLY_QUALITY) {
             loadStream()
         }
     }
@@ -1287,57 +1287,44 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         )
     }
 
-    private fun setQualityIndex() {
+    private fun setDefaultQuality() {
         val defaultQuality = prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved")?.substringBefore(" ")
-        viewModel.qualityIndex = when (defaultQuality) {
+        viewModel.quality = when (defaultQuality) {
             "saved" -> {
                 val savedQuality = prefs.getString(C.PLAYER_QUALITY, "720p60")?.substringBefore(" ")
                 when (savedQuality) {
-                    AUTO_QUALITY -> 0
-                    AUDIO_ONLY_QUALITY -> viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY).takeIf { it != -1 }
-                    CHAT_ONLY_QUALITY -> viewModel.qualities.keys.indexOf(CHAT_ONLY_QUALITY).takeIf { it != -1 }
-                    else -> findQualityIndex(savedQuality)
+                    AUTO_QUALITY -> viewModel.qualities.entries.find { it.key == AUTO_QUALITY }?.key
+                    AUDIO_ONLY_QUALITY -> viewModel.qualities.entries.find { it.key == AUDIO_ONLY_QUALITY }?.key
+                    CHAT_ONLY_QUALITY -> viewModel.qualities.entries.find { it.key == CHAT_ONLY_QUALITY }?.key
+                    else -> findQuality(savedQuality)
                 }
             }
-            "Auto" -> 0
-            "Source" -> {
-                if (viewModel.qualities.containsKey(AUTO_QUALITY)) {
-                    1
-                } else {
-                    0
-                }
-            }
-            AUDIO_ONLY_QUALITY -> {
-                viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY).takeIf { it != -1 }
-            }
-            CHAT_ONLY_QUALITY -> {
-                viewModel.qualities.keys.indexOf(CHAT_ONLY_QUALITY).takeIf { it != -1 }
-            }
-            else -> findQualityIndex(defaultQuality)
-        } ?: 0
+            AUTO_QUALITY -> viewModel.qualities.entries.find { it.key == AUTO_QUALITY }?.key
+            "Source" -> viewModel.qualities.entries.find { it.key != AUTO_QUALITY }?.key
+            AUDIO_ONLY_QUALITY -> viewModel.qualities.entries.find { it.key == AUDIO_ONLY_QUALITY }?.key
+            CHAT_ONLY_QUALITY -> viewModel.qualities.entries.find { it.key == CHAT_ONLY_QUALITY }?.key
+            else -> findQuality(defaultQuality)
+        } ?: viewModel.qualities.entries.firstOrNull()?.key
     }
 
-    private fun findQualityIndex(targetQualityString: String?): Int? {
-        return targetQualityString?.split("p")?.let { targetQuality ->
-            targetQuality[0].filter(Char::isDigit).toIntOrNull()?.let { targetRes ->
-                val targetFps = if (targetQuality.size >= 2) targetQuality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                val qualities = viewModel.qualities.keys
-                qualities.indexOf(qualities.find { qualityString ->
-                    qualityString.split("p").let { quality ->
-                        quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                            val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                            (targetRes == qualityRes && targetFps >= qualityFps) || targetRes > qualityRes || qualities.indexOf(qualityString) == qualities.indexOf(AUDIO_ONLY_QUALITY) - 1
-                        } == true
-                    }
-                }).let { if (it != -1) it else null }
+    private fun findQuality(targetQualityString: String?): String? {
+        val targetQuality = targetQualityString?.split("p")
+        return targetQuality?.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()?.let { targetResolution ->
+            val targetFps = targetQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+            val last = viewModel.qualities.keys.last { it != AUDIO_ONLY_QUALITY && it != CHAT_ONLY_QUALITY }
+            viewModel.qualities.keys.find { qualityString ->
+                val quality = qualityString.split("p")
+                val resolution = quality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
+                val fps = quality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                resolution != null && ((targetResolution == resolution && targetFps >= fps) || targetResolution > resolution || qualityString == last)
             }
         }
     }
 
-    private fun changeQuality(index: Int) {
-        viewModel.previousIndex = viewModel.qualityIndex
-        viewModel.qualityIndex = index
-        viewModel.qualities.entries.elementAtOrNull(index)?.let { quality ->
+    private fun changeQuality(selectedQuality: String?) {
+        viewModel.previousQuality = viewModel.quality
+        viewModel.quality = selectedQuality
+        viewModel.qualities.entries.find { it.key == selectedQuality }?.let { quality ->
             player?.let { player ->
                 player.currentMediaItem?.let { mediaItem ->
                     when (quality.key) {
@@ -1409,18 +1396,21 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     if (!player.currentTracks.isEmpty) {
                                         player.currentTracks.groups.find { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO }?.let {
                                             val selectedQuality = quality.key.split("p")
-                                            val height = selectedQuality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
-                                            val fps = selectedQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                            val targetResolution = selectedQuality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
+                                            val targetFps = selectedQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
                                             if (it.mediaTrackGroup.length > 0) {
-                                                if (height != null) {
+                                                if (targetResolution != null) {
                                                     val formats = mutableListOf<Triple<Int, Int, Float>>()
                                                     for (i in 0 until it.mediaTrackGroup.length) {
                                                         val format = it.mediaTrackGroup.getFormat(i)
                                                         formats.add(Triple(i, format.height, format.frameRate))
                                                     }
-                                                    formats.sortedWith(
+                                                    val list = formats.sortedWith(
                                                         compareByDescending<Triple<Int, Int, Float>> { it.third }.thenByDescending { it.second }
-                                                    ).find { it.second <= height && floor(it.third) <= fps }?.first?.let { index ->
+                                                    )
+                                                    list.find {
+                                                        (targetResolution == it.second && targetFps >= floor(it.third)) || targetResolution > it.second || it == list.last()
+                                                    }?.first?.let { index ->
                                                         setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, index))
                                                     }
                                                 } else {
@@ -1527,13 +1517,11 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     fun secondViewIsHidden() = binding.slidingLayout.secondView?.isVisible == false
 
     fun enterPictureInPicture(): Boolean {
-        val quality = viewModel.qualities.keys.elementAtOrNull(
-            if (viewModel.restoreQuality) {
-                viewModel.previousIndex
-            } else {
-                viewModel.qualityIndex
-            }
-        )
+        val quality = if (viewModel.restoreQuality) {
+            viewModel.previousQuality
+        } else {
+            viewModel.quality
+        }
         return quality != AUDIO_ONLY_QUALITY && quality != CHAT_ONLY_QUALITY
     }
 
@@ -1575,9 +1563,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     setSubtitles()
                     if (!tracks.isEmpty) {
                         if (viewModel.qualities.containsKey(AUTO_QUALITY)
-                            && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
+                            && viewModel.quality != AUDIO_ONLY_QUALITY
                             && !viewModel.hidden) {
-                            changeQuality(viewModel.qualityIndex)
+                            changeQuality(viewModel.quality)
                         }
                         chatFragment?.startReplayChatLoad()
                     }
@@ -1585,7 +1573,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                     if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED && !timeline.isEmpty && viewModel.qualities.containsKey(AUTO_QUALITY)) {
-                        viewModel.updateQualities = viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY
+                        viewModel.updateQualities = viewModel.quality != AUDIO_ONLY_QUALITY
                     }
                     if (viewModel.qualities.isEmpty() || viewModel.updateQualities) {
                         player?.sendCustomCommand(
@@ -1631,9 +1619,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                                 .thenByDescending { it == "audio_only" }
                                                 .thenByDescending { it == "chat_only" }
                                         )
-                                        setQualityIndex()
-                                        if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) == AUDIO_ONLY_QUALITY) {
-                                            changeQuality(viewModel.qualityIndex)
+                                        setDefaultQuality()
+                                        if (viewModel.quality == AUDIO_ONLY_QUALITY) {
+                                            changeQuality(viewModel.quality)
                                         }
                                     }
                                     if (reason == Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE) {
@@ -1673,7 +1661,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                                 }
                                             } else {
                                                 if (!oldValue) {
-                                                    val playlist = viewModel.qualities.values.elementAtOrNull(viewModel.qualityIndex)?.second
+                                                    val playlist = viewModel.qualities[viewModel.quality]?.second
                                                     if (!viewModel.stopProxy && !playlist.isNullOrBlank() && useProxy) {
                                                         player?.sendCustomCommand(
                                                             SessionCommand(
@@ -1815,7 +1803,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
             })
             if (viewModel.restoreQuality) {
                 viewModel.restoreQuality = false
-                changeQuality(viewModel.previousIndex)
+                changeQuality(viewModel.previousQuality)
             }
             player?.sendCustomCommand(
                 SessionCommand(
@@ -2062,16 +2050,16 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, requireArguments().getString(KEY_VIDEO_TYPE))
                 val map = mutableMapOf<String, Pair<String, String?>>()
                 qualityMap.forEach {
-                    if (it.key == "source") {
-                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
-                    } else {
-                        map[it.key] = Pair(it.key, it.value)
+                    when (it.key) {
+                        "source" -> map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
+                        "audio_only" -> map[it.key] = Pair(requireContext().getString(R.string.audio_only), it.value)
+                        else -> map[it.key] = Pair(it.key, it.value)
                     }
                 }
                 map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
                     ?: Pair(requireContext().getString(R.string.audio_only), null))
                 viewModel.qualities = map
-                viewModel.qualityIndex = 0
+                viewModel.quality = map.keys.firstOrNull()
                 map.values.firstOrNull()?.second
             }?.let { url ->
                 player?.let { player ->
@@ -2179,11 +2167,11 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     )
                     viewModel.usingProxy = false
                 }
-                if (viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                if (viewModel.quality != AUDIO_ONLY_QUALITY) {
                     viewModel.restoreQuality = true
-                    viewModel.previousIndex = viewModel.qualityIndex
-                    viewModel.qualityIndex = viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY)
-                    viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)?.let { quality ->
+                    viewModel.previousQuality = viewModel.quality
+                    viewModel.quality = AUDIO_ONLY_QUALITY
+                    viewModel.qualities.entries.find { it.key == viewModel.quality }?.let { quality ->
                         player.currentMediaItem?.let { mediaItem ->
                             if (prefs.getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
                                 player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
@@ -2234,11 +2222,11 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 if (prefs.getBoolean(C.PLAYER_BACKGROUND_AUDIO, true)
                     && !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode)
                 ) {
-                    if (player.playWhenReady == true && viewModel.qualities.keys.elementAtOrNull(viewModel.qualityIndex) != AUDIO_ONLY_QUALITY) {
+                    if (player.playWhenReady == true && viewModel.quality != AUDIO_ONLY_QUALITY) {
                         viewModel.restoreQuality = true
-                        viewModel.previousIndex = viewModel.qualityIndex
-                        viewModel.qualityIndex = viewModel.qualities.keys.indexOf(AUDIO_ONLY_QUALITY)
-                        viewModel.qualities.entries.elementAtOrNull(viewModel.qualityIndex)?.let { quality ->
+                        viewModel.previousQuality = viewModel.quality
+                        viewModel.quality = AUDIO_ONLY_QUALITY
+                        viewModel.qualities.entries.find { it.key == viewModel.quality }?.let { quality ->
                             player.currentMediaItem?.let { mediaItem ->
                                 if (prefs.getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
                                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
@@ -2466,7 +2454,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {
         when (requestCode) {
             REQUEST_CODE_QUALITY -> {
-                changeQuality(index)
+                changeQuality(viewModel.qualities.keys.elementAtOrNull(index))
                 changePlayerMode()
                 setQualityText()
             }
