@@ -625,12 +625,17 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     }
                                 }
                                 map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
-                                viewModel.qualities = map.toSortedMap(
-                                    compareByDescending<String> { it == "source" }
-                                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                                        .thenByDescending { it == "audio_only" }
-                                )
+                                viewModel.qualities = map.toList()
+                                    .sortedByDescending {
+                                        it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                    }
+                                    .sortedByDescending {
+                                        it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                    }
+                                    .sortedByDescending {
+                                        it.first == "source"
+                                    }
+                                    .toMap()
                                 setDefaultQuality()
                                 player?.let { player ->
                                     val quality = viewModel.qualities.entries.find { it.key == viewModel.quality }
@@ -1567,26 +1572,39 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                         map[AUTO_QUALITY] = Pair(requireContext().getString(R.string.auto), null)
                                         names.forEachIndexed { index, quality ->
                                             urls.getOrNull(index)?.let { url ->
-                                                if (quality.startsWith("audio", true)) {
-                                                    map[AUDIO_ONLY_QUALITY] = Pair(requireContext().getString(R.string.audio_only), url)
-                                                } else {
-                                                    map[quality] = Pair(codecs?.getOrNull(index)?.let { "$quality $it" } ?: quality, url)
+                                                when {
+                                                    quality.equals("source", true) -> {
+                                                        map["source"] = Pair(requireContext().getString(R.string.source), url)
+                                                    }
+                                                    quality.startsWith("audio", true) -> {
+                                                        map[AUDIO_ONLY_QUALITY] = Pair(requireContext().getString(R.string.audio_only), url)
+                                                    }
+                                                    else -> {
+                                                        map[quality] = Pair(codecs?.getOrNull(index)?.let { "$quality $it" } ?: quality, url)
+                                                    }
                                                 }
                                             }
                                         }
-                                        map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
-                                            ?: Pair(requireContext().getString(R.string.audio_only), null))
+                                        if (!map.containsKey(AUDIO_ONLY_QUALITY)) {
+                                            map[AUDIO_ONLY_QUALITY] = Pair(requireContext().getString(R.string.audio_only), null)
+                                        }
                                         if (videoType == STREAM) {
                                             map[CHAT_ONLY_QUALITY] = Pair(requireContext().getString(R.string.chat_only), null)
                                         }
-                                        viewModel.qualities = map.toSortedMap(
-                                            compareByDescending<String> { it == "auto" }
-                                                .thenByDescending { it == "source" }
-                                                .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                                                .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                                                .thenByDescending { it == "audio_only" }
-                                                .thenByDescending { it == "chat_only" }
-                                        )
+                                        viewModel.qualities = map.toList()
+                                            .sortedByDescending {
+                                                it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                            }
+                                            .sortedByDescending {
+                                                it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                            }
+                                            .sortedByDescending {
+                                                it.first == "source"
+                                            }
+                                            .sortedByDescending {
+                                                it.first == "auto"
+                                            }
+                                            .toMap()
                                         setDefaultQuality()
                                         if (viewModel.quality == AUDIO_ONLY_QUALITY) {
                                             changeQuality(viewModel.quality)
@@ -2320,9 +2338,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         if (viewModel.loaded.value) {
             when (videoType) {
                 STREAM -> {
-                    val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                        pair.second?.let { pair.first to it }
-                    }
+                    val qualities = viewModel.qualities.filter { !it.value.second.isNullOrBlank() }
                     DownloadDialog.newInstance(
                         id = requireArguments().getString(KEY_STREAM_ID),
                         title = requireArguments().getString(KEY_TITLE),
@@ -2335,8 +2351,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         gameId = requireArguments().getString(KEY_GAME_ID),
                         gameSlug = requireArguments().getString(KEY_GAME_SLUG),
                         gameName = requireArguments().getString(KEY_GAME_NAME),
-                        keys = qualities.map { it.first }.toTypedArray(),
-                        values = qualities.map { it.second }.toTypedArray()
+                        qualityKeys = qualities.keys.toTypedArray(),
+                        qualityNames = qualities.map { it.value.first }.toTypedArray(),
+                        qualityUrls = qualities.mapNotNull { it.value.second }.toTypedArray(),
                     ).show(childFragmentManager, null)
                 }
                 VIDEO -> {
@@ -2347,9 +2364,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         result.addListener({
                             if (result.get().resultCode == SessionResult.RESULT_SUCCESS) {
                                 val totalDuration = result.get().extras.getLong(PlaybackService.RESULT)
-                                val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                                    pair.second?.let { pair.first to it }
-                                }
+                                val qualities = viewModel.qualities.filter { !it.value.second.isNullOrBlank() }
                                 DownloadDialog.newInstance(
                                     id = requireArguments().getString(KEY_VIDEO_ID),
                                     title = requireArguments().getString(KEY_TITLE),
@@ -2367,17 +2382,16 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     gameName = requireArguments().getString(KEY_GAME_NAME),
                                     totalDuration = totalDuration,
                                     currentPosition = player?.currentPosition,
-                                    keys = qualities.map { it.first }.toTypedArray(),
-                                    values = qualities.map { it.second }.toTypedArray()
+                                    qualityKeys = qualities.keys.toTypedArray(),
+                                    qualityNames = qualities.map { it.value.first }.toTypedArray(),
+                                    qualityUrls = qualities.mapNotNull { it.value.second }.toTypedArray(),
                                 ).show(childFragmentManager, null)
                             }
                         }, MoreExecutors.directExecutor())
                     }
                 }
                 CLIP -> {
-                    val qualities = viewModel.qualities.values.mapNotNull { pair ->
-                        pair.second?.let { pair.first to it }
-                    }
+                    val qualities = viewModel.qualities.filter { !it.value.second.isNullOrBlank() }
                     DownloadDialog.newInstance(
                         clipId = requireArguments().getString(KEY_CLIP_ID),
                         title = requireArguments().getString(KEY_TITLE),
@@ -2394,8 +2408,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         gameId = requireArguments().getString(KEY_GAME_ID),
                         gameSlug = requireArguments().getString(KEY_GAME_SLUG),
                         gameName = requireArguments().getString(KEY_GAME_NAME),
-                        keys = qualities.map { it.first }.toTypedArray(),
-                        values = qualities.map { it.second }.toTypedArray()
+                        qualityKeys = qualities.keys.toTypedArray(),
+                        qualityNames = qualities.map { it.value.first }.toTypedArray(),
+                        qualityUrls = qualities.mapNotNull { it.value.second }.toTypedArray(),
                     ).show(childFragmentManager, null)
                 }
             }
