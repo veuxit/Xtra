@@ -62,6 +62,7 @@ import java.util.Timer
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.max
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -197,7 +198,13 @@ class MainViewModel @Inject constructor(
                         profileImageUrl = user?.broadcaster?.profileImageURL,
                         videoId = clip?.video?.id,
                         duration = clip?.durationSeconds,
-                        vodOffset = clip?.videoOffsetSeconds ?: user?.videoOffsetSeconds
+                        vodOffset = (clip?.videoOffsetSeconds ?: user?.videoOffsetSeconds).let {
+                            if (it != null && clip?.durationSeconds != null) {
+                                max(it - clip.durationSeconds.toInt(), 0)
+                            } else {
+                                it
+                            }
+                        }
                     )
                 } catch (e: Exception) {
                     if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
@@ -212,7 +219,11 @@ class MainViewModel @Inject constructor(
                                     channelId = it.channelId,
                                     channelName = it.channelName,
                                     videoId = it.videoId,
-                                    vodOffset = it.vodOffset,
+                                    vodOffset = if (it.vodOffset != null && it.duration != null) {
+                                        max(it.vodOffset - it.duration.toInt(), 0)
+                                    } else {
+                                        it.vodOffset
+                                    },
                                     gameId = it.gameId,
                                     title = it.title,
                                     viewCount = it.viewCount,

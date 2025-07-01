@@ -7,6 +7,7 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.util.C
+import kotlin.math.max
 
 class ChannelClipsDataSource(
     private val channelId: String?,
@@ -75,7 +76,11 @@ class ChannelClipsDataSource(
                     channelLogin = data.login,
                     channelName = data.displayName,
                     videoId = it.video?.id,
-                    vodOffset = it.videoOffsetSeconds,
+                    vodOffset = if (it.videoOffsetSeconds != null && it.durationSeconds != null) {
+                        max(it.videoOffsetSeconds - it.durationSeconds, 0) // api is returning wrong offset
+                    } else {
+                        it.videoOffsetSeconds
+                    },
                     gameId = it.game?.id,
                     gameSlug = it.game?.slug,
                     gameName = it.game?.displayName,
@@ -160,7 +165,11 @@ class ChannelClipsDataSource(
                 channelLogin = channelLogin,
                 channelName = it.channelName,
                 videoId = it.videoId,
-                vodOffset = it.vodOffset,
+                vodOffset = if (it.vodOffset != null && it.duration != null) {
+                    max(it.vodOffset - it.duration.toInt(), 0)
+                } else {
+                    it.vodOffset
+                },
                 gameId = it.gameId,
                 gameName = it.gameId?.let { id ->
                     games.find { game -> game.id == id }?.name

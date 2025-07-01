@@ -8,6 +8,7 @@ import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.util.C
+import kotlin.math.max
 
 class GameClipsDataSource(
     private val gameId: String?,
@@ -88,7 +89,11 @@ class GameClipsDataSource(
                     channelLogin = it.broadcaster?.login,
                     channelName = it.broadcaster?.displayName,
                     videoId = it.video?.id,
-                    vodOffset = it.videoOffsetSeconds,
+                    vodOffset = if (it.videoOffsetSeconds != null && it.durationSeconds != null) {
+                        max(it.videoOffsetSeconds - it.durationSeconds, 0)
+                    } else {
+                        it.videoOffsetSeconds
+                    },
                     gameId = gameId,
                     gameSlug = gameSlug,
                     gameName = gameName,
@@ -177,7 +182,11 @@ class GameClipsDataSource(
                 channelLogin = user?.channelLogin,
                 channelName = it.channelName,
                 videoId = it.videoId,
-                vodOffset = it.vodOffset,
+                vodOffset = if (it.vodOffset != null && it.duration != null) {
+                    max(it.vodOffset - it.duration.toInt(), 0)
+                } else {
+                    it.vodOffset
+                },
                 gameId = gameId,
                 gameSlug = gameSlug,
                 gameName = gameName,
