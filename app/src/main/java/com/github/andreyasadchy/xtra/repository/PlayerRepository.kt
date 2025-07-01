@@ -257,18 +257,22 @@ class PlayerRepository @Inject constructor(
             response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
         }
         val accessToken = response.data?.clip?.playbackAccessToken
-        response.data?.clip?.videoQualities?.withIndex()?.associateBy({
-            if (!it.value.quality.isNullOrBlank()) {
-                val frameRate = it.value.frameRate?.roundToInt() ?: 0
-                if (frameRate < 60) {
-                    "${it.value.quality}p"
+        response.data?.clip?.videoQualities?.mapIndexedNotNull { index, quality ->
+            if (quality.sourceURL.isNotBlank()) {
+                val name = if (!quality.quality.isNullOrBlank()) {
+                    val frameRate = quality.frameRate?.roundToInt() ?: 0
+                    if (frameRate < 60) {
+                        "${quality.quality}p"
+                    } else {
+                        "${quality.quality}p${frameRate}"
+                    }
                 } else {
-                    "${it.value.quality}p${frameRate}"
+                    index.toString()
                 }
-            } else {
-                it.index.toString()
-            }
-        }, { "${it.value.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}" })
+                val url = "${quality.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}"
+                name to url
+            } else null
+        }?.toMap()
     }
 
     suspend fun sendMinuteWatched(networkLibrary: String?, userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {

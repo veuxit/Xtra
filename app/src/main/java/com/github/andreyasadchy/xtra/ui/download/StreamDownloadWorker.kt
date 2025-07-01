@@ -184,26 +184,30 @@ class StreamDownloadWorker @AssistedInject constructor(
                 }
             }
             if (!playlist.isNullOrBlank()) {
-                val names = "NAME=\"(.*)\"".toRegex().findAll(playlist).map { it.groupValues[1] }.toMutableList()
-                val urls = "https://.*\\.m3u8".toRegex().findAll(playlist).map(MatchResult::value).toMutableList()
-                val map = names.zip(urls).toMap(mutableMapOf()).toSortedMap(
-                    compareByDescending<String> { it == "source" }
-                        .thenByDescending { it.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                        .thenByDescending { it.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull() }
-                        .thenByDescending { it == "audio_only" }
-                )
+                val names = Regex("NAME=\"(.+?)\"").findAll(playlist).mapNotNull { it.groups[1]?.value }.toMutableList()
+                val urls = Regex("https://.*\\.m3u8").findAll(playlist).map(MatchResult::value).toMutableList()
+                val map = names.zip(urls)
+                    .sortedByDescending {
+                        it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                    }
+                    .sortedByDescending {
+                        it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                    }
+                    .sortedByDescending {
+                        it.first == "source"
+                    }
+                    .toMap()
                 if (map.isNotEmpty()) {
                     val mediaPlaylistUrl = if (!quality.isNullOrBlank()) {
                         quality.split("p").let { targetQuality ->
-                            targetQuality[0].filter(Char::isDigit).toIntOrNull()?.let { targetRes ->
-                                val targetFps = if (targetQuality.size >= 2) targetQuality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                            targetQuality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()?.let { targetResolution ->
+                                val targetFps = targetQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                val last = map.keys.last { it != "audio_only" && it != "chat_only" }
                                 map.entries.find { entry ->
-                                    entry.key.split("p").let { quality ->
-                                        quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                                            val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                                            (targetRes == qualityRes && targetFps >= qualityFps) || targetRes > qualityRes
-                                        } == true
-                                    }
+                                    val quality = entry.key.split("p")
+                                    val resolution = quality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
+                                    val fps = quality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                    resolution != null && ((targetResolution == resolution && targetFps >= fps) || targetResolution > resolution || entry.key == last)
                                 }
                             }
                         }?.value ?: map.values.first()
@@ -250,21 +254,30 @@ class StreamDownloadWorker @AssistedInject constructor(
                                 }
                             }
                         }
-                        val newNames = "NAME=\"(.*)\"".toRegex().findAll(newPlaylist).map { it.groupValues[1] }.toMutableList()
-                        val newUrls = "https://.*\\.m3u8".toRegex().findAll(newPlaylist).map(MatchResult::value).toMutableList()
-                        val newMap = newNames.zip(newUrls).toMap(mutableMapOf())
+                        val newNames = Regex("NAME=\"(.+?)\"").findAll(newPlaylist).mapNotNull { it.groups[1]?.value }.toMutableList()
+                        val newUrls = Regex("https://.*\\.m3u8").findAll(newPlaylist).map(MatchResult::value).toMutableList()
+                        val newMap = newNames.zip(newUrls)
+                            .sortedByDescending {
+                                it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                            }
+                            .sortedByDescending {
+                                it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                            }
+                            .sortedByDescending {
+                                it.first == "source"
+                            }
+                            .toMap()
                         if (newMap.isNotEmpty()) {
                             if (!quality.isNullOrBlank()) {
                                 quality.split("p").let { targetQuality ->
-                                    targetQuality[0].filter(Char::isDigit).toIntOrNull()?.let { targetRes ->
-                                        val targetFps = if (targetQuality.size >= 2) targetQuality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
+                                    targetQuality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()?.let { targetResolution ->
+                                        val targetFps = targetQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                        val last = newMap.keys.last { it != "audio_only" && it != "chat_only" }
                                         newMap.entries.find { entry ->
-                                            entry.key.split("p").let { quality ->
-                                                quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
-                                                    val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 30 else 30
-                                                    (targetRes == qualityRes && targetFps >= qualityFps) || targetRes > qualityRes
-                                                } == true
-                                            }
+                                            val quality = entry.key.split("p")
+                                            val resolution = quality.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()
+                                            val fps = quality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
+                                            resolution != null && ((targetResolution == resolution && targetFps >= fps) || targetResolution > resolution || entry.key == last)
                                         }
                                     }
                                 }?.value ?: newMap.values.first()
