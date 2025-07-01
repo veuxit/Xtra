@@ -2,7 +2,6 @@ package com.github.andreyasadchy.xtra.ui.saved.downloads
 
 import android.content.ContentResolver
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.util.JsonReader
 import androidx.core.net.toUri
@@ -655,81 +654,75 @@ class DownloadsViewModel @Inject internal constructor(
                 } else {
                     WorkManager.getInstance(applicationContext).cancelAllWorkByTag(video.id.toString())
                 }
-                if (videoUrl != null) {
+                if (videoUrl != null && !keepFiles) {
                     if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
-                        if (!keepFiles) {
-                            if (videoUrl.endsWith(".m3u8")) {
-                                val directory = DocumentFile.fromTreeUri(applicationContext, videoUrl.substringBefore("/document/").toUri()) ?: return@launch
-                                val videoDirectory = directory.findFile(videoUrl.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
-                                val playlistFile = videoDirectory.findFile(videoUrl.substringAfterLast("%2F")) ?: return@launch
-                                val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
-                                val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
+                        if (videoUrl.endsWith(".m3u8")) {
+                            val directory = DocumentFile.fromTreeUri(applicationContext, videoUrl.substringBefore("/document/").toUri()) ?: return@launch
+                            val videoDirectory = directory.findFile(videoUrl.substringBeforeLast("%2F").substringAfterLast("%2F").substringAfterLast("%3A")) ?: return@launch
+                            val playlistFile = videoDirectory.findFile(videoUrl.substringAfterLast("%2F")) ?: return@launch
+                            val playlists = videoDirectory.listFiles().filter { it.name?.endsWith(".m3u8") == true && it.uri != playlistFile.uri }
+                            val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
+                            }
+                            val tracksToDelete = playlist.segments.toMutableSet()
+                            playlists.forEach { file ->
+                                val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
                                     PlaylistUtils.parseMediaPlaylist(it)
                                 }
-                                val tracksToDelete = playlist.segments.toMutableSet()
-                                playlists.forEach { file ->
-                                    val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
-                                        PlaylistUtils.parseMediaPlaylist(it)
-                                    }
-                                    tracksToDelete.removeAll(p.segments.toSet())
-                                }
+                                tracksToDelete.removeAll(p.segments.toSet())
+                            }
+                            repository.updateVideo(video.apply {
+                                maxProgress = tracksToDelete.count()
+                            })
+                            tracksToDelete.forEach {
+                                videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete()
                                 repository.updateVideo(video.apply {
-                                    maxProgress = tracksToDelete.count()
+                                    progress += 1
                                 })
-                                tracksToDelete.forEach {
-                                    videoDirectory.findFile(it.uri.substringAfterLast("%2F"))?.delete()
-                                    repository.updateVideo(video.apply {
-                                        progress += 1
-                                    })
-                                }
-                                playlistFile.delete()
-                                if (playlists.isEmpty()) {
-                                    videoDirectory.delete()
-                                }
-                            } else {
-                                DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())?.delete()
                             }
-                            video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri())?.delete() }
+                            playlistFile.delete()
+                            if (playlists.isEmpty()) {
+                                videoDirectory.delete()
+                            }
+                        } else {
+                            DocumentFile.fromSingleUri(applicationContext, videoUrl.toUri())?.delete()
                         }
-                        applicationContext.contentResolver.releasePersistableUriPermission(videoUrl.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        video.chatUrl?.let { applicationContext.contentResolver.releasePersistableUriPermission(it.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+                        video.chatUrl?.let { DocumentFile.fromSingleUri(applicationContext, it.toUri())?.delete() }
                     } else {
-                        if (!keepFiles) {
-                            val playlistFile = File(videoUrl)
-                            if (!playlistFile.exists()) {
-                                return@launch
-                            }
-                            if (videoUrl.endsWith(".m3u8")) {
-                                val directory = playlistFile.parentFile
-                                if (directory != null) {
-                                    val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
-                                    if (playlists != null) {
-                                        val playlist = PlaylistUtils.parseMediaPlaylist(playlistFile.inputStream())
-                                        val tracksToDelete = playlist.segments.toMutableSet()
-                                        playlists.forEach {
-                                            val p = PlaylistUtils.parseMediaPlaylist(it.inputStream())
-                                            tracksToDelete.removeAll(p.segments.toSet())
-                                        }
+                        val playlistFile = File(videoUrl)
+                        if (!playlistFile.exists()) {
+                            return@launch
+                        }
+                        if (videoUrl.endsWith(".m3u8")) {
+                            val directory = playlistFile.parentFile
+                            if (directory != null) {
+                                val playlists = directory.listFiles(FileFilter { it.extension == "m3u8" && it != playlistFile })
+                                if (playlists != null) {
+                                    val playlist = PlaylistUtils.parseMediaPlaylist(playlistFile.inputStream())
+                                    val tracksToDelete = playlist.segments.toMutableSet()
+                                    playlists.forEach {
+                                        val p = PlaylistUtils.parseMediaPlaylist(it.inputStream())
+                                        tracksToDelete.removeAll(p.segments.toSet())
+                                    }
+                                    repository.updateVideo(video.apply {
+                                        maxProgress = tracksToDelete.count()
+                                    })
+                                    tracksToDelete.forEach {
+                                        File(it.uri).delete()
                                         repository.updateVideo(video.apply {
-                                            maxProgress = tracksToDelete.count()
+                                            progress += 1
                                         })
-                                        tracksToDelete.forEach {
-                                            File(it.uri).delete()
-                                            repository.updateVideo(video.apply {
-                                                progress += 1
-                                            })
-                                        }
-                                        playlistFile.delete()
-                                        if (playlists.isEmpty()) {
-                                            directory.deleteRecursively()
-                                        }
+                                    }
+                                    playlistFile.delete()
+                                    if (playlists.isEmpty()) {
+                                        directory.deleteRecursively()
                                     }
                                 }
-                            } else {
-                                playlistFile.delete()
                             }
-                            video.chatUrl?.let { File(it).delete() }
+                        } else {
+                            playlistFile.delete()
                         }
+                        video.chatUrl?.let { File(it).delete() }
                     }
                 }
             }.invokeOnCompletion {
