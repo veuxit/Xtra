@@ -30,7 +30,7 @@ android {
         minSdk = 16
         targetSdk = 36
         versionCode = 121
-        versionName = "2.45.4"
+        versionName = "2.45.5"
     }
 
     buildTypes {
@@ -65,7 +65,6 @@ android {
             "androidx.coordinatorlayout:coordinatorlayout:1.3.0-alpha02",
             "androidx.core:core-ktx:1.13.0-alpha01",
             "androidx.customview:customview:1.2.0-alpha02",
-            "androidx.documentfile:documentfile:1.1.0-alpha01",
             "androidx.fragment:fragment-ktx:1.7.0-alpha06",
             "androidx.hilt:hilt-compiler:1.1.0",
             "androidx.hilt:hilt-work:1.1.0",
@@ -108,7 +107,6 @@ dependencies {
     implementation(libs.coordinatorlayout)
     implementation(libs.core.ktx)
     implementation(libs.customview)
-    implementation(libs.documentfile)
     implementation(libs.fragment.ktx)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.navigation.fragment)
