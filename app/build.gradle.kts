@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 21
         targetSdk = 36
-        versionCode = 290
-        versionName = "2.45.4"
+        versionCode = 291
+        versionName = "2.45.5"
     }
 
     buildTypes {
@@ -67,7 +67,6 @@ dependencies {
     implementation(libs.coordinatorlayout)
     implementation(libs.core.ktx)
     implementation(libs.customview)
-    implementation(libs.documentfile)
     implementation(libs.fragment.ktx)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.navigation.fragment)
