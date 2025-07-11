@@ -1188,11 +1188,11 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
     }
 
     override fun onCreateMessageClickedChatAdapter(): MessageClickedChatAdapter {
-        return adapter.createMessageClickedChatAdapter(viewModel.chatMessages.value.toList())
+        return adapter.createMessageClickedChatAdapter(adapter.messages?.toList())
     }
 
     override fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter {
-        return adapter.createReplyClickedChatAdapter(viewModel.chatMessages.value.toList())
+        return adapter.createReplyClickedChatAdapter(adapter.messages?.toList())
     }
 
     override fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?) {

@@ -125,7 +125,7 @@ class ChatAdapter(
         )
     }
 
-    fun createMessageClickedChatAdapter(messages: List<ChatMessage>): MessageClickedChatAdapter {
+    fun createMessageClickedChatAdapter(messages: List<ChatMessage>?): MessageClickedChatAdapter {
         return MessageClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { chatMessage -> selectedMessage = chatMessage; replyClickListener?.invoke() },
@@ -138,7 +138,7 @@ class ChatAdapter(
         )
     }
 
-    fun createReplyClickedChatAdapter(messages: List<ChatMessage>): ReplyClickedChatAdapter {
+    fun createReplyClickedChatAdapter(messages: List<ChatMessage>?): ReplyClickedChatAdapter {
         return ReplyClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
