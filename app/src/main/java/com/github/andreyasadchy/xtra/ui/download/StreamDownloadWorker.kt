@@ -11,6 +11,7 @@ import android.net.http.HttpEngine
 import android.net.http.UrlResponseInfo
 import android.os.Build
 import android.os.ext.SdkExtensions
+import android.provider.DocumentsContract
 import android.util.Base64
 import android.util.JsonReader
 import android.util.JsonToken
@@ -18,7 +19,6 @@ import android.util.JsonWriter
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -465,8 +465,14 @@ class StreamDownloadWorker @AssistedInject constructor(
         } else {
             val fileName = "${offlineVideo.channelLogin ?: ""}${offlineVideo.quality ?: ""}${downloadDate}.${firstUrls.first().substringAfterLast(".").substringBefore("?")}"
             val fileUri = if (isShared) {
-                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
-                (directory.findFile(fileName) ?: directory.createFile("", fileName))!!.uri.toString()
+                val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                try {
+                    context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
+                } catch (e: IllegalArgumentException) {
+                    DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                }
+                fileUri
             } else {
                 "$path${File.separator}$fileName"
             }
@@ -1058,8 +1064,14 @@ class StreamDownloadWorker @AssistedInject constructor(
             fileUri
         } else {
             val fileUri = if (isShared) {
-                val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
-                (directory?.findFile(fileName) ?: directory?.createFile("", fileName))!!.uri.toString()
+                val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                try {
+                    context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
+                } catch (e: IllegalArgumentException) {
+                    DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                }
+                fileUri
             } else {
                 "$path${File.separator}$fileName"
             }

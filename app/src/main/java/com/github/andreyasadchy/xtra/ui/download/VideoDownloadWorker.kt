@@ -11,6 +11,7 @@ import android.net.http.HttpEngine
 import android.net.http.UrlResponseInfo
 import android.os.Build
 import android.os.ext.SdkExtensions
+import android.provider.DocumentsContract
 import android.util.Base64
 import android.util.JsonReader
 import android.util.JsonToken
@@ -18,7 +19,6 @@ import android.util.JsonWriter
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -76,7 +76,6 @@ import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
 import java.io.File
-import java.io.FileFilter
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.StringReader
@@ -202,11 +201,11 @@ class VideoDownloadWorker @AssistedInject constructor(
                 }).let { if (it < 0) -it else it }
             }
             val urlPath = sourceUrl.substringBeforeLast('/') + "/"
-            val segments = ArrayList<Segment>()
+            val remainingSegments = ArrayList<Segment>()
             if (offlineVideo.progress < offlineVideo.maxProgress) {
                 for (i in fromIndex + offlineVideo.progress..toIndex) {
                     val segment = playlist.segments[i]
-                    segments.add(segment.copy(uri = segment.uri.replace("-unmuted", "-muted")))
+                    remainingSegments.add(segment.copy(uri = segment.uri.replace("-unmuted", "-muted")))
                 }
             }
             val requestSemaphore = Semaphore(context.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
@@ -228,10 +227,16 @@ class VideoDownloadWorker @AssistedInject constructor(
                     }
                     fileUri
                 } else {
-                    val fileName = "${offlineVideo.videoId ?: ""}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}.${segments.first().uri.substringAfterLast(".")}"
+                    val fileName = "${offlineVideo.videoId ?: ""}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}.${remainingSegments.first().uri.substringAfterLast(".")}"
                     val fileUri = if (isShared) {
-                        val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
-                        (directory.findFile(fileName) ?: directory.createFile("", fileName))!!.uri.toString()
+                        val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                        val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                        try {
+                            context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
+                        } catch (e: IllegalArgumentException) {
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                        }
+                        fileUri
                     } else {
                         "$path${File.separator}$fileName"
                     }
@@ -299,7 +304,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                     fileUri
                 }
                 runBlocking {
-                    segments.map {
+                    remainingSegments.map {
                         launch {
                             requestSemaphore.withPermit {
                                 when {
@@ -308,7 +313,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             httpEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
                                         }
                                         val mutex = Mutex()
-                                        val id = segments.indexOf(it)
+                                        val id = remainingSegments.indexOf(it)
                                         if (count.value != id) {
                                             mutex.lock()
                                             mutexMap[id] = mutex
@@ -341,7 +346,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             response.second
                                         }
                                         val mutex = Mutex()
-                                        val id = segments.indexOf(it)
+                                        val id = remainingSegments.indexOf(it)
                                         if (count.value != id) {
                                             mutex.lock()
                                             mutexMap[id] = mutex
@@ -365,7 +370,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                     else -> {
                                         okHttpClient.newCall(Request.Builder().url(urlPath + it.uri).build()).execute().use { response ->
                                             val mutex = Mutex()
-                                            val id = segments.indexOf(it)
+                                            val id = remainingSegments.indexOf(it)
                                             if (count.value != id) {
                                                 mutex.lock()
                                                 mutexMap[id] = mutex
@@ -400,34 +405,50 @@ class VideoDownloadWorker @AssistedInject constructor(
                     "${offlineVideo.downloadDate}"
                 }
                 if (isShared) {
-                    val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
-                    val videoDirectory = directory.findFile(videoDirectoryName) ?: directory.createDirectory(videoDirectoryName)!!
+                    val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                    val videoDirectoryUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + videoDirectoryName
+                    try {
+                        context.contentResolver.openOutputStream(videoDirectoryUri.toUri())!!.close()
+                    } catch (e: Exception) {
+                        if (e is IllegalArgumentException) {
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), DocumentsContract.Document.MIME_TYPE_DIR, videoDirectoryName)
+                        }
+                    }
                     val playlistFileUri = if (!offlineVideo.url.isNullOrBlank()) {
                         offlineVideo.url!!
                     } else {
                         val sharedSegments = ArrayList<Segment>()
                         for (i in fromIndex..toIndex) {
                             val segment = playlist.segments[i]
-                            sharedSegments.add(segment.copy(uri = videoDirectory.uri.toString() + "%2F" + segment.uri.replace("-unmuted", "-muted")))
+                            sharedSegments.add(segment.copy(uri = videoDirectoryUri + "%2F" + segment.uri.replace("-unmuted", "-muted")))
                         }
                         val fileName = "${offlineVideo.downloadDate}.m3u8"
-                        val playlistFile = videoDirectory.findFile(fileName) ?: videoDirectory.createFile("", fileName)!!
-                        applicationContext.contentResolver.openOutputStream(playlistFile.uri)!!.use {
+                        val playlistFileUri = "$videoDirectoryUri%2F$fileName"
+                        try {
+                            context.contentResolver.openOutputStream(playlistFileUri.toUri())!!
+                        } catch (e: IllegalArgumentException) {
+                            DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", fileName)
+                            context.contentResolver.openOutputStream(playlistFileUri.toUri())!!
+                        }.use {
                             PlaylistUtils.writeMediaPlaylist(playlist.copy(
-                                initSegmentUri = playlist.initSegmentUri?.let { uri -> videoDirectory.uri.toString() + "%2F" + uri },
+                                initSegmentUri = playlist.initSegmentUri?.let { uri -> "$videoDirectoryUri%2F$uri" },
                                 segments = sharedSegments
                             ), it)
                         }
-                        val playlistUri = playlistFile.uri.toString()
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
+                            val initSegmentFileUri = (videoDirectoryUri + "%2F" + playlist.initSegmentUri).toUri()
                             when {
                                 networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
                                     val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
                                         httpEngine!!.get().newUrlRequestBuilder(urlPath + playlist.initSegmentUri, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
                                     }
-                                    val file = videoDirectory.findFile(playlist.initSegmentUri) ?: videoDirectory.createFile("", playlist.initSegmentUri)!!
-                                    context.contentResolver.openOutputStream(file.uri)!!.use {
+                                    try {
+                                        context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                    } catch (e: IllegalArgumentException) {
+                                        DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", playlist.initSegmentUri)
+                                        context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                    }.use {
                                         it.write(response.second)
                                     }
                                 }
@@ -442,15 +463,23 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         }
                                         response.second
                                     }
-                                    val file = videoDirectory.findFile(playlist.initSegmentUri) ?: videoDirectory.createFile("", playlist.initSegmentUri)!!
-                                    context.contentResolver.openOutputStream(file.uri)!!.use {
+                                    try {
+                                        context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                    } catch (e: IllegalArgumentException) {
+                                        DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", playlist.initSegmentUri)
+                                        context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                    }.use {
                                         it.write(response)
                                     }
                                 }
                                 else -> {
                                     okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
-                                        val file = videoDirectory.findFile(playlist.initSegmentUri) ?: videoDirectory.createFile("", playlist.initSegmentUri)!!
-                                        context.contentResolver.openOutputStream(file.uri)!!.sink().buffer().use { sink ->
+                                        try {
+                                            context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                        } catch (e: IllegalArgumentException) {
+                                            DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", playlist.initSegmentUri)
+                                            context.contentResolver.openOutputStream(initSegmentFileUri)!!
+                                        }.sink().buffer().use { sink ->
                                             sink.writeAll(response.body.source())
                                         }
                                     }
@@ -458,64 +487,89 @@ class VideoDownloadWorker @AssistedInject constructor(
                             }
                         }
                         offlineRepository.updateVideo(offlineVideo.apply {
-                            url = playlistUri
+                            url = playlistFileUri
                             duration = (relativeStartTimes[toIndex] + durations[toIndex] - startPosition) - 1000L
                             sourceStartPosition = startPosition
                             maxProgress = toIndex - fromIndex + 1
                         })
-                        playlistUri
+                        playlistFileUri
                     }
                     val downloadedTracks = mutableListOf<String>()
-                    val playlists = videoDirectory.listFiles().filter { it.isFile && it.name?.endsWith(".m3u8") == true && it.uri.toString() != playlistFileUri }
-                    playlists.forEach { file ->
-                        val p = applicationContext.contentResolver.openInputStream(file.uri)!!.use {
+                    val playlists = offlineRepository.getPlaylists().mapNotNull { video ->
+                        video.url?.takeIf {
+                            it.toUri().scheme == ContentResolver.SCHEME_CONTENT
+                                    && it.substringBeforeLast("%2F") == videoDirectoryUri
+                                    && it != playlistFileUri
+                        }
+                    }
+                    playlists.forEach { uri ->
+                        val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
                             PlaylistUtils.parseMediaPlaylist(it)
                         }
                         p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                     }
                     runBlocking {
-                        segments.map {
+                        remainingSegments.map {
                             launch {
                                 requestSemaphore.withPermit {
-                                    if (videoDirectory.findFile(it.uri) == null || !downloadedTracks.contains(it.uri)) {
-                                        when {
-                                            networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
-                                                val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
-                                                    httpEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
-                                                }
-                                                val file = videoDirectory.findFile(it.uri) ?: videoDirectory.createFile("", it.uri)!!
-                                                context.contentResolver.openOutputStream(file.uri)!!.use {
-                                                    it.write(response.second)
-                                                }
-                                            }
-                                            networkLibrary == "Cronet" && cronetEngine != null -> {
-                                                val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                                    val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
-                                                    cronetEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
-                                                    request.future.get().responseBody as ByteArray
-                                                } else {
-                                                    val response = suspendCoroutine<Pair<org.chromium.net.UrlResponseInfo, ByteArray>> { continuation ->
-                                                        cronetEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                    val fileUri = (videoDirectoryUri + "%2F" + it.uri).toUri()
+                                    try {
+                                        context.contentResolver.openOutputStream(fileUri)!!
+                                    } catch (e: IllegalArgumentException) {
+                                        null
+                                    }.use { outputStream ->
+                                        if (outputStream == null || !downloadedTracks.contains(it.uri)) {
+                                            when {
+                                                networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
+                                                    val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
+                                                        httpEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, cronetExecutor, HttpEngineUtils.byteArrayUrlCallback(continuation)).build().start()
                                                     }
-                                                    response.second
+                                                    if (outputStream != null) {
+                                                        outputStream
+                                                    } else {
+                                                        DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", it.uri)
+                                                        context.contentResolver.openOutputStream(fileUri)!!
+                                                    }.use {
+                                                        it.write(response.second)
+                                                    }
                                                 }
-                                                val file = videoDirectory.findFile(it.uri) ?: videoDirectory.createFile("", it.uri)!!
-                                                context.contentResolver.openOutputStream(file.uri)!!.use {
-                                                    it.write(response)
+                                                networkLibrary == "Cronet" && cronetEngine != null -> {
+                                                    val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                                        val request = UrlRequestCallbacks.forByteArrayBody(RedirectHandlers.alwaysFollow())
+                                                        cronetEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, request.callback, cronetExecutor).build().start()
+                                                        request.future.get().responseBody as ByteArray
+                                                    } else {
+                                                        val response = suspendCoroutine<Pair<org.chromium.net.UrlResponseInfo, ByteArray>> { continuation ->
+                                                            cronetEngine!!.get().newUrlRequestBuilder(urlPath + it.uri, getByteArrayCronetCallback(continuation), cronetExecutor).build().start()
+                                                        }
+                                                        response.second
+                                                    }
+                                                    if (outputStream != null) {
+                                                        outputStream
+                                                    } else {
+                                                        DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", it.uri)
+                                                        context.contentResolver.openOutputStream(fileUri)!!
+                                                    }.use {
+                                                        it.write(response)
+                                                    }
                                                 }
-                                            }
-                                            else -> {
-                                                okHttpClient.newCall(Request.Builder().url(urlPath + it.uri).build()).execute().use { response ->
-                                                    val file = videoDirectory.findFile(it.uri) ?: videoDirectory.createFile("", it.uri)!!
-                                                    context.contentResolver.openOutputStream(file.uri)!!.sink().buffer().use { sink ->
-                                                        sink.writeAll(response.body.source())
+                                                else -> {
+                                                    okHttpClient.newCall(Request.Builder().url(urlPath + it.uri).build()).execute().use { response ->
+                                                        if (outputStream != null) {
+                                                            outputStream
+                                                        } else {
+                                                            DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", it.uri)
+                                                            context.contentResolver.openOutputStream(fileUri)!!
+                                                        }.sink().buffer().use { sink ->
+                                                            sink.writeAll(response.body.source())
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                     val mutex = Mutex()
-                                    val id = segments.indexOf(it)
+                                    val id = remainingSegments.indexOf(it)
                                     if (count.value != id) {
                                         mutex.lock()
                                         mutexMap[id] = mutex
@@ -538,7 +592,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                         File(directory).mkdir()
                         val playlistUri = "$directory${offlineVideo.downloadDate}.m3u8"
                         FileOutputStream(playlistUri).use {
-                            PlaylistUtils.writeMediaPlaylist(playlist.copy(segments = segments), it)
+                            PlaylistUtils.writeMediaPlaylist(playlist.copy(segments = remainingSegments), it)
                         }
                         val startPosition = relativeStartTimes[fromIndex]
                         if (playlist.initSegmentUri != null) {
@@ -584,13 +638,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                         playlistUri
                     }
                     val downloadedTracks = mutableListOf<String>()
-                    val playlists = File(directory).listFiles(FileFilter { it.extension == "m3u8" && it.path != playlistFileUri })
+                    val playlists = File(directory).listFiles { it.extension == "m3u8" && it.path != playlistFileUri }
                     playlists?.forEach { file ->
                         val p = PlaylistUtils.parseMediaPlaylist(file.inputStream())
                         p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                     }
                     runBlocking {
-                        segments.map {
+                        remainingSegments.map {
                             launch {
                                 requestSemaphore.withPermit {
                                     if (!File(directory + it.uri).exists() || !downloadedTracks.contains(it.uri)) {
@@ -628,7 +682,7 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         }
                                     }
                                     val mutex = Mutex()
-                                    val id = segments.indexOf(it)
+                                    val id = remainingSegments.indexOf(it)
                                     if (count.value != id) {
                                         mutex.lock()
                                         mutexMap[id] = mutex
@@ -664,8 +718,14 @@ class VideoDownloadWorker @AssistedInject constructor(
                     "${offlineVideo.downloadDate}.mp4"
                 }
                 val fileUri = if (isShared) {
-                    val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())!!
-                    (directory.findFile(fileName) ?: directory.createFile("", fileName))!!.uri.toString()
+                    val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                    val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                    try {
+                        context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
+                    } catch (e: IllegalArgumentException) {
+                        DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                    }
+                    fileUri
                 } else {
                     "$path${File.separator}$fileName"
                 }
@@ -919,8 +979,14 @@ class VideoDownloadWorker @AssistedInject constructor(
                     fileUri
                 } else {
                     val fileUri = if (isShared) {
-                        val directory = DocumentFile.fromTreeUri(applicationContext, path.toUri())
-                        (directory?.findFile(fileName) ?: directory?.createFile("", fileName))!!.uri.toString()
+                        val directoryUri = path + "/document/" + path.substringAfter("/tree/")
+                        val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                        try {
+                            context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
+                        } catch (e: IllegalArgumentException) {
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                        }
+                        fileUri
                     } else {
                         "$path${File.separator}$fileName"
                     }

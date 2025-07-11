@@ -9,9 +9,9 @@ import android.net.http.HttpEngine
 import android.net.http.UrlResponseInfo
 import android.os.Build
 import android.os.ext.SdkExtensions
+import android.provider.DocumentsContract
 import android.util.JsonReader
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.sqlite.db.SimpleSQLiteQuery
@@ -169,7 +169,7 @@ class SettingsViewModel @Inject constructor(
                                             offlineRepository.saveVideo(
                                                 OfflineVideo(
                                                     url = playlistFile.path,
-                                                    name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(file.name),
+                                                    name = if (!title.isNullOrBlank()) title else Uri.decode(file.name),
                                                     channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                                     channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                                     channelName = if (!channelName.isNullOrBlank()) channelName else null,
@@ -240,7 +240,7 @@ class SettingsViewModel @Inject constructor(
                                     offlineRepository.saveVideo(
                                         OfflineVideo(
                                             url = file.path,
-                                            name = if (!title.isNullOrBlank()) title else null ?: Uri.decode(fileName),
+                                            name = if (!title.isNullOrBlank()) title else Uri.decode(fileName),
                                             channelId = if (!channelId.isNullOrBlank()) channelId else null,
                                             channelLogin = if (!channelLogin.isNullOrBlank()) channelLogin else null,
                                             channelName = if (!channelName.isNullOrBlank()) channelName else null,
@@ -377,23 +377,29 @@ class SettingsViewModel @Inject constructor(
 
     fun backupSettings(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val directory = DocumentFile.fromTreeUri(applicationContext, url.substringBefore("/document/").toUri())
-            if (directory != null) {
-                val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
-                (directory.findFile(preferences.name) ?: directory.createFile("", preferences.name))?.let {
-                    applicationContext.contentResolver.openOutputStream(it.uri)!!.sink().buffer().use { sink ->
-                        sink.writeAll(preferences.source().buffer())
-                    }
-                }
-                appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
-                    it.moveToPosition(-1)
-                }
-                val database = applicationContext.getDatabasePath("database")
-                (directory.findFile(database.name) ?: directory.createFile("", database.name))?.let {
-                    applicationContext.contentResolver.openOutputStream(it.uri)!!.sink().buffer().use { sink ->
-                        sink.writeAll(database.source().buffer())
-                    }
-                }
+            val directoryUri = url + "/document/" + url.substringAfter("/tree/")
+            val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
+            val preferencesUri = directoryUri + "%2F" + preferences.name
+            try {
+                applicationContext.contentResolver.openOutputStream(preferencesUri.toUri())!!
+            } catch (e: IllegalArgumentException) {
+                DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", preferences.name)
+                applicationContext.contentResolver.openOutputStream(preferencesUri.toUri())!!
+            }.sink().buffer().use { sink ->
+                sink.writeAll(preferences.source().buffer())
+            }
+            appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
+                it.moveToPosition(-1)
+            }
+            val database = applicationContext.getDatabasePath("database")
+            val databaseUri = directoryUri + "%2F" + database.name
+            try {
+                applicationContext.contentResolver.openOutputStream(databaseUri.toUri())!!
+            } catch (e: IllegalArgumentException) {
+                DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", database.name)
+                applicationContext.contentResolver.openOutputStream(databaseUri.toUri())!!
+            }.sink().buffer().use { sink ->
+                sink.writeAll(database.source().buffer())
             }
         }
     }
