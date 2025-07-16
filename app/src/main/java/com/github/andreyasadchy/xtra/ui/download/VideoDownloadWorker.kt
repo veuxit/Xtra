@@ -503,10 +503,14 @@ class VideoDownloadWorker @AssistedInject constructor(
                         }
                     }
                     playlists.forEach { uri ->
-                        val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
-                            PlaylistUtils.parseMediaPlaylist(it)
+                        try {
+                            val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
+                            }
+                            p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
+                        } catch (e: Exception) {
+
                         }
-                        p.segments.forEach { downloadedTracks.add(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                     }
                     runBlocking {
                         remainingSegments.map {
