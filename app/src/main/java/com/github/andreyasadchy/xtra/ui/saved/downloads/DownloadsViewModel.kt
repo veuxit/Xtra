@@ -193,10 +193,14 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                     playlists.forEach { uri ->
-                        val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
-                            PlaylistUtils.parseMediaPlaylist(it)
+                        try {
+                            val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
+                            }
+                            p.segments.forEach { tracksToDelete.remove(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
+                        } catch (e: Exception) {
+
                         }
-                        p.segments.forEach { tracksToDelete.remove(it.uri.substringAfterLast("%2F").substringAfterLast("/")) }
                     }
                     val new = try {
                         applicationContext.contentResolver.openOutputStream(newVideoFileUri.toUri())!!.close()
@@ -531,10 +535,14 @@ class DownloadsViewModel @Inject internal constructor(
                         }
                     }
                     playlists.forEach { uri ->
-                        val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
-                            PlaylistUtils.parseMediaPlaylist(it)
+                        try {
+                            val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
+                                PlaylistUtils.parseMediaPlaylist(it)
+                            }
+                            p.segments.forEach { tracksToDelete.remove(Uri.decode(it.uri.substringAfterLast("%2F").substringAfterLast("/"))) }
+                        } catch (e: Exception) {
+
                         }
-                        p.segments.forEach { tracksToDelete.remove(Uri.decode(it.uri.substringAfterLast("%2F").substringAfterLast("/"))) }
                     }
                     if (oldPlaylist.initSegmentUri != null) {
                         val oldFileName = oldPlaylist.initSegmentUri.substringAfterLast("%2F").substringAfterLast("/")
@@ -743,10 +751,14 @@ class DownloadsViewModel @Inject internal constructor(
                                 }
                             }
                             playlists.forEach { uri ->
-                                val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
-                                    PlaylistUtils.parseMediaPlaylist(it)
+                                try {
+                                    val p = applicationContext.contentResolver.openInputStream(uri.toUri())!!.use {
+                                        PlaylistUtils.parseMediaPlaylist(it)
+                                    }
+                                    tracksToDelete.removeAll(p.segments.toSet())
+                                } catch (e: Exception) {
+
                                 }
-                                tracksToDelete.removeAll(p.segments.toSet())
                             }
                             repository.updateVideo(video.apply {
                                 maxProgress = tracksToDelete.count()
