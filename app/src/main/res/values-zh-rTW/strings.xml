@@ -688,4 +688,5 @@
     <string name="chat_badge_size">徽章大小</string>
     <string name="overlay_emotes">疊加表情符號</string>
     <string name="network_library">網路函式庫</string>
+    <string name="navigation_tabs">Navigation tabs</string>
 </resources>

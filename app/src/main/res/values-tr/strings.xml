@@ -689,4 +689,5 @@
     <string name="chat_badge_size">Rozet boyutu</string>
     <string name="overlay_emotes">Üstte gösterilen ifadeler</string>
     <string name="network_library">Ağ kütüphanesi</string>
+    <string name="navigation_tabs">Navigation tabs</string>
 </resources>

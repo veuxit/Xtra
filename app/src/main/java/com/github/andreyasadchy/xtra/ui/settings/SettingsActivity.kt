@@ -46,6 +46,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceManager
@@ -534,6 +535,7 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<ListPreference>(C.PORTRAIT_COLUMN_COUNT)?.onPreferenceChangeListener = changeListener
             findPreference<ListPreference>(C.LANDSCAPE_COLUMN_COUNT)?.onPreferenceChangeListener = changeListener
             findPreference<ListPreference>(C.COMPACT_STREAMS)?.onPreferenceChangeListener = changeListener
+            findPreference<MultiSelectListPreference>(C.UI_NAVIGATION_TABS)?.onPreferenceChangeListener = changeListener
         }
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
