@@ -350,8 +350,8 @@ object TwitchApiHelper {
     val followedChannelsApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY, C.HELIX)
     val followedGamesApiDefaults = listOf(C.GQL, C.GQL_PERSISTED_QUERY)
 
-    fun getVideoUrlMapFromPreview(url: String, type: String?): Map<String, String> {
-        val qualityList = listOf("chunked", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
+    fun getVideoUrlMapFromPreview(url: String, type: String?, list: List<String>?): Map<String, String> {
+        val qualityList = list ?: listOf("chunked", "1080p60", "1080p30", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
         val map = mutableMapOf<String, String>()
         qualityList.forEach { quality ->
             map[if (quality == "chunked") "source" else quality] = url

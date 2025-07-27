@@ -49,6 +49,7 @@ import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UploadDataProviders
 import org.chromium.net.apihelpers.UrlRequestCallbacks
+import org.json.JSONException
 import org.json.JSONObject
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -171,7 +172,7 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadVideoPlaylistUrl(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
+    suspend fun loadVideoPlaylistUrl(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): Pair<String, List<String>> = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders = gqlHeaders, randomDeviceId = true, enableIntegrity = enableIntegrity)
         val accessToken = graphQLRepository.loadPlaybackAccessToken(
             networkLibrary = networkLibrary,
@@ -183,6 +184,23 @@ class PlayerRepository @Inject constructor(
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
         }.data?.videoPlaybackAccessToken
+        val backupQualities = mutableListOf<String>()
+        accessToken?.value?.let { value ->
+            val json = try {
+                JSONObject(value)
+            } catch (e: JSONException) {
+                null
+            }
+            val array = json?.optJSONObject("chansub")?.optJSONArray("restricted_bitrates")
+            if (array != null) {
+                for (i in 0 until array.length()) {
+                    val quality = array.optString(i)
+                    if (!quality.isNullOrBlank()) {
+                        backupQualities.add(quality)
+                    }
+                }
+            }
+        }
         val query = mutableMapOf<String, String>().apply {
             put("allow_source", "true")
             put("allow_audio_only", "true")
@@ -195,11 +213,13 @@ class PlayerRepository @Inject constructor(
             supportedCodecs?.let { put("supported_codecs", it) }
             accessToken?.value?.let { put("token", it) }
         }.map { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8.name())}" }.joinToString("&", "?")
-        "https://usher.ttvnw.net/vod/${videoId}.m3u8${query}"
+        "https://usher.ttvnw.net/vod/${videoId}.m3u8${query}" to backupQualities
     }
 
-    suspend fun loadVideoPlaylist(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): String? = withContext(Dispatchers.IO) {
-        val url = loadVideoPlaylistUrl(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+    suspend fun loadVideoPlaylist(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): Pair<String?, List<String>> = withContext(Dispatchers.IO) {
+        val result = loadVideoPlaylistUrl(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+        val url = result.first
+        val backupQualities = result.second
         when {
             networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
                 val response = suspendCoroutine<Pair<UrlResponseInfo, ByteArray>> { continuation ->
@@ -233,7 +253,7 @@ class PlayerRepository @Inject constructor(
                     } else null
                 }
             }
-        }
+        } to backupQualities
     }
 
     private fun getPlaybackAccessTokenHeaders(gqlHeaders: Map<String, String>, randomDeviceId: Boolean?, xDeviceId: String? = null, enableIntegrity: Boolean): Map<String, String> {

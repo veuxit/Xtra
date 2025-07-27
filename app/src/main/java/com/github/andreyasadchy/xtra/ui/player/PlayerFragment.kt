@@ -2066,7 +2066,7 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
     private fun playVideo(skipAccessToken: Boolean, playbackPosition: Long?) {
         if (skipAccessToken && !requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW).isNullOrBlank()) {
             requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW)?.let { preview ->
-                val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, requireArguments().getString(KEY_VIDEO_TYPE))
+                val qualityMap = TwitchApiHelper.getVideoUrlMapFromPreview(preview, requireArguments().getString(KEY_VIDEO_TYPE), viewModel.backupQualities)
                 val map = mutableMapOf<String, Pair<String, String?>>()
                 qualityMap.forEach {
                     when (it.key) {
@@ -2077,9 +2077,20 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 }
                 map.put(AUDIO_ONLY_QUALITY, map.remove(AUDIO_ONLY_QUALITY) //move audio option to bottom
                     ?: Pair(requireContext().getString(R.string.audio_only), null))
-                viewModel.qualities = map
-                viewModel.quality = map.keys.firstOrNull()
-                map.values.firstOrNull()?.second
+                val qualities = map.toList()
+                    .sortedByDescending {
+                        it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                    }
+                    .sortedByDescending {
+                        it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                    }
+                    .sortedByDescending {
+                        it.first == "source"
+                    }
+                    .toMap()
+                viewModel.qualities = qualities
+                viewModel.quality = qualities.keys.firstOrNull()
+                qualities.values.firstOrNull()?.second
             }?.let { url ->
                 player?.let { player ->
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
