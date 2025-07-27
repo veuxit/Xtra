@@ -29,6 +29,7 @@ class DownloadViewModel @Inject constructor(
     private val _qualities = MutableStateFlow<Map<String, Pair<String, String>>?>(null)
     val qualities: StateFlow<Map<String, Pair<String, String>>?> = _qualities
     val dismiss = MutableStateFlow(false)
+    var backupQualities: List<String>? = null
 
     fun setStream(networkLibrary: String?, gqlHeaders: Map<String, String>, channelLogin: String?, qualities: Map<String, Pair<String, String>>?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
@@ -95,7 +96,7 @@ class DownloadViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         if (skipAccessToken <= 1 && !animatedPreviewUrl.isNullOrBlank()) {
-                            val urls = TwitchApiHelper.getVideoUrlMapFromPreview(animatedPreviewUrl, videoType)
+                            val urls = TwitchApiHelper.getVideoUrlMapFromPreview(animatedPreviewUrl, videoType, backupQualities)
                             val map = mutableMapOf<String, Pair<String, String>>()
                             urls.entries.forEach {
                                 when (it.key) {
@@ -104,9 +105,22 @@ class DownloadViewModel @Inject constructor(
                                     else -> map[it.key] = Pair(it.key, it.value)
                                 }
                             }
-                            _qualities.value = map
+                            map.remove("audio_only")?.let { map.put("audio_only", it) }
+                            _qualities.value = map.toList()
+                                .sortedByDescending {
+                                    it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                }
+                                .sortedByDescending {
+                                    it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                }
+                                .sortedByDescending {
+                                    it.first == "source"
+                                }
+                                .toMap()
                         } else {
-                            val playlist = playerRepository.loadVideoPlaylist(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                            val result = playerRepository.loadVideoPlaylist(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                            val playlist = result.first
+                            backupQualities = result.second
                             if (!playlist.isNullOrBlank()) {
                                 val names = Regex("NAME=\"(.+?)\"").findAll(playlist).mapNotNull { it.groups[1]?.value }.toMutableList()
                                 val codecs = Regex("CODECS=\"(.+?)\"").findAll(playlist).mapNotNull { it.groups[1]?.value }.toMutableList()
@@ -209,7 +223,7 @@ class DownloadViewModel @Inject constructor(
                                     .toMap()
                             } else {
                                 if (skipAccessToken == 2 && !animatedPreviewUrl.isNullOrBlank()) {
-                                    val urls = TwitchApiHelper.getVideoUrlMapFromPreview(animatedPreviewUrl, videoType)
+                                    val urls = TwitchApiHelper.getVideoUrlMapFromPreview(animatedPreviewUrl, videoType, backupQualities)
                                     val map = mutableMapOf<String, Pair<String, String>>()
                                     urls.entries.forEach {
                                         when (it.key) {
@@ -218,7 +232,18 @@ class DownloadViewModel @Inject constructor(
                                             else -> map[it.key] = Pair(it.key, it.value)
                                         }
                                     }
-                                    _qualities.value = map
+                                    map.remove("audio_only")?.let { map.put("audio_only", it) }
+                                    _qualities.value = map.toList()
+                                        .sortedByDescending {
+                                            it.first.substringAfter("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                        }
+                                        .sortedByDescending {
+                                            it.first.substringBefore("p", "").takeWhile { it.isDigit() }.toIntOrNull()
+                                        }
+                                        .sortedByDescending {
+                                            it.first == "source"
+                                        }
+                                        .toMap()
                                 } else {
                                     throw IllegalAccessException()
                                 }
