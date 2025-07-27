@@ -68,6 +68,7 @@ import com.github.andreyasadchy.xtra.util.DisplayUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
+import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isInPortraitOrientation
 import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
@@ -297,10 +298,12 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
     private fun setNavBarColor(isPortrait: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> window.isNavigationBarContrastEnforced = !isPortrait
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                    window.isNavigationBarContrastEnforced = !isPortrait || prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()
+                }
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
                     @Suppress("DEPRECATION")
-                    window.navigationBarColor = if (isPortrait) {
+                    window.navigationBarColor = if (isPortrait && !prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()) {
                         Color.TRANSPARENT
                     } else {
                         ContextCompat.getColor(this, if (!isLightTheme) R.color.darkScrim else R.color.lightScrim)
@@ -309,13 +312,17 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                     @Suppress("DEPRECATION")
                     if (!isLightTheme) {
-                        window.navigationBarColor = if (isPortrait) Color.TRANSPARENT else ContextCompat.getColor(this, R.color.darkScrim)
+                        window.navigationBarColor = if (isPortrait && !prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()) {
+                            Color.TRANSPARENT
+                        } else {
+                            ContextCompat.getColor(this, R.color.darkScrim)
+                        }
                     }
                 }
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.M -> {
+                else -> {
                     @Suppress("DEPRECATION")
                     if (!isLightTheme) {
-                        if (isPortrait) {
+                        if (isPortrait && !prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()) {
                             window.navigationBarColor = Color.TRANSPARENT
                             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                         } else {
@@ -749,17 +756,30 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true) && prefs.getBoolean(C.UI_THEME_MATERIAL3, true)) {
                 setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             }
-            menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
-            menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
-            if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
-                menu.add(Menu.NONE, R.id.followPagerFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
+            val tabs = prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet())
+            if (!tabs.isNullOrEmpty()) {
+                tabs.forEach {
+                    when (it) {
+                        "0" -> menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
+                        "1" -> menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
+                        "2" -> {
+                            if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
+                                menu.add(Menu.NONE, R.id.followPagerFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
+                            } else {
+                                menu.add(Menu.NONE, R.id.followMediaFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
+                            }
+                        }
+                        "3" -> {
+                            if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
+                                menu.add(Menu.NONE, R.id.savedPagerFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
+                            } else {
+                                menu.add(Menu.NONE, R.id.savedMediaFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
+                            }
+                        }
+                    }
+                }
             } else {
-                menu.add(Menu.NONE, R.id.followMediaFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
-            }
-            if (prefs.getBoolean(C.UI_SAVEDPAGER, true)) {
-                menu.add(Menu.NONE, R.id.savedPagerFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
-            } else {
-                menu.add(Menu.NONE, R.id.savedMediaFragment, Menu.NONE, R.string.saved).setIcon(R.drawable.ic_file_download_black_24dp)
+                binding.navBarContainer.gone()
             }
             setupWithNavController(navController)
             setOnItemSelectedListener {

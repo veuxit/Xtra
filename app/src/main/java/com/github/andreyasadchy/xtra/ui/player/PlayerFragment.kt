@@ -214,8 +214,9 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     }
                 }
                 slidingLayout.apply {
+                    val update = isMaximized && isPortrait && savedInsets != null
                     savedInsets = insets
-                    if (!isMaximized && !isPortrait) {
+                    if (update) {
                         init()
                     }
                 }

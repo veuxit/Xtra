@@ -454,7 +454,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 collapsingToolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                     topMargin = insets.top
                 }
-                WindowInsetsCompat.CONSUMED
+                windowInsets
             }
         }
     }
