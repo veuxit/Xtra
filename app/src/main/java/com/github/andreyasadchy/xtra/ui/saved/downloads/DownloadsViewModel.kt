@@ -739,10 +739,14 @@ class DownloadsViewModel @Inject internal constructor(
                     if (videoUrl.toUri().scheme == ContentResolver.SCHEME_CONTENT) {
                         if (videoUrl.endsWith(".m3u8")) {
                             val videoDirectoryUri = videoUrl.substringBeforeLast("%2F")
-                            val playlist = applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
-                                PlaylistUtils.parseMediaPlaylist(it)
+                            val playlist = try {
+                                applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use {
+                                    PlaylistUtils.parseMediaPlaylist(it)
+                                }
+                            } catch (e: Exception) {
+                                null
                             }
-                            val tracksToDelete = playlist.segments.toMutableSet()
+                            val tracksToDelete = playlist?.segments?.toMutableSet() ?: mutableSetOf()
                             val playlists = repository.getPlaylists().mapNotNull { video ->
                                 video.url?.takeIf {
                                     it.toUri().scheme == ContentResolver.SCHEME_CONTENT
