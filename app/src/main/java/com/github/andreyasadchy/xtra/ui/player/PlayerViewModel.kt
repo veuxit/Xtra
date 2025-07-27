@@ -82,6 +82,7 @@ class PlayerViewModel @Inject constructor(
     var stopProxy = false
 
     val videoResult = MutableStateFlow<String?>(null)
+    var backupQualities: List<String>? = null
     var playbackPosition: Long? = null
     val savedPosition = MutableStateFlow<Long?>(null)
     val isBookmarked = MutableStateFlow<Boolean?>(null)
@@ -298,7 +299,9 @@ class PlayerViewModel @Inject constructor(
         if (videoResult.value == null) {
             viewModelScope.launch {
                 try {
-                    videoResult.value = playerRepository.loadVideoPlaylistUrl(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                    val result = playerRepository.loadVideoPlaylistUrl(networkLibrary, gqlHeaders, videoId, playerType, supportedCodecs, enableIntegrity)
+                    videoResult.value = result.first
+                    backupQualities = result.second
                 } catch (e: Exception) {
                     if (e.message == "failed integrity check" && integrity.value == null) {
                         integrity.value = "refreshVideo"
