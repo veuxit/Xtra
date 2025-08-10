@@ -754,7 +754,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             if (!prefs.getBoolean(C.UI_THEME_BOTTOM_NAV_COLOR, true) && prefs.getBoolean(C.UI_THEME_MATERIAL3, true)) {
                 setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             }
-            val tabs = prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet())
+            val tabs = prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet())?.toSortedSet()
             if (!tabs.isNullOrEmpty()) {
                 tabs.forEach {
                     when (it) {
