@@ -68,7 +68,7 @@ import kotlin.system.exitProcess
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,

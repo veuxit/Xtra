@@ -67,7 +67,7 @@ import kotlin.concurrent.scheduleAtFixedRate
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val translateAllMessagesUsersRepository: TranslateAllMessagesUsersRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,

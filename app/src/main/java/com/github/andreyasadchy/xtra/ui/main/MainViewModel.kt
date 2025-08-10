@@ -66,7 +66,7 @@ import kotlin.math.max
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
     private val offlineRepository: OfflineRepository,
