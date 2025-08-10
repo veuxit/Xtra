@@ -1000,6 +1000,26 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         PlayerVolumeDialog.newInstance(player?.volume).show(childFragmentManager, "closeOnPip")
     }
 
+    fun getTranslateAllMessages(): Boolean? {
+        return if (!requireArguments().getString(KEY_CHANNEL_ID).isNullOrBlank()) {
+            chatFragment?.getTranslateAllMessages()
+        } else null
+    }
+
+    fun saveTranslateAllMessagesUser() {
+        requireArguments().getString(KEY_CHANNEL_ID)?.let {
+            chatFragment?.toggleTranslateAllMessages(true)
+            viewModel.saveTranslateAllMessagesUser(it)
+        }
+    }
+
+    fun deleteTranslateAllMessagesUser() {
+        requireArguments().getString(KEY_CHANNEL_ID)?.let {
+            chatFragment?.toggleTranslateAllMessages(false)
+            viewModel.deleteTranslateAllMessagesUser(it)
+        }
+    }
+
     fun toggleChatBar() {
         with(binding) {
             requireView().findViewById<LinearLayout>(R.id.messageView)?.let {

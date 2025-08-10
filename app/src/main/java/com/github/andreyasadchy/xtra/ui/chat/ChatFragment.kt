@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.KeyEvent
@@ -42,6 +43,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -176,6 +178,8 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         emoteQuality = requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
                         animateGifs = requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true),
                         enableOverlayEmotes = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
+                        translateMessage = this@ChatFragment::onTranslateMessageClicked,
+                        showLanguageDownloadDialog = this@ChatFragment::showLanguageDownloadDialog,
                         channelId = channelId,
                     )
                     recyclerView.let {
@@ -1019,6 +1023,19 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                             }
                         }
                     }
+                    if (requireContext().prefs().getBoolean(C.CHAT_TRANSLATE, false) && channelId != null && Build.SUPPORTED_64_BIT_ABIS.firstOrNull() == "arm64-v8a") {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.translateAllMessages.collectLatest {
+                                    if (it != null) {
+                                        adapter.translateAllMessages = it
+                                        viewModel.translateAllMessages.value = null
+                                    }
+                                }
+                            }
+                        }
+                        viewModel.checkTranslateAllMessages(channelId)
+                    }
                     if (chatUrl != null) {
                         viewModel.startReplay(
                             channelId = channelId,
@@ -1130,6 +1147,14 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
 
     fun updateStreamId(id: String?) {
         viewModel.streamId = id
+    }
+
+    fun getTranslateAllMessages(): Boolean {
+        return adapter.translateAllMessages
+    }
+
+    fun toggleTranslateAllMessages(enable: Boolean) {
+        viewModel.translateAllMessages.value = enable
     }
 
     fun emoteMenuIsVisible() = binding.emoteMenu.isVisible
@@ -1285,6 +1310,10 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         )
         (parentFragment as? PlayerFragment)?.minimize()
     }
+
+    override fun onTranslateMessageClicked(chatMessage: ChatMessage, languageTag: String?) {}
+
+    private fun showLanguageDownloadDialog(chatMessage: ChatMessage, sourceLanguage: String) {}
 
     override fun onNetworkRestored() {
         if (isResumed) {

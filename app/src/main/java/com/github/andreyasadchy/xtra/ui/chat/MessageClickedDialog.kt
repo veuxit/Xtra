@@ -50,12 +50,14 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
         fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?)
         fun onCopyMessageClicked(message: String)
         fun onViewProfileClicked(id: String?, login: String?, name: String?, channelLogo: String?)
+        fun onTranslateMessageClicked(chatMessage: ChatMessage, languageTag: String?)
     }
 
     companion object {
         private const val KEY_MESSAGING = "messaging"
         private const val KEY_CHANNEL_ID = "channelId"
         private val savedUsers = mutableListOf<Pair<User, String?>>()
+        private var selectedLanguage: String? = null
 
         fun newInstance(messagingEnabled: Boolean, channelId: String?): MessageClickedDialog {
             return MessageClickedDialog().apply {
@@ -353,6 +355,16 @@ class MessageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callba
                         adapter.notifyItemChanged(it)
                     }
                 }
+            }
+        }
+    }
+
+    fun updateTranslation(chatMessage: ChatMessage, previousTranslation: String?) {
+        adapter?.let { adapter ->
+            adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                    adapter.updateTranslation(chatMessage, it, previousTranslation)
+                } ?: adapter.notifyItemChanged(it)
             }
         }
     }

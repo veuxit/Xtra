@@ -31,10 +31,12 @@ class ReplyClickedDialog : BottomSheetDialogFragment() {
         fun onCreateReplyClickedChatAdapter(): ReplyClickedChatAdapter
         fun onReplyClicked(replyId: String?, userLogin: String?, userName: String?, message: String?)
         fun onCopyMessageClicked(message: String)
+        fun onTranslateMessageClicked(chatMessage: ChatMessage, languageTag: String?)
     }
 
     companion object {
         private const val KEY_MESSAGING = "messaging"
+        private var selectedLanguage: String? = null
 
         fun newInstance(messagingEnabled: Boolean): ReplyClickedDialog {
             return ReplyClickedDialog().apply {
@@ -173,6 +175,16 @@ class ReplyClickedDialog : BottomSheetDialogFragment() {
                         adapter.notifyItemChanged(it)
                     }
                 }
+            }
+        }
+    }
+
+    fun updateTranslation(chatMessage: ChatMessage, previousTranslation: String?) {
+        adapter?.let { adapter ->
+            adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                    adapter.updateTranslation(chatMessage, it, previousTranslation)
+                } ?: adapter.notifyItemChanged(it)
             }
         }
     }
