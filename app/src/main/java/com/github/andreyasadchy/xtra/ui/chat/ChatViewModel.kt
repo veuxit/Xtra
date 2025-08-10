@@ -29,6 +29,7 @@ import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.TranslateAllMessagesUsersRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
@@ -67,6 +68,7 @@ import kotlin.concurrent.scheduleAtFixedRate
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
+    private val translateAllMessagesUsersRepository: TranslateAllMessagesUsersRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
     private val playerRepository: PlayerRepository,
@@ -155,6 +157,7 @@ class ChatViewModel @Inject constructor(
     val personalEmoteSetUsers = mutableMapOf<String, String>()
     val newPersonalEmoteSetUser = MutableStateFlow<Pair<String, String>?>(null)
     var channelStvEmoteSetId: String? = null
+    val translateAllMessages = MutableStateFlow<Boolean?>(null)
 
     val reloadMessages = MutableStateFlow(false)
     val scrollDown = MutableStateFlow(false)
@@ -584,6 +587,12 @@ class ChatViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load recent messages for channel $channelLogin", e)
             }
+        }
+    }
+
+    fun checkTranslateAllMessages(id: String) {
+        viewModelScope.launch {
+            translateAllMessages.value = translateAllMessagesUsersRepository.getByUserId(id) != null
         }
     }
 

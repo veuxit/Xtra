@@ -51,10 +51,14 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, replyMessage: String, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showStvBadges: Boolean, stvBadges: List<StvBadge>?, stvBadgeUsers: Map<String, String>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, enableOverlayEmotes: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Triple<SpannableStringBuilder, ArrayList<Image>, Triple<NamePaint, String, Int>?> {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, replyMessage: String, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showStvBadges: Boolean, stvBadges: List<StvBadge>?, stvBadgeUsers: Map<String, String>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, enableOverlayEmotes: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, translateAllMessages: Boolean, translateMessage: (ChatMessage, String?) -> Unit, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): MessageResult {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
-        var imagePaint: Triple<NamePaint, String, Int>? = null
+        var imagePaint: NamePaint? = null
+        var userName: String? = null
+        var userNameStartIndex: Int? = null
+        var wasMentioned = false
+        var translated = false
         var builderIndex = 0
         when {
             chatMessage.isReply -> {
@@ -76,6 +80,7 @@ object ChatAdapterUtils {
                     builder.append(message)
                     builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + message.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                     prepareEmotes(chatMessage, message, builder, builderIndex, images, null, useReadableColors, isLightTheme, enableOverlayEmotes, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                    builderIndex = builder.length
                 }
                 itemView.setBackgroundResource(0)
             }
@@ -95,6 +100,15 @@ object ChatAdapterUtils {
                         prepareEmotes(chatMessage, chatMessage.systemMsg, builder, builderIndex, images, imageClick, useReadableColors, isLightTheme, enableOverlayEmotes, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
                     }
                     builderIndex = builder.length
+                    if (chatMessage.translatedMessage != null) {
+                        translated = true
+                        val result = addTranslation(chatMessage, builder, builderIndex, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
+                        builderIndex = result
+                    } else {
+                        if (translateAllMessages) {
+                            translateMessage(chatMessage, null)
+                        }
+                    }
                 } else {
                     if (chatMessage.reward?.title != null) {
                         val userName = if (chatMessage.userLogin != null && !chatMessage.userLogin.equals(chatMessage.userName, true)) {
@@ -247,7 +261,7 @@ object ChatAdapterUtils {
                     }
                 }
                 if (!chatMessage.userName.isNullOrBlank()) {
-                    val userName = if (chatMessage.userLogin != null && !chatMessage.userLogin.equals(chatMessage.userName, true)) {
+                    userName = if (chatMessage.userLogin != null && !chatMessage.userLogin.equals(chatMessage.userName, true)) {
                         when (nameDisplay) {
                             "0" -> "${chatMessage.userName}(${chatMessage.userLogin})"
                             "1" -> chatMessage.userName
@@ -284,7 +298,8 @@ object ChatAdapterUtils {
                                 }
                                 "URL" -> {
                                     if (!paint.imageUrl.isNullOrBlank()) {
-                                        imagePaint = Triple(paint, userName, builderIndex)
+                                        imagePaint = paint
+                                        userNameStartIndex = builderIndex
                                     }
                                 }
                             }
@@ -299,13 +314,24 @@ object ChatAdapterUtils {
                         builderIndex += 1
                     }
                 }
-                val wasMentioned = if (chatMessage.message != null) {
+                if (chatMessage.message != null) {
                     builder.append(chatMessage.message)
                     if (chatMessage.isAction) {
                         builder.setSpan(ForegroundColorSpan(color), builderIndex, builderIndex + chatMessage.message.length, SPAN_EXCLUSIVE_EXCLUSIVE)
                     }
-                    prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, images, imageClick, useReadableColors, isLightTheme, enableOverlayEmotes, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes) == true
-                } else false
+                    val result = prepareEmotes(chatMessage, chatMessage.message, builder, builderIndex, images, imageClick, useReadableColors, isLightTheme, enableOverlayEmotes, useBoldNames, loggedInUser, chatUrl, getEmoteBytes, savedColors, localTwitchEmotes, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, cheerEmotes, savedLocalTwitchEmotes, savedLocalCheerEmotes, savedLocalEmotes)
+                    wasMentioned = result
+                    builderIndex = builder.length
+                }
+                if (chatMessage.translatedMessage != null) {
+                    translated = true
+                    val result = addTranslation(chatMessage, builder, builderIndex, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
+                    builderIndex = result
+                } else {
+                    if (translateAllMessages) {
+                        translateMessage(chatMessage, null)
+                    }
+                }
                 when {
                     chatMessage.isFirst && firstMsgVisibility < 2 -> itemView.setBackgroundResource(R.color.chatMessageFirst)
                     chatMessage.reward?.id != null && firstMsgVisibility < 2 -> itemView.setBackgroundResource(R.color.chatMessageReward)
@@ -315,7 +341,37 @@ object ChatAdapterUtils {
                 }
             }
         }
-        return Triple(builder, images, imagePaint)
+        return MessageResult(builder, images, imagePaint, userName, userNameStartIndex, translated)
+    }
+
+    class MessageResult(
+        val builder: SpannableStringBuilder,
+        val images: ArrayList<Image>,
+        val imagePaint: NamePaint?,
+        val userName: String?,
+        val userNameStartIndex: Int?,
+        val translated: Boolean,
+    )
+
+    fun addTranslation(chatMessage: ChatMessage, builder: SpannableStringBuilder, startIndex: Int, savedColors: HashMap<String, Int>, useReadableColors: Boolean, isLightTheme: Boolean, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean): Int {
+        var builderIndex = startIndex
+        if (!hideErrors || !chatMessage.translationFailed) {
+            val translatedMessage = "\n${chatMessage.translatedMessage}"
+            builder.append(translatedMessage)
+            builder.setSpan(ForegroundColorSpan(getSavedColor("#999999", savedColors, useReadableColors, isLightTheme)), builderIndex, builderIndex + translatedMessage.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+            val messageLanguage = chatMessage.messageLanguage
+            if (messageLanguage != null) {
+                builder.setSpan(object : ClickableSpan() {
+                    override fun onClick(widget: View) {
+                        showLanguageDownloadDialog(chatMessage, messageLanguage)
+                    }
+
+                    override fun updateDrawState(ds: TextPaint) {}
+                }, builderIndex, builderIndex + translatedMessage.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            builderIndex += translatedMessage.length
+        }
+        return builderIndex
     }
 
     private fun getSavedColor(color: String, savedColors: HashMap<String, Int>, useReadableColors: Boolean, isLightTheme: Boolean): Int {
@@ -638,13 +694,12 @@ object ChatAdapterUtils {
         }
     }
 
-    fun loadImages(fragment: Fragment, itemView: View, bind: (SpannableStringBuilder) -> Unit, images: List<Image>, imagePaint: Triple<NamePaint, String, Int>?, backgroundColor: Int, imageLibrary: String?, builder: SpannableStringBuilder, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableOverlayEmotes: Boolean) {
+    fun loadImages(fragment: Fragment, itemView: View, bind: (SpannableStringBuilder) -> Unit, images: List<Image>, imagePaint: NamePaint?, userName: String?, userNameStartIndex: Int?, backgroundColor: Int, imageLibrary: String?, builder: SpannableStringBuilder, translated: Boolean, emoteSize: Int, badgeSize: Int, emoteQuality: String, animateGifs: Boolean, enableOverlayEmotes: Boolean, chatMessage: ChatMessage, savedColors: HashMap<String, Int>, useReadableColors: Boolean, isLightTheme: Boolean, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean) {
         if (imagePaint != null) {
-            val paint = imagePaint.first
             if (imageLibrary == "0") {
                 fragment.requireContext().imageLoader.enqueue(
                     ImageRequest.Builder(fragment.requireContext()).apply {
-                        data(paint.imageUrl)
+                        data(imagePaint.imageUrl)
                         target(
                             onSuccess = {
                                 (it.asDrawable(fragment.resources)).let { result ->
@@ -667,17 +722,20 @@ object ChatAdapterUtils {
                                     try {
                                         builder.setSpan(
                                             NamePaintImageSpan(
-                                                imagePaint.second,
-                                                paint.shadows,
+                                                userName!!,
+                                                imagePaint.shadows,
                                                 (itemView.background as? ColorDrawable)?.color,
                                                 backgroundColor,
                                                 result
                                             ),
-                                            imagePaint.third,
-                                            imagePaint.third + imagePaint.second.length,
+                                            userNameStartIndex!!,
+                                            userNameStartIndex + userName.length,
                                             SPAN_EXCLUSIVE_EXCLUSIVE
                                         )
                                     } catch (e: IndexOutOfBoundsException) {
+                                    }
+                                    if (!translated && chatMessage.translatedMessage != null) {
+                                        addTranslation(chatMessage, builder, builder.length, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
                                     }
                                     bind(builder)
                                 }
@@ -687,7 +745,7 @@ object ChatAdapterUtils {
                 )
             } else {
                 Glide.with(fragment)
-                    .load(paint.imageUrl)
+                    .load(imagePaint.imageUrl)
                     .diskCacheStrategy(DiskCacheStrategy.DATA)
                     .into(object : CustomTarget<Drawable>() {
                         override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
@@ -710,17 +768,20 @@ object ChatAdapterUtils {
                             try {
                                 builder.setSpan(
                                     NamePaintImageSpan(
-                                        imagePaint.second,
-                                        paint.shadows,
+                                        userName!!,
+                                        imagePaint.shadows,
                                         (itemView.background as? ColorDrawable)?.color,
                                         backgroundColor,
                                         resource
                                     ),
-                                    imagePaint.third,
-                                    imagePaint.third + imagePaint.second.length,
+                                    userNameStartIndex!!,
+                                    userNameStartIndex + userName.length,
                                     SPAN_EXCLUSIVE_EXCLUSIVE
                                 )
                             } catch (e: IndexOutOfBoundsException) {
+                            }
+                            if (!translated && chatMessage.translatedMessage != null) {
+                                addTranslation(chatMessage, builder, builder.length, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
                             }
                             bind(builder)
                         }
@@ -762,16 +823,19 @@ object ChatAdapterUtils {
                 }
                 if (image.overlayEmote != null) {
                     val drawables = arrayOf(result)
-                    nextOverlayEmote(imageLibrary, fragment, drawables, image.overlayEmote!!, image, itemView, bind, builder, emoteSize, emoteQuality, animateGifs, enableOverlayEmotes)
+                    nextOverlayEmote(imageLibrary, fragment, drawables, image.overlayEmote!!, image, itemView, bind, builder, translated, emoteSize, emoteQuality, animateGifs, enableOverlayEmotes, chatMessage, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
                 } else {
                     builder.setSpan(CenteredImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (!translated && chatMessage.translatedMessage != null) {
+                        addTranslation(chatMessage, builder, builder.length, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
+                    }
                     bind(builder)
                 }
             }
         }
     }
 
-    private fun nextOverlayEmote(imageLibrary: String?, fragment: Fragment, drawables: Array<Drawable>, image: Image, bottomImage: Image, itemView: View, bind: (SpannableStringBuilder) -> Unit, builder: SpannableStringBuilder, emoteSize: Int, emoteQuality: String, animateGifs: Boolean, enableOverlayEmotes: Boolean) {
+    private fun nextOverlayEmote(imageLibrary: String?, fragment: Fragment, drawables: Array<Drawable>, image: Image, bottomImage: Image, itemView: View, bind: (SpannableStringBuilder) -> Unit, builder: SpannableStringBuilder, translated: Boolean, emoteSize: Int, emoteQuality: String, animateGifs: Boolean, enableOverlayEmotes: Boolean, chatMessage: ChatMessage, savedColors: HashMap<String, Int>, useReadableColors: Boolean, isLightTheme: Boolean, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean) {
         loadImage(imageLibrary, fragment, image, emoteQuality) { result ->
             val widthRatio = result.intrinsicWidth.toFloat() / result.intrinsicHeight.toFloat()
             val size = if (widthRatio == 1f) {
@@ -798,13 +862,16 @@ object ChatAdapterUtils {
             }
             val array = drawables.plus(result)
             if (image.overlayEmote != null) {
-                nextOverlayEmote(imageLibrary, fragment, array, image.overlayEmote!!, bottomImage, itemView, bind, builder, emoteSize, emoteQuality, animateGifs, enableOverlayEmotes)
+                nextOverlayEmote(imageLibrary, fragment, array, image.overlayEmote!!, bottomImage, itemView, bind, builder, translated, emoteSize, emoteQuality, animateGifs, enableOverlayEmotes, chatMessage, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
             } else {
                 val layer = LayerDrawable(array)
                 val width = array.maxOf { it.bounds.right }
                 val height = array.maxOf { it.bounds.bottom }
                 layer.setBounds(0, 0, width, height)
                 builder.setSpan(CenteredImageSpan(layer), bottomImage.start, bottomImage.end, SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (!translated && chatMessage.translatedMessage != null) {
+                    addTranslation(chatMessage, builder, builder.length, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, hideErrors)
+                }
                 bind(builder)
             }
         }

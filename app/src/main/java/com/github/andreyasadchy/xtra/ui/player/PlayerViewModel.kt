@@ -15,6 +15,7 @@ import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.ui.Stream
+import com.github.andreyasadchy.xtra.model.ui.TranslateAllMessagesUser
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
@@ -24,6 +25,7 @@ import com.github.andreyasadchy.xtra.repository.NotificationUsersRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
+import com.github.andreyasadchy.xtra.repository.TranslateAllMessagesUsersRepository
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.HttpEngineUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -62,6 +64,7 @@ class PlayerViewModel @Inject constructor(
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val shownNotificationsRepository: ShownNotificationsRepository,
     private val notificationUsersRepository: NotificationUsersRepository,
+    private val translateAllMessagesUsersRepository: TranslateAllMessagesUsersRepository,
     private val httpEngine: Lazy<HttpEngine>?,
     private val cronetEngine: Lazy<CronetEngine>?,
     private val cronetExecutor: ExecutorService,
@@ -673,6 +676,18 @@ class PlayerViewModel @Inject constructor(
             } catch (e: Exception) {
 
             }
+        }
+    }
+
+    fun saveTranslateAllMessagesUser(channelId: String) {
+        viewModelScope.launch {
+            translateAllMessagesUsersRepository.saveUser(TranslateAllMessagesUser(channelId))
+        }
+    }
+
+    fun deleteTranslateAllMessagesUser(channelId: String) {
+        viewModelScope.launch {
+            translateAllMessagesUsersRepository.deleteUser(TranslateAllMessagesUser(channelId))
         }
     }
 }

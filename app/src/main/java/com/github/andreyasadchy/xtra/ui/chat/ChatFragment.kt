@@ -1,6 +1,7 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.KeyEvent
@@ -42,6 +43,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
+import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.ui.Stream
@@ -54,6 +56,7 @@ import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.hideKeyboard
 import com.github.andreyasadchy.xtra.util.isLightTheme
@@ -63,10 +66,17 @@ import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.tabs.TabLayoutMediator
+import com.google.mlkit.nl.languageid.LanguageIdentification
+import com.google.mlkit.nl.languageid.LanguageIdentifier
+import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.Translator
+import com.google.mlkit.nl.translate.TranslatorOptions
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.extensions.LayoutContainer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -98,6 +108,9 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
 
     private val replyDialog: ReplyClickedDialog?
         get() = childFragmentManager.findFragmentByTag("replyDialog") as? ReplyClickedDialog
+
+    private var languageIdentifier: LanguageIdentifier? = null
+    private val translators = mutableMapOf<String, Translator>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentChatBinding.inflate(inflater, container, false)
@@ -176,6 +189,8 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         emoteQuality = requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
                         animateGifs = requireContext().prefs().getBoolean(C.ANIMATED_EMOTES, true),
                         enableOverlayEmotes = requireContext().prefs().getBoolean(C.CHAT_ZEROWIDTH, true),
+                        translateMessage = this@ChatFragment::onTranslateMessageClicked,
+                        showLanguageDownloadDialog = this@ChatFragment::showLanguageDownloadDialog,
                         channelId = channelId,
                     )
                     recyclerView.let {
@@ -1019,6 +1034,19 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                             }
                         }
                     }
+                    if (requireContext().prefs().getBoolean(C.CHAT_TRANSLATE, false) && channelId != null && Build.SUPPORTED_64_BIT_ABIS.firstOrNull() == "arm64-v8a") {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                viewModel.translateAllMessages.collectLatest {
+                                    if (it != null) {
+                                        adapter.translateAllMessages = it
+                                        viewModel.translateAllMessages.value = null
+                                    }
+                                }
+                            }
+                        }
+                        viewModel.checkTranslateAllMessages(channelId)
+                    }
                     if (chatUrl != null) {
                         viewModel.startReplay(
                             channelId = channelId,
@@ -1130,6 +1158,14 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
 
     fun updateStreamId(id: String?) {
         viewModel.streamId = id
+    }
+
+    fun getTranslateAllMessages(): Boolean {
+        return adapter.translateAllMessages
+    }
+
+    fun toggleTranslateAllMessages(enable: Boolean) {
+        viewModel.translateAllMessages.value = enable
     }
 
     fun emoteMenuIsVisible() = binding.emoteMenu.isVisible
@@ -1286,6 +1322,161 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         (parentFragment as? PlayerFragment)?.minimize()
     }
 
+    override fun onTranslateMessageClicked(chatMessage: ChatMessage, languageTag: String?) {
+        val message = chatMessage.message ?: chatMessage.systemMsg
+        if (message != null) {
+            if (languageTag != null) {
+                translateMessage(message, chatMessage, languageTag)
+            } else {
+                val languageIdentifier = languageIdentifier ?: LanguageIdentification.getClient().also { languageIdentifier = it }
+                languageIdentifier.identifyLanguage(message)
+                    .addOnSuccessListener { tag ->
+                        translateMessage(message, chatMessage, tag)
+                    }
+                    .addOnFailureListener {
+                        val previousTranslation = chatMessage.translatedMessage
+                        chatMessage.translatedMessage = requireContext().getString(R.string.translate_failed_id)
+                        chatMessage.translationFailed = true
+                        chatMessage.messageLanguage = null
+                        try {
+                            adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                                (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                                    adapter.updateTranslation(chatMessage, it, previousTranslation)
+                                } ?: adapter.notifyItemChanged(it)
+                            }
+                            messageDialog?.updateTranslation(chatMessage, previousTranslation)
+                            replyDialog?.updateTranslation(chatMessage, previousTranslation)
+                        } catch (e: NullPointerException) {
+
+                        }
+                    }
+            }
+        }
+    }
+
+    private fun translateMessage(message: String, chatMessage: ChatMessage, tag: String) {
+        val targetLanguage = requireContext().prefs().getString(C.CHAT_TRANSLATE_TARGET, "en") ?: "en"
+        if (tag != "und" && tag != targetLanguage) {
+            TranslateLanguage.fromLanguageTag(tag)?.let { sourceLanguage ->
+                val translator = translators[sourceLanguage] ?: Translation.getClient(
+                    TranslatorOptions.Builder()
+                        .setSourceLanguage(sourceLanguage)
+                        .setTargetLanguage(targetLanguage)
+                        .build()
+                ).also {
+                    if (translators.size >= 3) {
+                        val entry = translators.entries.first()
+                        translators.remove(entry.key)
+                        entry.value.close()
+                    }
+                    translators.put(sourceLanguage, it)
+                }
+                translator.translate(message)
+                    .addOnSuccessListener { text ->
+                        val languageName = Locale.forLanguageTag(sourceLanguage).displayLanguage
+                        val previousTranslation = chatMessage.translatedMessage
+                        chatMessage.translatedMessage = requireContext().getString(R.string.translated_message, languageName, text)
+                        chatMessage.translationFailed = false
+                        chatMessage.messageLanguage = null
+                        try {
+                            adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                                (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                                    adapter.updateTranslation(chatMessage, it, previousTranslation)
+                                } ?: adapter.notifyItemChanged(it)
+                            }
+                            messageDialog?.updateTranslation(chatMessage, previousTranslation)
+                            replyDialog?.updateTranslation(chatMessage, previousTranslation)
+                        } catch (e: NullPointerException) {
+
+                        }
+                    }
+                    .addOnFailureListener {
+                        val languageName = Locale.forLanguageTag(sourceLanguage).displayLanguage
+                        val previousTranslation = chatMessage.translatedMessage
+                        chatMessage.translatedMessage = requireContext().getString(R.string.translate_failed, languageName)
+                        chatMessage.translationFailed = true
+                        chatMessage.messageLanguage = sourceLanguage
+                        try {
+                            adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                                (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                                    adapter.updateTranslation(chatMessage, it, previousTranslation)
+                                } ?: adapter.notifyItemChanged(it)
+                            }
+                            messageDialog?.updateTranslation(chatMessage, previousTranslation)
+                            replyDialog?.updateTranslation(chatMessage, previousTranslation)
+                        } catch (e: NullPointerException) {
+
+                        }
+                    }
+            }
+        } else {
+            val previousTranslation = chatMessage.translatedMessage
+            chatMessage.translatedMessage = requireContext().getString(R.string.translate_failed_id)
+            chatMessage.translationFailed = true
+            chatMessage.messageLanguage = null
+            try {
+                adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                    (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                        adapter.updateTranslation(chatMessage, it, previousTranslation)
+                    } ?: adapter.notifyItemChanged(it)
+                }
+                messageDialog?.updateTranslation(chatMessage, previousTranslation)
+                replyDialog?.updateTranslation(chatMessage, previousTranslation)
+            } catch (e: NullPointerException) {
+
+            }
+        }
+    }
+
+    private fun showLanguageDownloadDialog(chatMessage: ChatMessage, sourceLanguage: String) {
+        val languageName = Locale.forLanguageTag(sourceLanguage).displayLanguage
+        requireContext().getAlertDialogBuilder()
+            .setMessage(requireContext().getString(R.string.download_language_model_message, languageName))
+            .setNegativeButton(getString(R.string.no), null)
+            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                val targetLanguage = requireContext().prefs().getString(C.CHAT_TRANSLATE_TARGET, "en") ?: "en"
+                val translator = translators[sourceLanguage] ?: Translation.getClient(
+                    TranslatorOptions.Builder()
+                        .setSourceLanguage(sourceLanguage)
+                        .setTargetLanguage(targetLanguage)
+                        .build()
+                ).also {
+                    if (translators.size >= 3) {
+                        val entry = translators.entries.first()
+                        translators.remove(entry.key)
+                        entry.value.close()
+                    }
+                    translators.put(sourceLanguage, it)
+                }
+                translator.downloadModelIfNeeded()
+                    .addOnSuccessListener {
+                        val message = chatMessage.message ?: chatMessage.systemMsg
+                        if (message != null) {
+                            translator.translate(message)
+                                .addOnSuccessListener { text ->
+                                    val languageName = Locale.forLanguageTag(sourceLanguage).displayLanguage
+                                    val previousTranslation = chatMessage.translatedMessage
+                                    chatMessage.translatedMessage = requireContext().getString(R.string.translated_message, languageName, text)
+                                    chatMessage.translationFailed = false
+                                    chatMessage.messageLanguage = null
+                                    try {
+                                        adapter.messages?.toList()?.indexOf(chatMessage)?.takeIf { it != -1 }?.let {
+                                            (binding.recyclerView.layoutManager?.findViewByPosition(it) as? TextView)?.let {
+                                                adapter.updateTranslation(chatMessage, it, previousTranslation)
+                                            } ?: adapter.notifyItemChanged(it)
+                                        }
+                                        messageDialog?.updateTranslation(chatMessage, previousTranslation)
+                                        replyDialog?.updateTranslation(chatMessage, previousTranslation)
+                                    } catch (e: NullPointerException) {
+
+                                    }
+                                }
+                        }
+                    }
+            }
+            .show()
+    }
+
     override fun onNetworkRestored() {
         if (isResumed) {
             val args = requireArguments()
@@ -1318,6 +1509,14 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        languageIdentifier?.close()
+        translators.forEach {
+            it.value.close()
+        }
     }
 
     class SpaceTokenizer : MultiAutoCompleteTextView.Tokenizer {

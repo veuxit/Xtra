@@ -4,6 +4,7 @@ import android.graphics.drawable.Animatable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.LayerDrawable
 import android.text.Spannable
+import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
 import android.text.TextUtils
@@ -67,6 +68,9 @@ class MessageClickedChatAdapter(
     private val emoteQuality: String,
     private val animateGifs: Boolean,
     private val enableOverlayEmotes: Boolean,
+    private val translateAllMessages: Boolean,
+    private val translateMessage: (ChatMessage, String?) -> Unit,
+    private val showLanguageDownloadDialog: (ChatMessage, String) -> Unit,
     messages: List<ChatMessage>?,
     private val userColors: HashMap<String, Int>,
     private val savedColors: HashMap<String, Int>,
@@ -116,22 +120,23 @@ class MessageClickedChatAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val chatMessage = messages?.get(position) ?: return
-        val pair = ChatAdapterUtils.prepareChatMessage(
+        val result = ChatAdapterUtils.prepareChatMessage(
             chatMessage, holder.textView, enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg,
             rewardChatMsg, replyMessage, { url, name, source, format, isAnimated, emoteId -> imageClick(url, name, source, format, isAnimated, emoteId) },
             useRandomColors, random, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers,
             showStvBadges, stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes,
-            enableOverlayEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, localTwitchEmotes, globalStvEmotes, channelStvEmotes,
-            globalBttvEmotes, channelBttvEmotes, globalFfzEmotes, channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes,
-            savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
+            enableOverlayEmotes, loggedInUser, chatUrl, getEmoteBytes, userColors, savedColors, translateAllMessages, translateMessage,
+            showLanguageDownloadDialog, false, localTwitchEmotes, globalStvEmotes, channelStvEmotes, globalBttvEmotes, channelBttvEmotes, globalFfzEmotes,
+            channelFfzEmotes, globalBadges, channelBadges, cheerEmotes, savedLocalTwitchEmotes, savedLocalBadges, savedLocalCheerEmotes, savedLocalEmotes
         )
         if (chatMessage == selectedMessage) {
             holder.textView.setBackgroundResource(R.color.chatMessageSelected)
         }
-        holder.bind(chatMessage, pair.first)
+        holder.bind(chatMessage, result.builder)
         ChatAdapterUtils.loadImages(
-            fragment, holder.textView, { holder.bind(chatMessage, it) }, pair.second, pair.third, backgroundColor, imageLibrary, pair.first, emoteSize,
-            badgeSize, emoteQuality, animateGifs, enableOverlayEmotes
+            fragment, holder.textView, { holder.bind(chatMessage, it) }, result.images, result.imagePaint, result.userName, result.userNameStartIndex,
+            backgroundColor, imageLibrary, result.builder, result.translated, emoteSize, badgeSize, emoteQuality, animateGifs, enableOverlayEmotes,
+            chatMessage, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, false
         )
     }
 
@@ -158,6 +163,21 @@ class MessageClickedChatAdapter(
                 it.backgroundColor = (item.background as? ColorDrawable)?.color
                 view.setSpan(it, view.getSpanStart(it), view.getSpanEnd(it), SPAN_EXCLUSIVE_EXCLUSIVE)
             }
+        }
+    }
+
+    fun updateTranslation(chatMessage: ChatMessage, item: TextView, previousTranslation: String?) {
+        (item.text as? SpannableString)?.let { text ->
+            val builder = SpannableStringBuilder()
+            builder.append(
+                if (previousTranslation != null) {
+                    text.dropLast(previousTranslation.length + 1)
+                } else {
+                    text
+                }
+            )
+            ChatAdapterUtils.addTranslation(chatMessage, builder, builder.length, savedColors, useReadableColors, isLightTheme, showLanguageDownloadDialog, false)
+            item.text = builder
         }
     }
 

@@ -13,6 +13,7 @@ import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.ShownNotificationsDao
 import com.github.andreyasadchy.xtra.db.SortChannelDao
 import com.github.andreyasadchy.xtra.db.SortGameDao
+import com.github.andreyasadchy.xtra.db.TranslateAllMessagesUsersDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.db.VideosDao
 import com.github.andreyasadchy.xtra.db.VodBookmarkIgnoredUsersDao
@@ -24,6 +25,7 @@ import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.ShownNotificationsRepository
 import com.github.andreyasadchy.xtra.repository.SortChannelRepository
 import com.github.andreyasadchy.xtra.repository.SortGameRepository
+import com.github.andreyasadchy.xtra.repository.TranslateAllMessagesUsersRepository
 import com.github.andreyasadchy.xtra.repository.VodBookmarkIgnoredUsersRepository
 import dagger.Module
 import dagger.Provides
@@ -73,6 +75,10 @@ class DatabaseModule {
 
     @Singleton
     @Provides
+    fun providesTranslateAllMessagesUsersRepository(translateAllMessagesUsersDao: TranslateAllMessagesUsersDao): TranslateAllMessagesUsersRepository = TranslateAllMessagesUsersRepository(translateAllMessagesUsersDao)
+
+    @Singleton
+    @Provides
     fun providesVideosDao(database: AppDatabase): VideosDao = database.videos()
 
     @Singleton
@@ -114,6 +120,10 @@ class DatabaseModule {
     @Singleton
     @Provides
     fun providesNotificationUsersDao(database: AppDatabase): NotificationUsersDao = database.notificationsDao()
+
+    @Singleton
+    @Provides
+    fun providesTranslateAllMessagesUsersDao(database: AppDatabase): TranslateAllMessagesUsersDao = database.translateAllMessagesUsersDao()
 
     @Singleton
     @Provides
@@ -274,6 +284,11 @@ class DatabaseModule {
                 object : Migration(27, 28) {
                     override fun migrate(db: SupportSQLiteDatabase) {
                         db.execSQL("CREATE TABLE IF NOT EXISTS notifications (channelId TEXT NOT NULL, PRIMARY KEY (channelId))")
+                    }
+                },
+                object : Migration(28, 29) {
+                    override fun migrate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE IF NOT EXISTS translate_all_messages (channelId TEXT NOT NULL, PRIMARY KEY (channelId))")
                     }
                 },
             )

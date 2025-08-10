@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.player
 
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -180,6 +181,23 @@ class PlayerSettingsDialog : BottomSheetDialogFragment() {
                 menuVolume.setOnClickListener {
                     (parentFragment as? PlayerFragment)?.showVolumeDialog()
                     dismiss()
+                }
+            }
+            if (requireContext().prefs().getBoolean(C.CHAT_TRANSLATE, false) && Build.SUPPORTED_64_BIT_ABIS.firstOrNull() == "arm64-v8a") {
+                val translateAll = (parentFragment as? PlayerFragment)?.getTranslateAllMessages()
+                if (translateAll != null) {
+                    menuTranslateAll.visible()
+                    if (translateAll) {
+                        menuTranslateAll.setOnClickListener {
+                            (parentFragment as? PlayerFragment)?.deleteTranslateAllMessagesUser()
+                            dismiss()
+                        }
+                    } else {
+                        menuTranslateAll.setOnClickListener {
+                            (parentFragment as? PlayerFragment)?.saveTranslateAllMessagesUser()
+                            dismiss()
+                        }
+                    }
                 }
             }
             (parentFragment as? PlayerFragment)?.setSubtitles()
