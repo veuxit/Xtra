@@ -57,6 +57,14 @@ android {
     lint {
         disable += "ContentDescription"
     }
+    packaging.jniLibs.excludes.addAll(listOf(
+        "lib/x86/libtranslate_jni.so",
+        "lib/x86/liblanguage_id_l2c_jni.so",
+        "lib/x86_64/libtranslate_jni.so",
+        "lib/x86_64/liblanguage_id_l2c_jni.so",
+        "lib/armeabi-v7a/libtranslate_jni.so",
+        "lib/armeabi-v7a/liblanguage_id_l2c_jni.so",
+    ))
     configurations.all {
         resolutionStrategy.force(listOf(
             "androidx.activity:activity:1.8.2",
@@ -98,6 +106,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.google.android.gms:play-services-cronet:18.0.1")
+    implementation("com.google.mlkit:language-id:17.0.1")
+    implementation("com.google.mlkit:translate:16.1.2")
 
     implementation(libs.material)
 
