@@ -29,7 +29,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GameClipsViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val sortGameRepository: SortGameRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,

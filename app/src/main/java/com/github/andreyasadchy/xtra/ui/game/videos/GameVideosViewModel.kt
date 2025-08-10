@@ -55,7 +55,7 @@ import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class GameVideosViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val sortGameRepository: SortGameRepository,
     playerRepository: PlayerRepository,
     private val bookmarksRepository: BookmarksRepository,
