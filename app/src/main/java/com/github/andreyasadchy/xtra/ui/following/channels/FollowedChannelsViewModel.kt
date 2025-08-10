@@ -27,7 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedChannelsViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val sortChannelRepository: SortChannelRepository,
     private val localFollowsChannel: LocalFollowChannelRepository,
     private val offlineRepository: OfflineRepository,

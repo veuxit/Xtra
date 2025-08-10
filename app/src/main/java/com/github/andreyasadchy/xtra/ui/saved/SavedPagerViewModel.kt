@@ -20,7 +20,7 @@ import kotlin.math.max
 
 @HiltViewModel
 class SavedPagerViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val offlineRepository: OfflineRepository,
 ) : ViewModel() {
 

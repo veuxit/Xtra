@@ -35,7 +35,7 @@ import kotlin.math.max
 
 @HiltViewModel
 class DownloadsViewModel @Inject internal constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val repository: OfflineRepository,
 ) : ViewModel() {
 

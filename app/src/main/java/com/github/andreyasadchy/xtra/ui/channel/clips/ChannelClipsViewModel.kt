@@ -27,7 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChannelClipsViewModel @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val sortChannelRepository: SortChannelRepository,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
