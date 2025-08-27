@@ -67,6 +67,7 @@ import java.util.Timer
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
 import kotlin.concurrent.schedule
+import kotlin.concurrent.scheduleAtFixedRate
 
 
 @OptIn(UnstableApi::class)
@@ -100,6 +101,8 @@ class PlaybackService : MediaSessionService() {
     private var offlineVideoId: Int? = null
     private var sleepTimer: Timer? = null
     private var sleepTimerEndTime = 0L
+    private var lastSavedPosition: Long? = null
+    private var savePositionTimer: Timer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -121,6 +124,24 @@ class PlaybackService : MediaSessionService() {
         }.build()
         player.addListener(
             object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (isPlaying) {
+                        if (savePositionTimer == null && (videoId != null || offlineVideoId != null)) {
+                            savePositionTimer = Timer().apply {
+                                scheduleAtFixedRate(30000, 30000) {
+                                    Handler(Looper.getMainLooper()).post {
+                                        updateSavedPosition()
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        savePositionTimer?.cancel()
+                        savePositionTimer = null
+                        updateSavedPosition()
+                    }
+                }
+
                 override fun onPlayerError(error: PlaybackException) {
                     if (background) {
                         player.prepare()
@@ -610,6 +631,28 @@ class PlaybackService : MediaSessionService() {
                 offlineVideoId?.let {
                     runBlocking {
                         offlineRepository.updateVideoPosition(it, player.currentPosition)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateSavedPosition() {
+        mediaSession?.player?.let { player ->
+            if (!player.currentTracks.isEmpty && prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                val currentPosition = player.currentPosition
+                val savedPosition = lastSavedPosition
+                if (savedPosition == null || currentPosition - savedPosition !in 0..2000) {
+                    lastSavedPosition = currentPosition
+                    videoId?.let {
+                        runBlocking {
+                            playerRepository.saveVideoPosition(VideoPosition(it, currentPosition))
+                        }
+                    } ?:
+                    offlineVideoId?.let {
+                        runBlocking {
+                            offlineRepository.updateVideoPosition(it, currentPosition)
+                        }
                     }
                 }
             }

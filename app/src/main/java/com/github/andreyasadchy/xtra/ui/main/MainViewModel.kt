@@ -19,6 +19,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.User
@@ -27,6 +28,7 @@ import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
+import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.download.StreamDownloadWorker
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadWorker
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
@@ -69,6 +71,7 @@ class MainViewModel @Inject constructor(
     @param:ApplicationContext private val applicationContext: Context,
     private val graphQLRepository: GraphQLRepository,
     private val helixRepository: HelixRepository,
+    private val playerRepository: PlayerRepository,
     private val offlineRepository: OfflineRepository,
     private val authRepository: AuthRepository,
     private val httpEngine: Lazy<HttpEngine>?,
@@ -116,10 +119,10 @@ class MainViewModel @Inject constructor(
         isPlayerMaximized = false
     }
 
-    fun loadVideo(videoId: String?, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
+    fun loadVideo(videoId: String?, offset: Long?, saveVideoPositions: Boolean, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (video.value == null) {
             viewModelScope.launch {
-                video.value = try {
+                val item = try {
                     val response = graphQLRepository.loadQueryVideo(networkLibrary, gqlHeaders, videoId)
                     if (enableIntegrity && integrity.value == null) {
                         response.errors?.find { it.message == "failed integrity check" }?.let {
@@ -169,6 +172,12 @@ class MainViewModel @Inject constructor(
                         }
                     } else null
                 }
+                if (item != null && saveVideoPositions) {
+                    videoId?.toLongOrNull()?.let { id ->
+                        playerRepository.saveVideoPosition(VideoPosition(id, offset ?: 0))
+                    }
+                }
+                video.value = item
             }
         }
     }

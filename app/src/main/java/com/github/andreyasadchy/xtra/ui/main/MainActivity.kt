@@ -413,6 +413,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         if (!id.isNullOrBlank()) {
                             viewModel.loadVideo(
                                 id,
+                                offset,
+                                prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true),
                                 prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                                 TwitchApiHelper.getGQLHeaders(this),
                                 TwitchApiHelper.getHelixHeaders(this),
