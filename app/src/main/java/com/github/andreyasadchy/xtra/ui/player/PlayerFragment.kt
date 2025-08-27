@@ -671,20 +671,28 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 if (!videoId.isNullOrBlank()) {
                     watchVideo.visible()
                     watchVideo.setOnClickListener {
-                        (requireActivity() as MainActivity).startVideo(
-                            Video(
-                                id = videoId,
-                                channelId = requireArguments().getString(KEY_CHANNEL_ID),
-                                channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
-                                channelName = requireArguments().getString(KEY_CHANNEL_NAME),
-                                profileImageUrl = requireArguments().getString(KEY_PROFILE_IMAGE_URL),
-                                animatedPreviewURL = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW)
-                            ),
-                            requireArguments().getInt(KEY_VOD_OFFSET).takeIf { it != -1 }?.let {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val offset = requireArguments().getInt(KEY_VOD_OFFSET).takeIf { it != -1 }?.let {
                                 (it * 1000) + (player?.currentPosition ?: 0)
-                            } ?: 0,
-                            true
-                        )
+                            } ?: 0
+                            if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                                videoId.toLongOrNull()?.let { id ->
+                                    viewModel.savePosition(id, offset)
+                                }
+                            }
+                            (requireActivity() as MainActivity).startVideo(
+                                Video(
+                                    id = videoId,
+                                    channelId = requireArguments().getString(KEY_CHANNEL_ID),
+                                    channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
+                                    channelName = requireArguments().getString(KEY_CHANNEL_NAME),
+                                    profileImageUrl = requireArguments().getString(KEY_PROFILE_IMAGE_URL),
+                                    animatedPreviewURL = requireArguments().getString(KEY_VIDEO_ANIMATED_PREVIEW)
+                                ),
+                                offset,
+                                true
+                            )
+                        }
                     }
                 }
             } else {
@@ -1988,18 +1996,18 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 )
             }
             VIDEO -> {
-                if (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION)) {
-                    playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getLong(KEY_OFFSET).takeIf { it != -1L } ?: 0)
-                    requireArguments().putBoolean(KEY_IGNORE_SAVED_POSITION, false)
-                    requireArguments().putLong(KEY_OFFSET, -1)
+                if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                    val id = requireArguments().getString(KEY_VIDEO_ID)?.toLongOrNull()
+                    if (id != null) {
+                        viewModel.getVideoPosition(id)
+                    } else {
+                        playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
+                    }
                 } else {
-                    if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
-                        val id = requireArguments().getString(KEY_VIDEO_ID)?.toLongOrNull()
-                        if (id != null) {
-                            viewModel.getVideoPosition(id)
-                        } else {
-                            playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
-                        }
+                    if (requireArguments().getBoolean(KEY_IGNORE_SAVED_POSITION)) {
+                        playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, requireArguments().getLong(KEY_OFFSET).takeIf { it != -1L } ?: 0)
+                        requireArguments().putBoolean(KEY_IGNORE_SAVED_POSITION, false)
+                        requireArguments().putLong(KEY_OFFSET, -1)
                     } else {
                         playVideo((prefs.getString(C.TOKEN_SKIP_VIDEO_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) <= 1, 0)
                     }

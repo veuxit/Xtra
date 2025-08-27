@@ -328,6 +328,10 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    suspend fun savePosition(id: Long, position: Long) {
+        playerRepository.saveVideoPosition(VideoPosition(id, position))
+    }
+
     fun loadGamesList(videoId: String?, networkLibrary: String?, gqlHeaders: Map<String, String>, enableIntegrity: Boolean) {
         if (gamesList.value == null) {
             viewModelScope.launch {
