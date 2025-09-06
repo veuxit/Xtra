@@ -13,11 +13,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.asDrawable
 import coil3.imageLoader
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.DialogChatImageClickBinding
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
@@ -40,6 +43,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         private const val IMAGE_SOURCE = "image_source"
         private const val IMAGE_FORMAT = "image_format"
         private const val IMAGE_ANIMATED = "image_animated"
+        private const val IMAGE_THIRD_PARTY = "image_third_party"
         private const val EMOTE_ID = "emote_id"
 
         const val PERSONAL_STV = "personal_stv"
@@ -50,7 +54,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         const val GLOBAL_BTTV = "global_bttv"
         const val GLOBAL_FFZ = "global_ffz"
 
-        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, emoteId: String?): ImageClickedDialog {
+        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, thirdParty: Boolean?, emoteId: String?): ImageClickedDialog {
             return ImageClickedDialog().apply {
                 arguments = bundleOf(
                     IMAGE_URL to url,
@@ -58,6 +62,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
                     IMAGE_SOURCE to source,
                     IMAGE_FORMAT to format,
                     IMAGE_ANIMATED to isAnimated,
+                    IMAGE_THIRD_PARTY to thirdParty,
                     EMOTE_ID to emoteId
                 )
             }
@@ -99,6 +104,11 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
                 requireContext().imageLoader.enqueue(
                     ImageRequest.Builder(requireContext()).apply {
                         data(args.getString(IMAGE_URL))
+                        if (args.getBoolean(IMAGE_THIRD_PARTY)) {
+                            httpHeaders(NetworkHeaders.Builder().apply {
+                                add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+                            }.build())
+                        }
                         target(
                             onSuccess = {
                                 val result = it.asDrawable(resources)

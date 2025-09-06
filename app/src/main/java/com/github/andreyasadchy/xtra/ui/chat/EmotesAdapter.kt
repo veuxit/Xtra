@@ -8,12 +8,15 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil3.imageLoader
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.target
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.Emote
 
@@ -53,6 +56,11 @@ class EmotesAdapter(
                             else -> emote.url1x
                         }
                     )
+                    if (emote.thirdParty) {
+                        httpHeaders(NetworkHeaders.Builder().apply {
+                            add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+                        }.build())
+                    }
                     crossfade(true)
                     target(holder.itemView as ImageView)
                 }.build()

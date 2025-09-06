@@ -19,11 +19,14 @@ import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import coil3.asDrawable
 import coil3.imageLoader
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
 import com.github.andreyasadchy.xtra.model.chat.CheerEmote
@@ -51,7 +54,7 @@ object ChatAdapterUtils {
     private const val PI_DEGREES = 180f
     private const val TWO_PI_DEGREES = 360f
 
-    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, replyMessage: String, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showStvBadges: Boolean, stvBadges: List<StvBadge>?, stvBadgeUsers: Map<String, String>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, enableOverlayEmotes: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, translateAllMessages: Boolean, translateMessage: (ChatMessage, String?) -> Unit, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): MessageResult {
+    fun prepareChatMessage(chatMessage: ChatMessage, itemView: View, enableTimestamps: Boolean, timestampFormat: String?, firstMsgVisibility: Int, firstChatMsg: String, redeemedChatMsg: String, redeemedNoMsg: String, rewardChatMsg: String, replyMessage: String, imageClick: ((String?, String?, String?, String?, Boolean?, Boolean?, String?) -> Unit)?, useRandomColors: Boolean, random: Random, useReadableColors: Boolean, isLightTheme: Boolean, nameDisplay: String?, useBoldNames: Boolean, showNamePaints: Boolean, namePaints: List<NamePaint>?, paintUsers: Map<String, String>?, showStvBadges: Boolean, stvBadges: List<StvBadge>?, stvBadgeUsers: Map<String, String>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, enableOverlayEmotes: Boolean, showSystemMessageEmotes: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, userColors: HashMap<String, Int>, savedColors: HashMap<String, Int>, translateAllMessages: Boolean, translateMessage: (ChatMessage, String?) -> Unit, showLanguageDownloadDialog: (ChatMessage, String) -> Unit, hideErrors: Boolean, localTwitchEmotes: List<TwitchEmote>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, globalBadges: List<TwitchBadge>?, channelBadges: List<TwitchBadge>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalBadges: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): MessageResult {
         val builder = SpannableStringBuilder()
         val images = ArrayList<Image>()
         var imagePaint: NamePaint? = null
@@ -203,7 +206,7 @@ object ChatAdapterUtils {
                         if (imageClick != null) {
                             builder.setSpan(object : ClickableSpan() {
                                 override fun onClick(widget: View) {
-                                    imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.title, null, null, null, null)
+                                    imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.title, null, null, null, null, null)
                                 }
 
                                 override fun updateDrawState(ds: TextPaint) {}
@@ -227,7 +230,7 @@ object ChatAdapterUtils {
                         if (imageClick != null) {
                             builder.setSpan(object : ClickableSpan() {
                                 override fun onClick(widget: View) {
-                                    imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.name, null, badge.format, true, null)
+                                    imageClick(badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x, badge.name, null, badge.format, true, true, null)
                                 }
 
                                 override fun updateDrawState(ds: TextPaint) {}
@@ -240,6 +243,7 @@ object ChatAdapterUtils {
                             url4x = badge.url4x,
                             format = badge.format,
                             isAnimated = true,
+                            thirdParty = true,
                             start = builderIndex++,
                             end = builderIndex++
                         ))
@@ -406,7 +410,7 @@ object ChatAdapterUtils {
         return ColorUtils.HSLToColor(colorArray)
     }
 
-    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, startIndex: Int, images: ArrayList<Image>, imageClick: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)?, useReadableColors: Boolean, isLightTheme: Boolean, enableOverlayEmotes: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
+    private fun prepareEmotes(chatMessage: ChatMessage, message: String, builder: SpannableStringBuilder, startIndex: Int, images: ArrayList<Image>, imageClick: ((String?, String?, String?, String?, Boolean?, Boolean?, String?) -> Unit)?, useReadableColors: Boolean, isLightTheme: Boolean, enableOverlayEmotes: Boolean, useBoldNames: Boolean, loggedInUser: String?, chatUrl: String?, getEmoteBytes: ((String, Pair<Long, Int>) -> ByteArray?)?, savedColors: HashMap<String, Int>, localTwitchEmotes: List<TwitchEmote>?, showPersonalEmotes: Boolean, personalEmoteSets: Map<String, List<Emote>>?, personalEmoteSetUsers: Map<String, String>?, globalStvEmotes: List<Emote>?, channelStvEmotes: List<Emote>?, globalBttvEmotes: List<Emote>?, channelBttvEmotes: List<Emote>?, globalFfzEmotes: List<Emote>?, channelFfzEmotes: List<Emote>?, cheerEmotes: List<CheerEmote>?, savedLocalTwitchEmotes: MutableMap<String, ByteArray>, savedLocalCheerEmotes: MutableMap<String, ByteArray>, savedLocalEmotes: MutableMap<String, ByteArray>): Boolean {
         var wasMentioned = false
         try {
             var builderIndex = startIndex
@@ -448,7 +452,7 @@ object ChatAdapterUtils {
                             if (imageClick != null) {
                                 builder.setSpan(object : ClickableSpan() {
                                     override fun onClick(widget: View) {
-                                        imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, value, null, emote.format, emote.isAnimated, null)
+                                        imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, value, null, emote.format, emote.isAnimated, null, null)
                                     }
 
                                     override fun updateDrawState(ds: TextPaint) {}
@@ -504,6 +508,7 @@ object ChatAdapterUtils {
                             format = emote.format,
                             isAnimated = emote.isAnimated,
                             isEmote = true,
+                            thirdParty = emote.thirdParty,
                             start = previousImage.start,
                             end = previousImage.end
                         )
@@ -523,7 +528,7 @@ object ChatAdapterUtils {
                         if (imageClick != null) {
                             builder.setSpan(object : ClickableSpan() {
                                 override fun onClick(widget: View) {
-                                    imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, emote.name, source, emote.format, emote.isAnimated, null)
+                                    imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, emote.name, source, emote.format, emote.isAnimated, emote.thirdParty, null)
                                 }
 
                                 override fun updateDrawState(ds: TextPaint) {}
@@ -538,6 +543,7 @@ object ChatAdapterUtils {
                             format = emote.format,
                             isAnimated = emote.isAnimated,
                             isEmote = true,
+                            thirdParty = emote.thirdParty,
                             start = builderIndex,
                             end = builderIndex + 1
                         )
@@ -585,7 +591,7 @@ object ChatAdapterUtils {
                     if (imageClick != null) {
                         builder.setSpan(object : ClickableSpan() {
                             override fun onClick(widget: View) {
-                                imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, value, null, emote.format, emote.isAnimated, emote.id)
+                                imageClick(emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x, value, null, emote.format, emote.isAnimated, null, emote.id)
                             }
 
                             override fun updateDrawState(ds: TextPaint) {}
@@ -700,6 +706,9 @@ object ChatAdapterUtils {
                 fragment.requireContext().imageLoader.enqueue(
                     ImageRequest.Builder(fragment.requireContext()).apply {
                         data(imagePaint.imageUrl)
+                        httpHeaders(NetworkHeaders.Builder().apply {
+                            add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+                        }.build())
                         target(
                             onSuccess = {
                                 (it.asDrawable(fragment.resources)).let { result ->
@@ -894,6 +903,11 @@ object ChatAdapterUtils {
                     "2" -> image.url2x ?: image.url1x
                     else -> image.url1x
                 })
+                if (image.thirdParty) {
+                    httpHeaders(NetworkHeaders.Builder().apply {
+                        add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+                    }.build())
+                }
                 target(
                     onSuccess = {
                         onLoaded((it.asDrawable(fragment.resources)))
