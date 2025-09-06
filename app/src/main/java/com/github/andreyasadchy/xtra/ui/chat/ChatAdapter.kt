@@ -105,7 +105,7 @@ class ChatAdapter(
 
     var messageClickListener: ((String?) -> Unit)? = null
     var replyClickListener: (() -> Unit)? = null
-    var imageClickListener: ((String?, String?, String?, String?, Boolean?, String?) -> Unit)? = null
+    var imageClickListener: ((String?, String?, String?, String?, Boolean?, Boolean?, String?) -> Unit)? = null
     private var selectedMessage: ChatMessage? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -151,7 +151,7 @@ class ChatAdapter(
         return MessageClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
             { chatMessage -> selectedMessage = chatMessage; replyClickListener?.invoke() },
-            { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
+            { url, name, source, format, isAnimated, thirdParty, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, thirdParty, emoteId) },
             useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
             stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
             fragment, dialogBackgroundColor, imageLibrary, messageTextSize, emoteSize, badgeSize, emoteQuality, animateGifs, enableOverlayEmotes,
@@ -164,7 +164,7 @@ class ChatAdapter(
     fun createReplyClickedChatAdapter(messages: List<ChatMessage>?): ReplyClickedChatAdapter {
         return ReplyClickedChatAdapter(
             enableTimestamps, timestampFormat, firstMsgVisibility, firstChatMsg, redeemedChatMsg, redeemedNoMsg, rewardChatMsg, replyMessage,
-            { url, name, source, format, isAnimated, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, emoteId) },
+            { url, name, source, format, isAnimated, thirdParty, emoteId -> imageClickListener?.invoke(url, name, source, format, isAnimated, thirdParty, emoteId) },
             useRandomColors, useReadableColors, isLightTheme, nameDisplay, useBoldNames, showNamePaints, namePaints, paintUsers, showStvBadges,
             stvBadges, stvBadgeUsers, showPersonalEmotes, personalEmoteSets, personalEmoteSetUsers, showSystemMessageEmotes, chatUrl, getEmoteBytes,
             fragment, dialogBackgroundColor, imageLibrary, messageTextSize, emoteSize, badgeSize, emoteQuality, animateGifs, enableOverlayEmotes,

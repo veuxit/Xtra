@@ -33,6 +33,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import coil3.imageLoader
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.target
@@ -41,6 +43,7 @@ import coil3.transform.CircleCropTransformation
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
@@ -234,10 +237,10 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         editText.clearFocus()
                         ReplyClickedDialog.newInstance(enableMessaging).show(this@ChatFragment.childFragmentManager, "replyDialog")
                     }
-                    adapter.imageClickListener = { url, name, source, format, isAnimated, emoteId ->
+                    adapter.imageClickListener = { url, name, source, format, isAnimated, thirdParty, emoteId ->
                         editText.hideKeyboard()
                         editText.clearFocus()
-                        ImageClickedDialog.newInstance(url, name, source, format, isAnimated, emoteId).show(this@ChatFragment.childFragmentManager, "imageDialog")
+                        ImageClickedDialog.newInstance(url, name, source, format, isAnimated, thirdParty, emoteId).show(this@ChatFragment.childFragmentManager, "imageDialog")
                     }
                     if (enableMessaging) {
                         adapter.loggedInUser = accountLogin
@@ -1632,6 +1635,11 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                                                 else -> item.url1x
                                             }
                                         )
+                                        if (item.thirdParty) {
+                                            httpHeaders(NetworkHeaders.Builder().apply {
+                                                add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+                                            }.build())
+                                        }
                                         crossfade(true)
                                         target(it)
                                     }.build()
