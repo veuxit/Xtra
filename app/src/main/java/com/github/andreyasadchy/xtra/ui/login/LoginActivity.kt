@@ -157,8 +157,12 @@ class LoginActivity : AppCompatActivity() {
                 "user:read:follows", // streams/followed, channels/followed
                 "user:write:chat", // chat/messages
             )
-            val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}" +
-                    "&redirect_uri=${helixRedirect}&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}"
+            val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize" +
+                    "?response_type=token" +
+                    "&client_id=${helixClientId}" +
+                    "&redirect_uri=${helixRedirect}" +
+                    "&scope=${URLEncoder.encode(helixScopes.joinToString(" "), Charsets.UTF_8.name())}" +
+                    "&force_verify=true"
             webViewContainer.visible()
             textZoom.visible()
             havingTrouble.setOnClickListener {
