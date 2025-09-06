@@ -37,6 +37,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         private const val IMAGE_SOURCE = "image_source"
         private const val IMAGE_FORMAT = "image_format"
         private const val IMAGE_ANIMATED = "image_animated"
+        private const val IMAGE_THIRD_PARTY = "image_third_party"
         private const val EMOTE_ID = "emote_id"
 
         const val PERSONAL_STV = "personal_stv"
@@ -47,7 +48,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
         const val GLOBAL_BTTV = "global_bttv"
         const val GLOBAL_FFZ = "global_ffz"
 
-        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, emoteId: String?): ImageClickedDialog {
+        fun newInstance(url: String?, name: String?, source: String?, format: String?, isAnimated: Boolean?, thirdParty: Boolean?, emoteId: String?): ImageClickedDialog {
             return ImageClickedDialog().apply {
                 arguments = bundleOf(
                     IMAGE_URL to url,
@@ -55,6 +56,7 @@ class ImageClickedDialog : BottomSheetDialogFragment(), IntegrityDialog.Callback
                     IMAGE_SOURCE to source,
                     IMAGE_FORMAT to format,
                     IMAGE_ANIMATED to isAnimated,
+                    IMAGE_THIRD_PARTY to thirdParty,
                     EMOTE_ID to emoteId
                 )
             }

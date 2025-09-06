@@ -227,10 +227,10 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                         editText.clearFocus()
                         ReplyClickedDialog.newInstance(enableMessaging).show(this@ChatFragment.childFragmentManager, "replyDialog")
                     }
-                    adapter.imageClickListener = { url, name, source, format, isAnimated, emoteId ->
+                    adapter.imageClickListener = { url, name, source, format, isAnimated, thirdParty, emoteId ->
                         editText.hideKeyboard()
                         editText.clearFocus()
-                        ImageClickedDialog.newInstance(url, name, source, format, isAnimated, emoteId).show(this@ChatFragment.childFragmentManager, "imageDialog")
+                        ImageClickedDialog.newInstance(url, name, source, format, isAnimated, thirdParty, emoteId).show(this@ChatFragment.childFragmentManager, "imageDialog")
                     }
                     if (enableMessaging) {
                         adapter.loggedInUser = accountLogin
@@ -264,7 +264,13 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                                 }
                             }
                         }
-                        autoCompleteAdapter = AutoCompleteAdapter(requireContext(), this@ChatFragment, autoCompleteList, requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
+                        autoCompleteAdapter = AutoCompleteAdapter(
+                            requireContext(),
+                            this@ChatFragment,
+                            autoCompleteList,
+                            requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
+                            requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
+                        ).apply {
                             setNotifyOnChange(false)
                             editText.setAdapter(this)
 
@@ -1541,6 +1547,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         private val fragment: Fragment,
         list: List<Any>,
         private val emoteQuality: String,
+        private val imageLibrary: String?,
     ) : ArrayAdapter<Any>(context, 0, list) {
 
         private var mFilter: ArrayFilter? = null

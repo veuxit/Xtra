@@ -10,6 +10,7 @@ class Emote(
     val format: String? = null,
     val isAnimated: Boolean = true,
     val isOverlayEmote: Boolean = false,
+    val thirdParty: Boolean = false,
 ) {
 
     override fun equals(other: Any?): Boolean {
