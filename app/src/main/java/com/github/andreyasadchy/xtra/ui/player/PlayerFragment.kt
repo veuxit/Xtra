@@ -2260,10 +2260,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     )
                     viewModel.usingProxy = false
                 }
-                if (prefs.getBoolean(C.PLAYER_BACKGROUND_AUDIO, true)
-                    && !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().isInPictureInPictureMode)
-                ) {
-                    if (player.playWhenReady == true && viewModel.quality != AUDIO_ONLY_QUALITY) {
+                if (prefs.getBoolean(C.PLAYER_BACKGROUND_AUDIO, true)) {
+                    if (player.playWhenReady && viewModel.quality != AUDIO_ONLY_QUALITY) {
                         viewModel.restoreQuality = true
                         viewModel.previousQuality = viewModel.quality
                         viewModel.quality = AUDIO_ONLY_QUALITY
