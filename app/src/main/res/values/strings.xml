@@ -715,4 +715,8 @@
     <string name="download_language_model_message">Download language model for %s?</string>
     <string name="translate_from_selected">Translate from selected language</string>
     <string name="translate_all_messages">Translate all messages on this channel</string>
+    <string name="use_custom_websockets">Use custom WebSockets</string>
+    <string name="show_more_websocket_info">Show more info about WebSockets</string>
+    <string name="websocket_connected">%s: Connected</string>
+    <string name="websocket_disconnected">%1$s: Disconnected - %2$s</string>
 </resources>

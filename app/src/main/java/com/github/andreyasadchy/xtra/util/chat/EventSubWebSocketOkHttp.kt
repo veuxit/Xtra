@@ -1,61 +1,64 @@
 package com.github.andreyasadchy.xtra.util.chat
 
-import com.github.andreyasadchy.xtra.util.WebSocket
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.util.Timer
-import javax.net.ssl.X509TrustManager
 import kotlin.concurrent.schedule
 
-class EventSubWebSocket(
+class EventSubWebSocketOkHttp(
+    private val client: OkHttpClient,
     private val onConnect: () -> Unit,
-    private val onDisconnect: ((String, String) -> Unit),
     private val onWelcomeMessage: (String) -> Unit,
     private val onChatMessage: (JSONObject, String?) -> Unit,
     private val onUserNotice: (JSONObject, String?) -> Unit,
     private val onClearChat: (JSONObject, String?) -> Unit,
     private val onRoomState: (JSONObject, String?) -> Unit,
-    private val trustManager: X509TrustManager?,
-    private val coroutineScope: CoroutineScope,
 ) {
-    private var webSocket: WebSocket? = null
+    private var socket: WebSocket? = null
     private var pongTimer: Timer? = null
-    val isActive: Boolean?
-        get() = webSocket?.isActive
+    var isActive = true
     private var timeout = 10000L
+    private var usingReconnectUrl = false
     private val handledMessageIds = mutableListOf<String>()
 
-    fun connect() {
-        webSocket = WebSocket("wss://eventsub.wss.twitch.tv/ws", trustManager, EventSubWebSocketListener())
-        coroutineScope.launch {
-            webSocket?.start()
-        }
+    fun connect(reconnectUrl: String? = null) {
+        socket = client.newWebSocket(
+            Request.Builder().url(reconnectUrl ?: "wss://eventsub.wss.twitch.tv/ws").build(),
+            EventSubWebSocketListener()
+        )
     }
 
-    suspend fun disconnect() {
+    fun disconnect() {
         pongTimer?.cancel()
-        webSocket?.stop()
+        socket?.close(1000, null)
+        isActive = false
+    }
+
+    private fun reconnect(reconnectUrl: String? = null) {
+        socket?.close(1000, null)
+        connect(reconnectUrl)
     }
 
     private fun startPongTimer() {
         pongTimer = Timer().apply {
             schedule(timeout) {
-                coroutineScope.launch {
-                    webSocket?.disconnect()
-                }
+                reconnect()
             }
         }
     }
 
-    private inner class EventSubWebSocketListener : WebSocket.Listener {
-        override fun onOpen(webSocket: WebSocket) {
+    private inner class EventSubWebSocketListener : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
             onConnect()
         }
 
-        override fun onMessage(webSocket: WebSocket, message: String) {
+        override fun onMessage(webSocket: WebSocket, text: String) {
             try {
-                val json = if (message.isNotBlank()) JSONObject(message) else null
+                val json = if (text.isNotBlank()) JSONObject(text) else null
                 json?.let {
                     val metadata = json.optJSONObject("metadata")
                     val messageId = if (metadata?.isNull("message_id") == false) metadata.optString("message_id").takeIf { it.isNotBlank() } else null
@@ -93,10 +96,9 @@ class EventSubWebSocket(
                             val payload = json.optJSONObject("payload")
                             val session = payload?.optJSONObject("session")
                             val reconnectUrl = if (session?.isNull("reconnect_url") == false) session.optString("reconnect_url").takeIf { it.isNotBlank() } else null
+                            usingReconnectUrl = reconnectUrl != null
                             pongTimer?.cancel()
-                            coroutineScope.launch {
-                                webSocket.disconnect()
-                            }
+                            reconnect(reconnectUrl)
                         }
                         "session_welcome" -> {
                             val payload = json.optJSONObject("payload")
@@ -106,9 +108,11 @@ class EventSubWebSocket(
                             }
                             pongTimer?.cancel()
                             startPongTimer()
-                            val sessionId = session?.optString("id")
-                            if (!sessionId.isNullOrBlank()) {
-                                onWelcomeMessage(sessionId)
+                            if (!usingReconnectUrl) {
+                                val sessionId = session?.optString("id")
+                                if (!sessionId.isNullOrBlank()) {
+                                    onWelcomeMessage(sessionId)
+                                }
                             }
                         }
                     }
@@ -116,10 +120,6 @@ class EventSubWebSocket(
             } catch (e: Exception) {
 
             }
-        }
-
-        override fun onFailure(webSocket: WebSocket, throwable: Throwable) {
-            onDisconnect(throwable.toString(), throwable.stackTraceToString())
         }
     }
 }

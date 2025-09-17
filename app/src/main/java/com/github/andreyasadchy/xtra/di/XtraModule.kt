@@ -14,21 +14,21 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
-import okhttp3.TlsVersion
 import okhttp3.logging.HttpLoggingInterceptor
-import okhttp3.tls.HandshakeCertificates
 import org.chromium.net.CronetEngine
 import org.chromium.net.CronetProvider
 import org.chromium.net.QuicOptions
 import org.chromium.net.RequestFinishedInfo
 import org.conscrypt.Conscrypt
+import java.security.KeyStore
 import java.security.Security
 import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.inject.Singleton
 import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -91,7 +91,7 @@ class XtraModule {
 
     @Singleton
     @Provides
-    fun providesOkHttpClient(application: Application): OkHttpClient {
+    fun providesOkHttpClient(trustManager: X509TrustManager?): OkHttpClient {
         val builder = OkHttpClient.Builder().apply {
             if (BuildConfig.DEBUG) {
                 addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
@@ -99,26 +99,42 @@ class XtraModule {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                 val conscrypt = Conscrypt.newProvider()
                 Security.insertProviderAt(conscrypt, 1)
-                val trustManager = Conscrypt.getDefaultX509TrustManager()
-                val sslContext = SSLContext.getInstance(TlsVersion.TLS_1_3.javaName(), conscrypt)
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N && trustManager != null) {
+                val sslContext = SSLContext.getInstance("TLSv1.3")
                 sslContext.init(null, arrayOf(trustManager), null)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    sslSocketFactory(sslContext.socketFactory, trustManager)
-                } else {
-                    val certificateFactory = CertificateFactory.getInstance("X.509")
-                    val certificates = HandshakeCertificates.Builder()
-                        .addTrustedCertificate(
-                            application.resources.openRawResource(R.raw.isrgrootx1).use {
-                                certificateFactory.generateCertificates(it).single() as X509Certificate
-                            }
-                        )
-                        .addPlatformTrustedCertificates()
-                        .build()
-                    sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager())
-                }
+                sslSocketFactory(sslContext.socketFactory, trustManager)
             }
         }
         return builder.build()
+    }
+
+    @Singleton
+    @Provides
+    fun providesTrustManager(application: Application): X509TrustManager? {
+        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+            keyStore.load(null, null)
+            var count = 0
+            val certificateFactory = CertificateFactory.getInstance("X.509")
+            application.resources.openRawResource(R.raw.isrgrootx1).use {
+                val certificate = certificateFactory.generateCertificate(it)
+                keyStore.setCertificateEntry("cert_0", certificate)
+                count += 1
+            }
+            val defaultTrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+            defaultTrustManagerFactory.init(null as KeyStore?)
+            val defaultTrustManager = defaultTrustManagerFactory.trustManagers.first() as X509TrustManager
+            defaultTrustManager.acceptedIssuers.forEach {
+                keyStore.setCertificateEntry("cert_$count", it)
+                count += 1
+            }
+            val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+            trustManagerFactory.init(keyStore)
+            trustManagerFactory.trustManagers.first() as X509TrustManager
+        } else {
+            null
+        }
     }
 
     @Singleton

@@ -30,7 +30,7 @@ android {
         minSdk = 16
         targetSdk = 36
         versionCode = 121
-        versionName = "2.47.2"
+        versionName = "2.48.0"
     }
 
     buildTypes {
@@ -95,7 +95,6 @@ android {
             "androidx.work:work-runtime:2.9.1",
             "com.google.android.material:material:1.11.0",
             "com.squareup.okhttp3:okhttp:3.12.13",
-            "com.squareup.okhttp3:okhttp-tls:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
         ))
     }
@@ -135,7 +134,6 @@ dependencies {
     implementation(libs.cronet.api)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
-    implementation(libs.okhttp.tls)
     implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)

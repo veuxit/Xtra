@@ -80,10 +80,10 @@ class ChatReadIRC(
         Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
             socketIn = if (useSSL) {
-                val socketFactory = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
-                    SSLContext.getDefault().socketFactory
-                } else {
+                val socketFactory = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     SSLSocketFactory.getDefault()
+                } else {
+                    SSLContext.getDefault().socketFactory
                 }
                 socketFactory.createSocket("irc.twitch.tv", 6697)
             } else {

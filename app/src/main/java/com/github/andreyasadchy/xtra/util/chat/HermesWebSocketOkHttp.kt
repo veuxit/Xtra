@@ -1,9 +1,10 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.os.Build
-import com.github.andreyasadchy.xtra.util.WebSocket
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -15,11 +16,10 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.Timer
 import java.util.UUID
-import javax.net.ssl.X509TrustManager
 import kotlin.concurrent.schedule
 import kotlin.concurrent.scheduleAtFixedRate
 
-class HermesWebSocket(
+class HermesWebSocketOkHttp(
     private val channelId: String,
     private val userId: String?,
     private val gqlToken: String?,
@@ -28,8 +28,7 @@ class HermesWebSocket(
     private val showRaids: Boolean,
     private val showPolls: Boolean,
     private val showPredictions: Boolean,
-    private val onConnect: (() -> Unit),
-    private val onDisconnect: ((String, String) -> Unit),
+    private val client: OkHttpClient,
     private val onPlaybackMessage: (JSONObject) -> Unit,
     private val onStreamInfo: (JSONObject) -> Unit,
     private val onRewardMessage: (JSONObject) -> Unit,
@@ -39,10 +38,8 @@ class HermesWebSocket(
     private val onRaidUpdate: (JSONObject, Boolean) -> Unit,
     private val onPollUpdate: (JSONObject) -> Unit,
     private val onPredictionUpdate: (JSONObject) -> Unit,
-    private val trustManager: X509TrustManager?,
-    private val coroutineScope: CoroutineScope,
 ) {
-    private var webSocket: WebSocket? = null
+    private var socket: WebSocket? = null
     private var pongTimer: Timer? = null
     private var timeout = 15000L
     private var minuteWatchedTimer: Timer? = null
@@ -50,17 +47,22 @@ class HermesWebSocket(
     private val handledMessageIds = mutableListOf<String>()
 
     fun connect() {
-        webSocket = WebSocket("wss://hermes.twitch.tv/v1?clientId=kimne78kx3ncx6brgo4mv6wki5h1ko", trustManager, HermesWebSocketListener())
-        coroutineScope.launch {
-            webSocket?.start()
-        }
+        socket = client.newWebSocket(
+            Request.Builder().url("wss://hermes.twitch.tv/v1?clientId=kimne78kx3ncx6brgo4mv6wki5h1ko").build(),
+            HermesWebSocketListener()
+        )
     }
 
-    suspend fun disconnect() {
+    fun disconnect() {
         pongTimer?.cancel()
         minuteWatchedTimer?.cancel()
         minuteWatchedTimer = null
-        webSocket?.stop()
+        socket?.close(1000, null)
+    }
+
+    private fun reconnect() {
+        socket?.close(1000, null)
+        connect()
     }
 
     private fun subscribe() {
@@ -73,9 +75,7 @@ class HermesWebSocket(
                 })
                 put("timestamp", getCurrentTime())
             }.toString()
-            coroutineScope.launch {
-                webSocket?.write(authenticate)
-            }
+            socket?.send(authenticate)
         }
         topics = buildMap {
             put(UUID.randomUUID().toString().replace("-", "").substring(0, 21), "video-playback-by-id.$channelId")
@@ -109,9 +109,7 @@ class HermesWebSocket(
                 })
                 put("timestamp", getCurrentTime())
             }.toString()
-            coroutineScope.launch {
-                webSocket?.write(subscribe)
-            }
+            socket?.send(subscribe)
         }
     }
 
@@ -130,9 +128,7 @@ class HermesWebSocket(
     private fun startPongTimer() {
         pongTimer = Timer().apply {
             schedule(timeout) {
-                coroutineScope.launch {
-                    webSocket?.disconnect()
-                }
+                reconnect()
             }
         }
     }
@@ -145,14 +141,10 @@ class HermesWebSocket(
         }
     }
 
-    private inner class HermesWebSocketListener : WebSocket.Listener {
-        override fun onOpen(webSocket: WebSocket) {
-            onConnect()
-        }
-
-        override fun onMessage(webSocket: WebSocket, message: String) {
+    private inner class HermesWebSocketListener : WebSocketListener() {
+        override fun onMessage(webSocket: WebSocket, text: String) {
             try {
-                val json = if (message.isNotBlank()) JSONObject(message) else null
+                val json = if (text.isNotBlank()) JSONObject(text) else null
                 val messageId = if (json?.isNull("id") == false) json.optString("id").takeIf { it.isNotBlank() } else null
                 if (!messageId.isNullOrBlank()) {
                     if (handledMessageIds.contains(messageId)) {
@@ -234,9 +226,7 @@ class HermesWebSocket(
                         //val reconnect = json.optJSONObject("reconnect")
                         //val reconnectUrl = if (reconnect?.isNull("url") == false) reconnect.optString("url").takeIf { it.isNotBlank() } else null
                         pongTimer?.cancel()
-                        coroutineScope.launch {
-                            webSocket.disconnect()
-                        }
+                        reconnect()
                     }
                     "welcome" -> {
                         val welcome = json.optJSONObject("welcome")
@@ -254,10 +244,6 @@ class HermesWebSocket(
             } catch (e: Exception) {
 
             }
-        }
-
-        override fun onFailure(webSocket: WebSocket, throwable: Throwable) {
-            onDisconnect(throwable.toString(), throwable.stackTraceToString())
         }
     }
 }
