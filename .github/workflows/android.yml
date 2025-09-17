@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ api_16 ]
+    branches: [ minSdk16 ]
 
 jobs:
   build:
@@ -43,6 +43,7 @@ jobs:
       with:
         allowUpdates: true
         artifacts: app/build/outputs/apk/release/*.apk
+        body: "This release is for devices running Android 4.1 to 4.4"
         generateReleaseNotes: false
         makeLatest: false
         tag: "api16"
