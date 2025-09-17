@@ -26,7 +26,6 @@ import org.conscrypt.Conscrypt
 import java.security.Security
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 import javax.net.ssl.SSLContext
 
@@ -116,9 +115,6 @@ class XtraModule {
                     sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
                 }
             }
-            connectTimeout(5, TimeUnit.MINUTES)
-            writeTimeout(5, TimeUnit.MINUTES)
-            readTimeout(5, TimeUnit.MINUTES)
         }
         return builder.build()
     }
