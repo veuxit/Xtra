@@ -34,22 +34,28 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.ChatReadIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
+import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.chat.ChatUtils
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteIRC
 import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocket
+import com.github.andreyasadchy.xtra.util.chat.ChatWriteWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.chat.EventSubUtils
 import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocket
+import com.github.andreyasadchy.xtra.util.chat.EventSubWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.chat.HermesWebSocket
+import com.github.andreyasadchy.xtra.util.chat.HermesWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.chat.PubSubUtils
 import com.github.andreyasadchy.xtra.util.chat.PubSubWebSocket
 import com.github.andreyasadchy.xtra.util.chat.RecentMessageUtils
 import com.github.andreyasadchy.xtra.util.chat.StvEventApiWebSocket
+import com.github.andreyasadchy.xtra.util.chat.StvEventApiWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +68,7 @@ import java.util.Collections
 import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
+import javax.net.ssl.X509TrustManager
 import kotlin.concurrent.scheduleAtFixedRate
 
 
@@ -73,17 +80,23 @@ class ChatViewModel @Inject constructor(
     private val helixRepository: HelixRepository,
     private val playerRepository: PlayerRepository,
     private val okHttpClient: OkHttpClient,
+    private val trustManager: X509TrustManager?,
 ) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
 
     private var chatReadIRC: ChatReadIRC? = null
     private var chatWriteIRC: ChatWriteIRC? = null
+    private var chatReadWebSocketOkHttp: ChatReadWebSocketOkHttp? = null
+    private var chatWriteWebSocketOkHttp: ChatWriteWebSocketOkHttp? = null
     private var chatReadWebSocket: ChatReadWebSocket? = null
     private var chatWriteWebSocket: ChatWriteWebSocket? = null
+    private var eventSubOkHttp: EventSubWebSocketOkHttp? = null
     private var eventSub: EventSubWebSocket? = null
+    private var hermesWebSocketOkHttp: HermesWebSocketOkHttp? = null
     private var hermesWebSocket: HermesWebSocket? = null
     private var pubSub: PubSubWebSocket? = null
+    private var stvEventApiOkHttp: StvEventApiWebSocketOkHttp? = null
     private var stvEventApi: StvEventApiWebSocket? = null
     private var stvUserId: String? = null
     private var stvLastPresenceUpdate: Long? = null
@@ -173,7 +186,7 @@ class ChatViewModel @Inject constructor(
     val newChatter = MutableStateFlow<Chatter?>(null)
 
     fun startLive(networkLibrary: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?) {
-        if (chatReadIRC == null && chatReadWebSocket == null && eventSub == null && channelLogin != null) {
+        if (chatReadIRC == null && chatReadWebSocketOkHttp == null && chatReadWebSocket == null && eventSubOkHttp == null && eventSub == null && channelLogin != null) {
             messageLimit = applicationContext.prefs().getInt(C.CHAT_LIMIT, 600)
             this.streamId = streamId
             startLiveChat(channelId, channelLogin)
@@ -202,7 +215,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun resumeLive(channelId: String?, channelLogin: String?) {
-        if ((chatReadIRC?.isActive == false || chatReadWebSocket?.isActive == false || eventSub?.isActive == false) && channelLogin != null && autoReconnect) {
+        if ((chatReadIRC?.isActive == false || chatReadWebSocketOkHttp?.isActive == false || chatReadWebSocket?.isActive == false || eventSubOkHttp?.isActive == false || eventSub?.isActive == false) && channelLogin != null && autoReconnect) {
             startLiveChat(channelId, channelLogin)
         }
     }
@@ -646,75 +659,134 @@ class ChatViewModel @Inject constructor(
         val showClearChat = applicationContext.prefs().getBoolean(C.CHAT_SHOW_CLEARCHAT, true)
         val nameDisplay = applicationContext.prefs().getString(C.UI_NAME_DISPLAY, "0")
         val useApiChatMessages = applicationContext.prefs().getBoolean(C.DEBUG_API_CHAT_MESSAGES, true)
+        val useCustomWebSockets = applicationContext.prefs().getBoolean(C.DEBUG_USE_CUSTOM_WEBSOCKETS, false)
+        val showWebSocketDebugInfo = applicationContext.prefs().getBoolean(C.DEBUG_WEBSOCKET_INFO, false)
         if (applicationContext.prefs().getBoolean(C.DEBUG_EVENTSUB_CHAT, false) && !helixHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-            eventSub = EventSubWebSocket(
-                client = okHttpClient,
-                onConnect = { onConnect(channelLogin) },
-                onWelcomeMessage = { sessionId ->
-                    listOf(
-                        "channel.chat.clear",
-                        "channel.chat.message",
-                        "channel.chat.notification",
-                        "channel.chat_settings.update",
-                    ).forEach {
-                        viewModelScope.launch {
-                            try {
-                                helixRepository.createEventSubSubscription(networkLibrary, helixHeaders, accountId, channelId, it, sessionId)?.let {
-                                    onMessage(ChatMessage(systemMsg = it))
-                                }
-                            } catch (e: Exception) {
-
+            val onWelcomeMessage: (String) -> Unit = { sessionId ->
+                listOf(
+                    "channel.chat.clear",
+                    "channel.chat.message",
+                    "channel.chat.notification",
+                    "channel.chat_settings.update",
+                ).forEach {
+                    viewModelScope.launch {
+                        try {
+                            helixRepository.createEventSubSubscription(networkLibrary, helixHeaders, accountId, channelId, it, sessionId)?.let {
+                                onMessage(ChatMessage(systemMsg = it))
                             }
+                        } catch (e: Exception) {
+
                         }
                     }
-                },
-                onChatMessage = { json, timestamp ->
-                    val chatMessage = EventSubUtils.parseChatMessage(json, timestamp)
-                    if (usePubSub && chatMessage.reward != null && !chatMessage.reward.id.isNullOrBlank()) {
-                        onRewardMessage(chatMessage, networkLibrary, isLoggedIn, accountId, channelId)
-                    } else {
-                        onChatMessage(chatMessage, networkLibrary, isLoggedIn, accountId, channelId)
-                    }
-                },
-                onUserNotice = { json, timestamp ->
-                    if (showUserNotice) {
-                        onChatMessage(EventSubUtils.parseUserNotice(json, timestamp), networkLibrary, isLoggedIn, accountId, channelId)
-                    }
-                },
-                onClearChat = { json, timestamp ->
-                    if (showClearChat) {
-                        onMessage(EventSubUtils.parseClearChat(applicationContext, json, timestamp))
-                    }
-                },
-                onRoomState = { json, timestamp ->
-                    roomState.value = EventSubUtils.parseRoomState(json)
-                },
-            ).apply { connect() }
+                }
+            }
+            val onChatMessage: (JSONObject, String?) -> Unit = { json, timestamp ->
+                val chatMessage = EventSubUtils.parseChatMessage(json, timestamp)
+                if (usePubSub && chatMessage.reward != null && !chatMessage.reward.id.isNullOrBlank()) {
+                    onRewardMessage(chatMessage, networkLibrary, isLoggedIn, accountId, channelId)
+                } else {
+                    onChatMessage(chatMessage, networkLibrary, isLoggedIn, accountId, channelId)
+                }
+            }
+            val onUserNotice: (JSONObject, String?) -> Unit = { json, timestamp ->
+                if (showUserNotice) {
+                    onChatMessage(EventSubUtils.parseUserNotice(json, timestamp), networkLibrary, isLoggedIn, accountId, channelId)
+                }
+            }
+            val onClearChat: (JSONObject, String?) -> Unit = { json, timestamp ->
+                if (showClearChat) {
+                    onMessage(EventSubUtils.parseClearChat(applicationContext, json, timestamp))
+                }
+            }
+            val onRoomState: (JSONObject, String?) -> Unit = { json, timestamp ->
+                roomState.value = EventSubUtils.parseRoomState(json)
+            }
+            if (useCustomWebSockets) {
+                eventSub = EventSubWebSocket(
+                    onConnect = { onConnect(channelLogin) },
+                    onDisconnect = { message, fullMsg -> onDisconnect(channelLogin, message, fullMsg) },
+                    onWelcomeMessage = onWelcomeMessage,
+                    onChatMessage = onChatMessage,
+                    onUserNotice = onUserNotice,
+                    onClearChat = onClearChat,
+                    onRoomState = onRoomState,
+                    trustManager = trustManager,
+                    coroutineScope = viewModelScope,
+                ).apply { connect() }
+            } else {
+                eventSubOkHttp = EventSubWebSocketOkHttp(
+                    client = okHttpClient,
+                    onConnect = { onConnect(channelLogin) },
+                    onWelcomeMessage = onWelcomeMessage,
+                    onChatMessage = onChatMessage,
+                    onUserNotice = onUserNotice,
+                    onClearChat = onClearChat,
+                    onRoomState = onRoomState,
+                ).apply { connect() }
+            }
         } else {
             val gqlToken = gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
             val helixToken = helixHeaders[C.HEADER_TOKEN]?.removePrefix("Bearer ")
             if (applicationContext.prefs().getBoolean(C.CHAT_USE_WEBSOCKET, false)) {
-                chatReadWebSocket = ChatReadWebSocket(
-                    loggedIn = isLoggedIn,
-                    channelName = channelLogin,
-                    client = okHttpClient,
-                    onConnect = { onConnect(channelLogin) },
-                    onDisconnect = { message, fullMsg -> onDisconnect(channelLogin, message, fullMsg) },
-                    onChatMessage = { message, fullMsg -> onChatMessage(message, fullMsg, showUserNotice, usePubSub, networkLibrary, isLoggedIn, accountId, channelId) },
-                    onClearMessage = { if (showClearMsg) { onClearMessage(it, nameDisplay) } },
-                    onClearChat = { if (showClearChat) { onClearChat(it) } },
-                    onNotice = { onNotice(it) },
-                    onRoomState = { onRoomState(it) }
-                ).apply { connect() }
-                if (isLoggedIn && (!gqlToken.isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !useApiChatMessages)) {
-                    chatWriteWebSocket = ChatWriteWebSocket(
-                        userLogin = accountLogin,
-                        userToken = gqlToken?.takeIf { it.isNotBlank() } ?: helixToken,
+                if (useCustomWebSockets) {
+                    chatReadWebSocket = ChatReadWebSocket(
+                        loggedIn = isLoggedIn,
+                        channelName = channelLogin,
+                        onConnect = { onConnect(channelLogin) },
+                        onDisconnect = { message, fullMsg -> onDisconnect(channelLogin, message, fullMsg) },
+                        onChatMessage = { message, fullMsg -> onChatMessage(message, fullMsg, showUserNotice, usePubSub, networkLibrary, isLoggedIn, accountId, channelId) },
+                        onClearMessage = { if (showClearMsg) { onClearMessage(it, nameDisplay) } },
+                        onClearChat = { if (showClearChat) { onClearChat(it) } },
+                        onNotice = { onNotice(it) },
+                        onRoomState = { onRoomState(it) },
+                        trustManager = trustManager,
+                        coroutineScope = viewModelScope,
+                    ).apply { connect() }
+                } else {
+                    chatReadWebSocketOkHttp = ChatReadWebSocketOkHttp(
+                        loggedIn = isLoggedIn,
                         channelName = channelLogin,
                         client = okHttpClient,
+                        onConnect = { onConnect(channelLogin) },
+                        onDisconnect = { message, fullMsg -> onDisconnect(channelLogin, message, fullMsg) },
+                        onChatMessage = { message, fullMsg -> onChatMessage(message, fullMsg, showUserNotice, usePubSub, networkLibrary, isLoggedIn, accountId, channelId) },
+                        onClearMessage = { if (showClearMsg) { onClearMessage(it, nameDisplay) } },
+                        onClearChat = { if (showClearChat) { onClearChat(it) } },
                         onNotice = { onNotice(it) },
-                        onUserState = { onUserState(it, channelId) }
+                        onRoomState = { onRoomState(it) }
                     ).apply { connect() }
+                }
+                if (isLoggedIn && (!gqlToken.isNullOrBlank() || !helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && !useApiChatMessages)) {
+                    if (useCustomWebSockets) {
+                        chatWriteWebSocket = ChatWriteWebSocket(
+                            userLogin = accountLogin,
+                            userToken = gqlToken?.takeIf { it.isNotBlank() } ?: helixToken,
+                            channelName = channelLogin,
+                            onConnect = {
+                                if (showWebSocketDebugInfo) {
+                                    onConnectWebSocket("Chat write socket")
+                                }
+                            },
+                            onDisconnect = { message, fullMsg ->
+                                if (showWebSocketDebugInfo) {
+                                    onDisconnectWebSocket("Chat write socket", message, fullMsg)
+                                }
+                            },
+                            onNotice = { onNotice(it) },
+                            onUserState = { onUserState(it, channelId) },
+                            trustManager = trustManager,
+                            coroutineScope = viewModelScope,
+                        ).apply { connect() }
+                    } else {
+                        chatWriteWebSocketOkHttp = ChatWriteWebSocketOkHttp(
+                            userLogin = accountLogin,
+                            userToken = gqlToken?.takeIf { it.isNotBlank() } ?: helixToken,
+                            channelName = channelLogin,
+                            client = okHttpClient,
+                            onNotice = { onNotice(it) },
+                            onUserState = { onUserState(it, channelId) }
+                        ).apply { connect() }
+                    }
                 }
             } else {
                 val useSSL = applicationContext.prefs().getBoolean(C.CHAT_USE_SSL, true)
@@ -905,30 +977,68 @@ class ChatViewModel @Inject constructor(
             val useNewPubSub = applicationContext.prefs().getBoolean(C.DEBUG_USE_NEW_PUBSUB, true)
             val webGQLToken = applicationContext.tokenPrefs().getString(C.GQL_TOKEN_WEB, null)
             if (useNewPubSub && (accountId.isNullOrBlank() || !collectPoints || !webGQLToken.isNullOrBlank() || enableIntegrity)) {
-                hermesWebSocket = HermesWebSocket(
-                    channelId = channelId,
-                    userId = accountId,
-                    gqlToken = if (enableIntegrity) {
-                        gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
-                    } else {
-                        webGQLToken
-                    },
-                    collectPoints = collectPoints,
-                    notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
-                    showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
-                    showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
-                    showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
-                    client = okHttpClient,
-                    onPlaybackMessage = onPlaybackMessage,
-                    onStreamInfo = onStreamInfo,
-                    onRewardMessage = onRewardMessage,
-                    onPointsEarned = onPointsEarned,
-                    onClaimAvailable = onClaimAvailable,
-                    onMinuteWatched = onMinuteWatched,
-                    onRaidUpdate = onRaidUpdate,
-                    onPollUpdate = onPollUpdate,
-                    onPredictionUpdate = onPredictionUpdate,
-                ).apply { connect() }
+                if (useCustomWebSockets) {
+                    hermesWebSocket = HermesWebSocket(
+                        channelId = channelId,
+                        userId = accountId,
+                        gqlToken = if (enableIntegrity) {
+                            gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+                        } else {
+                            webGQLToken
+                        },
+                        collectPoints = collectPoints,
+                        notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
+                        showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
+                        showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
+                        showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
+                        onConnect = {
+                            if (showWebSocketDebugInfo) {
+                                onConnectWebSocket("PubSub")
+                            }
+                        },
+                        onDisconnect = { message, fullMsg ->
+                            if (showWebSocketDebugInfo) {
+                                onDisconnectWebSocket("PubSub", message, fullMsg)
+                            }
+                        },
+                        onPlaybackMessage = onPlaybackMessage,
+                        onStreamInfo = onStreamInfo,
+                        onRewardMessage = onRewardMessage,
+                        onPointsEarned = onPointsEarned,
+                        onClaimAvailable = onClaimAvailable,
+                        onMinuteWatched = onMinuteWatched,
+                        onRaidUpdate = onRaidUpdate,
+                        onPollUpdate = onPollUpdate,
+                        onPredictionUpdate = onPredictionUpdate,
+                        trustManager = trustManager,
+                        coroutineScope = viewModelScope,
+                    ).apply { connect() }
+                } else {
+                    hermesWebSocketOkHttp = HermesWebSocketOkHttp(
+                        channelId = channelId,
+                        userId = accountId,
+                        gqlToken = if (enableIntegrity) {
+                            gqlHeaders[C.HEADER_TOKEN]?.removePrefix("OAuth ")
+                        } else {
+                            webGQLToken
+                        },
+                        collectPoints = collectPoints,
+                        notifyPoints = applicationContext.prefs().getBoolean(C.CHAT_POINTS_NOTIFY, false),
+                        showRaids = applicationContext.prefs().getBoolean(C.CHAT_RAIDS_SHOW, true),
+                        showPolls = applicationContext.prefs().getBoolean(C.CHAT_POLLS_SHOW, true),
+                        showPredictions = applicationContext.prefs().getBoolean(C.CHAT_PREDICTIONS_SHOW, true),
+                        client = okHttpClient,
+                        onPlaybackMessage = onPlaybackMessage,
+                        onStreamInfo = onStreamInfo,
+                        onRewardMessage = onRewardMessage,
+                        onPointsEarned = onPointsEarned,
+                        onClaimAvailable = onClaimAvailable,
+                        onMinuteWatched = onMinuteWatched,
+                        onRaidUpdate = onRaidUpdate,
+                        onPollUpdate = onPollUpdate,
+                        onPredictionUpdate = onPredictionUpdate,
+                    ).apply { connect() }
+                }
             } else {
                 pubSub = PubSubWebSocket(
                     channelId = channelId,
@@ -957,88 +1067,121 @@ class ChatViewModel @Inject constructor(
         val showPersonalEmotes = applicationContext.prefs().getBoolean(C.CHAT_SHOW_PERSONAL_EMOTES, true)
         val stvLiveUpdates = applicationContext.prefs().getBoolean(C.CHAT_STV_LIVE_UPDATES, true)
         if ((showNamePaints || showStvBadges || showPersonalEmotes || stvLiveUpdates) && !channelId.isNullOrBlank()) {
-            stvEventApi = StvEventApiWebSocket(
-                channelId = channelId,
-                useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true),
-                client = okHttpClient,
-                onPaint = { paint ->
-                    if (showNamePaints) {
-                        namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
-                        namePaints.add(paint)
-                        newPaint.value = paint
-                    }
-                },
-                onBadge = { badge ->
-                    if (showStvBadges) {
-                        stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
-                        stvBadges.add(badge)
-                        newStvBadge.value = badge
-                    }
-                },
-                onEmoteSet = { setId, added, removed, updated ->
-                    if (setId == channelStvEmoteSetId) {
-                        if (stvLiveUpdates) {
-                            val removedEmotes = (removed + updated.map { it.first }).map { it.name }
-                            val newEmotes = added + updated.map { it.second }
-                            allEmotes.removeAll { it.name in removedEmotes }
-                            allEmotes.addAll(newEmotes.filter { it !in allEmotes })
-                            val existingSet = channelStvEmotes.value?.filter { it.name !in removedEmotes } ?: emptyList()
-                            _channelStvEmotes.value = existingSet + newEmotes
-                            if (!reloadMessages.value) {
-                                reloadMessages.value = true
-                            }
-                        }
-                    } else {
-                        if (showPersonalEmotes) {
-                            val removedEmotes = (removed + updated.map { it.first }).map { it.name }
-                            val existingSet = personalEmoteSets[setId]?.filter { it.name !in removedEmotes } ?: emptyList()
-                            personalEmoteSets.remove(setId)
-                            val set = existingSet + added + updated.map { it.second }
-                            personalEmoteSets.put(setId, set)
-                            newPersonalEmoteSet.value = Pair(setId, set)
-                            if (isLoggedIn && !accountId.isNullOrBlank() && setId == _userPersonalEmoteSet.value?.first) {
-                                _userPersonalEmoteSet.value = Pair(setId, set)
-                            }
-                        }
-                    }
-                },
-                onPaintUser = { userId, paintId ->
-                    if (showNamePaints) {
-                        val item = paintUsers.entries.find { it.key == userId }
-                        if (item == null || item.value != paintId) {
-                            item?.let { paintUsers.remove(it.key) }
-                            paintUsers.put(userId, paintId)
-                            newPaintUser.value = Pair(userId, paintId)
-                        }
-                    }
-                },
-                onBadgeUser = { userId, badgeId ->
-                    if (showStvBadges) {
-                        val item = stvBadgeUsers.entries.find { it.key == userId }
-                        if (item == null || item.value != badgeId) {
-                            item?.let { stvBadgeUsers.remove(it.key) }
-                            stvBadgeUsers.put(userId, badgeId)
-                            newStvBadgeUser.value = Pair(userId, badgeId)
-                        }
-                    }
-                },
-                onEmoteSetUser = { userId, setId ->
-                    if (showPersonalEmotes) {
-                        val item = personalEmoteSetUsers.entries.find { it.key == userId }
-                        if (item == null || item.value != setId) {
-                            item?.let { personalEmoteSetUsers.remove(it.key) }
-                            personalEmoteSetUsers.put(userId, setId)
-                            newPersonalEmoteSetUser.value = Pair(userId, setId)
-                            if (isLoggedIn && !accountId.isNullOrBlank() && userId == accountId) {
-                                _userPersonalEmoteSet.value = Pair(setId, personalEmoteSets[setId] ?: emptyList())
-                            }
-                        }
-                    }
-                },
-                onUpdatePresence = { sessionId ->
-                    onUpdatePresence(networkLibrary, sessionId, channelId, true)
+            val onPaint: (NamePaint) -> Unit = { paint ->
+                if (showNamePaints) {
+                    namePaints.find { it.id == paint.id }?.let { namePaints.remove(it) }
+                    namePaints.add(paint)
+                    newPaint.value = paint
                 }
-            ).apply { connect() }
+            }
+            val onBadge: (StvBadge) -> Unit = { badge ->
+                if (showStvBadges) {
+                    stvBadges.find { it.id == badge.id }?.let { stvBadges.remove(it) }
+                    stvBadges.add(badge)
+                    newStvBadge.value = badge
+                }
+            }
+            val onEmoteSet: (String, List<Emote>, List<Emote>, List<Pair<Emote, Emote>>) -> Unit = { setId, added, removed, updated ->
+                if (setId == channelStvEmoteSetId) {
+                    if (stvLiveUpdates) {
+                        val removedEmotes = (removed + updated.map { it.first }).map { it.name }
+                        val newEmotes = added + updated.map { it.second }
+                        allEmotes.removeAll { it.name in removedEmotes }
+                        allEmotes.addAll(newEmotes.filter { it !in allEmotes })
+                        val existingSet = channelStvEmotes.value?.filter { it.name !in removedEmotes } ?: emptyList()
+                        _channelStvEmotes.value = existingSet + newEmotes
+                        if (!reloadMessages.value) {
+                            reloadMessages.value = true
+                        }
+                    }
+                } else {
+                    if (showPersonalEmotes) {
+                        val removedEmotes = (removed + updated.map { it.first }).map { it.name }
+                        val existingSet = personalEmoteSets[setId]?.filter { it.name !in removedEmotes } ?: emptyList()
+                        personalEmoteSets.remove(setId)
+                        val set = existingSet + added + updated.map { it.second }
+                        personalEmoteSets.put(setId, set)
+                        newPersonalEmoteSet.value = Pair(setId, set)
+                        if (isLoggedIn && !accountId.isNullOrBlank() && setId == _userPersonalEmoteSet.value?.first) {
+                            _userPersonalEmoteSet.value = Pair(setId, set)
+                        }
+                    }
+                }
+            }
+            val onPaintUser: (String, String) -> Unit = { userId, paintId ->
+                if (showNamePaints) {
+                    val item = paintUsers.entries.find { it.key == userId }
+                    if (item == null || item.value != paintId) {
+                        item?.let { paintUsers.remove(it.key) }
+                        paintUsers.put(userId, paintId)
+                        newPaintUser.value = Pair(userId, paintId)
+                    }
+                }
+            }
+            val onBadgeUser: (String, String) -> Unit = { userId, badgeId ->
+                if (showStvBadges) {
+                    val item = stvBadgeUsers.entries.find { it.key == userId }
+                    if (item == null || item.value != badgeId) {
+                        item?.let { stvBadgeUsers.remove(it.key) }
+                        stvBadgeUsers.put(userId, badgeId)
+                        newStvBadgeUser.value = Pair(userId, badgeId)
+                    }
+                }
+            }
+            val onEmoteSetUser: (String, String) -> Unit = { userId, setId ->
+                if (showPersonalEmotes) {
+                    val item = personalEmoteSetUsers.entries.find { it.key == userId }
+                    if (item == null || item.value != setId) {
+                        item?.let { personalEmoteSetUsers.remove(it.key) }
+                        personalEmoteSetUsers.put(userId, setId)
+                        newPersonalEmoteSetUser.value = Pair(userId, setId)
+                        if (isLoggedIn && !accountId.isNullOrBlank() && userId == accountId) {
+                            _userPersonalEmoteSet.value = Pair(setId, personalEmoteSets[setId] ?: emptyList())
+                        }
+                    }
+                }
+            }
+            val onUpdatePresence: (String) -> Unit = { sessionId ->
+                onUpdatePresence(networkLibrary, sessionId, channelId, true)
+            }
+            if (useCustomWebSockets) {
+                stvEventApi = StvEventApiWebSocket(
+                    onConnect = {
+                        if (showWebSocketDebugInfo) {
+                            onConnectWebSocket("7TV Event API")
+                        }
+                    },
+                    onDisconnect = { message, fullMsg ->
+                        if (showWebSocketDebugInfo) {
+                            onDisconnectWebSocket("7TV Event API", message, fullMsg)
+                        }
+                    },
+                    channelId = channelId,
+                    useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true),
+                    onPaint = onPaint,
+                    onBadge = onBadge,
+                    onEmoteSet = onEmoteSet,
+                    onPaintUser = onPaintUser,
+                    onBadgeUser = onBadgeUser,
+                    onEmoteSetUser = onEmoteSetUser,
+                    onUpdatePresence = onUpdatePresence,
+                    trustManager = trustManager,
+                    coroutineScope = viewModelScope,
+                ).apply { connect() }
+            } else {
+                stvEventApiOkHttp = StvEventApiWebSocketOkHttp(
+                    channelId = channelId,
+                    useWebp = applicationContext.prefs().getBoolean(C.CHAT_USE_WEBP, true),
+                    client = okHttpClient,
+                    onPaint = onPaint,
+                    onBadge = onBadge,
+                    onEmoteSet = onEmoteSet,
+                    onPaintUser = onPaintUser,
+                    onBadgeUser = onBadgeUser,
+                    onEmoteSetUser = onEmoteSetUser,
+                    onUpdatePresence = onUpdatePresence,
+                ).apply { connect() }
+            }
             if (isLoggedIn && !accountId.isNullOrBlank()) {
                 viewModelScope.launch {
                     try {
@@ -1053,21 +1196,50 @@ class ChatViewModel @Inject constructor(
 
     fun stopLiveChat() {
         chatReadIRC?.let {
-            viewModelScope.launch {
+            MainScope().launch(Dispatchers.IO) {
                 it.disconnect()
             }
-        } ?: chatReadWebSocket?.disconnect() ?: eventSub?.disconnect()
+        } ?:
+        chatReadWebSocketOkHttp?.disconnect() ?:
+        chatReadWebSocket?.let {
+            MainScope().launch(Dispatchers.IO) {
+                it.disconnect()
+            }
+        } ?:
+        eventSubOkHttp?.disconnect() ?:
+        eventSub?.let {
+            MainScope().launch(Dispatchers.IO) {
+                it.disconnect()
+            }
+        }
         chatWriteIRC?.let {
-            viewModelScope.launch {
+            MainScope().launch(Dispatchers.IO) {
                 it.disconnect()
             }
-        } ?: chatWriteWebSocket?.disconnect()
-        hermesWebSocket?.disconnect() ?: pubSub?.disconnect()
-        stvEventApi?.disconnect()
+        } ?:
+        chatWriteWebSocketOkHttp?.disconnect() ?:
+        chatWriteWebSocket?.let {
+            MainScope().launch(Dispatchers.IO) {
+                it.disconnect()
+            }
+        }
+        hermesWebSocketOkHttp?.disconnect() ?:
+        hermesWebSocket?.let {
+            MainScope().launch(Dispatchers.IO) {
+                it.disconnect()
+            }
+        } ?:
+        pubSub?.disconnect()
+        stvEventApiOkHttp?.disconnect() ?:
+        stvEventApi?.let {
+            MainScope().launch(Dispatchers.IO) {
+                it.disconnect()
+            }
+        }
     }
 
     fun isActive(): Boolean? {
-        return chatReadIRC?.isActive ?: chatReadWebSocket?.isActive ?: eventSub?.isActive
+        return chatReadIRC?.isActive ?: chatReadWebSocketOkHttp?.isActive ?: chatReadWebSocket?.isActive ?: eventSubOkHttp?.isActive ?: eventSub?.isActive
     }
 
     fun disconnect() {
@@ -1112,6 +1284,17 @@ class ChatViewModel @Inject constructor(
     private fun onSendMessageError(message: String, fullMsg: String) {
         onMessage(ChatMessage(
             systemMsg = ContextCompat.getString(applicationContext, R.string.chat_send_msg_error).format(message),
+            fullMsg = fullMsg
+        ))
+    }
+
+    private fun onConnectWebSocket(webSocket: String?) {
+        onMessage(ChatMessage(systemMsg = ContextCompat.getString(applicationContext, R.string.websocket_connected).format(webSocket)))
+    }
+
+    private fun onDisconnectWebSocket(webSocket: String?, message: String, fullMsg: String) {
+        onMessage(ChatMessage(
+            systemMsg = ContextCompat.getString(applicationContext, R.string.websocket_disconnected).format(webSocket, message),
             fullMsg = fullMsg
         ))
     }
@@ -1351,7 +1534,7 @@ class ChatViewModel @Inject constructor(
                 }
             }
         } else {
-            chatWriteIRC?.send(message, replyId) ?: chatWriteWebSocket?.send(message, replyId)
+            chatWriteIRC?.send(message, replyId) ?: chatWriteWebSocketOkHttp?.send(message, replyId) ?: chatWriteWebSocket?.send(message, replyId)
         }
         val usedEmotes = hashSetOf<RecentEmote>()
         val currentTime = System.currentTimeMillis()

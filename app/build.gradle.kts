@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = 121
-        versionName = "2.47.2"
+        versionName = "2.48.0"
     }
 
     buildTypes {
@@ -64,6 +64,15 @@ android {
         "lib/armeabi-v7a/libtranslate_jni.so",
         "lib/armeabi-v7a/liblanguage_id_l2c_jni.so",
     ))
+    configurations.all {
+        resolutionStrategy.force(listOf(
+            "androidx.hilt:hilt-compiler:1.3.0-alpha02",
+            "androidx.hilt:hilt-work:1.3.0-alpha02",
+            "androidx.room:room-compiler:2.8.0-rc01",
+            "androidx.room:room-paging:2.8.0-rc01",
+            "androidx.room:room-runtime:2.8.0-rc01",
+        ))
+    }
 }
 
 dependencies {
@@ -97,7 +106,6 @@ dependencies {
     implementation(libs.cronet.api)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
-    implementation(libs.okhttp.tls)
     implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)

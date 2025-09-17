@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.util.chat
 
+import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,6 +11,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.Socket
 import java.util.Random
+import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 
 private const val TAG = "ChatReadIRC"
@@ -78,7 +80,12 @@ class ChatReadIRC(
         Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
             socketIn = if (useSSL) {
-                SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697)
+                val socketFactory = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    SSLSocketFactory.getDefault()
+                } else {
+                    SSLContext.getDefault().socketFactory
+                }
+                socketFactory.createSocket("irc.twitch.tv", 6697)
             } else {
                 Socket("irc.twitch.tv", 6667)
             }.apply {
