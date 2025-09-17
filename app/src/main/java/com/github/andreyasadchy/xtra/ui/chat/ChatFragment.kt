@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
@@ -8,20 +7,15 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.Filter
-import android.widget.ImageView
 import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.core.content.res.use
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
-import androidx.core.widget.TextViewCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -33,21 +27,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import coil3.imageLoader
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.target
 import coil3.request.transformations
 import coil3.transform.CircleCropTransformation
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentChatBinding
 import com.github.andreyasadchy.xtra.model.chat.ChatMessage
-import com.github.andreyasadchy.xtra.model.chat.Chatter
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
@@ -55,6 +42,7 @@ import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.PlayerFragment
+import com.github.andreyasadchy.xtra.ui.view.AutoCompleteAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -76,11 +64,9 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.extensions.LayoutContainer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
-import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -97,8 +83,8 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
     private var hasRecentEmotes = false
     private var messagingEnabled = false
 
-    private var autoCompleteList = mutableListOf<Any>()
-    private var autoCompleteAdapter: AutoCompleteAdapter? = null
+    private var autoCompleteList = mutableListOf<Any?>()
+    private var autoCompleteAdapter: AutoCompleteAdapter<Any>? = null
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -274,12 +260,11 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
                                 }
                             }
                         }
-                        autoCompleteAdapter = AutoCompleteAdapter(
+                        autoCompleteAdapter = AutoCompleteAdapter<Any>(
                             requireContext(),
-                            this@ChatFragment,
+                            R.layout.auto_complete_emotes_list_item,
+                            R.id.name,
                             autoCompleteList,
-                            requireContext().prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4",
-                            requireContext().prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
                         ).apply {
                             setNotifyOnChange(false)
                             editText.setAdapter(this)
@@ -1557,140 +1542,7 @@ class ChatFragment : BaseNetworkFragment(), MessageClickedDialog.OnButtonClickLi
         }
     }
 
-    inner class AutoCompleteAdapter(
-        context: Context,
-        private val fragment: Fragment,
-        list: List<Any>,
-        private val emoteQuality: String,
-        private val imageLibrary: String?,
-    ) : ArrayAdapter<Any>(context, 0, list) {
-
-        private var mFilter: ArrayFilter? = null
-
-        override fun getFilter(): Filter = mFilter ?: ArrayFilter().also { mFilter = it }
-
-        private inner class ArrayFilter : Filter() {
-            override fun performFiltering(prefix: CharSequence?): FilterResults {
-                val results = FilterResults()
-                val originalValuesField = ArrayAdapter::class.java.getDeclaredField("mOriginalValues")
-                originalValuesField.isAccessible = true
-                val originalValues = originalValuesField.get(this@AutoCompleteAdapter) as List<*>?
-                if (originalValues == null) {
-                    originalValuesField.set(this@AutoCompleteAdapter, autoCompleteList.toList())
-                }
-                val list = originalValues ?: autoCompleteList.toList()
-                if (prefix.isNullOrEmpty()) {
-                    results.values = list
-                    results.count = list.size
-                } else {
-                    var regexString = ""
-                    prefix.toString().lowercase().forEach {
-                        regexString += "${Pattern.quote(it.toString())}\\S*?"
-                    }
-                    val regex = Regex(regexString)
-                    val newList = list.filter {
-                        regex.matches(it.toString().lowercase())
-                    }
-                    results.values = newList
-                    results.count = newList.size
-                }
-                return results
-            }
-
-            override fun publishResults(constraint: CharSequence?, results: FilterResults) {
-                val objectsField = ArrayAdapter::class.java.getDeclaredField("mObjects")
-                objectsField.isAccessible = true
-                objectsField.set(this@AutoCompleteAdapter, results.values as? List<*> ?: mutableListOf<Any>())
-                if (results.count > 0) {
-                    notifyDataSetChanged()
-                } else {
-                    notifyDataSetInvalidated()
-                }
-            }
-        }
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val viewHolder: ViewHolder
-
-            val item = getItem(position)!!
-            return when (getItemViewType(position)) {
-                TYPE_EMOTE -> {
-                    if (convertView == null) {
-                        val view = LayoutInflater.from(context).inflate(R.layout.auto_complete_emotes_list_item, parent, false)
-                        viewHolder = ViewHolder(view).also { view.tag = it }
-                    } else {
-                        viewHolder = convertView.tag as ViewHolder
-                    }
-                    viewHolder.containerView.apply {
-                        item as Emote
-                        findViewById<ImageView>(R.id.image)?.let {
-                            if (imageLibrary == "0" || (imageLibrary == "1" && !item.format.equals("webp", true))) {
-                                fragment.requireContext().imageLoader.enqueue(
-                                    ImageRequest.Builder(fragment.requireContext()).apply {
-                                        data(
-                                            when (emoteQuality) {
-                                                "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
-                                                "3" -> item.url3x ?: item.url2x ?: item.url1x
-                                                "2" -> item.url2x ?: item.url1x
-                                                else -> item.url1x
-                                            }
-                                        )
-                                        if (item.thirdParty) {
-                                            httpHeaders(NetworkHeaders.Builder().apply {
-                                                add("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
-                                            }.build())
-                                        }
-                                        crossfade(true)
-                                        target(it)
-                                    }.build()
-                                )
-                            } else {
-                                Glide.with(fragment)
-                                    .load(
-                                        when (emoteQuality) {
-                                            "4" -> item.url4x ?: item.url3x ?: item.url2x ?: item.url1x
-                                            "3" -> item.url3x ?: item.url2x ?: item.url1x
-                                            "2" -> item.url2x ?: item.url1x
-                                            else -> item.url1x
-                                        }
-                                    )
-                                    .diskCacheStrategy(DiskCacheStrategy.DATA)
-                                    .transition(DrawableTransitionOptions.withCrossFade())
-                                    .into(it)
-                            }
-                        }
-                        findViewById<TextView>(R.id.name)?.text = item.name
-                    }
-                }
-                else -> {
-                    if (convertView == null) {
-                        val view = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_1, parent, false)
-                        viewHolder = ViewHolder(view).also { view.tag = it }
-                    } else {
-                        viewHolder = convertView.tag as ViewHolder
-                    }
-                    (viewHolder.containerView as TextView).apply {
-                        text = (item as Chatter).name
-                        context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.textAppearanceBodyMedium)).use {
-                            TextViewCompat.setTextAppearance(this, it.getResourceId(0, 0))
-                        }
-                    }
-                }
-            }
-        }
-
-        override fun getItemViewType(position: Int): Int {
-            return if (getItem(position) is Emote) TYPE_EMOTE else TYPE_USERNAME
-        }
-
-        override fun getViewTypeCount(): Int = 2
-
-        inner class ViewHolder(override val containerView: View) : LayoutContainer
-    }
-
     companion object {
-        private const val TYPE_EMOTE = 0
-        private const val TYPE_USERNAME = 1
         private const val KEY_IS_LIVE = "isLive"
         private const val KEY_CHANNEL_ID = "channel_id"
         private const val KEY_CHANNEL_LOGIN = "channel_login"
