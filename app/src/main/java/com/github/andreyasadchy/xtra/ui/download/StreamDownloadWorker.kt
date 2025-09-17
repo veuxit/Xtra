@@ -39,7 +39,7 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.HttpEngineUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocket
+import com.github.andreyasadchy.xtra.util.chat.ChatReadWebSocketOkHttp
 import com.github.andreyasadchy.xtra.util.chat.ChatUtils
 import com.github.andreyasadchy.xtra.util.getByteArrayCronetCallback
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
@@ -115,7 +115,7 @@ class StreamDownloadWorker @AssistedInject constructor(
 
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var offlineVideo: OfflineVideo
-    private var chatReadWebSocket: ChatReadWebSocket? = null
+    private var chatReadWebSocketOkHttp: ChatReadWebSocketOkHttp? = null
     private var chatFileWriter: BufferedWriter? = null
     private var chatPosition: Long = 0
 
@@ -291,7 +291,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                     val done = try {
                         download(channelLogin, url, path)
                     } finally {
-                        chatReadWebSocket?.disconnect()
+                        chatReadWebSocketOkHttp?.disconnect()
                         chatFileWriter?.close()
                     }
                     if (done) {
@@ -1138,10 +1138,10 @@ class StreamDownloadWorker @AssistedInject constructor(
                 writer.name("liveStartTime".also { position += it.length + 4 }).value(streamStartTime.also { position += it.length + 2 })
             }
             chatPosition = position
-            chatReadWebSocket = ChatReadWebSocket(false, channelLogin, okHttpClient,
+            chatReadWebSocketOkHttp = ChatReadWebSocketOkHttp(false, channelLogin, okHttpClient,
                 webSocketListener = object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
-                        chatReadWebSocket?.apply {
+                        chatReadWebSocketOkHttp?.apply {
                             write("CAP REQ :twitch.tv/tags twitch.tv/commands")
                             write("NICK justinfan${Random().nextInt(((9999 - 1000) + 1)) + 1000}") //random number between 1000 and 9999
                             write("JOIN $hashChannelName")
@@ -1162,16 +1162,16 @@ class StreamDownloadWorker @AssistedInject constructor(
                                     contains("CLEARCHAT") -> list.add(this)
                                     contains("NOTICE") -> {}
                                     contains("ROOMSTATE") -> {}
-                                    startsWith("PING") -> chatReadWebSocket?.write("PONG")
+                                    startsWith("PING") -> chatReadWebSocketOkHttp?.write("PONG")
                                     startsWith("PONG") -> {
-                                        chatReadWebSocket?.apply {
+                                        chatReadWebSocketOkHttp?.apply {
                                             pingTimer?.cancel()
                                             pongTimer?.cancel()
                                             startPingTimer()
                                         }
                                     }
                                     startsWith("RECONNECT") -> {
-                                        chatReadWebSocket?.apply {
+                                        chatReadWebSocketOkHttp?.apply {
                                             pingTimer?.cancel()
                                             pongTimer?.cancel()
                                             reconnect()
