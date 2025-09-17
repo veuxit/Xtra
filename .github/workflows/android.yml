@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ minSdk21 ]
 
 jobs:
   build:
@@ -30,19 +30,20 @@ jobs:
 
     - name: Update git tag
       run: |
-        git tag -f latest
-        git push -f origin latest
+        git tag -f api21
+        git push -f origin api21
 
     - name: Delete Release
       uses: cb80/delrel@latest
       with:
-        tag: latest
+        tag: api21
 
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
         allowUpdates: true
         artifacts: app/build/outputs/apk/release/*.apk
+        body: "This release is for devices running Android 5"
         generateReleaseNotes: false
-        makeLatest: true
-        tag: "latest"
+        makeLatest: false
+        tag: "api21"
