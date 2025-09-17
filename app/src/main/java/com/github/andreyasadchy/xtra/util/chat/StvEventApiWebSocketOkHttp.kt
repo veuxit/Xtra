@@ -5,17 +5,17 @@ import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.model.chat.NamePaint
 import com.github.andreyasadchy.xtra.model.chat.StvBadge
-import com.github.andreyasadchy.xtra.util.WebSocket
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
-import javax.net.ssl.X509TrustManager
 
-class StvEventApiWebSocket(
+class StvEventApiWebSocketOkHttp(
     private val channelId: String,
     private val useWebp: Boolean,
-    private val onConnect: (() -> Unit),
-    private val onDisconnect: ((String, String) -> Unit),
+    private val client: OkHttpClient,
     private val onPaint: (NamePaint) -> Unit,
     private val onBadge: (StvBadge) -> Unit,
     private val onEmoteSet: (String, List<Emote>, List<Emote>, List<Pair<Emote, Emote>>) -> Unit,
@@ -23,25 +23,26 @@ class StvEventApiWebSocket(
     private val onBadgeUser: (String, String) -> Unit,
     private val onEmoteSetUser: (String, String) -> Unit,
     private val onUpdatePresence: (String) -> Unit,
-    private val trustManager: X509TrustManager?,
-    private val coroutineScope: CoroutineScope,
 ) {
-    private var webSocket: WebSocket? = null
+    private var socket: WebSocket? = null
 
     fun connect() {
-        webSocket = WebSocket(
-            url = "wss://events.7tv.io/v3",
-            trustManager = trustManager,
-            listener = STVEventApiWebSocketListener(),
-            headers = mapOf("User-Agent" to "Xtra/" + BuildConfig.VERSION_NAME),
+        socket = client.newWebSocket(
+            Request.Builder().apply {
+                url("wss://events.7tv.io/v3")
+                header("User-Agent", "Xtra/" + BuildConfig.VERSION_NAME)
+            }.build(),
+            STVEventApiWebSocketListener()
         )
-        coroutineScope.launch {
-            webSocket?.start()
-        }
     }
 
-    suspend fun disconnect() {
-        webSocket?.stop()
+    fun disconnect() {
+        socket?.close(1000, null)
+    }
+
+    private fun reconnect() {
+        socket?.close(1000, null)
+        connect()
     }
 
     private fun listen(type: String) {
@@ -56,14 +57,11 @@ class StvEventApiWebSocket(
                 })
             })
         }.toString()
-        coroutineScope.launch {
-            webSocket?.write(message)
-        }
+        socket?.send(message)
     }
 
-    private inner class STVEventApiWebSocketListener : WebSocket.Listener {
-        override fun onOpen(webSocket: WebSocket) {
-            onConnect()
+    private inner class STVEventApiWebSocketListener : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
             listOf(
                 "emote_set.*",
                 "cosmetic.*",
@@ -73,9 +71,9 @@ class StvEventApiWebSocket(
             }
         }
 
-        override fun onMessage(webSocket: WebSocket, message: String) {
+        override fun onMessage(webSocket: WebSocket, text: String) {
             try {
-                val json = if (message.isNotBlank()) JSONObject(message) else null
+                val json = if (text.isNotBlank()) JSONObject(text) else null
                 when (json?.optInt("op")) {
                     OPCODE_DISPATCH -> {
                         val data = json.optJSONObject("d")
@@ -278,19 +276,11 @@ class StvEventApiWebSocket(
                             onUpdatePresence(sessionId)
                         }
                     }
-                    OPCODE_RECONNECT -> {
-                        coroutineScope.launch {
-                            webSocket.disconnect()
-                        }
-                    }
+                    OPCODE_RECONNECT -> reconnect()
                 }
             } catch (e: Exception) {
 
             }
-        }
-
-        override fun onFailure(webSocket: WebSocket, throwable: Throwable) {
-            onDisconnect(throwable.toString(), throwable.stackTraceToString())
         }
 
         private fun parseEmote(value: JSONObject?): Emote? {
