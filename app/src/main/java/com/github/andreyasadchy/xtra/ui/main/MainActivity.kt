@@ -22,7 +22,6 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.view.Menu
 import android.view.ViewGroup
-import android.view.WindowManager
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -281,9 +280,7 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
         connectivityManager.registerNetworkCallback(
             NetworkRequest.Builder().apply {
                 addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                }
+                addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                 removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
             }.build(), networkCallback
         )
@@ -326,25 +323,13 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                     ContextCompat.getColor(this, if (!isLightTheme) R.color.darkScrim else R.color.lightScrim)
                 }
             }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+            else -> {
                 @Suppress("DEPRECATION")
                 if (!isLightTheme) {
                     window.navigationBarColor = if (isPortrait && !prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()) {
                         Color.TRANSPARENT
                     } else {
                         ContextCompat.getColor(this, R.color.darkScrim)
-                    }
-                }
-            }
-            else -> {
-                @Suppress("DEPRECATION")
-                if (!isLightTheme) {
-                    if (isPortrait && !prefs.getStringSet(C.UI_NAVIGATION_TABS, resources.getStringArray(R.array.pageValues).toSet()).isNullOrEmpty()) {
-                        window.navigationBarColor = Color.TRANSPARENT
-                        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                    } else {
-                        window.navigationBarColor = ContextCompat.getColor(this, R.color.darkScrim)
-                        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                     }
                 }
             }

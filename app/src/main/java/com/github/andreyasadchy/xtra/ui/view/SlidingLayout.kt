@@ -13,9 +13,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
-import android.view.WindowManager
 import android.widget.LinearLayout
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -23,11 +21,9 @@ import androidx.core.view.postDelayed
 import androidx.customview.widget.ViewDragHelper
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.getActivity
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.isClick
 import com.github.andreyasadchy.xtra.util.isKeyboardShown
-import com.github.andreyasadchy.xtra.util.isLightTheme
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.material.color.MaterialColors
 
@@ -42,7 +38,6 @@ class SlidingLayout : LinearLayout {
     var savedInsets: Insets? = null
     private var backgroundColor: Int? = null
     private var backgroundVisible = true
-    private var isLightTheme: Boolean? = null
 
     private var timeBar: View? = null
     private var topBound = 0
@@ -360,30 +355,18 @@ class SlidingLayout : LinearLayout {
         backgroundVisible = true
         (parent as View).setBackgroundColor(
             if (isPortrait) {
-                backgroundColor ?: if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && isLightTheme ?: context.isLightTheme.also { isLightTheme = it }) {
-                    ContextCompat.getColor(context, R.color.darkScrimOnLightSurface)
-                } else {
-                    MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface)
-                }.also { backgroundColor = it }
+                backgroundColor ?: MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface).also { backgroundColor = it }
             } else {
                 Color.BLACK
             }
         )
         (parent as View).isClickable = true
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            @Suppress("DEPRECATION")
-            context.getActivity()?.window?.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-        }
     }
 
     private fun disableBackground() {
         backgroundVisible = false
         (parent as View).setBackgroundColor(Color.TRANSPARENT)
         (parent as View).isClickable = false
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            @Suppress("DEPRECATION")
-            context.getActivity()?.window?.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-        }
     }
 
     private inner class SlidingCallback : ViewDragHelper.Callback() {

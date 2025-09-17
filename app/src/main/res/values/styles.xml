@@ -39,9 +39,9 @@
         <item name="linearProgressIndicatorStyle">@style/Widget.Material3.LinearProgressIndicator.Legacy</item>
         <item name="preferenceTheme">@style/PreferenceTheme</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
-        <item name="android:statusBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="BaseAmoledTheme" parent="Theme.Material3.Dark.NoActionBar">
@@ -422,9 +422,9 @@
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.None</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Material3.Corner.None</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
-        <item name="android:statusBarColor">@color/darkScrim</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="BaseAppCompatAmoledTheme" parent="Theme.AppCompat.NoActionBar">
