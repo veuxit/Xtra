@@ -77,9 +77,29 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="use_webview_integrity"
+        android:title="@string/get_webview_integrity"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="get_all_gql_headers"
+        android:title="@string/get_all_headers"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
     <EditTextPreference
         android:key="gql_headers"
         android:title="@string/gql_headers"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <Preference
+        android:key="get_integrity_token"
+        android:title="@string/get_integrity_token"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

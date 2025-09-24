@@ -23,4 +23,11 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="update_use_browser"
+        android:title="@string/update_using_browser"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
 </androidx.preference.PreferenceScreen>

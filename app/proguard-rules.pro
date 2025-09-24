@@ -26,7 +26,3 @@
     public static *** d(...);
     public static *** v(...);
 }
-
-# https://github.com/google/conscrypt/blob/master/android/proguard-rules.pro
--dontwarn com.android.org.conscrypt.SSLParametersImpl
--dontwarn org.apache.harmony.xnet.provider.jsse.SSLParametersImpl

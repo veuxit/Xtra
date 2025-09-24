@@ -1150,21 +1150,25 @@ class SettingsActivity : AppCompatActivity() {
                     true
                 }
             }
-            findPreference<SwitchPreferenceCompat>("update_use_browser")?.setOnPreferenceChangeListener { _, newValue ->
-                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    newValue == false &&
-                    requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
-                    !requireContext().packageManager.canRequestPackageInstalls()
-                ) {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:${requireContext().packageName}")
-                    )
-                    if (intent.resolveActivity(requireContext().packageManager) != null) {
-                        requireContext().startActivity(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                findPreference<SwitchPreferenceCompat>("update_use_browser")?.setOnPreferenceChangeListener { _, newValue ->
+                    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                        newValue == false &&
+                        requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                        !requireContext().packageManager.canRequestPackageInstalls()
+                    ) {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:${requireContext().packageName}")
+                        )
+                        if (intent.resolveActivity(requireContext().packageManager) != null) {
+                            requireContext().startActivity(intent)
+                        }
                     }
+                    true
                 }
-                true
+            } else {
+                findPreference<SwitchPreferenceCompat>("update_use_browser")?.isVisible = false
             }
         }
 
@@ -1216,9 +1220,15 @@ class SettingsActivity : AppCompatActivity() {
                     true
                 }
             }
-            findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
-                IntegrityDialog.show(childFragmentManager)
-                true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                findPreference<Preference>("get_integrity_token")?.setOnPreferenceClickListener {
+                    IntegrityDialog.show(childFragmentManager)
+                    true
+                }
+            } else {
+                findPreference<SwitchPreferenceCompat>("use_webview_integrity")?.isVisible = false
+                findPreference<SwitchPreferenceCompat>("get_all_gql_headers")?.isVisible = false
+                findPreference<Preference>("get_integrity_token")?.isVisible = false
             }
             val httpEngine = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7
             val cronet = CronetProvider.getAllProviders(requireContext()).any { it.isEnabled }
