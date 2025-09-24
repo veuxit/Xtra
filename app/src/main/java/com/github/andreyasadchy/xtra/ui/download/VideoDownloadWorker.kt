@@ -69,9 +69,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okio.appendingSink
-import okio.buffer
-import okio.sink
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
@@ -283,11 +280,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                             else -> {
                                 okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
                                     if (isShared) {
-                                        context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.sink().buffer()
+                                        context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!
                                     } else {
-                                        File(fileUri).appendingSink().buffer()
-                                    }.use { sink ->
-                                        sink.writeAll(response.body.source())
+                                        FileOutputStream(fileUri)
+                                    }.use { outputStream ->
+                                        response.body.byteStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                     response.body.contentLength()
                                 }
@@ -377,11 +376,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             }
                                             mutex.withLock {
                                                 if (isShared) {
-                                                    context.contentResolver.openOutputStream(videoFileUri.toUri(), "wa")!!.sink().buffer()
+                                                    context.contentResolver.openOutputStream(videoFileUri.toUri(), "wa")!!
                                                 } else {
-                                                    File(videoFileUri).appendingSink().buffer()
-                                                }.use { sink ->
-                                                    sink.writeAll(response.body.source())
+                                                    FileOutputStream(videoFileUri)
+                                                }.use { outputStream ->
+                                                    response.body.byteStream().use { inputStream ->
+                                                        inputStream.copyTo(outputStream)
+                                                    }
                                                     offlineRepository.updateVideo(offlineVideo.apply {
                                                         bytes += response.body.contentLength()
                                                         progress += 1
@@ -479,8 +480,10 @@ class VideoDownloadWorker @AssistedInject constructor(
                                         } catch (e: IllegalArgumentException) {
                                             DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", playlist.initSegmentUri)
                                             context.contentResolver.openOutputStream(initSegmentFileUri)!!
-                                        }.sink().buffer().use { sink ->
-                                            sink.writeAll(response.body.source())
+                                        }.use { outputStream ->
+                                            response.body.byteStream().use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
                                         }
                                     }
                                 }
@@ -564,8 +567,10 @@ class VideoDownloadWorker @AssistedInject constructor(
                                                         } else {
                                                             DocumentsContract.createDocument(context.contentResolver, videoDirectoryUri.toUri(), "", it.uri)
                                                             context.contentResolver.openOutputStream(fileUri)!!
-                                                        }.sink().buffer().use { sink ->
-                                                            sink.writeAll(response.body.source())
+                                                        }.use { outputStream ->
+                                                            response.body.byteStream().use { inputStream ->
+                                                                inputStream.copyTo(outputStream)
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -626,8 +631,10 @@ class VideoDownloadWorker @AssistedInject constructor(
                                 }
                                 else -> {
                                     okHttpClient.newCall(Request.Builder().url(urlPath + playlist.initSegmentUri).build()).execute().use { response ->
-                                        File(directory + playlist.initSegmentUri).sink().buffer().use { sink ->
-                                            sink.writeAll(response.body.source())
+                                        FileOutputStream(directory + playlist.initSegmentUri).use { outputStream ->
+                                            response.body.byteStream().use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
                                         }
                                     }
                                 }
@@ -678,8 +685,10 @@ class VideoDownloadWorker @AssistedInject constructor(
                                             }
                                             else -> {
                                                 okHttpClient.newCall(Request.Builder().url(urlPath + it.uri).build()).execute().use { response ->
-                                                    File(directory + it.uri).sink().buffer().use { sink ->
-                                                        sink.writeAll(response.body.source())
+                                                    FileOutputStream(directory + it.uri).use { outputStream ->
+                                                        response.body.byteStream().use { inputStream ->
+                                                            inputStream.copyTo(outputStream)
+                                                        }
                                                     }
                                                 }
                                             }
@@ -780,11 +789,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                             else -> {
                                 okHttpClient.newCall(Request.Builder().url(sourceUrl).build()).execute().use { response ->
                                     if (isShared) {
-                                        context.contentResolver.openOutputStream(videoFileUri.toUri())!!.sink().buffer()
+                                        context.contentResolver.openOutputStream(videoFileUri.toUri())!!
                                     } else {
-                                        File(videoFileUri).sink().buffer()
-                                    }.use { sink ->
-                                        sink.writeAll(response.body.source())
+                                        FileOutputStream(videoFileUri)
+                                    }.use { outputStream ->
+                                        response.body.byteStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                 }
                             }
