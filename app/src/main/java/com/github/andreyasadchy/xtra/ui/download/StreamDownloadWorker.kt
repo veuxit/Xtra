@@ -65,9 +65,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okio.appendingSink
-import okio.buffer
-import okio.sink
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
@@ -520,11 +517,13 @@ class StreamDownloadWorker @AssistedInject constructor(
                     else -> {
                         okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                             if (isShared) {
-                                context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.sink().buffer()
+                                context.contentResolver.openOutputStream(fileUri.toUri(), "wa")!!
                             } else {
-                                File(fileUri).appendingSink().buffer()
-                            }.use { sink ->
-                                sink.writeAll(response.body.source())
+                                FileOutputStream(fileUri)
+                            }.use { outputStream ->
+                                response.body.byteStream().use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
                             }
                             response.body.contentLength()
                         }
@@ -652,8 +651,10 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     else -> {
                                                         okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                                             if (response.isSuccessful) {
-                                                                File(filePath).sink().buffer().use { sink ->
-                                                                    sink.writeAll(response.body.source())
+                                                                FileOutputStream(filePath).use { outputStream ->
+                                                                    response.body.byteStream().use { inputStream ->
+                                                                        inputStream.copyTo(outputStream)
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -685,10 +686,10 @@ class StreamDownloadWorker @AssistedInject constructor(
         }
         val requestSemaphore = Semaphore(context.prefs().getInt(C.DOWNLOAD_CONCURRENT_LIMIT, 10))
         if (isShared) {
-            context.contentResolver.openOutputStream(videoFileUri.toUri(), "wa")!!.sink().buffer()
+            context.contentResolver.openOutputStream(videoFileUri.toUri(), "wa")!!
         } else {
-            File(videoFileUri).appendingSink().buffer()
-        }.use { sink ->
+            FileOutputStream(videoFileUri)
+        }.use { outputStream ->
             val firstMutexMap = mutableMapOf<Int, Mutex>()
             val firstCount = MutableStateFlow(0)
             val firstJobs = runBlocking {
@@ -707,7 +708,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                         firstMutexMap[id] = mutex
                                     }
                                     mutex.withLock {
-                                        sink.write(response.second)
+                                        outputStream.write(response.second)
                                         offlineRepository.updateVideo(offlineVideo.apply {
                                             bytes += response.second.size
                                             chatBytes = chatPosition
@@ -733,7 +734,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                         firstMutexMap[id] = mutex
                                     }
                                     mutex.withLock {
-                                        sink.write(response)
+                                        outputStream.write(response)
                                         offlineRepository.updateVideo(offlineVideo.apply {
                                             bytes += response.size
                                             chatBytes = chatPosition
@@ -750,7 +751,9 @@ class StreamDownloadWorker @AssistedInject constructor(
                                             firstMutexMap[id] = mutex
                                         }
                                         mutex.withLock {
-                                            sink.writeAll(response.body.source())
+                                            response.body.byteStream().use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
                                             offlineRepository.updateVideo(offlineVideo.apply {
                                                 bytes += response.body.contentLength()
                                                 chatBytes = chatPosition
@@ -855,7 +858,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                 mutexMap[id] = mutex
                                             }
                                             mutex.withLock {
-                                                sink.write(response.second)
+                                                outputStream.write(response.second)
                                                 offlineRepository.updateVideo(offlineVideo.apply {
                                                     bytes += response.second.size
                                                     chatBytes = chatPosition
@@ -881,7 +884,7 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                 mutexMap[id] = mutex
                                             }
                                             mutex.withLock {
-                                                sink.write(response)
+                                                outputStream.write(response)
                                                 offlineRepository.updateVideo(offlineVideo.apply {
                                                     bytes += response.size
                                                     chatBytes = chatPosition
@@ -898,7 +901,9 @@ class StreamDownloadWorker @AssistedInject constructor(
                                                     mutexMap[id] = mutex
                                                 }
                                                 mutex.withLock {
-                                                    sink.writeAll(response.body.source())
+                                                    response.body.byteStream().use { inputStream ->
+                                                        inputStream.copyTo(outputStream)
+                                                    }
                                                     offlineRepository.updateVideo(offlineVideo.apply {
                                                         bytes += response.body.contentLength()
                                                         chatBytes = chatPosition

@@ -52,9 +52,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okio.buffer
-import okio.sink
-import okio.source
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
@@ -388,8 +385,10 @@ class SettingsViewModel @Inject constructor(
                 } catch (e: IllegalArgumentException) {
                     DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", preferences.name)
                     applicationContext.contentResolver.openOutputStream(preferencesUri.toUri())!!
-                }.sink().buffer().use { sink ->
-                    sink.writeAll(preferences.source().buffer())
+                }.use { outputStream ->
+                    preferences.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
                 }
                 appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
                     it.moveToPosition(-1)
@@ -401,20 +400,26 @@ class SettingsViewModel @Inject constructor(
                 } catch (e: IllegalArgumentException) {
                     DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", database.name)
                     applicationContext.contentResolver.openOutputStream(databaseUri.toUri())!!
-                }.sink().buffer().use { sink ->
-                    sink.writeAll(database.source().buffer())
+                }.use { outputStream ->
+                    database.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
                 }
             } else {
                 val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
-                File(url, preferences.name).sink().buffer().use { sink ->
-                    sink.writeAll(preferences.source().buffer())
+                File(url, preferences.name).outputStream().use { outputStream ->
+                    preferences.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
                 }
                 appDatabase.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use {
                     it.moveToPosition(-1)
                 }
                 val database = applicationContext.getDatabasePath("database")
-                File(url, database.name).sink().buffer().use { sink ->
-                    sink.writeAll(database.source().buffer())
+                File(url, database.name).outputStream().use { outputStream ->
+                    database.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
                 }
             }
         }
@@ -425,8 +430,10 @@ class SettingsViewModel @Inject constructor(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 list.take(2).forEach { url ->
                     if (url.endsWith(".xml")) {
-                        File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
+                        FileOutputStream("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(url.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         val prefs = applicationContext.contentResolver.openInputStream(url.toUri())!!.bufferedReader().use {
                             it.readText()
@@ -436,8 +443,10 @@ class SettingsViewModel @Inject constructor(
                         val database = applicationContext.getDatabasePath("database")
                         File(database.parent, "database-shm").delete()
                         File(database.parent, "database-wal").delete()
-                        database.sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(url.toUri())!!.source().buffer())
+                        database.outputStream().use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(url.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         applicationContext.startActivity(
                             Intent(applicationContext, MainActivity::class.java).apply {
@@ -450,8 +459,10 @@ class SettingsViewModel @Inject constructor(
             } else {
                 list.take(2).forEach { url ->
                     if (url.endsWith(".xml")) {
-                        File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").sink().buffer().use { sink ->
-                            sink.writeAll(File(url).source().buffer())
+                        FileOutputStream("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml").use { outputStream ->
+                            FileInputStream(url).use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         val prefs = FileInputStream(url).bufferedReader().use {
                             it.readText()
@@ -461,8 +472,10 @@ class SettingsViewModel @Inject constructor(
                         val database = applicationContext.getDatabasePath("database")
                         File(database.parent, "database-shm").delete()
                         File(database.parent, "database-wal").delete()
-                        database.sink().buffer().use { sink ->
-                            sink.writeAll(File(url).source().buffer())
+                        database.outputStream().use { outputStream ->
+                            FileInputStream(url).use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         applicationContext.startActivity(
                             Intent(applicationContext, MainActivity::class.java).apply {

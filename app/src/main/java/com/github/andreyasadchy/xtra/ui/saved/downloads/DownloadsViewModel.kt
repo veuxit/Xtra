@@ -24,10 +24,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import okio.appendingSink
-import okio.buffer
-import okio.sink
-import okio.source
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -212,8 +208,10 @@ class DownloadsViewModel @Inject internal constructor(
                     }
                     if (oldPlaylist.initSegmentUri != null && new) {
                         val oldFileUri = oldPlaylist.initSegmentUri
-                        applicationContext.contentResolver.openOutputStream(newVideoFileUri.toUri(), "wa")!!.sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.source().buffer())
+                        applicationContext.contentResolver.openOutputStream(newVideoFileUri.toUri(), "wa")!!.use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                     }
                     repository.updateVideo(video.apply {
@@ -222,8 +220,10 @@ class DownloadsViewModel @Inject internal constructor(
                     oldPlaylist.segments.forEach { track ->
                         val oldFileUri = track.uri
                         val oldFileName = oldFileUri.substringAfterLast("%2F").substringAfterLast("/")
-                        applicationContext.contentResolver.openOutputStream(newVideoFileUri.toUri(), "wa")!!.sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.source().buffer())
+                        applicationContext.contentResolver.openOutputStream(newVideoFileUri.toUri(), "wa")!!.use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         if (tracksToDelete.contains(oldFileName)) {
                             try {
@@ -278,8 +278,10 @@ class DownloadsViewModel @Inject internal constructor(
                             if (oldPlaylist.initSegmentUri != null && File(newVideoFileUri).length() == 0L) {
                                 val oldFile = File(oldVideoDirectory.path + File.separator + oldPlaylist.initSegmentUri.substringAfterLast("%2F").substringAfterLast("/"))
                                 if (oldFile.exists()) {
-                                    File(newVideoFileUri).appendingSink().buffer().use { sink ->
-                                        sink.writeAll(oldFile.source().buffer())
+                                    FileOutputStream(newVideoFileUri).use { outputStream ->
+                                        oldFile.inputStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                 }
                             }
@@ -289,8 +291,10 @@ class DownloadsViewModel @Inject internal constructor(
                             oldPlaylist.segments.forEach { track ->
                                 val oldFile = File(oldVideoDirectory.path + File.separator + track.uri.substringAfterLast("%2F").substringAfterLast("/"))
                                 if (oldFile.exists()) {
-                                    File(newVideoFileUri).appendingSink().buffer().use { sink ->
-                                        sink.writeAll(oldFile.source().buffer())
+                                    FileOutputStream(newVideoFileUri).use { outputStream ->
+                                        oldFile.inputStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                     if (tracksToDelete.contains(oldFile.name)) {
                                         oldFile.delete()
@@ -386,8 +390,10 @@ class DownloadsViewModel @Inject internal constructor(
                                     } catch (e: IllegalArgumentException) {
                                         DocumentsContract.createDocument(applicationContext.contentResolver, newVideoDirectoryUri.toUri(), "", oldFile.name)
                                         applicationContext.contentResolver.openOutputStream(newFileUri.toUri())!!
-                                    }.sink().buffer().use { sink ->
-                                        sink.writeAll(oldFile.source().buffer())
+                                    }.use { outputStream ->
+                                        oldFile.inputStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                 }
                             }
@@ -403,8 +409,10 @@ class DownloadsViewModel @Inject internal constructor(
                                     } catch (e: IllegalArgumentException) {
                                         DocumentsContract.createDocument(applicationContext.contentResolver, newVideoDirectoryUri.toUri(), "", oldFile.name)
                                         applicationContext.contentResolver.openOutputStream(newFileUri.toUri())!!
-                                    }.sink().buffer().use { sink ->
-                                        sink.writeAll(oldFile.source().buffer())
+                                    }.use { outputStream ->
+                                        oldFile.inputStream().use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
                                     }
                                     if (tracksToDelete.contains(oldFile.name)) {
                                         oldFile.delete()
@@ -422,8 +430,10 @@ class DownloadsViewModel @Inject internal constructor(
                                 } catch (e: IllegalArgumentException) {
                                     DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldChatFile.name)
                                     applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                                }.sink().buffer().use { sink ->
-                                    sink.writeAll(oldChatFile.source().buffer())
+                                }.use { outputStream ->
+                                    oldChatFile.inputStream().use { inputStream ->
+                                        inputStream.copyTo(outputStream)
+                                    }
                                 }
                             }
                             repository.updateVideo(video.apply {
@@ -457,8 +467,10 @@ class DownloadsViewModel @Inject internal constructor(
                         } catch (e: IllegalArgumentException) {
                             DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldFile.name)
                             applicationContext.contentResolver.openOutputStream(newFileUri.toUri())!!
-                        }.sink().buffer().use { sink ->
-                            sink.writeAll(oldFile.source().buffer())
+                        }.use { outputStream ->
+                            oldFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
                         val newChatFileUri = oldChatFile?.let { newDirectoryUri + (if (!newDirectoryUri.endsWith("%3A")) "%2F" else "") + it.name }
@@ -468,8 +480,10 @@ class DownloadsViewModel @Inject internal constructor(
                             } catch (e: IllegalArgumentException) {
                                 DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldChatFile.name)
                                 applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                            }.sink().buffer().use { sink ->
-                                sink.writeAll(oldChatFile.source().buffer())
+                            }.use { outputStream ->
+                                oldChatFile.inputStream().use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
                             }
                         }
                         repository.updateVideo(video.apply {
@@ -549,8 +563,10 @@ class DownloadsViewModel @Inject internal constructor(
                         val oldFileName = oldPlaylist.initSegmentUri.substringAfterLast("%2F").substringAfterLast("/")
                         val oldFileUri = "$oldVideoDirectoryUri%2F$oldFileName"
                         val newFileUri = newVideoDirectoryUri + File.separator + Uri.decode(oldFileName)
-                        File(newFileUri).sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.source().buffer())
+                        FileOutputStream(newFileUri).use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                     }
                     repository.updateVideo(video.apply {
@@ -560,8 +576,10 @@ class DownloadsViewModel @Inject internal constructor(
                         val oldFileName = track.uri.substringAfterLast("%2F").substringAfterLast("/")
                         val oldFileUri = "$oldVideoDirectoryUri%2F$oldFileName"
                         val newFileUri = newVideoDirectoryUri + File.separator + Uri.decode(oldFileName)
-                        File(newFileUri).sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.source().buffer())
+                        FileOutputStream(newFileUri).use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldFileUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                         if (tracksToDelete.contains(Uri.decode(oldFileName))) {
                             try {
@@ -578,8 +596,10 @@ class DownloadsViewModel @Inject internal constructor(
                     val oldChatFileName = oldChatUri?.substringAfterLast("%2F")?.substringAfterLast("/")?.substringAfterLast("%3A")?.let { Uri.decode(it) }
                     val newChatFileUri = oldChatFileName?.let { path + File.separator + it }
                     if (oldChatUri != null && newChatFileUri != null) {
-                        File(newChatFileUri).sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.source().buffer())
+                        FileOutputStream(newChatFileUri).use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                     }
                     repository.updateVideo(video.apply {
@@ -616,15 +636,19 @@ class DownloadsViewModel @Inject internal constructor(
                 } else {
                     val oldFileName = Uri.decode(videoUrl.substringAfterLast("%2F").substringAfterLast("/").substringAfterLast("%3A"))
                     val newFileUri = path + File.separator + oldFileName
-                    File(newFileUri).sink().buffer().use { sink ->
-                        sink.writeAll(applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.source().buffer())
+                    FileOutputStream(newFileUri).use { outputStream ->
+                        applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
                     }
                     val oldChatUri = video.chatUrl
                     val oldChatFileName = oldChatUri?.substringAfterLast("%2F")?.substringAfterLast("/")?.substringAfterLast("%3A")?.let { Uri.decode(it) }
                     val newChatFileUri = oldChatFileName?.let { path + File.separator + it }
                     if (oldChatUri != null && newChatFileUri != null) {
-                        File(newChatFileUri).sink().buffer().use { sink ->
-                            sink.writeAll(applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.source().buffer())
+                        FileOutputStream(newChatFileUri).use { outputStream ->
+                            applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
                         }
                     }
                     repository.updateVideo(video.apply {

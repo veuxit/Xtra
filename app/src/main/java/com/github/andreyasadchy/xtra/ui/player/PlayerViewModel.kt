@@ -46,8 +46,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okio.buffer
-import okio.sink
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UrlRequestCallbacks
@@ -416,8 +414,10 @@ class PlayerViewModel @Inject constructor(
                                     else -> {
                                         okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                             if (response.isSuccessful) {
-                                                File(path).sink().buffer().use { sink ->
-                                                    sink.writeAll(response.body.source())
+                                                FileOutputStream(path).use { outputStream ->
+                                                    response.body.byteStream().use { inputStream ->
+                                                        inputStream.copyTo(outputStream)
+                                                    }
                                                 }
                                             }
                                         }
@@ -471,8 +471,10 @@ class PlayerViewModel @Inject constructor(
                                     else -> {
                                         okHttpClient.newCall(Request.Builder().url(it).build()).execute().use { response ->
                                             if (response.isSuccessful) {
-                                                File(path).sink().buffer().use { sink ->
-                                                    sink.writeAll(response.body.source())
+                                                FileOutputStream(path).use { outputStream ->
+                                                    response.body.byteStream().use { inputStream ->
+                                                        inputStream.copyTo(outputStream)
+                                                    }
                                                 }
                                             }
                                         }
