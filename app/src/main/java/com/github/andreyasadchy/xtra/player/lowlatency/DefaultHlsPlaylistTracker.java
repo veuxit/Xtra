@@ -745,7 +745,7 @@ public final class DefaultHlsPlaylistTracker
         } else if (currentTimeMs - lastSnapshotChangeMs
             > Util.usToMs(playlistSnapshot.targetDurationUs)
                 * playlistStuckTargetDurationCoefficient
-                && !loadedPlaylist.segments.isEmpty() && loadedPlaylist.segments.get(loadedPlaylist.segments.size() - 1).url != null) { // ad segments
+                && !loadedPlaylist.segments.isEmpty() && loadedPlaylist.segments.get(loadedPlaylist.segments.size() - 1).url != null) { // xtra: ad segments
           // TODO: Allow customization of stuck playlists handling.
           playlistError = new PlaylistStuckException(playlistUrl);
         }

@@ -30,7 +30,7 @@ android {
         minSdk = 16
         targetSdk = 36
         versionCode = 121
-        versionName = "2.48.0"
+        versionName = "2.48.1"
     }
 
     buildTypes {
@@ -79,7 +79,6 @@ android {
             "androidx.lifecycle:lifecycle-viewmodel:2.7.0-alpha03",
             "androidx.media3:media3-exoplayer:1.2.1",
             "androidx.media3:media3-exoplayer-hls:1.2.1",
-            "androidx.media3:media3-datasource-cronet:1.2.1",
             "androidx.media3:media3-session:1.2.1",
             "androidx.media3:media3-ui:1.2.1",
             "androidx.navigation:navigation-fragment:2.7.7",
@@ -141,7 +140,6 @@ dependencies {
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
-    implementation(libs.media3.datasource.cronet)
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
 

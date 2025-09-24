@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,15 @@
  */
 package com.github.andreyasadchy.xtra.player.lowlatency;
 
-import static android.net.http.UrlRequest.REQUEST_PRIORITY_MEDIUM;
 import static androidx.media3.common.util.Util.castNonNull;
 import static androidx.media3.datasource.HttpUtil.buildRangeRequestHeader;
+import static org.chromium.net.UrlRequest.Builder.REQUEST_PRIORITY_MEDIUM;
 import static java.lang.Math.min;
 
 import android.net.Uri;
-import android.net.http.HttpEngine;
-import android.net.http.HttpException;
-import android.net.http.NetworkException;
-import android.net.http.UploadDataProvider;
-import android.net.http.UploadDataSink;
-import android.net.http.UrlRequest;
-import android.net.http.UrlRequest.Status;
-import android.net.http.UrlResponseInfo;
-import android.os.Build;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresExtension;
-import androidx.annotation.VisibleForTesting;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaLibraryInfo;
 import androidx.media3.common.PlaybackException;
@@ -47,6 +36,7 @@ import androidx.media3.datasource.BaseDataSource;
 import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DataSourceException;
 import androidx.media3.datasource.DataSpec;
+import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.datasource.HttpUtil;
 import androidx.media3.datasource.TransferListener;
@@ -57,6 +47,15 @@ import com.google.common.base.Predicate;
 import com.google.common.net.HttpHeaders;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.SettableFuture;
+
+import org.chromium.net.CronetEngine;
+import org.chromium.net.CronetException;
+import org.chromium.net.NetworkException;
+import org.chromium.net.UploadDataProvider;
+import org.chromium.net.UploadDataSink;
+import org.chromium.net.UrlRequest;
+import org.chromium.net.UrlRequest.Status;
+import org.chromium.net.UrlResponseInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -85,27 +84,31 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * DataSource without intermediate buffer based on {@link HttpEngine} set using {@link UrlRequest}.
+ * DataSource without intermediate buffer based on Cronet API set using UrlRequest.
  *
  * <p>Note: HTTP request headers will be set using all parameters passed via (in order of decreasing
  * priority) the {@code dataSpec}, {@link #setRequestProperty} and the default parameters used to
  * construct the instance.
  */
-@RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
 @UnstableApi
-public final class HttpEngineDataSource extends BaseDataSource implements HttpDataSource {
+public class CronetDataSource extends BaseDataSource implements HttpDataSource {
 
   static {
-    MediaLibraryInfo.registerModule("media3.datasource.httpengine");
+    MediaLibraryInfo.registerModule("media3.datasource.cronet");
   }
 
-  /** {@link DataSource.Factory} for {@link HttpEngineDataSource} instances. */
+  /** {@link DataSource.Factory} for {@link CronetDataSource} instances. */
   public static final class Factory implements HttpDataSource.Factory {
 
-    private final HttpEngine httpEngine;
+    // TODO: Remove @Nullable annotation when CronetEngineWrapper is deleted.
+    @Nullable private final CronetEngine cronetEngine;
     private final Executor executor;
     private final RequestProperties defaultRequestProperties;
+    // TODO: Remove when CronetEngineWrapper is deleted.
+    @Nullable private final DefaultHttpDataSource.Factory internalFallbackFactory;
 
+    // TODO: Remove when CronetEngineWrapper is deleted.
+    @Nullable private HttpDataSource.Factory fallbackFactory;
     @Nullable private Predicate<String> contentTypePredicate;
     @Nullable private TransferListener transferListener;
     @Nullable private String userAgent;
@@ -123,20 +126,23 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     /**
      * Creates an instance.
      *
-     * @param httpEngine An {@link HttpEngine} to make the requests.
+     * @param cronetEngine A {@link CronetEngine} to make the requests. This should <em>not</em> be
+     *     a fallback instance obtained from {@code JavaCronetProvider}. It's more efficient to use
+     *     {@link DefaultHttpDataSource} instead in this case.
      * @param executor The {@link java.util.concurrent.Executor} that will handle responses. This
      *     may be a direct executor (i.e. executes tasks on the calling thread) in order to avoid a
-     *     thread hop from HttpEngine's internal network thread to the response handling thread.
+     *     thread hop from Cronet's internal network thread to the response handling thread.
      *     However, to avoid slowing down overall network performance, care must be taken to make
      *     sure response handling is a fast operation when using a direct executor.
      */
-    public Factory(HttpEngine httpEngine, Executor executor, @Nullable Call.Factory multivariantPlaylistProxyClient, @Nullable Call.Factory mediaPlaylistProxyClient, Function0<Boolean> proxyMediaPlaylist) {
-      this.httpEngine = Assertions.checkNotNull(httpEngine);
+    public Factory(CronetEngine cronetEngine, Executor executor, @Nullable Call.Factory multivariantPlaylistProxyClient, @Nullable Call.Factory mediaPlaylistProxyClient, Function0<Boolean> proxyMediaPlaylist) {
+      this.cronetEngine = Assertions.checkNotNull(cronetEngine);
       this.executor = executor;
       this.multivariantPlaylistProxyClient = multivariantPlaylistProxyClient; // xtra: proxy
       this.mediaPlaylistProxyClient = mediaPlaylistProxyClient;
       this.proxyMediaPlaylist = proxyMediaPlaylist;
       defaultRequestProperties = new RequestProperties();
+      internalFallbackFactory = null;
       requestPriority = REQUEST_PRIORITY_MEDIUM;
       connectTimeoutMs = DEFAULT_CONNECT_TIMEOUT_MILLIS;
       readTimeoutMs = DEFAULT_READ_TIMEOUT_MILLIS;
@@ -146,6 +152,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @Override
     public final Factory setDefaultRequestProperties(Map<String, String> defaultRequestProperties) {
       this.defaultRequestProperties.clearAndSet(defaultRequestProperties);
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setDefaultRequestProperties(defaultRequestProperties);
+      }
       return this;
     }
 
@@ -153,26 +162,29 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
      * Sets the user agent that will be used.
      *
      * <p>The default is {@code null}, which causes the default user agent of the underlying {@link
-     * HttpEngine} to be used.
+     * CronetEngine} to be used.
      *
      * @param userAgent The user agent that will be used, or {@code null} to use the default user
-     *     agent of the underlying {@link HttpEngine}.
+     *     agent of the underlying {@link CronetEngine}.
      * @return This factory.
      */
     @UnstableApi
     public Factory setUserAgent(@Nullable String userAgent) {
       this.userAgent = userAgent;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setUserAgent(userAgent);
+      }
       return this;
     }
 
     /**
-     * Sets the priority of requests made by {@link HttpEngineDataSource} instances created by this
+     * Sets the priority of requests made by {@link CronetDataSource} instances created by this
      * factory.
      *
-     * <p>The default is {@link UrlRequest#REQUEST_PRIORITY_MEDIUM}.
+     * <p>The default is {@link UrlRequest.Builder#REQUEST_PRIORITY_MEDIUM}.
      *
-     * @param requestPriority The request priority, which should be one of HttpEngine's {@code
-     *     UrlRequest#REQUEST_PRIORITY_*} constants.
+     * @param requestPriority The request priority, which should be one of Cronet's {@code
+     *     UrlRequest.Builder#REQUEST_PRIORITY_*} constants.
      * @return This factory.
      */
     @UnstableApi
@@ -184,7 +196,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     /**
      * Sets the connect timeout, in milliseconds.
      *
-     * <p>The default is {@link HttpEngineDataSource#DEFAULT_CONNECT_TIMEOUT_MILLIS}.
+     * <p>The default is {@link CronetDataSource#DEFAULT_CONNECT_TIMEOUT_MILLIS}.
      *
      * @param connectTimeoutMs The connect timeout, in milliseconds, that will be used.
      * @return This factory.
@@ -192,6 +204,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @UnstableApi
     public Factory setConnectionTimeoutMs(int connectTimeoutMs) {
       this.connectTimeoutMs = connectTimeoutMs;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setConnectTimeoutMs(connectTimeoutMs);
+      }
       return this;
     }
 
@@ -228,7 +243,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     /**
      * Sets the read timeout, in milliseconds.
      *
-     * <p>The default is {@link HttpEngineDataSource#DEFAULT_READ_TIMEOUT_MILLIS}.
+     * <p>The default is {@link CronetDataSource#DEFAULT_READ_TIMEOUT_MILLIS}.
      *
      * @param readTimeoutMs The connect timeout, in milliseconds, that will be used.
      * @return This factory.
@@ -236,6 +251,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @UnstableApi
     public Factory setReadTimeoutMs(int readTimeoutMs) {
       this.readTimeoutMs = readTimeoutMs;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setReadTimeoutMs(readTimeoutMs);
+      }
       return this;
     }
 
@@ -252,6 +270,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @UnstableApi
     public Factory setContentTypePredicate(@Nullable Predicate<String> contentTypePredicate) {
       this.contentTypePredicate = contentTypePredicate;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setContentTypePredicate(contentTypePredicate);
+      }
       return this;
     }
 
@@ -262,6 +283,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @UnstableApi
     public Factory setKeepPostFor302Redirects(boolean keepPostFor302Redirects) {
       this.keepPostFor302Redirects = keepPostFor302Redirects;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setKeepPostFor302Redirects(keepPostFor302Redirects);
+      }
       return this;
     }
 
@@ -278,15 +302,23 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @UnstableApi
     public Factory setTransferListener(@Nullable TransferListener transferListener) {
       this.transferListener = transferListener;
+      if (internalFallbackFactory != null) {
+        internalFallbackFactory.setTransferListener(transferListener);
+      }
       return this;
     }
 
     @UnstableApi
     @Override
     public HttpDataSource createDataSource() {
-      HttpEngineDataSource dataSource =
-          new HttpEngineDataSource(
-              httpEngine,
+      if (cronetEngine == null) {
+        return (fallbackFactory != null)
+            ? fallbackFactory.createDataSource()
+            : Assertions.checkNotNull(internalFallbackFactory).createDataSource();
+      }
+      CronetDataSource dataSource =
+          new CronetDataSource(
+              cronetEngine,
               executor,
               multivariantPlaylistProxyClient, // xtra: proxy
               mediaPlaylistProxyClient,
@@ -307,7 +339,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     }
   }
 
-  /** Thrown when an error is encountered when trying to open a {@link HttpEngineDataSource}. */
+  /** Thrown when an error is encountered when trying to open a {@link CronetDataSource}. */
   @UnstableApi
   public static final class OpenException extends HttpDataSourceException {
 
@@ -315,32 +347,48 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
      * Returns the status of the connection establishment at the moment when the error occurred, as
      * defined by {@link UrlRequest.Status}.
      */
-    public final int httpEngineConnectionStatus;
+    public final int cronetConnectionStatus;
+
+    /**
+     * @deprecated Use {@link #OpenException(IOException, DataSpec, int, int)}.
+     */
+    @Deprecated
+    public OpenException(IOException cause, DataSpec dataSpec, int cronetConnectionStatus) {
+      super(cause, dataSpec, PlaybackException.ERROR_CODE_IO_UNSPECIFIED, TYPE_OPEN);
+      this.cronetConnectionStatus = cronetConnectionStatus;
+    }
 
     public OpenException(
         IOException cause,
         DataSpec dataSpec,
         @PlaybackException.ErrorCode int errorCode,
-        int httpEngineConnectionStatus) {
+        int cronetConnectionStatus) {
       super(cause, dataSpec, errorCode, TYPE_OPEN);
-      this.httpEngineConnectionStatus = httpEngineConnectionStatus;
+      this.cronetConnectionStatus = cronetConnectionStatus;
+    }
+
+    /**
+     * @deprecated Use {@link #OpenException(String, DataSpec, int, int)}.
+     */
+    @Deprecated
+    public OpenException(String errorMessage, DataSpec dataSpec, int cronetConnectionStatus) {
+      super(errorMessage, dataSpec, PlaybackException.ERROR_CODE_IO_UNSPECIFIED, TYPE_OPEN);
+      this.cronetConnectionStatus = cronetConnectionStatus;
     }
 
     public OpenException(
         String errorMessage,
         DataSpec dataSpec,
         @PlaybackException.ErrorCode int errorCode,
-        int httpEngineConnectionStatus) {
+        int cronetConnectionStatus) {
       super(errorMessage, dataSpec, errorCode, TYPE_OPEN);
-      this.httpEngineConnectionStatus = httpEngineConnectionStatus;
+      this.cronetConnectionStatus = cronetConnectionStatus;
     }
 
     public OpenException(
-        DataSpec dataSpec,
-        @PlaybackException.ErrorCode int errorCode,
-        int httpEngineConnectionStatus) {
+        DataSpec dataSpec, @PlaybackException.ErrorCode int errorCode, int cronetConnectionStatus) {
       super(dataSpec, errorCode, TYPE_OPEN);
-      this.httpEngineConnectionStatus = httpEngineConnectionStatus;
+      this.cronetConnectionStatus = cronetConnectionStatus;
     }
   }
 
@@ -350,10 +398,12 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   /** The default read timeout, in milliseconds. */
   @UnstableApi public static final int DEFAULT_READ_TIMEOUT_MILLIS = 8 * 1000;
 
+  /* package */ final UrlRequest.Callback urlRequestCallback;
+
   // The size of read buffer passed to cronet UrlRequest.read().
   private static final int READ_BUFFER_SIZE_BYTES = 32 * 1024;
 
-  private final HttpEngine httpEngine;
+  private final CronetEngine cronetEngine;
   private final Executor executor;
   private final int requestPriority;
   private final int connectTimeoutMs;
@@ -373,17 +423,17 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   private boolean opened;
   private long bytesRemaining;
 
+  // Written from the calling thread only. currentUrlRequest.start() calls ensure writes are visible
+  // to reads made by the Cronet thread.
+  @Nullable private UrlRequest currentUrlRequest;
   @Nullable private DataSpec currentDataSpec;
-  @Nullable private UrlRequestWrapper currentUrlRequestWrapper;
 
-  // Reference written and read by calling thread only. Passed to HttpEngine thread as a local
-  // variable.
+  // Reference written and read by calling thread only. Passed to Cronet thread as a local variable.
   // operation.open() calls ensure writes into the buffer are visible to reads made by the calling
   // thread.
   @Nullable private ByteBuffer readBuffer;
 
-  // Written from the HttpEngine thread only. operation.open() calls ensure writes are visible to
-  // reads
+  // Written from the Cronet thread only. operation.open() calls ensure writes are visible to reads
   // made by the calling thread.
   @Nullable private UrlResponseInfo responseInfo;
   @Nullable private IOException exception;
@@ -398,8 +448,8 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   @Nullable private InputStream responseByteStream;
 
   @UnstableApi
-  /* package */ HttpEngineDataSource(
-      HttpEngine httpEngine,
+  protected CronetDataSource(
+      CronetEngine cronetEngine,
       Executor executor,
       @Nullable Call.Factory multivariantPlaylistProxyClient, // xtra: proxy
       @Nullable Call.Factory mediaPlaylistProxyClient,
@@ -414,7 +464,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       @Nullable Predicate<String> contentTypePredicate,
       boolean keepPostFor302Redirects) {
     super(/* isNetwork= */ true);
-    this.httpEngine = Assertions.checkNotNull(httpEngine);
+    this.cronetEngine = Assertions.checkNotNull(cronetEngine);
     this.executor = Assertions.checkNotNull(executor);
     this.multivariantPlaylistProxyClient = multivariantPlaylistProxyClient; // xtra: proxy
     this.mediaPlaylistProxyClient = mediaPlaylistProxyClient;
@@ -429,6 +479,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     this.contentTypePredicate = contentTypePredicate;
     this.keepPostFor302Redirects = keepPostFor302Redirects;
     clock = Clock.DEFAULT;
+    urlRequestCallback = new UrlRequestCallback();
     requestProperties = new RequestProperties();
     operation = new ConditionVariable();
   }
@@ -464,7 +515,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   @UnstableApi
   @Override
   public Map<String, List<String>> getResponseHeaders() {
-    return responseInfo == null ? Collections.emptyMap() : responseInfo.getHeaders().getAsMap();
+    return responseInfo == null ? Collections.emptyMap() : responseInfo.getAllHeaders();
   }
 
   @UnstableApi
@@ -489,10 +540,10 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     operation.close();
     resetConnectTimeout();
     currentDataSpec = dataSpec;
-    UrlRequestWrapper urlRequestWrapper;
+    UrlRequest urlRequest;
     try {
-      urlRequestWrapper = buildRequestWrapper(dataSpec);
-      currentUrlRequestWrapper = urlRequestWrapper;
+      urlRequest = buildRequestBuilder(dataSpec).build();
+      currentUrlRequest = urlRequest;
     } catch (IOException e) {
       if (e instanceof HttpDataSourceException) {
         throw (HttpDataSourceException) e;
@@ -511,7 +562,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
         }
       }
     }
-    urlRequestWrapper.start();
+    urlRequest.start();
 
     transferInitializing(dataSpec);
     try {
@@ -526,14 +577,14 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
             connectionOpenException,
             dataSpec,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            urlRequestWrapper.getStatus());
+            getStatus(urlRequest));
       } else if (!connectionOpened) {
         // The timeout was reached before the connection was opened.
         throw new OpenException(
             new SocketTimeoutException(),
             dataSpec,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-            urlRequestWrapper.getStatus());
+            getStatus(urlRequest));
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -550,7 +601,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     // Check for a valid response code.
     UrlResponseInfo responseInfo = Assertions.checkNotNull(this.responseInfo);
     int responseCode = responseInfo.getHttpStatusCode();
-    Map<String, List<String>> responseHeaders = responseInfo.getHeaders().getAsMap();
+    Map<String, List<String>> responseHeaders = responseInfo.getAllHeaders();
     if (responseCode < 200 || responseCode > 299) {
       if (responseCode == 416) {
         long documentSize =
@@ -635,7 +686,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
 
     ByteBuffer readBuffer = getOrCreateReadBuffer();
     if (!readBuffer.hasRemaining()) {
-      // Fill readBuffer with more data from HttpEngine.
+      // Fill readBuffer with more data from Cronet.
       operation.close();
       readBuffer.clear();
 
@@ -676,8 +727,8 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
    *
    * <p>If there is an error, a {@link HttpDataSourceException} is thrown and the contents of {@code
    * buffer} should be ignored. If the exception has error code {@code
-   * HttpDataSourceException.TYPE_READ}, note that HttpEngine may continue writing into {@code
-   * buffer} after the method has returned. Thus the caller should not attempt to reuse the buffer.
+   * HttpDataSourceException.TYPE_READ}, note that Cronet may continue writing into {@code buffer}
+   * after the method has returned. Thus the caller should not attempt to reuse the buffer.
    *
    * <p>If {@code buffer.remaining()} is zero then 0 is returned. Otherwise, if no data is available
    * because the end of the opened range has been reached, then {@link C#RESULT_END_OF_INPUT} is
@@ -720,7 +771,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       }
     }
 
-    // Fill buffer with more data from HttpEngine.
+    // Fill buffer with more data from Cronet.
     operation.close();
     readInternal(buffer, castNonNull(currentDataSpec));
 
@@ -742,9 +793,9 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   @UnstableApi
   @Override
   public synchronized void close() {
-    if (currentUrlRequestWrapper != null) {
-      currentUrlRequestWrapper.close();
-      currentUrlRequestWrapper = null;
+    if (currentUrlRequest != null) {
+      currentUrlRequest.cancel();
+      currentUrlRequest = null;
     }
     if (readBuffer != null) {
       readBuffer.limit(0);
@@ -761,28 +812,27 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     response = null; // xtra: proxy
   }
 
-  /** Returns current {@link UrlRequest.Callback}. May be null if the data source is not opened. */
+  /** Returns current {@link UrlRequest}. May be null if the data source is not opened. */
   @UnstableApi
-  @VisibleForTesting
   @Nullable
-  UrlRequest.Callback getCurrentUrlRequestCallback() {
-    return currentUrlRequestWrapper == null
-        ? null
-        : currentUrlRequestWrapper.getUrlRequestCallback();
+  protected UrlRequest getCurrentUrlRequest() {
+    return currentUrlRequest;
   }
 
-  private UrlRequestWrapper buildRequestWrapper(DataSpec dataSpec) throws IOException {
-    UrlRequestCallback callback = new UrlRequestCallback();
-    return new UrlRequestWrapper(buildRequestBuilder(dataSpec, callback).build(), callback);
+  /** Returns current {@link UrlResponseInfo}. May be null if the data source is not opened. */
+  @UnstableApi
+  @Nullable
+  protected UrlResponseInfo getCurrentUrlResponseInfo() {
+    return responseInfo;
   }
 
-  private UrlRequest.Builder buildRequestBuilder(
-      DataSpec dataSpec, UrlRequest.Callback urlRequestCallback) throws IOException {
+  @UnstableApi
+  protected UrlRequest.Builder buildRequestBuilder(DataSpec dataSpec) throws IOException {
     UrlRequest.Builder requestBuilder =
-        httpEngine
-            .newUrlRequestBuilder(dataSpec.uri.toString(), executor, urlRequestCallback)
+        cronetEngine
+            .newUrlRequestBuilder(dataSpec.uri.toString(), urlRequestCallback, executor)
             .setPriority(requestPriority)
-            .setDirectExecutorAllowed(true);
+            .allowDirectExecutor();
 
     // Set the headers.
     Map<String, String> requestHeaders = new HashMap<>();
@@ -865,7 +915,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
 
     try {
       while (bytesToSkip > 0) {
-        // Fill readBuffer with more data from HttpEngine.
+        // Fill readBuffer with more data from Cronet.
         operation.close();
         readBuffer.clear();
         readInternal(readBuffer, dataSpec);
@@ -946,7 +996,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       }
       return;
     }
-    castNonNull(currentUrlRequestWrapper).read(buffer);
+    castNonNull(currentUrlRequest).read(buffer);
     try {
       if (!operation.block(readTimeoutMs)) {
         throw new SocketTimeoutException();
@@ -992,7 +1042,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
   }
 
   private static boolean isCompressed(UrlResponseInfo info) {
-    for (Map.Entry<String, String> entry : info.getHeaders().getAsList()) {
+    for (Map.Entry<String, String> entry : info.getAllHeadersAsList()) {
       if (entry.getKey().equalsIgnoreCase("Content-Encoding")) {
         return !entry.getValue().equalsIgnoreCase("identity");
       }
@@ -1006,6 +1056,28 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       return null;
     }
     return TextUtils.join(";", setCookieHeaders);
+  }
+
+  private static void attachCookies(UrlRequest.Builder requestBuilder, @Nullable String cookies) {
+    if (TextUtils.isEmpty(cookies)) {
+      return;
+    }
+    requestBuilder.addHeader(HttpHeaders.COOKIE, cookies);
+  }
+
+  private static int getStatus(UrlRequest request) throws InterruptedException {
+    final ConditionVariable conditionVariable = new ConditionVariable();
+    final int[] statusHolder = new int[1];
+    request.getStatus(
+        new UrlRequest.StatusListener() {
+          @Override
+          public void onStatus(int status) {
+            statusHolder[0] = status;
+            conditionVariable.open();
+          }
+        });
+    conditionVariable.block();
+    return statusHolder[0];
   }
 
   @Nullable
@@ -1191,79 +1263,26 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     responseByteStream = null;
   }
 
-  /**
-   * A wrapper class that manages a {@link UrlRequest} and the {@link UrlRequestCallback} associated
-   * with that request.
-   */
-  private static final class UrlRequestWrapper {
-
-    private final UrlRequest urlRequest;
-    private final UrlRequestCallback urlRequestCallback;
-
-    UrlRequestWrapper(UrlRequest urlRequest, UrlRequestCallback urlRequestCallback) {
-      this.urlRequest = urlRequest;
-      this.urlRequestCallback = urlRequestCallback;
-    }
-
-    public void start() {
-      urlRequest.start();
-    }
-
-    public void read(ByteBuffer buffer) {
-      urlRequest.read(buffer);
-    }
-
-    public void close() {
-      urlRequestCallback.close();
-      urlRequest.cancel();
-    }
-
-    public UrlRequest.Callback getUrlRequestCallback() {
-      return urlRequestCallback;
-    }
-
-    public int getStatus() throws InterruptedException {
-      final ConditionVariable conditionVariable = new ConditionVariable();
-      final int[] statusHolder = new int[1];
-      urlRequest.getStatus(
-          new UrlRequest.StatusListener() {
-            @Override
-            public void onStatus(int status) {
-              statusHolder[0] = status;
-              conditionVariable.open();
-            }
-          });
-      conditionVariable.block();
-      return statusHolder[0];
-    }
-  }
-
-  private final class UrlRequestCallback implements UrlRequest.Callback {
-
-    private volatile boolean isClosed = false;
-
-    public void close() {
-      this.isClosed = true;
-    }
+  private final class UrlRequestCallback extends UrlRequest.Callback {
 
     @Override
     public synchronized void onRedirectReceived(
         UrlRequest request, UrlResponseInfo info, String newLocationUrl) {
-      if (isClosed) {
+      if (request != currentUrlRequest) {
         return;
       }
+      UrlRequest urlRequest = Assertions.checkNotNull(currentUrlRequest);
       DataSpec dataSpec = Assertions.checkNotNull(currentDataSpec);
       int responseCode = info.getHttpStatusCode();
       if (dataSpec.httpMethod == DataSpec.HTTP_METHOD_POST) {
-        // The industry standard is to disregard POST redirects when the status code is 307 or
-        // 308.
+        // The industry standard is to disregard POST redirects when the status code is 307 or 308.
         if (responseCode == 307 || responseCode == 308) {
           exception =
               new InvalidResponseCodeException(
                   responseCode,
                   info.getHttpStatusText(),
                   /* cause= */ null,
-                  info.getHeaders().getAsMap(),
+                  info.getAllHeaders(),
                   dataSpec,
                   /* responseBody= */ Util.EMPTY_BYTE_ARRAY);
           operation.open();
@@ -1287,14 +1306,13 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       }
 
       @Nullable
-      String cookieHeadersValue =
-          parseCookies(info.getHeaders().getAsMap().get(HttpHeaders.SET_COOKIE));
+      String cookieHeadersValue = parseCookies(info.getAllHeaders().get(HttpHeaders.SET_COOKIE));
       if (!shouldKeepPost && TextUtils.isEmpty(cookieHeadersValue)) {
         request.followRedirect();
         return;
       }
 
-      request.cancel();
+      urlRequest.cancel();
       DataSpec redirectUrlDataSpec;
       if (!shouldKeepPost && dataSpec.httpMethod == DataSpec.HTTP_METHOD_POST) {
         // For POST redirects that aren't 307 or 308, the redirect is followed but request is
@@ -1309,30 +1327,21 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
       } else {
         redirectUrlDataSpec = dataSpec.withUri(Uri.parse(newLocationUrl));
       }
-      if (!TextUtils.isEmpty(cookieHeadersValue)) {
-        Map<String, String> requestHeaders = new HashMap<>();
-        requestHeaders.putAll(dataSpec.httpRequestHeaders);
-        requestHeaders.put(HttpHeaders.COOKIE, cookieHeadersValue);
-        redirectUrlDataSpec =
-            redirectUrlDataSpec.buildUpon().setHttpRequestHeaders(requestHeaders).build();
-      }
-      UrlRequestWrapper redirectUrlRequestWrapper;
+      UrlRequest.Builder requestBuilder;
       try {
-        redirectUrlRequestWrapper = buildRequestWrapper(redirectUrlDataSpec);
+        requestBuilder = buildRequestBuilder(redirectUrlDataSpec);
       } catch (IOException e) {
         exception = e;
         return;
       }
-      if (currentUrlRequestWrapper != null) {
-        currentUrlRequestWrapper.close();
-      }
-      currentUrlRequestWrapper = redirectUrlRequestWrapper;
-      currentUrlRequestWrapper.start();
+      attachCookies(requestBuilder, cookieHeadersValue);
+      currentUrlRequest = requestBuilder.build();
+      currentUrlRequest.start();
     }
 
     @Override
     public synchronized void onResponseStarted(UrlRequest request, UrlResponseInfo info) {
-      if (isClosed) {
+      if (request != currentUrlRequest) {
         return;
       }
       responseInfo = info;
@@ -1342,7 +1351,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
     @Override
     public synchronized void onReadCompleted(
         UrlRequest request, UrlResponseInfo info, ByteBuffer buffer) {
-      if (isClosed) {
+      if (request != currentUrlRequest) {
         return;
       }
       operation.open();
@@ -1350,7 +1359,7 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
 
     @Override
     public synchronized void onSucceeded(UrlRequest request, UrlResponseInfo info) {
-      if (isClosed) {
+      if (request != currentUrlRequest) {
         return;
       }
       finished = true;
@@ -1359,8 +1368,8 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
 
     @Override
     public synchronized void onFailed(
-        UrlRequest request, @Nullable UrlResponseInfo info, HttpException error) {
-      if (isClosed) {
+        UrlRequest request, UrlResponseInfo info, CronetException error) {
+      if (request != currentUrlRequest) {
         return;
       }
       if (error instanceof NetworkException
@@ -1371,11 +1380,6 @@ public final class HttpEngineDataSource extends BaseDataSource implements HttpDa
         exception = error;
       }
       operation.open();
-    }
-
-    @Override
-    public synchronized void onCanceled(UrlRequest request, @Nullable UrlResponseInfo info) {
-      // Do nothing
     }
   }
 
