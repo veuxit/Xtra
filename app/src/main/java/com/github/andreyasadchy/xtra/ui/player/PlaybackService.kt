@@ -23,9 +23,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
-import androidx.media3.datasource.HttpEngineDataSource
-import androidx.media3.datasource.cronet.CronetDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsManifest
@@ -42,7 +39,10 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.github.andreyasadchy.xtra.model.VideoPosition
+import com.github.andreyasadchy.xtra.player.lowlatency.CronetDataSource
 import com.github.andreyasadchy.xtra.player.lowlatency.HlsPlaylistParser
+import com.github.andreyasadchy.xtra.player.lowlatency.HttpEngineDataSource
+import com.github.andreyasadchy.xtra.player.lowlatency.OkHttpDataSource
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -97,6 +97,7 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var dynamicsProcessing: DynamicsProcessing? = null
     private var background = false
+    private var proxyMediaPlaylist = false
     private var videoId: Long? = null
     private var offlineVideoId: Int? = null
     private var sleepTimer: Timer? = null
@@ -227,12 +228,64 @@ class PlaybackService : MediaSessionService() {
                         return when (customCommand.customAction) {
                             START_STREAM -> {
                                 val uri = customCommand.customExtras.getString(URI)
-                                val playlistAsData = customCommand.customExtras.getBoolean(PLAYLIST_AS_DATA)
                                 val title = customCommand.customExtras.getString(TITLE)
                                 val channelName = customCommand.customExtras.getString(CHANNEL_NAME)
                                 val channelLogo = customCommand.customExtras.getString(CHANNEL_LOGO)
                                 videoId = null
                                 offlineVideoId = null
+                                proxyMediaPlaylist = false
+                                val proxyHost = prefs().getString(C.PROXY_HOST, null)
+                                val proxyPort = prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
+                                val proxyUser = prefs().getString(C.PROXY_USER, null)
+                                val proxyPassword = prefs().getString(C.PROXY_PASSWORD, null)
+                                val multivariantPlaylistProxyClient = if (prefs().getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                                    okHttpClient.newBuilder().apply {
+                                        proxySelector(
+                                            object : ProxySelector() {
+                                                override fun select(u: URI): List<Proxy> {
+                                                    return if (Regex(MULTIVARIANT_PLAYLIST_REGEX).matches(u.host)) {
+                                                        listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)), Proxy.NO_PROXY)
+                                                    } else {
+                                                        listOf(Proxy.NO_PROXY)
+                                                    }
+                                                }
+
+                                                override fun connectFailed(u: URI, sa: SocketAddress, e: IOException) {}
+                                            }
+                                        )
+                                        if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                                            proxyAuthenticator { _, response ->
+                                                response.request.newBuilder().header(
+                                                    "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                                                ).build()
+                                            }
+                                        }
+                                    }.build()
+                                } else null
+                                val mediaPlaylistProxyClient = if (prefs().getBoolean(C.PROXY_MEDIA_PLAYLIST, true) && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                                    okHttpClient.newBuilder().apply {
+                                        proxySelector(
+                                            object : ProxySelector() {
+                                                override fun select(u: URI): List<Proxy> {
+                                                    return if (Regex(MEDIA_PLAYLIST_REGEX).matches(u.host)) {
+                                                        listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)), Proxy.NO_PROXY)
+                                                    } else {
+                                                        listOf(Proxy.NO_PROXY)
+                                                    }
+                                                }
+
+                                                override fun connectFailed(u: URI, sa: SocketAddress, e: IOException) {}
+                                            }
+                                        )
+                                        if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                                            proxyAuthenticator { _, response ->
+                                                response.request.newBuilder().header(
+                                                    "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                                                ).build()
+                                            }
+                                        }
+                                    }.build()
+                                } else null
                                 val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
                                 player.setMediaSource(
                                     HlsMediaSource.Factory(
@@ -240,13 +293,13 @@ class PlaybackService : MediaSessionService() {
                                             this@PlaybackService,
                                             when {
                                                 networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
-                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor, multivariantPlaylistProxyClient, mediaPlaylistProxyClient) { proxyMediaPlaylist }
                                                 }
                                                 networkLibrary == "Cronet" && cronetEngine != null -> {
-                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor, multivariantPlaylistProxyClient, mediaPlaylistProxyClient) { proxyMediaPlaylist }
                                                 }
                                                 else -> {
-                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                    OkHttpDataSource.Factory(multivariantPlaylistProxyClient ?: okHttpClient, mediaPlaylistProxyClient) { proxyMediaPlaylist }
                                                 }
                                             }.apply {
                                                 prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
@@ -270,11 +323,7 @@ class PlaybackService : MediaSessionService() {
                                         setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
                                     }.createMediaSource(
                                         MediaItem.Builder().apply {
-                                            if (playlistAsData) {
-                                                setUri("data:;base64,${uri}")
-                                            } else {
-                                                setUri(uri?.toUri())
-                                            }
+                                            setUri(uri?.toUri())
                                             setMimeType(MimeTypes.APPLICATION_M3U8)
                                             setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
                                                 prefs().getString(C.PLAYER_LIVE_MIN_SPEED, "")?.toFloatOrNull()?.let { setMinPlaybackSpeed(it) }
@@ -317,13 +366,13 @@ class PlaybackService : MediaSessionService() {
                                             this@PlaybackService,
                                             when {
                                                 networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
-                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor, null, null) { false }
                                                 }
                                                 networkLibrary == "Cronet" && cronetEngine != null -> {
-                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor, null, null) { false }
                                                 }
                                                 else -> {
-                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                    OkHttpDataSource.Factory(okHttpClient, null) { false }
                                                 }
                                             }
                                         )
@@ -363,13 +412,13 @@ class PlaybackService : MediaSessionService() {
                                             this@PlaybackService,
                                             when {
                                                 networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
-                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
+                                                    HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor, null, null) { false }
                                                 }
                                                 networkLibrary == "Cronet" && cronetEngine != null -> {
-                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
+                                                    CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor, null, null) { false }
                                                 }
                                                 else -> {
-                                                    OkHttpDataSource.Factory(okHttpClient)
+                                                    OkHttpDataSource.Factory(okHttpClient, null) { false }
                                                 }
                                             }
                                         )
@@ -441,77 +490,7 @@ class PlaybackService : MediaSessionService() {
                                 )))
                             }
                             TOGGLE_PROXY -> {
-                                val enable = customCommand.customExtras.getBoolean(USING_PROXY)
-                                session.player.currentMediaItem?.let { item ->
-                                    val proxyHost = prefs().getString(C.PROXY_HOST, null)
-                                    val proxyPort = prefs().getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                    val proxyUser = prefs().getString(C.PROXY_USER, null)
-                                    val proxyPassword = prefs().getString(C.PROXY_PASSWORD, null)
-                                    player.setMediaSource(
-                                        HlsMediaSource.Factory(
-                                            DefaultDataSource.Factory(
-                                                this@PlaybackService,
-                                                if (enable && !proxyHost.isNullOrBlank() && proxyPort != null) {
-                                                    OkHttpDataSource.Factory(
-                                                        okHttpClient.newBuilder().apply {
-                                                            proxySelector(
-                                                                object : ProxySelector() {
-                                                                    override fun select(u: URI): List<Proxy> {
-                                                                        return if (Regex("video-weaver\\.\\w+\\.hls\\.ttvnw\\.net").matches(u.host)) {
-                                                                            listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)), Proxy.NO_PROXY)
-                                                                        } else {
-                                                                            listOf(Proxy.NO_PROXY)
-                                                                        }
-                                                                    }
-
-                                                                    override fun connectFailed(u: URI, sa: SocketAddress, e: IOException) {}
-                                                                }
-                                                            )
-                                                            if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
-                                                                proxyAuthenticator { _, response ->
-                                                                    response.request.newBuilder().header(
-                                                                        "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
-                                                                    ).build()
-                                                                }
-                                                            }
-                                                        }.build()
-                                                    )
-                                                } else {
-                                                    val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, "OkHttp")
-                                                    when {
-                                                        networkLibrary == "HttpEngine" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 7 && httpEngine != null -> {
-                                                            HttpEngineDataSource.Factory(httpEngine!!.get(), cronetExecutor)
-                                                        }
-                                                        networkLibrary == "Cronet" && cronetEngine != null -> {
-                                                            CronetDataSource.Factory(cronetEngine!!.get(), cronetExecutor)
-                                                        }
-                                                        else -> {
-                                                            OkHttpDataSource.Factory(okHttpClient)
-                                                        }
-                                                    }
-                                                }.apply {
-                                                    prefs().getString(C.PLAYER_STREAM_HEADERS, null)?.let {
-                                                        try {
-                                                            val json = JSONObject(it)
-                                                            hashMapOf<String, String>().apply {
-                                                                json.keys().forEach { key ->
-                                                                    put(key, json.optString(key))
-                                                                }
-                                                            }
-                                                        } catch (e: Exception) {
-                                                            null
-                                                        }
-                                                    }?.let {
-                                                        setDefaultRequestProperties(it)
-                                                    }
-                                                }
-                                            )
-                                        ).apply {
-                                            setPlaylistParserFactory(CustomHlsPlaylistParserFactory())
-                                            setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
-                                        }.createMediaSource(item)
-                                    )
-                                }
+                                proxyMediaPlaylist = customCommand.customExtras.getBoolean(USING_PROXY)
                                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                             }
                             SET_SLEEP_TIMER -> {
@@ -703,7 +682,6 @@ class PlaybackService : MediaSessionService() {
 
         const val RESULT = "result"
         const val URI = "uri"
-        const val PLAYLIST_AS_DATA = "playlistAsData"
         const val VIDEO_ID = "videoId"
         const val PLAYBACK_POSITION = "playbackPosition"
         const val TITLE = "title"
@@ -714,6 +692,9 @@ class PlaybackService : MediaSessionService() {
         const val NAMES = "names"
         const val CODECS = "codecs"
         const val URLS = "urls"
+
+        const val MULTIVARIANT_PLAYLIST_REGEX = "^usher\\.ttvnw\\.net$"
+        const val MEDIA_PLAYLIST_REGEX = "^(?:[a-z0-9-]+\\.playlist\\.(?:live-video|ttvnw)\\.net|video-weaver\\.[a-z0-9-]+\\.hls\\.ttvnw\\.net)$"
 
         const val REQUEST_CODE_RESUME = 2
     }
