@@ -414,14 +414,10 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.streamResult.collectLatest {
                             if (it != null) {
-                                val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                 player?.sendCustomCommand(
                                     SessionCommand(
                                         PlaybackService.START_STREAM, bundleOf(
                                             PlaybackService.URI to it,
-                                            PlaybackService.PLAYLIST_AS_DATA to proxyMultivariantPlaylist,
                                             PlaybackService.TITLE to requireArguments().getString(KEY_TITLE),
                                             PlaybackService.CHANNEL_NAME to requireArguments().getString(KEY_CHANNEL_NAME),
                                             PlaybackService.CHANNEL_LOGO to requireArguments().getString(KEY_CHANNEL_LOGO),
@@ -2057,9 +2053,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 if (viewModel.useCustomProxy) {
                     viewModel.useCustomProxy = false
                 }
-                val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                 viewModel.loadStreamResult(
                     networkLibrary = prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
@@ -2069,9 +2062,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
                     supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                     proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
-                    proxyMultivariantPlaylist = proxyMultivariantPlaylist,
-                    proxyHost = proxyHost,
-                    proxyPort = proxyPort,
+                    proxyHost = prefs.getString(C.PROXY_HOST, null),
+                    proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull(),
                     proxyUser = prefs.getString(C.PROXY_USER, null),
                     proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
                     enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
@@ -2519,9 +2511,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     when (callback) {
                         "refreshStream" -> {
                             requireArguments().getString(KEY_CHANNEL_LOGIN)?.let { channelLogin ->
-                                val proxyHost = prefs.getString(C.PROXY_HOST, null)
-                                val proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull()
-                                val proxyMultivariantPlaylist = prefs.getBoolean(C.PROXY_MULTIVARIANT_PLAYLIST, false) && !proxyHost.isNullOrBlank() && proxyPort != null
                                 viewModel.loadStreamResult(
                                     networkLibrary = prefs.getString(C.NETWORK_LIBRARY, "OkHttp"),
                                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext(), prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_STREAM, true)),
@@ -2531,9 +2520,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                     playerType = prefs.getString(C.TOKEN_PLAYERTYPE, "site"),
                                     supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"),
                                     proxyPlaybackAccessToken = prefs.getBoolean(C.PROXY_PLAYBACK_ACCESS_TOKEN, false),
-                                    proxyMultivariantPlaylist = proxyMultivariantPlaylist,
-                                    proxyHost = proxyHost,
-                                    proxyPort = proxyPort,
+                                    proxyHost = prefs.getString(C.PROXY_HOST, null),
+                                    proxyPort = prefs.getString(C.PROXY_PORT, null)?.toIntOrNull(),
                                     proxyUser = prefs.getString(C.PROXY_USER, null),
                                     proxyPassword = prefs.getString(C.PROXY_PASSWORD, null),
                                     enableIntegrity = prefs.getBoolean(C.ENABLE_INTEGRITY, false)
