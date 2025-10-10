@@ -16,7 +16,7 @@ class ClipUrlsResponse(
     @Serializable
     class Clip(
         val playbackAccessToken: PlaybackAccessToken? = null,
-        val videoQualities: List<Quality>,
+        val assets: List<ClipAsset>
     )
 
     @Serializable
@@ -26,9 +26,21 @@ class ClipUrlsResponse(
     )
 
     @Serializable
+    class ClipAsset(
+        val videoQualities: List<Quality>,
+        val portraitMetadata: PortraitClipCropping? = null,
+    )
+
+    @Serializable
     class Quality(
+        val codecs: String? = null,
         val sourceURL: String,
         val frameRate: Float? = null,
         val quality: String? = null,
+    )
+
+    @Serializable
+    class PortraitClipCropping(
+        val portraitClipLayout: String? = null,
     )
 }

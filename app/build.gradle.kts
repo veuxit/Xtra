@@ -29,8 +29,8 @@ android {
         applicationId = "com.github.andreyasadchy.xtra"
         minSdk = 23
         targetSdk = 36
-        versionCode = 299
-        versionName = "2.48.2"
+        versionCode = 300
+        versionName = "2.49.0"
     }
 
     buildTypes {
@@ -88,7 +88,6 @@ dependencies {
     implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)
-    implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)

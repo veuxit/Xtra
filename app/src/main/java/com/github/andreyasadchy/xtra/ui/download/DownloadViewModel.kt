@@ -305,7 +305,7 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
-    fun setClip(networkLibrary: String?, gqlHeaders: Map<String, String>, clipId: String?, thumbnailUrl: String?, qualities: Map<String, Pair<String, String>>?, skipAccessToken: Int, enableIntegrity: Boolean) {
+    fun setClip(networkLibrary: String?, gqlHeaders: Map<String, String>, clipId: String?, qualities: Map<String, Pair<String, String>>?, enableIntegrity: Boolean) {
         if (_qualities.value == null) {
             if (!qualities.isNullOrEmpty()) {
                 _qualities.value = qualities
@@ -313,13 +313,38 @@ class DownloadViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val urls = playerRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId, enableIntegrity)
+                        val hideCodecs = urls?.all {
+                            it.key.second?.substringBefore('.').let { codec ->
+                                codec == "avc1" || codec == "mp4a" || codec.isNullOrBlank()
+                            }
+                        } == true
                         val map = mutableMapOf<String, Pair<String, String>>()
                         urls?.entries?.forEach {
-                            when (it.key) {
-                                "source" -> map[it.key] = Pair(ContextCompat.getString(applicationContext, R.string.source), it.value)
-                                "audio_only" -> map[it.key] = Pair(ContextCompat.getString(applicationContext, R.string.audio_only), it.value)
-                                else -> map[it.key] = Pair(it.key, it.value)
+                            val quality = it.key.first.let { quality ->
+                                if (quality == "audio_only") {
+                                    ContextCompat.getString(applicationContext, R.string.audio_only)
+                                } else {
+                                    val quality = if (quality == "source") {
+                                        ContextCompat.getString(applicationContext, R.string.source)
+                                    } else {
+                                        quality
+                                    }
+                                    if (hideCodecs) {
+                                        quality
+                                    } else {
+                                        val codec = it.key.second?.substringBefore('.').let { codec ->
+                                            when {
+                                                codec == "av01" -> "AV1"
+                                                codec == "hev1" || codec == "hvc1" -> "H.265"
+                                                codec == "avc1" || codec.isNullOrBlank() -> "H.264"
+                                                else -> it
+                                            }
+                                        }
+                                        "$quality $codec"
+                                    }
+                                }
                             }
+                            map[it.key.first] = Pair(quality, it.value)
                         }
                         _qualities.value = map.toList()
                             .sortedByDescending {
