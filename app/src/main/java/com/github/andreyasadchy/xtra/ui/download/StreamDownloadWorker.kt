@@ -462,12 +462,13 @@ class StreamDownloadWorker @AssistedInject constructor(
         } else {
             val fileName = "${offlineVideo.channelLogin ?: ""}${offlineVideo.quality ?: ""}${downloadDate}.${firstUrls.first().substringAfterLast(".").substringBefore("?")}"
             val fileUri = if (isShared) {
-                val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
                 try {
                     context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
                 } catch (e: IllegalArgumentException) {
-                    DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                    DocumentsContract.createDocument(context.contentResolver, directoryUri, "", fileName)
                 }
                 fileUri
             } else {
@@ -1069,12 +1070,13 @@ class StreamDownloadWorker @AssistedInject constructor(
             fileUri
         } else {
             val fileUri = if (isShared) {
-                val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
                 try {
                     context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
                 } catch (e: IllegalArgumentException) {
-                    DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                    DocumentsContract.createDocument(context.contentResolver, directoryUri, "", fileName)
                 }
                 fileUri
             } else {
