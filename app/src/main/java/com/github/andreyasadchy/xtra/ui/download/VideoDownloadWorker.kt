@@ -226,12 +226,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                 } else {
                     val fileName = "${offlineVideo.videoId ?: ""}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}.${remainingSegments.first().uri.substringAfterLast(".")}"
                     val fileUri = if (isShared) {
-                        val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                        val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                        val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                        val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                        val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
                         try {
                             context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
                         } catch (e: IllegalArgumentException) {
-                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri, "", fileName)
                         }
                         fileUri
                     } else {
@@ -406,13 +407,14 @@ class VideoDownloadWorker @AssistedInject constructor(
                     "${offlineVideo.downloadDate}"
                 }
                 if (isShared) {
-                    val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                    val videoDirectoryUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + videoDirectoryName
+                    val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                    val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                    val videoDirectoryUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + videoDirectoryName
                     try {
                         context.contentResolver.openOutputStream(videoDirectoryUri.toUri())!!.close()
                     } catch (e: Exception) {
                         if (e is IllegalArgumentException) {
-                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), DocumentsContract.Document.MIME_TYPE_DIR, videoDirectoryName)
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri, DocumentsContract.Document.MIME_TYPE_DIR, videoDirectoryName)
                         }
                     }
                     val playlistFileUri = if (!offlineVideo.url.isNullOrBlank()) {
@@ -731,12 +733,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                     "${offlineVideo.downloadDate}.mp4"
                 }
                 val fileUri = if (isShared) {
-                    val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                    val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                    val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                    val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                    val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
                     try {
                         context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
                     } catch (e: IllegalArgumentException) {
-                        DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                        DocumentsContract.createDocument(context.contentResolver, directoryUri, "", fileName)
                     }
                     fileUri
                 } else {
@@ -994,12 +997,13 @@ class VideoDownloadWorker @AssistedInject constructor(
                     fileUri
                 } else {
                     val fileUri = if (isShared) {
-                        val directoryUri = path + "/document/" + path.substringAfter("/tree/")
-                        val fileUri = directoryUri + (if (!directoryUri.endsWith("%3A")) "%2F" else "") + fileName
+                        val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
+                        val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
+                        val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
                         try {
                             context.contentResolver.openOutputStream(fileUri.toUri())!!.close()
                         } catch (e: IllegalArgumentException) {
-                            DocumentsContract.createDocument(context.contentResolver, directoryUri.toUri(), "", fileName)
+                            DocumentsContract.createDocument(context.contentResolver, directoryUri, "", fileName)
                         }
                         fileUri
                     } else {
