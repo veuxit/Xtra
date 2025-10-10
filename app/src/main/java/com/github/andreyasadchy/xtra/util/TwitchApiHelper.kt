@@ -390,10 +390,6 @@ object TwitchApiHelper {
         return map
     }
 
-    fun getClipUrlMapFromPreview(url: String): Map<String, String> {
-        return mapOf(Pair("source", url.substringBefore("-preview") + ".mp4"))
-    }
-
     fun getMessageIdString(msgId: String?): String? {
         val appContext = XtraApp.INSTANCE.applicationContext
         return when (msgId) {

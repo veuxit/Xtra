@@ -473,7 +473,6 @@
     <string name="followed_only">Solo seguiti</string>
     <string name="debug_api_commands">Usa comandi chat API</string>
     <string name="skip_video_access_token">Salta token di accesso video</string>
-    <string name="skip_clip_access_token">Salta token di accesso clip</string>
     <string name="skipVideoTokenEntries1">Salta sempre</string>
     <string name="skipVideoTokenEntries2">Salta per impostazione predefinita, non saltare se la riproduzione fallisce</string>
     <string name="skipVideoTokenEntries3">Non saltare per impostazione predefinita, salta se la riproduzione fallisce</string>

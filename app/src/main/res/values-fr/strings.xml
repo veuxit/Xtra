@@ -473,7 +473,6 @@
     <string name="followed_only">Suivis seulement</string>
     <string name="debug_api_commands">Utiliser les commandes API de chat</string>
     <string name="skip_video_access_token">Ignorer le jeton d\'accès video</string>
-    <string name="skip_clip_access_token">Ignorer le jeton d\'accès clip</string>
     <string name="skipVideoTokenEntries1">Toujours ignorer</string>
     <string name="skipVideoTokenEntries2">Ignorer par défaut, ne pas ignorer si la lecture échoue</string>
     <string name="skipVideoTokenEntries3">Ne pas ignorer par défaut, ignorer si la lecture échoue</string>
