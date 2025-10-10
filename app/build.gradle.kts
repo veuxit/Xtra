@@ -30,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = 121
-        versionName = "2.48.2"
+        versionName = "2.49.0"
     }
 
     buildTypes {
@@ -71,6 +71,7 @@ android {
             "androidx.room:room-compiler:2.8.0-rc01",
             "androidx.room:room-paging:2.8.0-rc01",
             "androidx.room:room-runtime:2.8.0-rc01",
+            "org.chromium.net:cronet-api:119.6045.31",
         ))
     }
 }
@@ -109,7 +110,6 @@ dependencies {
     implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)
-    implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
