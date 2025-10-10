@@ -473,7 +473,6 @@
     <string name="followed_only">Только отслеживаемые</string>
     <string name="debug_api_commands">Использовать команды API чата</string>
     <string name="skip_video_access_token">Пропустить токен доступа видео</string>
-    <string name="skip_clip_access_token">Пропустить токен доступа клипа</string>
     <string name="skipVideoTokenEntries1">Всегда пропускать</string>
     <string name="skipVideoTokenEntries2">Пропускать по умолчанию, не пропускать при ошибке проигрывания</string>
     <string name="skipVideoTokenEntries3">Не пропускать по умолчанию, пропускать при ошибке проигрывания</string>

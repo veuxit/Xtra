@@ -473,7 +473,6 @@
     <string name="followed_only">[フォロー中] タブのみ</string>
     <string name="debug_api_commands">API チャットコマンドを使用</string>
     <string name="skip_video_access_token">動画アクセストークンをスキップ</string>
-    <string name="skip_clip_access_token">クリップアクセストークンをスキップ</string>
     <string name="skipVideoTokenEntries1">常にスキップ</string>
     <string name="skipVideoTokenEntries2">デフォルトでスキップして、再生失敗時にはスキップしない</string>
     <string name="skipVideoTokenEntries3">デフォルトでスキップせず、再生失敗時にスキップする</string>

@@ -68,7 +68,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
         private const val KEY_CHANNEL_LOGIN = "channelLogin"
         private const val KEY_CHANNEL_NAME = "channelName"
         private const val KEY_CHANNEL_LOGO = "channelLogo"
-        private const val KEY_THUMBNAIL_URL = "thumbnailUrl"
         private const val KEY_THUMBNAIL = "thumbnail"
         private const val KEY_GAME_ID = "gameId"
         private const val KEY_GAME_SLUG = "gameSlug"
@@ -128,7 +127,7 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
             }
         }
 
-        fun newInstance(clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnailUrl: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, qualityKeys: Array<String>? = null, qualityNames: Array<String>? = null, qualityUrls: Array<String>? = null): DownloadDialog {
+        fun newInstance(clipId: String?, title: String?, uploadDate: String?, duration: Double?, videoId: String?, vodOffset: Int?, channelId: String?, channelLogin: String?, channelName: String?, channelLogo: String?, thumbnail: String?, gameId: String?, gameSlug: String?, gameName: String?, qualityKeys: Array<String>? = null, qualityNames: Array<String>? = null, qualityUrls: Array<String>? = null): DownloadDialog {
             return DownloadDialog().apply {
                 arguments = bundleOf(
                     KEY_TYPE to CLIP,
@@ -142,7 +141,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     KEY_CHANNEL_LOGIN to channelLogin,
                     KEY_CHANNEL_NAME to channelName,
                     KEY_CHANNEL_LOGO to channelLogo,
-                    KEY_THUMBNAIL_URL to thumbnailUrl,
                     KEY_THUMBNAIL to thumbnail,
                     KEY_GAME_ID to gameId,
                     KEY_GAME_SLUG to gameSlug,
@@ -368,7 +366,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                     networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
                     clipId = requireArguments().getString(KEY_CLIP_ID),
-                    thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL),
                     qualities = requireArguments().getStringArray(KEY_QUALITY_KEYS)?.let { keys ->
                         requireArguments().getStringArray(KEY_QUALITY_NAMES)?.let { names ->
                             requireArguments().getStringArray(KEY_QUALITY_URLS)?.let { urls ->
@@ -376,7 +373,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.CallbackListener {
                             }
                         }
                     },
-                    skipAccessToken = requireContext().prefs().getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2,
                     enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                 )
             }
