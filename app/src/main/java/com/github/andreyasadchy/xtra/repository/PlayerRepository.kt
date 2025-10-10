@@ -352,28 +352,57 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    suspend fun loadClipUrls(networkLibrary: String?, gqlHeaders: Map<String, String>, clipId: String?, enableIntegrity: Boolean): Map<String, String>? = withContext(Dispatchers.IO) {
-        val response = graphQLRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId)
-        if (enableIntegrity) {
-            response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+    suspend fun loadClipUrls(networkLibrary: String?, gqlHeaders: Map<String, String>, clipId: String?, enableIntegrity: Boolean): Map<Pair<String, String?>, String>? = withContext(Dispatchers.IO) {
+        try {
+            val response = graphQLRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId)
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            val accessToken = response.data?.clip?.playbackAccessToken
+            response.data!!.clip.assets.let { assets ->
+                (assets.find { it.portraitMetadata?.portraitClipLayout.isNullOrBlank() } ?: assets.firstOrNull())?.videoQualities?.mapIndexedNotNull { index, quality ->
+                    if (quality.sourceURL.isNotBlank()) {
+                        val name = if (!quality.quality.isNullOrBlank()) {
+                            val frameRate = quality.frameRate?.roundToInt() ?: 0
+                            if (frameRate < 60) {
+                                "${quality.quality}p"
+                            } else {
+                                "${quality.quality}p${frameRate}"
+                            }
+                        } else {
+                            index.toString()
+                        }
+                        val url = "${quality.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}"
+                        Pair(name, quality.codecs) to url
+                    } else null
+                }?.toMap()
+            }
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            val response = graphQLRepository.loadQueryClipUrls(networkLibrary, gqlHeaders, clipId!!)
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            val accessToken = response.data?.clip?.playbackAccessToken
+            response.data?.clip?.assets?.let { assets ->
+                (assets.find { it?.portraitMetadata?.portraitClipLayout.isNullOrBlank() } ?: assets.firstOrNull())?.videoQualities?.mapIndexedNotNull { index, quality ->
+                    if (!quality?.sourceURL.isNullOrBlank()) {
+                        val name = if (!quality.quality.isNullOrBlank()) {
+                            val frameRate = quality.frameRate?.roundToInt() ?: 0
+                            if (frameRate < 60) {
+                                "${quality.quality}p"
+                            } else {
+                                "${quality.quality}p${frameRate}"
+                            }
+                        } else {
+                            index.toString()
+                        }
+                        val url = "${quality.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}"
+                        Pair(name, quality.codecs) to url
+                    } else null
+                }?.toMap()
+            }
         }
-        val accessToken = response.data?.clip?.playbackAccessToken
-        response.data?.clip?.videoQualities?.mapIndexedNotNull { index, quality ->
-            if (quality.sourceURL.isNotBlank()) {
-                val name = if (!quality.quality.isNullOrBlank()) {
-                    val frameRate = quality.frameRate?.roundToInt() ?: 0
-                    if (frameRate < 60) {
-                        "${quality.quality}p"
-                    } else {
-                        "${quality.quality}p${frameRate}"
-                    }
-                } else {
-                    index.toString()
-                }
-                val url = "${quality.sourceURL}?sig=${Uri.encode(accessToken?.signature)}&token=${Uri.encode(accessToken?.value)}"
-                name to url
-            } else null
-        }?.toMap()
     }
 
     suspend fun sendMinuteWatched(networkLibrary: String?, userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {

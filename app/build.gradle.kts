@@ -30,7 +30,7 @@ android {
         minSdk = 16
         targetSdk = 36
         versionCode = 121
-        versionName = "2.48.2"
+        versionName = "2.49.0"
     }
 
     buildTypes {
@@ -95,6 +95,7 @@ android {
             "com.google.android.material:material:1.11.0",
             "com.squareup.okhttp3:okhttp:3.12.13",
             "com.squareup.okhttp3:logging-interceptor:3.12.13",
+            "org.chromium.net:cronet-api:119.6045.31",
         ))
     }
 }
@@ -136,7 +137,6 @@ dependencies {
     implementation(libs.conscrypt)
     implementation(libs.serialization.json)
     implementation(libs.apollo.api)
-    implementation(libs.okio)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)

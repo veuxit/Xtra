@@ -13,6 +13,7 @@ import com.apollographql.apollo.api.json.jsonReader
 import com.apollographql.apollo.api.json.writeObject
 import com.apollographql.apollo.api.parseResponse
 import com.github.andreyasadchy.xtra.BadgesQuery
+import com.github.andreyasadchy.xtra.ClipUrlsQuery
 import com.github.andreyasadchy.xtra.GameBoxArtQuery
 import com.github.andreyasadchy.xtra.GameClipsQuery
 import com.github.andreyasadchy.xtra.GameStreamsQuery
@@ -237,6 +238,11 @@ class GraphQLRepository @Inject constructor(
 
     suspend fun loadQueryBadges(networkLibrary: String?, headers: Map<String, String>, quality: BadgeImageSize): ApolloResponse<BadgesQuery.Data> = withContext(Dispatchers.IO) {
         val query = BadgesQuery(Optional.Present(quality))
+        sendQuery(networkLibrary, headers, query)
+    }
+
+    suspend fun loadQueryClipUrls(networkLibrary: String?, headers: Map<String, String>, slug: String): ApolloResponse<ClipUrlsQuery.Data> = withContext(Dispatchers.IO) {
+        val query = ClipUrlsQuery(slug)
         sendQuery(networkLibrary, headers, query)
     }
 

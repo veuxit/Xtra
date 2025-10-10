@@ -1,6 +1,7 @@
 type Query {
     badges: [Badge]
     cheerConfig: GlobalCheerConfig
+    clip(slug: ID!): Clip
     games(first: Int, after: Cursor, options: GameOptions): GameConnection
     game(id: ID, slug: String, name: String): Game
     searchCategories(query: String!, first: Int, after: Cursor): SearchCategoriesConnection
@@ -72,17 +73,24 @@ type CheermoteTier {
 }
 
 type Clip {
+    assets: [ClipAsset]
     broadcaster: User
     createdAt: Time
     durationSeconds: Int
     game: Game
     id: ID
+    playbackAccessToken(params: PlaybackAccessTokenParams!): PlaybackAccessToken
     slug: String
     thumbnailURL: String
     title: String
     video: Video
     videoOffsetSeconds: Int
     viewCount: Int
+}
+
+type ClipAsset {
+    videoQualities: [ClipVideoQuality]
+    portraitMetadata: PortraitClipCropping
 }
 
 type ClipConnection {
@@ -93,6 +101,13 @@ type ClipConnection {
 type ClipEdge {
     cursor: Cursor
     node: Clip
+}
+
+type ClipVideoQuality {
+    codecs: String
+    frameRate: Float
+    quality: String
+    sourceURL: String
 }
 
 type Emote {
@@ -185,6 +200,10 @@ type PageInfo {
 type PlaybackAccessToken {
     signature: String
     value: String
+}
+
+type PortraitClipCropping {
+    portraitClipLayout: String
 }
 
 type SearchCategoriesConnection {

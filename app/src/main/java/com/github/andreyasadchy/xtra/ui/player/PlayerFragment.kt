@@ -619,21 +619,40 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.clipUrls.collectLatest { map ->
                             if (map != null) {
-                                val urls = map.ifEmpty {
-                                    val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
-                                    if ((prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2) == 2 && !thumbnailUrl.isNullOrBlank()) {
-                                        TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
-                                    } else {
-                                        emptyMap()
+                                val supportedCodecs = prefs.getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264")?.split(',') ?: emptyList()
+                                val filtered = map.filterNot {
+                                    it.key.second?.substringBefore('.').let { codec ->
+                                        (codec == "av01" && !supportedCodecs.contains("av1")) || ((codec == "hev1" || codec == "hvc1") && !supportedCodecs.contains("h265"))
+                                    }
+                                }
+                                val hideCodecs = filtered.all {
+                                    it.key.second?.substringBefore('.').let { codec ->
+                                        codec == "avc1" || codec == "mp4a" || codec.isNullOrBlank()
                                     }
                                 }
                                 val map = mutableMapOf<String, Pair<String, String?>>()
-                                urls.forEach {
-                                    if (it.key == "source") {
-                                        map[it.key] = Pair(requireContext().getString(R.string.source), it.value)
-                                    } else {
-                                        map[it.key] = Pair(it.key, it.value)
+                                filtered.forEach {
+                                    val quality = it.key.first.let { quality ->
+                                        val quality = if (quality == "source") {
+                                            requireContext().getString(R.string.source)
+                                        } else {
+                                            quality
+                                        }
+                                        if (hideCodecs) {
+                                            quality
+                                        } else {
+                                            val codec = it.key.second?.substringBefore('.').let { codec ->
+                                                when {
+                                                    codec == "av01" -> "AV1"
+                                                    codec == "hev1" || codec == "hvc1" -> "H.265"
+                                                    codec == "avc1" || codec.isNullOrBlank() -> "H.264"
+                                                    else -> it
+                                                }
+                                            }
+                                            "$quality $codec"
+                                        }
                                     }
+                                    map[it.key.first] = Pair(quality, it.value)
                                 }
                                 map.put(AUDIO_ONLY_QUALITY, Pair(requireContext().getString(R.string.audio_only), null))
                                 viewModel.qualities = map.toList()
