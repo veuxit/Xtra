@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.SearchChannelsQuery
 import com.github.andreyasadchy.xtra.SearchGamesQuery
 import com.github.andreyasadchy.xtra.SearchStreamsQuery
 import com.github.andreyasadchy.xtra.SearchVideosQuery
+import com.github.andreyasadchy.xtra.StreamPlaybackAccessTokenQuery
 import com.github.andreyasadchy.xtra.TopGamesQuery
 import com.github.andreyasadchy.xtra.TopStreamsQuery
 import com.github.andreyasadchy.xtra.UserBadgesQuery
@@ -40,6 +41,7 @@ import com.github.andreyasadchy.xtra.UserVideosQuery
 import com.github.andreyasadchy.xtra.UsersLastBroadcastQuery
 import com.github.andreyasadchy.xtra.UsersStreamQuery
 import com.github.andreyasadchy.xtra.UsersTypeQuery
+import com.github.andreyasadchy.xtra.VideoPlaybackAccessTokenQuery
 import com.github.andreyasadchy.xtra.VideoQuery
 import com.github.andreyasadchy.xtra.model.gql.ErrorResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsResponse
@@ -321,6 +323,11 @@ class GraphQLRepository @Inject constructor(
         sendQuery(networkLibrary, headers, query)
     }
 
+    suspend fun loadQueryStreamPlaybackAccessToken(networkLibrary: String?, headers: Map<String, String>, login: String, platform: String, playerType: String): ApolloResponse<StreamPlaybackAccessTokenQuery.Data> = withContext(Dispatchers.IO) {
+        val query = StreamPlaybackAccessTokenQuery(login, platform, playerType)
+        sendQuery(networkLibrary, headers, query)
+    }
+
     suspend fun loadQueryTopGames(networkLibrary: String?, headers: Map<String, String>, tags: List<String>?, first: Int?, after: String?): ApolloResponse<TopGamesQuery.Data> = withContext(Dispatchers.IO) {
         val query = TopGamesQuery(
             tags = Optional.Present(tags),
@@ -478,6 +485,11 @@ class GraphQLRepository @Inject constructor(
 
     suspend fun loadQueryVideo(networkLibrary: String?, headers: Map<String, String>, id: String?): ApolloResponse<VideoQuery.Data> = withContext(Dispatchers.IO) {
         val query = VideoQuery(Optional.Present(id))
+        sendQuery(networkLibrary, headers, query)
+    }
+
+    suspend fun loadQueryVideoPlaybackAccessToken(networkLibrary: String?, headers: Map<String, String>, videoId: String, platform: String, playerType: String): ApolloResponse<VideoPlaybackAccessTokenQuery.Data> = withContext(Dispatchers.IO) {
+        val query = VideoPlaybackAccessTokenQuery(videoId, platform, playerType)
         sendQuery(networkLibrary, headers, query)
     }
 

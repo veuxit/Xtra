@@ -6,7 +6,13 @@ import android.net.http.UrlResponseInfo
 import android.os.Build
 import android.os.ext.SdkExtensions
 import android.util.Base64
+import com.apollographql.apollo.api.CustomScalarAdapters
+import com.apollographql.apollo.api.json.buildJsonString
+import com.apollographql.apollo.api.json.jsonReader
+import com.apollographql.apollo.api.json.writeObject
+import com.apollographql.apollo.api.parseResponse
 import com.github.andreyasadchy.xtra.BuildConfig
+import com.github.andreyasadchy.xtra.StreamPlaybackAccessTokenQuery
 import com.github.andreyasadchy.xtra.db.RecentEmotesDao
 import com.github.andreyasadchy.xtra.db.VideoPositionsDao
 import com.github.andreyasadchy.xtra.model.VideoPosition
@@ -43,6 +49,8 @@ import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.buffer
+import okio.source
 import org.chromium.net.CronetEngine
 import org.chromium.net.apihelpers.RedirectHandlers
 import org.chromium.net.apihelpers.UploadDataProviders
@@ -74,9 +82,9 @@ class PlayerRepository @Inject constructor(
 ) {
 
     suspend fun loadStreamPlaylistUrl(networkLibrary: String?, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, supportedCodecs: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): String = withContext(Dispatchers.IO) {
-        val accessToken = loadStreamPlaybackAccessToken(networkLibrary, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken?.let { token ->
-            if (token.value?.contains("\"forbidden\":true") == true && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
-                loadStreamPlaybackAccessToken(networkLibrary, gqlHeaders.filterNot { it.key == C.HEADER_TOKEN }, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)?.data?.streamPlaybackAccessToken
+        val accessToken = loadStreamPlaybackAccessToken(networkLibrary, gqlHeaders, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity).let { token ->
+            if (token.second?.contains("\"forbidden\":true") == true && !gqlHeaders[C.HEADER_TOKEN].isNullOrBlank()) {
+                loadStreamPlaybackAccessToken(networkLibrary, gqlHeaders.filterNot { it.key == C.HEADER_TOKEN }, channelLogin, randomDeviceId, xDeviceId, playerType, proxyPlaybackAccessToken, proxyHost, proxyPort, proxyUser, proxyPassword, enableIntegrity)
             } else token
         }
         val query = mutableMapOf<String, String>().apply {
@@ -87,9 +95,9 @@ class PlayerRepository @Inject constructor(
             if (supportedCodecs?.contains("av1", true) == true) {
                 put("platform", "web")
             }
-            accessToken?.signature?.let { put("sig", it) }
+            accessToken.first?.let { put("sig", it) }
             supportedCodecs?.let { put("supported_codecs", it) }
-            accessToken?.value?.let { put("token", it) }
+            accessToken.second?.let { put("token", it) }
         }.map { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8.name())}" }.joinToString("&", "?")
         "https://usher.ttvnw.net/api/channel/hls/${channelLogin}.m3u8${query}"
     }
@@ -132,58 +140,131 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    private suspend fun loadStreamPlaybackAccessToken(networkLibrary: String?, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): PlaybackAccessTokenResponse? = withContext(Dispatchers.IO) {
+    private suspend fun loadStreamPlaybackAccessToken(networkLibrary: String?, gqlHeaders: Map<String, String>, channelLogin: String, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, proxyPlaybackAccessToken: Boolean, proxyHost: String?, proxyPort: Int?, proxyUser: String?, proxyPassword: String?, enableIntegrity: Boolean): Pair<String?, String?> = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders, randomDeviceId, xDeviceId, enableIntegrity)
-        if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
-            okHttpClient.newBuilder().apply {
-                proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
-                if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
-                    proxyAuthenticator { _, response ->
-                        response.request.newBuilder().header(
-                            "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
-                        ).build()
+        try {
+            val response = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                okHttpClient.newBuilder().apply {
+                    proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
+                    if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                        proxyAuthenticator { _, response ->
+                            response.request.newBuilder().header(
+                                "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                            ).build()
+                        }
+                    }
+                }.build().newCall(Request.Builder().apply {
+                    url("https://gql.twitch.tv/gql/")
+                    accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" }.forEach {
+                        addHeader(it.key, it.value)
+                    }
+                    header("Content-Type", "application/json")
+                    post(graphQLRepository.getPlaybackAccessTokenRequestBody(channelLogin, "", playerType).toRequestBody())
+                }.build()).execute().use { response ->
+                    json.decodeFromString<PlaybackAccessTokenResponse>(response.body.string())
+                }
+            } else {
+                graphQLRepository.loadPlaybackAccessToken(
+                    networkLibrary = networkLibrary,
+                    headers = accessTokenHeaders,
+                    login = channelLogin,
+                    playerType = playerType
+                )
+            }
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.streamPlaybackAccessToken!!.let {
+                it.signature to it.value
+            }
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            val response = if (proxyPlaybackAccessToken && !proxyHost.isNullOrBlank() && proxyPort != null) {
+                val query = StreamPlaybackAccessTokenQuery(channelLogin, "web", playerType ?: "")
+                val body = buildJsonString {
+                    query.apply {
+                        writeObject {
+                            name("variables")
+                            writeObject {
+                                serializeVariables(this, CustomScalarAdapters.Empty, false)
+                            }
+                            name("query")
+                            value(document().replaceFirst(name(), "null"))
+                        }
                     }
                 }
-            }.build().newCall(Request.Builder().apply {
-                url("https://gql.twitch.tv/gql/")
-                post(graphQLRepository.getPlaybackAccessTokenRequestBody(channelLogin, "", playerType).toRequestBody())
-                accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" }.forEach {
-                    addHeader(it.key, it.value)
+                okHttpClient.newBuilder().apply {
+                    proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
+                    if (!proxyUser.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
+                        proxyAuthenticator { _, response ->
+                            response.request.newBuilder().header(
+                                "Proxy-Authorization", Credentials.basic(proxyUser, proxyPassword)
+                            ).build()
+                        }
+                    }
+                }.build().newCall(Request.Builder().apply {
+                    url("https://gql.twitch.tv/gql/")
+                    accessTokenHeaders.filterKeys { it == C.HEADER_CLIENT_ID || it == "X-Device-Id" }.forEach {
+                        addHeader(it.key, it.value)
+                    }
+                    header("Content-Type", "application/json")
+                    post(body.toRequestBody())
+                }.build()).execute().use { response ->
+                    response.body.byteStream().source().buffer().jsonReader().use {
+                        query.parseResponse(it)
+                    }
                 }
-            }.build()).execute().use { response ->
-                val text = response.body.string()
-                if (text.isNotBlank()) {
-                    json.decodeFromString<PlaybackAccessTokenResponse>(text)
-                } else null
+            } else {
+                graphQLRepository.loadQueryStreamPlaybackAccessToken(
+                    networkLibrary = networkLibrary,
+                    headers = accessTokenHeaders,
+                    login = channelLogin,
+                    platform = "web",
+                    playerType = playerType ?: ""
+                )
             }
-        } else {
-            graphQLRepository.loadPlaybackAccessToken(
-                networkLibrary = networkLibrary,
-                headers = accessTokenHeaders,
-                login = channelLogin,
-                playerType = playerType
-            )
-        }.also { response ->
             if (enableIntegrity) {
-                response?.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.streamPlaybackAccessToken!!.let {
+                it.signature to it.value
             }
         }
     }
 
     suspend fun loadVideoPlaylistUrl(networkLibrary: String?, gqlHeaders: Map<String, String>, videoId: String?, playerType: String?, supportedCodecs: String?, enableIntegrity: Boolean): Pair<String, List<String>> = withContext(Dispatchers.IO) {
         val accessTokenHeaders = getPlaybackAccessTokenHeaders(gqlHeaders = gqlHeaders, randomDeviceId = true, enableIntegrity = enableIntegrity)
-        val accessToken = graphQLRepository.loadPlaybackAccessToken(
-            networkLibrary = networkLibrary,
-            headers = accessTokenHeaders,
-            vodId = videoId,
-            playerType = playerType
-        ).also { response ->
+        val accessToken = try {
+            val response = graphQLRepository.loadPlaybackAccessToken(
+                networkLibrary = networkLibrary,
+                headers = accessTokenHeaders,
+                vodId = videoId,
+                playerType = playerType
+            )
             if (enableIntegrity) {
                 response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
             }
-        }.data?.videoPlaybackAccessToken
+            response.data!!.videoPlaybackAccessToken!!.let {
+                it.signature to it.value
+            }
+        } catch (e: Exception) {
+            if (e.message == "failed integrity check") throw e
+            val response = graphQLRepository.loadQueryVideoPlaybackAccessToken(
+                networkLibrary = networkLibrary,
+                headers = accessTokenHeaders,
+                videoId = videoId!!,
+                platform = "web",
+                playerType = playerType ?: ""
+            )
+            if (enableIntegrity) {
+                response.errors?.find { it.message == "failed integrity check" }?.let { throw Exception(it.message) }
+            }
+            response.data!!.videoPlaybackAccessToken!!.let {
+                it.signature to it.value
+            }
+        }
         val backupQualities = mutableListOf<String>()
-        accessToken?.value?.let { value ->
+        accessToken.second?.let { value ->
             val json = try {
                 JSONObject(value)
             } catch (e: JSONException) {
@@ -207,9 +288,9 @@ class PlayerRepository @Inject constructor(
             if (supportedCodecs?.contains("av1", true) == true) {
                 put("platform", "web")
             }
-            accessToken?.signature?.let { put("sig", it) }
+            accessToken.first?.let { put("sig", it) }
             supportedCodecs?.let { put("supported_codecs", it) }
-            accessToken?.value?.let { put("token", it) }
+            accessToken.second?.let { put("token", it) }
         }.map { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8.name())}" }.joinToString("&", "?")
         "https://usher.ttvnw.net/vod/${videoId}.m3u8${query}" to backupQualities
     }
