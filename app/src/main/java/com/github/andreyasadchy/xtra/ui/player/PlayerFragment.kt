@@ -2010,18 +2010,12 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                 }
             }
             CLIP -> {
-                val skipAccessToken = prefs.getString(C.TOKEN_SKIP_CLIP_ACCESS_TOKEN, "2")?.toIntOrNull() ?: 2
-                val thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL)
-                if (skipAccessToken >= 2 || thumbnailUrl.isNullOrBlank()) {
-                    viewModel.loadClip(
-                        networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
-                        gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
-                        id = requireArguments().getString(KEY_CLIP_ID),
-                        enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
-                    )
-                } else {
-                    viewModel.clipUrls.value = TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
-                }
+                viewModel.loadClip(
+                    networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
+                    gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
+                    id = requireArguments().getString(KEY_CLIP_ID),
+                    enableIntegrity = requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+                )
             }
             OFFLINE_VIDEO -> {
                 if (prefs.getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
@@ -2433,7 +2427,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                         channelLogin = requireArguments().getString(KEY_CHANNEL_LOGIN),
                         channelName = requireArguments().getString(KEY_CHANNEL_NAME),
                         channelLogo = requireArguments().getString(KEY_CHANNEL_LOGO),
-                        thumbnailUrl = requireArguments().getString(KEY_THUMBNAIL_URL),
                         thumbnail = requireArguments().getString(KEY_THUMBNAIL),
                         gameId = requireArguments().getString(KEY_GAME_ID),
                         gameSlug = requireArguments().getString(KEY_GAME_SLUG),
@@ -2650,7 +2643,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
         private const val KEY_CHANNEL_NAME = "channelName"
         private const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
         private const val KEY_CHANNEL_LOGO = "channelLogo"
-        private const val KEY_THUMBNAIL_URL = "thumbnailUrl"
         private const val KEY_THUMBNAIL = "thumbnail"
         private const val KEY_GAME_ID = "gameId"
         private const val KEY_GAME_SLUG = "gameSlug"
@@ -2716,7 +2708,6 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                     KEY_CHANNEL_NAME to item.channelName,
                     KEY_PROFILE_IMAGE_URL to item.profileImageUrl,
                     KEY_CHANNEL_LOGO to item.channelLogo,
-                    KEY_THUMBNAIL_URL to item.thumbnailUrl,
                     KEY_THUMBNAIL to item.thumbnail,
                     KEY_GAME_ID to item.gameId,
                     KEY_GAME_SLUG to item.gameSlug,

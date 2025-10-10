@@ -473,7 +473,6 @@
     <string name="followed_only">僅已關注</string>
     <string name="debug_api_commands">使用 API 聊天指令</string>
     <string name="skip_video_access_token">略過影片存取權杖</string>
-    <string name="skip_clip_access_token">略過剪輯存取權杖</string>
     <string name="skipVideoTokenEntries1">總是略過</string>
     <string name="skipVideoTokenEntries2">預設為略過，如果播放失敗則不略過</string>
     <string name="skipVideoTokenEntries3">不要預設為略過，如果播放失敗則略過</string>
