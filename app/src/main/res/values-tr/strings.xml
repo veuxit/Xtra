@@ -707,4 +707,5 @@
     <string name="sort_and_type">Sort by: %1$s. Type: %2$s</string>
     <string name="search_tags">Search tags</string>
     <string name="invalid_directory">Invalid directory</string>
+    <string name="suggested">Suggested</string>
 </resources>

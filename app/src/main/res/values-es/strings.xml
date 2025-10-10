@@ -711,4 +711,5 @@
     <string name="sort_and_type">Ordenar por: %1$s. Tipo: %2$s</string>
     <string name="search_tags">Buscar etiquetas</string>
     <string name="invalid_directory">Directory Invalido</string>
+    <string name="suggested">Sugeridos</string>
 </resources>
