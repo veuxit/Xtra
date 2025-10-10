@@ -86,7 +86,7 @@ class PlayerViewModel @Inject constructor(
     val gamesList = MutableStateFlow<List<Game>?>(null)
     var shouldRetry = true
 
-    val clipUrls = MutableStateFlow<Map<String, String>?>(null)
+    val clipUrls = MutableStateFlow<Map<Pair<String, String?>, String>?>(null)
 
     val savedOfflineVideoPosition = MutableStateFlow<Long?>(null)
 
