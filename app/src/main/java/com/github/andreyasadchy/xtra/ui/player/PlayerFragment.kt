@@ -1631,7 +1631,8 @@ class PlayerFragment : BaseNetworkFragment(), SlidingLayout.Listener, PlayerGame
                                             urls.getOrNull(index)?.let { url ->
                                                 when {
                                                     quality.equals("source", true) -> {
-                                                        map["source"] = Pair(requireContext().getString(R.string.source), url)
+                                                        val quality = requireContext().getString(R.string.source)
+                                                        map["source"] = Pair(codecs?.getOrNull(index)?.let { "$quality $it" } ?: quality, url)
                                                     }
                                                     quality.startsWith("audio", true) -> {
                                                         map[AUDIO_ONLY_QUALITY] = Pair(requireContext().getString(R.string.audio_only), url)

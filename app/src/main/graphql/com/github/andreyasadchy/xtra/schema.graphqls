@@ -7,12 +7,14 @@ type Query {
     searchFor(userQuery: String!, platform: String!, target: SearchForTarget): SearchFor
     searchStreams(userQuery: String!, first: Int, after: Cursor): SearchStreamConnection
     searchUsers(userQuery: String!, first: Int, after: Cursor): SearchUserConnection
+    streamPlaybackAccessToken(channelName: String!, params: PlaybackAccessTokenParams!): PlaybackAccessToken
     streams(first: Int, after: Cursor, options: StreamOptions): StreamConnection
     user(id: ID, login: String, lookupType: UserLookupType): User
     userResultByID(id: ID!): UserResult
     userResultByLogin(login: String!): UserResult
     users(ids: [ID!], logins: [String!]): [User]
     video(id: ID): Video
+    videoPlaybackAccessToken(id: ID!, params: PlaybackAccessTokenParams!): PlaybackAccessToken
 }
 
 type Badge {
@@ -180,6 +182,11 @@ type PageInfo {
     hasPreviousPage: Boolean
 }
 
+type PlaybackAccessToken {
+    signature: String
+    value: String
+}
+
 type SearchCategoriesConnection {
     edges: [SearchCategoriesEdge!]
     pageInfo: PageInfo
@@ -344,6 +351,11 @@ input GameOptions {
 input GameStreamOptions {
     freeformTags: [String!]
     sort: StreamSort
+}
+
+input PlaybackAccessTokenParams {
+    platform: String!
+    playerType: String!
 }
 
 input SearchForTarget {
