@@ -708,4 +708,7 @@
     <string name="show_more_websocket_info">Mostrar más información sobre WebSockets</string>
     <string name="websocket_connected">%s: Conectado</string>
     <string name="websocket_disconnected">%1$s: Desconectado - %2$s</string>
+    <string name="sort_and_type">Ordenar por: %1$s. Tipo: %2$s</string>
+    <string name="search_tags">Buscar etiquetas</string>
+    <string name="invalid_directory">Directory Invalido</string>
 </resources>
