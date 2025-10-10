@@ -66,7 +66,6 @@ class GameClipsFragment : PagedListFragment(), Scrollable, Sortable, VideosSortD
                 channelLogin = it.channelLogin,
                 channelName = it.channelName,
                 channelLogo = it.channelLogo,
-                thumbnailUrl = it.thumbnailUrl,
                 thumbnail = it.thumbnail,
                 gameId = it.gameId,
                 gameSlug = it.gameSlug,

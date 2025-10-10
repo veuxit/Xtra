@@ -473,7 +473,6 @@
     <string name="followed_only">Nur Follower</string>
     <string name="debug_api_commands">API Chat Kommandos benutzen</string>
     <string name="skip_video_access_token">Video Zugriff-Token überspringen</string>
-    <string name="skip_clip_access_token">Clip Zugriff-Token überspringen</string>
     <string name="skipVideoTokenEntries1">Immer überspringen</string>
     <string name="skipVideoTokenEntries2">Immer überspringen, außer die Wiedergabe schlägt fehl</string>
     <string name="skipVideoTokenEntries3">Nicht überspringen, außer die Wiedergabe schlägt fehl</string>

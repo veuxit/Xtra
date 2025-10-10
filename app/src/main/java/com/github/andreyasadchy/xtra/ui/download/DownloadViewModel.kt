@@ -271,14 +271,7 @@ class DownloadViewModel @Inject constructor(
             } else {
                 viewModelScope.launch {
                     try {
-                        val urls = if (skipAccessToken <= 1 && !thumbnailUrl.isNullOrBlank()) {
-                            TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
-                        } else {
-                            playerRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId, enableIntegrity) ?:
-                            if (skipAccessToken == 2 && !thumbnailUrl.isNullOrBlank()) {
-                                TwitchApiHelper.getClipUrlMapFromPreview(thumbnailUrl)
-                            } else null
-                        }
+                        val urls = playerRepository.loadClipUrls(networkLibrary, gqlHeaders, clipId, enableIntegrity)
                         val map = mutableMapOf<String, Pair<String, String>>()
                         urls?.entries?.forEach {
                             when (it.key) {
