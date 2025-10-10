@@ -79,9 +79,15 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
     private val binding get() = _binding!!
     private val args: ChannelPagerFragmentArgs by navArgs()
     private val viewModel: ChannelPagerViewModel by viewModels()
+    private var firstLaunch = true
 
     override val currentFragment: Fragment?
         get() = childFragmentManager.findFragmentByTag("f${binding.viewPager.currentItem}")
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        firstLaunch = savedInstanceState == null
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentChannelBinding.inflate(inflater, container, false)
@@ -408,7 +414,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 private val originalScrollFlags = layoutParams.scrollFlags
 
                 override fun onPageSelected(position: Int) {
-                    layoutParams.scrollFlags = if (position != 2) {
+                    layoutParams.scrollFlags = if (position != 3) {
                         originalScrollFlags
                     } else {
                         appBar.setExpanded(false, isResumed)
@@ -440,12 +446,17 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
             })
             val adapter = ChannelPagerAdapter(this@ChannelPagerFragment, args)
             viewPager.adapter = adapter
+            if (firstLaunch) {
+                viewPager.setCurrentItem(1, false)
+                firstLaunch = false
+            }
             viewPager.offscreenPageLimit = adapter.itemCount
             viewPager.reduceDragSensitivity()
             TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                 tab.text = when (position) {
-                    0 -> getString(R.string.videos)
-                    1 -> getString(R.string.clips)
+                    0 -> getString(R.string.suggested)
+                    1 -> getString(R.string.videos)
+                    2 -> getString(R.string.clips)
                     else -> getString(R.string.chat)
                 }
             }.attach()
