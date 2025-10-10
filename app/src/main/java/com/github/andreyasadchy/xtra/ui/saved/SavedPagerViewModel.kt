@@ -26,11 +26,12 @@ class SavedPagerViewModel @Inject constructor(
 
     fun saveFolders(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val directoryUri = url + "/document/" + url.substringAfter("/tree/")
+            val documentId = DocumentsContract.getTreeDocumentId(url.toUri())
+            val directoryUri = DocumentsContract.buildDocumentUriUsingTree(url.toUri(), documentId)
             val directoryUris = mutableListOf<Uri>()
             val chatFiles = mutableMapOf<String, String>()
             applicationContext.contentResolver.query(
-                DocumentsContract.buildChildDocumentsUriUsingTree(directoryUri.toUri(), DocumentsContract.getDocumentId(directoryUri.toUri())),
+                DocumentsContract.buildChildDocumentsUriUsingTree(directoryUri, documentId),
                 arrayOf(
                     DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                     DocumentsContract.Document.COLUMN_MIME_TYPE,
@@ -40,12 +41,13 @@ class SavedPagerViewModel @Inject constructor(
                     val documentId = cursor.getString(0)
                     val mimeType = cursor.getString(1)
                     if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                        val directoryUri = DocumentsContract.buildChildDocumentsUriUsingTree(directoryUri.toUri(), documentId)
+                        val directoryUri = DocumentsContract.buildChildDocumentsUriUsingTree(directoryUri, documentId)
                         directoryUris.add(directoryUri)
                     } else {
-                        val documentUri = DocumentsContract.buildDocumentUriUsingTree(directoryUri.toUri(), documentId)
+                        val documentUri = DocumentsContract.buildDocumentUriUsingTree(directoryUri, documentId)
                         if (documentUri.toString().endsWith(".json")) {
-                            chatFiles[documentUri.toString().substringAfterLast("%2F").substringAfterLast("%3A").removeSuffix(".json").removeSuffix("_chat")] = documentUri.toString()
+                            val fileName = documentUri.toString().substringAfterLast("%2F").substringAfterLast("%3A").removeSuffix(".json").removeSuffix("_chat")
+                            chatFiles[fileName] = documentUri.toString()
                         }
                     }
                 }
@@ -64,7 +66,7 @@ class SavedPagerViewModel @Inject constructor(
                         val documentId = cursor.getString(0)
                         val mimeType = cursor.getString(1)
                         if (mimeType != DocumentsContract.Document.MIME_TYPE_DIR) {
-                            val documentUri = DocumentsContract.buildDocumentUriUsingTree(directoryUri.toUri(), documentId)
+                            val documentUri = DocumentsContract.buildDocumentUriUsingTree(directoryUri, documentId)
                             if (documentUri.toString().endsWith(".m3u8")) {
                                 playlistFileUris.add(documentUri)
                             }
@@ -163,13 +165,14 @@ class SavedPagerViewModel @Inject constructor(
     fun saveVideos(list: List<String>) {
         viewModelScope.launch {
             val chatFiles = mutableMapOf<String, String>()
-            list.filter { it.endsWith(".json") }.forEach {
-                chatFiles[it.substringAfterLast("%2F").removeSuffix(".json").removeSuffix("_chat")] = it
+            list.filter { it.endsWith(".json") }.forEach { url ->
+                val fileName = url.substringAfterLast("%2F").substringAfterLast("%3A").removeSuffix(".json").removeSuffix("_chat")
+                chatFiles[fileName] = url
             }
             list.filter { !it.endsWith(".json") }.forEach { url ->
                 val existingVideo = offlineRepository.getVideoByUrl(url)
                 if (existingVideo == null) {
-                    val fileName = url.substringAfterLast("%2F").removeSuffix(".mp4").removeSuffix(".ts")
+                    val fileName = url.substringAfterLast("%2F").substringAfterLast("%3A").removeSuffix(".mp4").removeSuffix(".ts")
                     val chatFile = chatFiles[fileName]
                     var id: String? = null
                     var title: String? = null

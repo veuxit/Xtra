@@ -345,13 +345,14 @@ class DownloadsViewModel @Inject internal constructor(
                     if (oldPlaylistFile.exists()) {
                         val oldVideoDirectory = oldPlaylistFile.parentFile
                         if (oldVideoDirectory != null) {
-                            val newDirectoryUri = newUri.toString() + "/document/" + newUri.toString().substringAfter("/tree/")
-                            val newVideoDirectoryUri = newDirectoryUri + (if (!newDirectoryUri.endsWith("%3A")) "%2F" else "") + oldVideoDirectory.name
+                            val documentId = DocumentsContract.getTreeDocumentId(newUri)
+                            val newDirectoryUri = DocumentsContract.buildDocumentUriUsingTree(newUri, documentId)
+                            val newVideoDirectoryUri = newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + oldVideoDirectory.name
                             try {
                                 applicationContext.contentResolver.openOutputStream(newVideoDirectoryUri.toUri())!!.close()
                             } catch (e: Exception) {
                                 if (e is IllegalArgumentException) {
-                                    DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), DocumentsContract.Document.MIME_TYPE_DIR, oldVideoDirectory.name)
+                                    DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, DocumentsContract.Document.MIME_TYPE_DIR, oldVideoDirectory.name)
                                 }
                             }
                             val newPlaylistFileUri = newVideoDirectoryUri + "%2F" + oldPlaylistFile.name
@@ -422,12 +423,12 @@ class DownloadsViewModel @Inject internal constructor(
                                 })
                             }
                             val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
-                            val newChatFileUri = oldChatFile?.let { newDirectoryUri + (if (!newDirectoryUri.endsWith("%3A")) "%2F" else "") + it.name }
+                            val newChatFileUri = oldChatFile?.let { newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + it.name }
                             if (newChatFileUri != null) {
                                 try {
                                     applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
                                 } catch (e: IllegalArgumentException) {
-                                    DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldChatFile.name)
+                                    DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, "", oldChatFile.name)
                                     applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
                                 }.use { outputStream ->
                                     oldChatFile.inputStream().use { inputStream ->
@@ -459,12 +460,13 @@ class DownloadsViewModel @Inject internal constructor(
                 } else {
                     val oldFile = File(videoUrl)
                     if (oldFile.exists()) {
-                        val newDirectoryUri = newUri.toString() + "/document/" + newUri.toString().substringAfter("/tree/")
-                        val newFileUri = newDirectoryUri + (if (!newDirectoryUri.endsWith("%3A")) "%2F" else "") + oldFile.name
+                        val documentId = DocumentsContract.getTreeDocumentId(newUri)
+                        val newDirectoryUri = DocumentsContract.buildDocumentUriUsingTree(newUri, documentId)
+                        val newFileUri = newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + oldFile.name
                         try {
                             applicationContext.contentResolver.openOutputStream(newFileUri.toUri())!!
                         } catch (e: IllegalArgumentException) {
-                            DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldFile.name)
+                            DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, "", oldFile.name)
                             applicationContext.contentResolver.openOutputStream(newFileUri.toUri())!!
                         }.use { outputStream ->
                             oldFile.inputStream().use { inputStream ->
@@ -472,12 +474,12 @@ class DownloadsViewModel @Inject internal constructor(
                             }
                         }
                         val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
-                        val newChatFileUri = oldChatFile?.let { newDirectoryUri + (if (!newDirectoryUri.endsWith("%3A")) "%2F" else "") + it.name }
+                        val newChatFileUri = oldChatFile?.let { newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + it.name }
                         if (newChatFileUri != null) {
                             try {
                                 applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
                             } catch (e: IllegalArgumentException) {
-                                DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri.toUri(), "", oldChatFile.name)
+                                DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, "", oldChatFile.name)
                                 applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
                             }.use { outputStream ->
                                 oldChatFile.inputStream().use { inputStream ->
