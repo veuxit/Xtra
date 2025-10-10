@@ -377,13 +377,14 @@ class SettingsViewModel @Inject constructor(
     fun backupSettings(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val directoryUri = url + "/document/" + url.substringAfter("/tree/")
+                val documentId = DocumentsContract.getTreeDocumentId(url.toUri())
+                val directoryUri = DocumentsContract.buildDocumentUriUsingTree(url.toUri(), documentId)
                 val preferences = File("${applicationContext.applicationInfo.dataDir}/shared_prefs/${applicationContext.packageName}_preferences.xml")
-                val preferencesUri = directoryUri + "%2F" + preferences.name
+                val preferencesUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + preferences.name
                 try {
                     applicationContext.contentResolver.openOutputStream(preferencesUri.toUri())!!
                 } catch (e: IllegalArgumentException) {
-                    DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", preferences.name)
+                    DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri, "", preferences.name)
                     applicationContext.contentResolver.openOutputStream(preferencesUri.toUri())!!
                 }.use { outputStream ->
                     preferences.inputStream().use { inputStream ->
@@ -394,11 +395,11 @@ class SettingsViewModel @Inject constructor(
                     it.moveToPosition(-1)
                 }
                 val database = applicationContext.getDatabasePath("database")
-                val databaseUri = directoryUri + "%2F" + database.name
+                val databaseUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + database.name
                 try {
                     applicationContext.contentResolver.openOutputStream(databaseUri.toUri())!!
                 } catch (e: IllegalArgumentException) {
-                    DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri.toUri(), "", database.name)
+                    DocumentsContract.createDocument(applicationContext.contentResolver, directoryUri, "", database.name)
                     applicationContext.contentResolver.openOutputStream(databaseUri.toUri())!!
                 }.use { outputStream ->
                     database.inputStream().use { inputStream ->
