@@ -44,11 +44,11 @@ object PubSubUtils {
                 id = if (reward?.isNull("id") == false) reward.optString("id").takeIf { it.isNotBlank() } else null,
                 title = if (reward?.isNull("title") == false) reward.optString("title").takeIf { it.isNotBlank() } else null,
                 cost = if (reward?.isNull("cost") == false) reward.optInt("cost") else null,
-                url1x = if (rewardImage?.isNull("url_1x") == false) rewardImage.optString("url_1x").takeIf { it.isNotBlank() } else null
+                url1x = if (rewardImage?.isNull("url_1x") == false) { rewardImage.optString("url_1x").takeIf { it.isNotBlank() } } else { null }
                     ?: if (defaultImage?.isNull("url_1x") == false) defaultImage.optString("url_1x").takeIf { it.isNotBlank() } else null,
-                url2x = if (rewardImage?.isNull("url_2x") == false) rewardImage.optString("url_2x").takeIf { it.isNotBlank() } else null
+                url2x = if (rewardImage?.isNull("url_2x") == false) { rewardImage.optString("url_2x").takeIf { it.isNotBlank() } } else { null }
                     ?: if (defaultImage?.isNull("url_2x") == false) defaultImage.optString("url_2x").takeIf { it.isNotBlank() } else null,
-                url4x = if (rewardImage?.isNull("url_4x") == false) rewardImage.optString("url_4x").takeIf { it.isNotBlank() } else null
+                url4x = if (rewardImage?.isNull("url_4x") == false) { rewardImage.optString("url_4x").takeIf { it.isNotBlank() } } else { null }
                     ?: if (defaultImage?.isNull("url_4x") == false) defaultImage.optString("url_4x").takeIf { it.isNotBlank() } else null,
             ),
             timestamp = if (messageData?.isNull("timestamp") == false) messageData.optString("timestamp").takeIf { it.isNotBlank() }?.let { TwitchApiHelper.parseIso8601DateUTC(it) } else null,
