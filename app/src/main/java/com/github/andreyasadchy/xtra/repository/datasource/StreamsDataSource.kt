@@ -5,9 +5,15 @@ import androidx.paging.PagingState
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.HelixRepository
+import com.github.andreyasadchy.xtra.type.Language
+import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
 
 class StreamsDataSource(
+    private val gqlQueryLanguages: List<Language>?,
+    private val gqlQuerySort: StreamSort?,
+    private val gqlLanguages: List<String>?,
+    private val gqlSort: String?,
     private val tags: List<String>?,
     private val gqlHeaders: Map<String, String>,
     private val graphQLRepository: GraphQLRepository,
@@ -49,13 +55,13 @@ class StreamsDataSource(
         return when (apiPref) {
             C.GQL -> gqlQueryLoad(params)
             C.GQL_PERSISTED_QUERY -> gqlLoad(params)
-            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && tags.isNullOrEmpty()) helixLoad(params) else throw Exception()
+            C.HELIX -> if (!helixHeaders[C.HEADER_TOKEN].isNullOrBlank() && tags.isNullOrEmpty() && gqlQueryLanguages.isNullOrEmpty() && gqlLanguages.isNullOrEmpty()) helixLoad(params) else throw Exception()
             else -> throw Exception()
         }
     }
 
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): LoadResult<Int, Stream> {
-        val response = graphQLRepository.loadQueryTopStreams(networkLibrary, gqlHeaders, tags, params.loadSize, offset)
+        val response = graphQLRepository.loadQueryTopStreams(networkLibrary, gqlHeaders, gqlQuerySort, tags, gqlQueryLanguages, params.loadSize, offset)
         if (enableIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
@@ -93,7 +99,7 @@ class StreamsDataSource(
     }
 
     private suspend fun gqlLoad(params: LoadParams<Int>): LoadResult<Int, Stream> {
-        val response = graphQLRepository.loadTopStreams(networkLibrary, gqlHeaders, tags, params.loadSize, offset)
+        val response = graphQLRepository.loadTopStreams(networkLibrary, gqlHeaders, gqlSort, tags, gqlLanguages, params.loadSize, offset)
         if (enableIntegrity) {
             response.errors?.find { it.message == "failed integrity check" }?.let { return LoadResult.Error(Exception(it.message)) }
         }
@@ -112,6 +118,7 @@ class StreamsDataSource(
                     type = it.type,
                     title = it.title,
                     viewerCount = it.viewersCount,
+                    startedAt = it.createdAt,
                     thumbnailUrl = it.previewImageURL,
                     profileImageUrl = it.broadcaster?.profileImageURL,
                     tags = it.freeformTags?.mapNotNull { tag -> tag.name }

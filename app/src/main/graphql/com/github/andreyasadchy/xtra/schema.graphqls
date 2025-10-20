@@ -368,6 +368,7 @@ input GameOptions {
 }
 
 input GameStreamOptions {
+    broadcasterLanguages: [Language!]
     freeformTags: [String!]
     sort: StreamSort
 }
@@ -384,6 +385,7 @@ input SearchForTarget {
 }
 
 input StreamOptions {
+    broadcasterLanguages: [Language!]
     freeformTags: [String!]
     sort: StreamSort
 }
