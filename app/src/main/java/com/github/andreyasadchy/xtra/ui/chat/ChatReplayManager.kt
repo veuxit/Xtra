@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -18,6 +19,7 @@ class ChatReplayManager @Inject constructor(
     private val networkLibrary: String?,
     private val gqlHeaders: Map<String, String>,
     private val graphQLRepository: GraphQLRepository,
+    private val json: Json,
     private val enableIntegrity: Boolean,
     private val videoId: String,
     private val startTime: Long,
@@ -109,7 +111,7 @@ class ChatReplayManager @Inject constructor(
                                 color = message.userColor,
                                 emotes = emotes,
                                 badges = badges,
-                                fullMsg = item.toString()
+                                fullMsg = json.encodeToString(item)
                             )
                         }
                     }
