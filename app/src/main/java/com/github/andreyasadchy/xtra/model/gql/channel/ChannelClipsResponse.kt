@@ -54,6 +54,7 @@ class ChannelClipsResponse(
     @Serializable
     class Game(
         val id: String? = null,
+        val slug: String? = null,
         val name: String? = null,
     )
 }
