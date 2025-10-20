@@ -26,23 +26,18 @@ jobs:
         name: apk
         path: app/build/outputs/apk/release/*.apk
 
-    - name: Update git tag
+    - name: Update tag
       run: |
         git tag -f api21
-        git push -f origin api21
+        git push -f origin tag api21
 
-    - name: Delete Release
-      uses: cb80/delrel@latest
-      with:
-        tag: api21
+    - name: Delete release
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release delete api21 -y
 
-    - name: Create Release
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        artifacts: app/build/outputs/apk/release/*.apk
-        body: "This release is for devices running Android 5"
-        generateReleaseNotes: false
-        makeLatest: false
-        name: "Android 5 release"
-        tag: "api21"
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release create api21 --title "Android 5 release" --notes "This release is for devices running Android 5" --latest=false 'app/build/outputs/apk/release/*.apk'
