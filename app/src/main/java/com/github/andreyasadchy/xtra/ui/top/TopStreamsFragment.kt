@@ -28,11 +28,13 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.common.StreamsAdapter
 import com.github.andreyasadchy.xtra.ui.common.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.ui.common.StreamsSortDialog
+import com.github.andreyasadchy.xtra.ui.common.StreamsSortDialog.Companion.RECENT
+import com.github.andreyasadchy.xtra.ui.common.StreamsSortDialog.Companion.SORT_VIEWERS
+import com.github.andreyasadchy.xtra.ui.common.StreamsSortDialog.Companion.SORT_VIEWERS_ASC
 import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentArgs
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.SearchPagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragmentDirections
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -134,6 +136,45 @@ class TopStreamsFragment : PagedListFragment(), Scrollable, StreamsSortDialog.On
 
     override fun initialize() {
         viewLifecycleOwner.lifecycleScope.launch {
+            if (viewModel.filter.value == null) {
+                viewModel.setFilter(viewModel.sort, args.languages ?: viewModel.languages)
+                viewModel.sortText.value = requireContext().getString(
+                    R.string.sort_by,
+                    requireContext().getString(
+                        when (viewModel.sort) {
+                            SORT_VIEWERS -> R.string.viewers_high
+                            SORT_VIEWERS_ASC -> R.string.viewers_low
+                            RECENT -> R.string.recent
+                            else -> R.string.viewers_high
+                        }
+                    )
+                )
+                viewModel.filtersText.value = if (!args.tags.isNullOrEmpty() || viewModel.languages.isNotEmpty()) {
+                    buildString {
+                        args.tags?.takeIf { it.isNotEmpty() }?.let {
+                            append(
+                                requireContext().resources.getQuantityString(
+                                    R.plurals.tags,
+                                    it.size,
+                                    it.joinToString()
+                                )
+                            )
+                        }
+                        if (viewModel.languages.isNotEmpty()) {
+                            if (isNotEmpty()) {
+                                append(". ")
+                            }
+                            append(
+                                requireContext().resources.getQuantityString(
+                                    R.plurals.languages,
+                                    viewModel.languages.size,
+                                    viewModel.languages.joinToString()
+                                )
+                            )
+                        }
+                    }
+                } else null
+            }
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.flow.collectLatest { pagingData ->
                     pagingAdapter.submitData(pagingData)
@@ -151,17 +192,63 @@ class TopStreamsFragment : PagedListFragment(), Scrollable, StreamsSortDialog.On
         with(binding) {
             sortBar.root.visible()
             sortBar.root.setOnClickListener {
-                findNavController().navigate(
-                    TagSearchFragmentDirections.actionGlobalTagSearchFragment()
-                )
+                StreamsSortDialog.newInstance(
+                    sort = viewModel.sort,
+                    languages = viewModel.languages
+                ).show(childFragmentManager, null)
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.sortText.collectLatest {
+                        sortBar.sortText.text = it
+                    }
+                }
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.filtersText.collectLatest {
+                        if (it != null) {
+                            sortBar.filtersText.visible()
+                            sortBar.filtersText.text = it
+                        } else {
+                            sortBar.filtersText.gone()
+                        }
+                    }
+                }
             }
         }
     }
 
-    override fun onChange(sort: String) {
+    override fun onChange(sort: String, sortText: CharSequence, languages: Array<String>) {
         viewLifecycleOwner.lifecycleScope.launch {
             pagingAdapter.submitData(PagingData.empty())
-            viewModel.setFilter(sort)
+            viewModel.setFilter(sort, languages)
+            viewModel.sortText.value = requireContext().getString(R.string.sort_by, sortText)
+            viewModel.filtersText.value = if (!args.tags.isNullOrEmpty() || viewModel.languages.isNotEmpty()) {
+                buildString {
+                    args.tags?.takeIf { it.isNotEmpty() }?.let {
+                        append(
+                            requireContext().resources.getQuantityString(
+                                R.plurals.tags,
+                                it.size,
+                                it.joinToString()
+                            )
+                        )
+                    }
+                    if (viewModel.languages.isNotEmpty()) {
+                        if (isNotEmpty()) {
+                            append(". ")
+                        }
+                        append(
+                            requireContext().resources.getQuantityString(
+                                R.plurals.languages,
+                                viewModel.languages.size,
+                                viewModel.languages.joinToString()
+                            )
+                        )
+                    }
+                }
+            } else null
         }
     }
 
