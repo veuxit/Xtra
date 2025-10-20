@@ -763,15 +763,16 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "08eed732ca804e536f9262c6ce87e0e15f07d6d3c047e8e5d7a461afd5a66a00")
+                    put("sha256Hash", "53dc989e1d3cc360f7e4868c88eaaf37e06495b1d58c91c435e9e83643bb8c5c")
                     put("version", 1)
                 }
             }
             put("operationName", "FilterableVideoTower_Videos")
             putJsonObject("variables") {
                 put("broadcastType", type)
-                put("cursor", cursor)
                 put("channelOwnerLogin", channelLogin)
+                put("cursor", cursor)
+                put("includePreviewBlur", false)
                 put("limit", limit)
                 put("videoSort", sort)
             }
@@ -779,22 +780,23 @@ class GraphQLRepository @Inject constructor(
         json.decodeFromString<ChannelVideosResponse>(sendPersistedQuery(networkLibrary, headers, body))
     }
 
-    suspend fun loadChannelClips(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?, sort: String?, limit: Int?, cursor: String?): ChannelClipsResponse = withContext(Dispatchers.IO) {
+    suspend fun loadChannelClips(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?, period: String?, limit: Int?, cursor: String?): ChannelClipsResponse = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "fa3122f0b8fbd980f247a0f885c8097c154debc595dbcb815265669ea410c2eb")
+                    put("sha256Hash", "b06901ff6be502ab854ac2ceb8462a6b3bee2d76c750c20cbecb4907273bd2aa")
                     put("version", 1)
                 }
             }
             put("operationName", "ClipsCards__User")
             putJsonObject("variables") {
                 putJsonObject("criteria") {
-                    put("filter", sort)
+                    put("filter", period)
+                    put("shouldFilterByDiscoverySetting", false)
                 }
                 put("cursor", cursor)
-                put("login", channelLogin)
                 put("limit", limit)
+                put("login", channelLogin)
             }
         }.toString()
         json.decodeFromString<ChannelClipsResponse>(sendPersistedQuery(networkLibrary, headers, body))
@@ -804,21 +806,24 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "f6c2575aee4418e8a616e03364d8bcdbf0b10a5c87b59f523569dacc963e8da5")
+                    put("sha256Hash", "7f3580f6ac6cd8aa1424cff7c974a07143827d6fa36bba1b54318fe7f0b68dc5")
                     put("version", 1)
                 }
             }
             put("operationName", "SearchResultsPage_SearchResults")
             putJsonObject("variables") {
+                put("includeIsDJ", true)
                 putJsonObject("options") {
+                    put("shouldSkipDiscoveryControl", true)
                     putJsonArray("targets") {
                         add(buildJsonObject {
-                            put("cursor", cursor)
+                            if (cursor != null) {
+                                put("cursor", cursor)
+                            }
                             put("index", "CHANNEL")
                         })
                     }
                 }
-                put("includeIsDJ", true)
                 put("query", query)
             }
         }.toString()
@@ -829,21 +834,24 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "f6c2575aee4418e8a616e03364d8bcdbf0b10a5c87b59f523569dacc963e8da5")
+                    put("sha256Hash", "7f3580f6ac6cd8aa1424cff7c974a07143827d6fa36bba1b54318fe7f0b68dc5")
                     put("version", 1)
                 }
             }
             put("operationName", "SearchResultsPage_SearchResults")
             putJsonObject("variables") {
+                put("includeIsDJ", true)
                 putJsonObject("options") {
+                    put("shouldSkipDiscoveryControl", true)
                     putJsonArray("targets") {
                         add(buildJsonObject {
-                            put("cursor", cursor)
+                            if (cursor != null) {
+                                put("cursor", cursor)
+                            }
                             put("index", "GAME")
                         })
                     }
                 }
-                put("includeIsDJ", true)
                 put("query", query)
             }
         }.toString()
@@ -854,21 +862,24 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "f6c2575aee4418e8a616e03364d8bcdbf0b10a5c87b59f523569dacc963e8da5")
+                    put("sha256Hash", "7f3580f6ac6cd8aa1424cff7c974a07143827d6fa36bba1b54318fe7f0b68dc5")
                     put("version", 1)
                 }
             }
             put("operationName", "SearchResultsPage_SearchResults")
             putJsonObject("variables") {
+                put("includeIsDJ", true)
                 putJsonObject("options") {
+                    put("shouldSkipDiscoveryControl", true)
                     putJsonArray("targets") {
                         add(buildJsonObject {
-                            put("cursor", cursor)
+                            if (cursor != null) {
+                                put("cursor", cursor)
+                            }
                             put("index", "VOD")
                         })
                     }
                 }
-                put("includeIsDJ", true)
                 put("query", query)
             }
         }.toString()
@@ -1051,14 +1062,15 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "ecadcf350272dde399a63385cf888903d7fcd4c8fc6809a8469fe3753579d1c6")
+                    put("sha256Hash", "de3e2d0230fdb0a1da1e91e535ad839ddedaecc2c9c462c1d35d97e7b0b425ae")
                     put("version", 1)
                 }
             }
             put("operationName", "FollowingLive_CurrentUser")
             putJsonObject("variables") {
                 put("cursor", cursor)
-                put("includeIsDJ", true)
+                put("imageWidth", 50)
+                put("includeCostreaming", true)
                 put("limit", limit)
             }
         }.toString()
@@ -1069,13 +1081,14 @@ class GraphQLRepository @Inject constructor(
         val body = buildJsonObject {
             putJsonObject("extensions") {
                 putJsonObject("persistedQuery") {
-                    put("sha256Hash", "11d0ddb94121afab8fa8b641e01f038db35892f95b4e4b9e5380eaa33d5e4a8c")
+                    put("sha256Hash", "f2c1304cb0c2c46436ca48778c5b17d486750d7beeabe3bb9719fc47d765f2c8")
                     put("version", 1)
                 }
             }
             put("operationName", "FollowedVideos_CurrentUser")
             putJsonObject("variables") {
                 put("cursor", cursor)
+                put("includePreviewBlur", false)
                 put("limit", limit)
             }
         }.toString()

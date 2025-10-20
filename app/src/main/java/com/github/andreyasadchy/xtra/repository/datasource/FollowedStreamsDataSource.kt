@@ -145,10 +145,12 @@ class FollowedStreamsDataSource(
                     channelLogin = it.login,
                     channelName = it.displayName,
                     gameId = it.stream?.game?.id,
+                    gameSlug = it.stream?.game?.slug,
                     gameName = it.stream?.game?.displayName,
                     type = it.stream?.type,
                     title = it.stream?.title,
                     viewerCount = it.stream?.viewersCount,
+                    startedAt = it.stream?.createdAt,
                     thumbnailUrl = it.stream?.previewImageURL,
                     profileImageUrl = it.profileImageURL,
                     tags = it.stream?.freeformTags?.mapNotNull { tag -> tag.name }
