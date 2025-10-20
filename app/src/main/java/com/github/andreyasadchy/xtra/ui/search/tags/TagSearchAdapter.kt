@@ -74,6 +74,7 @@ class TagSearchAdapter(
                                                 gameSlug = args.gameSlug,
                                                 gameName = args.gameName,
                                                 tags = arrayOf(item.name),
+                                                languages = args.languages,
                                             )
                                         } else {
                                             GameMediaFragmentDirections.actionGlobalGameMediaFragment(
@@ -81,6 +82,7 @@ class TagSearchAdapter(
                                                 gameSlug = args.gameSlug,
                                                 gameName = args.gameName,
                                                 tags = arrayOf(item.name),
+                                                languages = args.languages,
                                             )
                                         }
                                     )
@@ -89,7 +91,8 @@ class TagSearchAdapter(
                                 root.setOnClickListener {
                                     fragment.findNavController().navigate(
                                         TopStreamsFragmentDirections.actionGlobalTopFragment(
-                                            tags = arrayOf(item.name)
+                                            tags = arrayOf(item.name),
+                                            languages = args.languages,
                                         )
                                     )
                                 }

@@ -10,6 +10,7 @@ import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.datasource.GameStreamsDataSource
+import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.ui.common.StreamsSortDialog
 import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentArgs
@@ -33,9 +34,13 @@ class GameStreamsViewModel @Inject constructor(
 
     private val args = GamePagerFragmentArgs.fromSavedStateHandle(savedStateHandle)
     val filter = MutableStateFlow<Filter?>(null)
+    val sortText = MutableStateFlow<CharSequence?>(null)
+    val filtersText = MutableStateFlow<CharSequence?>(null)
 
     val sort: String
         get() = filter.value?.sort ?: StreamsSortDialog.Companion.SORT_VIEWERS
+    val languages: Array<String>
+        get() = filter.value?.languages ?: emptyArray()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
@@ -50,14 +55,20 @@ class GameStreamsViewModel @Inject constructor(
                 gameId = args.gameId,
                 gameSlug = args.gameSlug,
                 gameName = args.gameName,
+                gqlQueryLanguages = languages.ifEmpty { null }?.mapNotNull { language ->
+                    Language.entries.find { it.rawValue == language }
+                },
                 gqlQuerySort = when (sort) {
                     StreamsSortDialog.Companion.SORT_VIEWERS -> StreamSort.VIEWER_COUNT
                     StreamsSortDialog.Companion.SORT_VIEWERS_ASC -> StreamSort.VIEWER_COUNT_ASC
+                    StreamsSortDialog.Companion.RECENT -> StreamSort.RECENT
                     else -> StreamSort.VIEWER_COUNT
                 },
+                gqlLanguages = languages.ifEmpty { null }?.toList(),
                 gqlSort = when (sort) {
                     StreamsSortDialog.Companion.SORT_VIEWERS -> "VIEWER_COUNT"
                     StreamsSortDialog.Companion.SORT_VIEWERS_ASC -> "VIEWER_COUNT_ASC"
+                    StreamsSortDialog.Companion.RECENT -> "RECENT"
                     else -> "VIEWER_COUNT"
                 },
                 tags = args.tags?.toList(),
@@ -72,11 +83,12 @@ class GameStreamsViewModel @Inject constructor(
         }.flow
     }.cachedIn(viewModelScope)
 
-    fun setFilter(sort: String?) {
-        filter.value = Filter(sort)
+    fun setFilter(sort: String?, languages: Array<String>?) {
+        filter.value = Filter(sort, languages)
     }
 
     class Filter(
         val sort: String?,
+        val languages: Array<String>?,
     )
 }
