@@ -12,4 +12,4 @@ jobs:
     - name: Update git tag
       run: |
         git tag -f f-droid
-        git push -f origin f-droid
+        git push -f origin tag f-droid
