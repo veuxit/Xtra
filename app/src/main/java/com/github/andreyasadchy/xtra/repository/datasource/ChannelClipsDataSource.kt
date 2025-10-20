@@ -120,6 +120,7 @@ class ChannelClipsDataSource(
                     channelLogin = it.broadcaster?.login,
                     channelName = it.broadcaster?.displayName,
                     gameId = it.game?.id,
+                    gameSlug = it.game?.slug,
                     gameName = it.game?.name,
                     title = it.title,
                     viewCount = it.viewCount,
