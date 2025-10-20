@@ -26,23 +26,18 @@ jobs:
         name: apk
         path: app/build/outputs/apk/release/*.apk
 
-    - name: Update git tag
+    - name: Update tag
       run: |
         git tag -f api16
-        git push -f origin api16
+        git push -f origin tag api16
 
-    - name: Delete Release
-      uses: cb80/delrel@latest
-      with:
-        tag: api16
+    - name: Delete release
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release delete api16 -y
 
-    - name: Create Release
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        artifacts: app/build/outputs/apk/release/*.apk
-        body: "This release is for devices running Android 4.1 to 4.4"
-        generateReleaseNotes: false
-        makeLatest: false
-        name: "Android 4 release"
-        tag: "api16"
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release create api16 --title "Android 4 release" --notes "This release is for devices running Android 4.1 to 4.4" --latest=false 'app/build/outputs/apk/release/*.apk'
