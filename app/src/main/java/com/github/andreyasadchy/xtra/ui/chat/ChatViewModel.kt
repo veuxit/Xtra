@@ -60,6 +60,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.io.File
@@ -81,6 +82,7 @@ class ChatViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val okHttpClient: OkHttpClient,
     private val trustManager: X509TrustManager?,
+    private val json: Json,
 ) : ViewModel() {
 
     val integrity = MutableStateFlow<String?>(null)
@@ -2214,6 +2216,7 @@ class ChatViewModel @Inject constructor(
                     networkLibrary = applicationContext.prefs().getString(C.NETWORK_LIBRARY, "OkHttp"),
                     gqlHeaders = TwitchApiHelper.getGQLHeaders(applicationContext, true),
                     graphQLRepository = graphQLRepository,
+                    json = json,
                     enableIntegrity = applicationContext.prefs().getBoolean(C.ENABLE_INTEGRITY, false),
                     videoId = videoId,
                     startTime = startTime.times(1000L),
