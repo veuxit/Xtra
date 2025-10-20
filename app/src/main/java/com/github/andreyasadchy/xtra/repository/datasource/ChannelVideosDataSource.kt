@@ -125,6 +125,7 @@ class ChannelVideosDataSource(
                     channelLogin = it.owner?.login,
                     channelName = it.owner?.displayName,
                     gameId = it.game?.id,
+                    gameSlug = it.game?.slug,
                     gameName = it.game?.displayName,
                     title = it.title,
                     viewCount = it.viewCount,

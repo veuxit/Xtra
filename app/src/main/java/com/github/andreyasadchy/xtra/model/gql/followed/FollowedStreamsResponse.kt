@@ -47,6 +47,7 @@ class FollowedStreamsResponse(
         val type: String? = null,
         val title: String? = null,
         val viewersCount: Int? = null,
+        val createdAt: String? = null,
         val previewImageURL: String? = null,
         val freeformTags: List<Tag>? = null,
     )
@@ -54,6 +55,7 @@ class FollowedStreamsResponse(
     @Serializable
     class Game(
         val id: String? = null,
+        val slug: String? = null,
         val displayName: String? = null,
     )
 
