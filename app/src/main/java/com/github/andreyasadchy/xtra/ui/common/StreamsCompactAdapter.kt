@@ -152,7 +152,7 @@ class StreamsCompactAdapter(
                         type.gone()
                     }
                     if (context.prefs().getBoolean(C.UI_UPTIME, true) && item.startedAt != null) {
-                        val text = TwitchApiHelper.getUptime(context = context, input = item.startedAt)
+                        val text = TwitchApiHelper.getUptime(startedAt = item.startedAt)
                         if (text != null) {
                             uptime.visible()
                             uptime.text = text

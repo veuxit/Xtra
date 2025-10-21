@@ -99,19 +99,19 @@ object TwitchApiHelper {
         } else return null
     }
 
-    fun getUptime(context: Context, input: String?): String? {
-        return if (input != null) {
+    fun getUptime(startedAt: String?): String? {
+        return if (startedAt != null) {
             val currentTime = Calendar.getInstance().time.time
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
             format.timeZone = TimeZone.getTimeZone("UTC")
             val createdAt = try {
-                format.parse(input)?.time
+                format.parse(startedAt)?.time
             } catch (e: ParseException) {
                 null
             }
             val diff = if (createdAt != null) ((currentTime - createdAt) / 1000) else null
             if (diff != null && diff >= 0) {
-                getDurationFromSeconds(context, diff.toString(), false)
+                DateUtils.formatElapsedTime(diff)
             } else null
         } else null
     }
