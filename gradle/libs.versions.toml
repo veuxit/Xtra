@@ -17,7 +17,7 @@ glide-webpdecoder = "2.7.4.16.0"
 google-material = "1.14.0-alpha06"
 hilt = "2.57.2"
 hilt-extensions = "1.3.0"
-kotlin = "2.2.20"
+kotlin = "2.2.21"
 ksp = "2.2.20-2.0.3"
 language-id = "17.0.6"
 lifecycle = "2.9.4"
@@ -64,7 +64,6 @@ hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-extensions
 language-id = { module = "com.google.mlkit:language-id", version.ref = "language-id" }
 lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
-material-v1140 = { module = "com.google.android.material:material", version.ref = "material-version" }
 material-v1140alpha06 = { module = "com.google.android.material:material", version.ref = "google-material" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
