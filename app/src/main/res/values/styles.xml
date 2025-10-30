@@ -95,7 +95,7 @@
         <item name="materialSwitchStyle">@style/SwitchBlue</item>
         <item name="sliderStyle">@style/Widget.Material3Expressive.Slider.Xsmall</item>
         <item name="linearProgressIndicatorStyle">@style/Widget.Material3.LinearProgressIndicator.Legacy</item>
-        <item name="bottomNavigationStyle">@style/BottomNavigationBlue</item>
+        <item name="bottomNavigationStyle">@style/Widget.Material3Expressive.BottomNavigationView</item>
         <item name="preferenceTheme">@style/PreferenceTheme</item>
         <item name="android:navigationBarColor">@color/darkScrim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -264,7 +264,7 @@
         <item name="indicatorColor">@android:color/white</item>
     </style>
 
-    <style name="BottomNavigationAmoled" parent="Widget.Material3.BottomNavigationView">
+    <style name="BottomNavigationAmoled" parent="Widget.Material3Expressive.BottomNavigationView">
         <item name="materialThemeOverlay">@style/BottomNavigationOverlayAmoled</item>
         <item name="elevation">0dp</item>
     </style>
@@ -274,8 +274,8 @@
         <item name="colorSecondaryContainer">@color/surfaceContainerAmoled</item>
     </style>
 
-    <style name="BottomNavigationBlue" parent="Widget.Material3.BottomNavigationView">
-        <item name="materialThemeOverlay">@style/BottomNavigationOverlayBlue</item>
+    <style name="BottomNavigationBlue" parent="Widget.Material3Expressive.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/Widget.Material3Expressive.BottomNavigationView</item>
     </style>
 
     <style name="BottomNavigationOverlayBlue">
@@ -641,7 +641,7 @@
         <item name="dividerColor">@color/secondaryTextColorBlue</item>
     </style>
 
-    <style name="MaterialBottomNavigationDark" parent="Widget.MaterialComponents.BottomNavigationView">
+    <style name="MaterialBottomNavigationDark" parent="Widget.Material3Expressive.BottomNavigationView">
         <item name="materialThemeOverlay">@style/MaterialBottomNavigationOverlay</item>
         <item name="itemTextAppearanceActive">@style/MaterialBottomNavigationText</item>
         <item name="itemTextAppearanceInactive">@style/MaterialBottomNavigationText</item>
